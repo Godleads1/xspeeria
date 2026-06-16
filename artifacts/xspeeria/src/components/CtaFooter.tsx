@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Logo } from "./Logo";
 
 export function CtaFooter() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("Free to join. No credit card required.");
-  const [msgColor, setMsgColor] = useState("var(--text-dim)");
+  const [msgColor, setMsgColor] = useState("rgba(255,255,255,.35)");
 
   const joinWaitlist = () => {
     if (email && /\S+@\S+\.\S+/.test(email)) {
@@ -13,7 +12,7 @@ export function CtaFooter() {
       setMsgColor("var(--mint)");
       setTimeout(() => {
         setMsg("Free to join. No credit card required.");
-        setMsgColor("var(--text-dim)");
+        setMsgColor("rgba(255,255,255,.35)");
       }, 4000);
     }
   };
@@ -24,7 +23,7 @@ export function CtaFooter() {
         <div className="cta-block">
           <div className="eyebrow" style={{ marginBottom: "12px" }}>Get Early Access</div>
           <h2>Ready to Exchange<br />at the Real Rate?</h2>
-          <p>Join thousands of people who are already saving on every international transfer.</p>
+          <p>Join thousands of people already saving on every international transfer.</p>
           <div className="waitlist-form">
             <input
               type="email"
@@ -41,11 +40,18 @@ export function CtaFooter() {
 
         <div className="footer-links-row">
           <div className="footer-brand">
-            <div style={{ marginBottom: "12px" }}>
-              <Logo />
+            <div style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--mint)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-.03em", color: "#fff" }}>Xspeeria<span style={{ color: "var(--mint)" }}>.</span></span>
             </div>
             <p>The P2P FX marketplace by IntelYtics Limited. Connecting People. Connecting Currencies. Connecting Benefit.</p>
-            <small>© 2025 IntelYtics Limited. All rights reserved.</small>
+            <small>© 2026 IntelYtics Limited. All rights reserved.</small>
           </div>
           <div className="footer-col">
             <h4>Product</h4>
@@ -79,7 +85,7 @@ export function CtaFooter() {
 
         <div className="footer-bottom">
           <div className="footer-copy">
-            © 2025 IntelYtics Limited · Xspeeria is a registered trademark
+            © 2026 IntelYtics Limited · Xspeeria is a registered trademark
           </div>
           <div className="cert-pills">
             <span className="cert-pill">ISO 27001</span>
