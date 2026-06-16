@@ -77,7 +77,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               <span className="line line-3 c-mint">market rate.</span>
             </h1>
 
-            <p className="hero-sub">Send money directly to verified peers across 8 countries. No banks. No hidden fees. No custodial wallets — just the mid-market rate.</p>
+            <p className="hero-sub">Connect with verified peers across 8 countries. Settlements flow through licensed partner banks — no custody, no hidden fees, just the mid-market rate.</p>
 
             <div className="hero-trust" aria-label="User ratings">
               <div className="hero-stars" aria-label="5 out of 5 stars">★★★★★</div>
@@ -187,11 +187,11 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               <div className="compare-row">
                 <div className="cmp-card cmp-good">
                   <div className="cmp-label">✓ Xspeeria</div>
-                  <div className="cmp-text">0% wallet risk · mid-market rate · direct P2P</div>
+                  <div className="cmp-text">No custody · mid-market rate · bank-settled</div>
                 </div>
                 <div className="cmp-card cmp-bad">
-                  <div className="cmp-label">✕ Banks</div>
-                  <div className="cmp-text" style={{ color: "var(--red)" }}>3–7% margin · slow · opaque fees</div>
+                  <div className="cmp-label">✕ Bank FX Desks</div>
+                  <div className="cmp-text" style={{ color: "var(--red)" }}>3–7% FX margin · slow · opaque fees</div>
                 </div>
               </div>
 

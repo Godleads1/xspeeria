@@ -14,7 +14,7 @@ const complianceItems = [
   { type: "compliance", text: "✓ KYC / AML First" },
   { type: "compliance", text: "✓ Bank API Integrated" },
   { type: "compliance", text: "✓ AES-256 Encrypted" },
-  { type: "compliance", text: "✓ Escrow-Only Settlement" },
+  { type: "compliance", text: "✓ Bank-Settled · No Custody" },
   { type: "compliance", text: "✓ FCA-Aligned" },
   { type: "compliance", text: "✓ CBN-Compliant" },
   { type: "compliance", text: "✓ FINTRAC Licensed" },

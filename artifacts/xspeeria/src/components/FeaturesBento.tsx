@@ -11,9 +11,9 @@ const features = [
   {
     iconClass: "bi-mint",
     icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6L12 2z"/></svg>,
-    title: "Escrow Settlement",
-    desc: "Funds lock in bank-linked escrow until both parties clear — giving each exchange tamper-proof, verifiable security.",
-    tag: "Zero-Risk", tagClass: "bt-mint", wide: false, delay: ".08s",
+    title: "Bank-Held Settlement",
+    desc: "Funds are deposited into licensed partner bank accounts until both sides are confirmed. The bank owns and operates the escrow — Xspeeria never takes custody, giving each exchange full institutional-grade security.",
+    tag: "No Custody", tagClass: "bt-mint", wide: false, delay: ".08s",
   },
   {
     iconClass: "bi-gold",
@@ -26,7 +26,7 @@ const features = [
     iconClass: "bi-mint",
     icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>,
     title: "Split & Multiple Account Transfers",
-    desc: "Disburse exchanged value across one or many destination accounts — split by fixed amounts or custom percentages. Perfect for payroll, business disbursements, and multi-beneficiary settlements in a single transaction.",
+    desc: "Receive exchanged value across one or many destination accounts — split by fixed amounts or custom percentages. Perfect for payroll, business disbursements, and multi-beneficiary settlements in a single transaction.",
     tag: "Flexible", tagClass: "bt-mint", wide: true, delay: ".24s",
   },
   {
