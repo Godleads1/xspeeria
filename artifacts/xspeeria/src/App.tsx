@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { Background } from "@/components/Background";
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
 import { TrustBar } from "@/components/TrustBar";
@@ -19,6 +20,7 @@ function XspeeriaApp() {
 
   return (
     <>
+      <Background />
       <Nav onVideoOpen={() => setVideoOpen(true)} />
       <main>
         <Hero onVideoOpen={() => setVideoOpen(true)} />

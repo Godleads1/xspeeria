@@ -72,6 +72,23 @@ ul{list-style:none}
 }
 
 body { background:var(--bg); color:var(--text-main); }
+/* Ensure all content sits above the fixed background layers */
+#nav, main, footer, #sticky-cta { position:relative; z-index:1; }
+
+/* Day orb & dot colours */
+:root {
+  --bg-dot: rgba(26,86,219,.16);
+  --orb-blue: rgba(26,86,219,.10);
+  --orb-mint: rgba(16,185,129,.09);
+  --orb-purple: rgba(139,92,246,.08);
+}
+/* Night orb & dot colours */
+[data-theme="night"] {
+  --bg-dot: rgba(255,255,255,.07);
+  --orb-blue: rgba(26,86,219,.25);
+  --orb-mint: rgba(16,185,129,.18);
+  --orb-purple: rgba(139,92,246,.15);
+}
 
 /* ── TYPOGRAPHY ──────────────────────────── */
 h1{font-size:clamp(2.4rem,5.5vw,4.2rem);font-weight:800;line-height:1.06;letter-spacing:-.03em;color:var(--text-main)}
@@ -142,7 +159,7 @@ section{padding:96px 0}
 .theme-toggle svg{flex-shrink:0}
 
 /* ── HERO ────────────────────────────────── */
-#hero{padding:148px 0 100px;position:relative;overflow:hidden;background:var(--bg)}
+#hero{padding:148px 0 100px;position:relative;overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;position:relative;z-index:1}
 
 /* Staggered headline */
@@ -219,7 +236,7 @@ section{padding:96px 0}
 .ticker-item{height:1.5rem;font-size:.78rem;color:var(--text-sub);line-height:1.5rem;white-space:nowrap}
 
 /* ── PRESS BAR ───────────────────────────── */
-#press-bar{background:var(--bg);border-bottom:1px solid var(--bg-border);padding:40px 0}
+#press-bar{border-bottom:1px solid var(--bg-border);padding:40px 0}
 [data-theme="night"] #press-bar{background:var(--bg-mid)}
 .press-label{text-align:center;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--text-dim);margin-bottom:24px}
 .press-logos{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap}
@@ -362,7 +379,7 @@ section{padding:96px 0}
 .status-soon{background:rgba(217,119,6,.08);color:var(--gold);border:1px solid rgba(217,119,6,.18)}
 
 /* ── APP DOWNLOAD ────────────────────────── */
-#app-download{background:var(--bg)}
+#app-download{}
 .app-download-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
 .app-download-text .eyebrow{margin-bottom:10px}
 .app-download-text h2{margin-bottom:16px}
