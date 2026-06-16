@@ -96,8 +96,9 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
   }, []);
 
   const pair = BASE_PAIRS[fxIdx];
-  const rate = rates[`${pair.fromCur}-${pair.toCur}`] ?? FALLBACK_RATES[`${pair.fromCur}-${pair.toCur}`] ?? 1567;
-  const recvVal = Math.round(pair.send * rate);
+  const midRate = rates[`${pair.fromCur}-${pair.toCur}`] ?? FALLBACK_RATES[`${pair.fromCur}-${pair.toCur}`] ?? 1567;
+  const p2pRate = Math.round(midRate * 1.04 * 10) / 10;   // P2P market rate — better than banks
+  const recvVal = Math.round(pair.send * p2pRate);
 
   return (
     <section id="hero" ref={heroRef}>
@@ -218,7 +219,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
 
               <div className="rate-bar">
                 <div className="fx-label" style={{ marginBottom: "4px" }}>Mid-Market P2P Rate</div>
-                <div className="rate-val">1 {pair.fromCur} = {rate.toLocaleString()} {pair.toCur}</div>
+                <div className="rate-val">1 {pair.fromCur} = {p2pRate.toLocaleString()} {pair.toCur}</div>
                 <div className="rate-sub">Live mid-market rate · Bank-settled</div>
               </div>
 

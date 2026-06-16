@@ -52,11 +52,11 @@ export function Calculator() {
   }, []);
 
   const key = `${from}-${to}`;
-  const rate = calcRates[key] ?? FALLBACK[key] ?? 1567;
+  const midRate = calcRates[key] ?? FALLBACK[key] ?? 1567;
   const sym = currSymbols[to] ?? "";
-  const xspRecv = Math.round(amount * rate);
-  const bankRecv = Math.round(xspRecv * 0.95);
-  const walletRecv = Math.round(xspRecv * 0.97);
+  const xspRecv   = Math.round(amount * midRate * 1.04);   // P2P market rate — beats bank
+  const bankRecv  = Math.round(amount * midRate * 1.01);   // real bank rate (~₦1,373 for NGN)
+  const walletRecv = Math.round(amount * midRate * 0.98);  // wallet apps after fees
   const savingsVsBank = xspRecv - bankRecv;
   const savingsVsWallet = xspRecv - walletRecv;
 
