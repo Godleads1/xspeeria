@@ -25,7 +25,7 @@ export function AppDownload() {
       <div aria-hidden="true" style={{
         position: "absolute",
         inset: 0,
-        background: "linear-gradient(to bottom, rgba(4,8,15,.72) 0%, rgba(4,8,15,.82) 100%)",
+        background: "linear-gradient(to bottom, rgba(4,8,15,.45) 0%, rgba(4,8,15,.6) 100%)",
         zIndex: 0,
       }} />
 
