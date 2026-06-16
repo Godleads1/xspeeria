@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import worldMap from "@assets/global-network-connections-world-map-with-illuminated-cities-a_1781629425084.jpg";
+import worldMap from "../assets/world-map.jpg";
 
 export function AppDownload() {
   const ref = useRef<HTMLElement>(null);
