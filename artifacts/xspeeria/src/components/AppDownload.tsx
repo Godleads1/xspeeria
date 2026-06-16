@@ -1,5 +1,22 @@
 import { useEffect, useRef } from "react";
 
+const VALID_SIZES = [20, 24, 32, 40, 48, 56, 64, 72, 80] as const;
+function nearestSize(n: number) {
+  return VALID_SIZES.reduce((a, b) => Math.abs(b - n) < Math.abs(a - n) ? b : a);
+}
+const Flag = ({ code, size = 16 }: { code: string; size?: number }) => {
+  const s = nearestSize(size);
+  return (
+    <img
+      src={`https://flagcdn.com/${s}x${Math.round(s * 0.75)}/${code}.png`}
+      alt={code.toUpperCase()}
+      width={size}
+      height={Math.round(size * 0.75)}
+      style={{ borderRadius: "2px", display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+    />
+  );
+};
+
 export function AppDownload() {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -60,9 +77,9 @@ export function AppDownload() {
                 <div className="phone-screen">
                   <div className="phone-app-header">Xspeeria</div>
                   <div className="phone-balance">
-                    <div className="phone-balance-label">Portfolio Balance</div>
-                    <div className="phone-balance-amount">$12,450.00</div>
-                    <div className="phone-balance-sub">+$340 this week ↑</div>
+                    <div className="phone-balance-label">Active Exchange</div>
+                    <div className="phone-balance-amount">$1,000 USD</div>
+                    <div className="phone-balance-sub">→ 1,567,000 NGN · Peer matched ✓</div>
                   </div>
                   <div className="phone-actions">
                     <div className="phone-action">
@@ -70,24 +87,28 @@ export function AppDownload() {
                       <div className="phone-action-label">Exchange</div>
                     </div>
                     <div className="phone-action">
-                      <div className="phone-action-icon">📤</div>
-                      <div className="phone-action-label">Send</div>
+                      <div className="phone-action-icon">🤝</div>
+                      <div className="phone-action-label">Match</div>
                     </div>
                     <div className="phone-action">
                       <div className="phone-action-icon">📊</div>
                       <div className="phone-action-label">Rates</div>
                     </div>
                     <div className="phone-action">
-                      <div className="phone-action-icon">🔒</div>
-                      <div className="phone-action-label">Escrow</div>
+                      <div className="phone-action-icon">🏦</div>
+                      <div className="phone-action-label">Settle</div>
                     </div>
                   </div>
                   <div className="phone-rate-row">
-                    <div className="phone-rate-left">🇺🇸 USD → 🇳🇬 NGN</div>
+                    <div className="phone-rate-left" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Flag code="us" size={14} /> USD → <Flag code="ng" size={14} /> NGN
+                    </div>
                     <div className="phone-rate-right">1 USD = 1,567 NGN</div>
                   </div>
                   <div className="phone-rate-row">
-                    <div className="phone-rate-left">🇬🇧 GBP → 🇳🇬 NGN</div>
+                    <div className="phone-rate-left" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Flag code="gb" size={14} /> GBP → <Flag code="ng" size={14} /> NGN
+                    </div>
                     <div className="phone-rate-right">1 GBP = 2,040 NGN</div>
                   </div>
                   <div className="phone-home-bar" />
