@@ -22,7 +22,7 @@ export function StickyCta() {
   return (
     <div id="sticky-cta" className={visible ? "visible" : ""}>
       <a href="#cta-footer" className="btn-primary" style={{ width: "100%", maxWidth: "360px", justifyContent: "center" }}>
-        Join the Waitlist — It's Free
+        Get Started — It's Free
       </a>
     </div>
   );

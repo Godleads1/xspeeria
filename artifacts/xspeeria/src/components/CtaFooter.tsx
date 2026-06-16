@@ -11,7 +11,7 @@ export function CtaFooter() {
       setMsg("🎉 Welcome aboard! We'll be in touch soon.");
       setMsgColor("var(--mint)");
       setTimeout(() => {
-        setMsg("Free to join. No credit card required.");
+        setMsg("Free to sign up. No credit card required.");
         setMsgColor("rgba(255,255,255,.35)");
       }, 4000);
     }
@@ -21,7 +21,7 @@ export function CtaFooter() {
     <footer id="cta-footer">
       <div className="container">
         <div className="cta-block">
-          <div className="eyebrow" style={{ marginBottom: "12px" }}>Get Early Access</div>
+          <div className="eyebrow" style={{ marginBottom: "12px" }}>Get Started Free</div>
           <h2>Ready to Exchange<br />at the Real Rate?</h2>
           <p>Join thousands of people already saving on every international transfer.</p>
           <div className="waitlist-form">
@@ -33,7 +33,7 @@ export function CtaFooter() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") joinWaitlist(); }}
             />
-            <button onClick={joinWaitlist}>Join Waitlist</button>
+            <button onClick={joinWaitlist}>Create Free Account</button>
           </div>
           <div className="waitlist-note" style={{ color: msgColor }}>{msg}</div>
         </div>
