@@ -1,28 +1,47 @@
 import { useEffect, useRef } from "react";
 
+const Flag = ({ code, size = 24 }: { code: string; size?: number }) => (
+  <img
+    src={`https://flagcdn.com/${size}x${Math.round(size * 0.75)}/${code}.png`}
+    alt={code.toUpperCase()}
+    width={size}
+    height={Math.round(size * 0.75)}
+    style={{ borderRadius: "2px", display: "inline-block" }}
+  />
+);
+
 const countries = [
-  { flag: "🇬🇧", name: "United Kingdom", reg: "FCA-aligned", status: "Live Q2 2025", active: true },
-  { flag: "🇨🇦", name: "Canada", reg: "FINTRAC · Corp HQ", status: "Active", active: true },
-  { flag: "🇳🇬", name: "Nigeria", reg: "CBN-compliant", status: "Active", active: true },
-  { flag: "🇦🇪", name: "UAE", reg: "CBUAE-aligned", status: "Active", active: true },
-  { flag: "🇺🇸", name: "United States", reg: "FinCEN-registered", status: "Q3 2025", active: false },
-  { flag: "🇰🇪", name: "Kenya", reg: "CBK-compliant", status: "Live Q2 2025", active: true },
-  { flag: "🇬🇭", name: "Ghana", reg: "BoG-compliant", status: "Q3 2025", active: false },
-  { flag: "🇮🇳", name: "India", reg: "RBI-aligned", status: "Q4 2025", active: false },
+  { code: "gb", name: "United Kingdom", reg: "FCA-aligned", status: "Live Q2 2025", active: true },
+  { code: "ca", name: "Canada", reg: "FINTRAC · Corp HQ", status: "Active", active: true },
+  { code: "ng", name: "Nigeria", reg: "CBN-compliant", status: "Active", active: true },
+  { code: "ae", name: "UAE", reg: "CBUAE-aligned", status: "Active", active: true },
+  { code: "us", name: "United States", reg: "FinCEN-registered", status: "Q3 2025", active: false },
+  { code: "ke", name: "Kenya", reg: "CBK-compliant", status: "Live Q2 2025", active: true },
+  { code: "gh", name: "Ghana", reg: "BoG-compliant", status: "Q3 2025", active: false },
+  { code: "in", name: "India", reg: "RBI-aligned", status: "Q4 2025", active: false },
 ];
 
 const mapNodes = [
-  { flag: "🇬🇧", label: "UK", delay: "0s" },
-  { flag: "🇨🇦", label: "Canada", delay: ".3s" },
-  { flag: "🇳🇬", label: "Nigeria", delay: ".6s" },
-  { flag: "🇦🇪", label: "UAE", delay: ".9s" },
-  { flag: "🇺🇸", label: "USA", delay: "1.2s" },
-  { flag: "🇰🇪", label: "Kenya", delay: "1.5s" },
-  { flag: "🇬🇭", label: "Ghana", delay: "1.8s" },
-  { flag: "🇮🇳", label: "India", delay: "2.1s" },
+  { code: "gb", label: "UK", delay: "0s" },
+  { code: "ca", label: "Canada", delay: ".3s" },
+  { code: "ng", label: "Nigeria", delay: ".6s" },
+  { code: "ae", label: "UAE", delay: ".9s" },
+  { code: "us", label: "USA", delay: "1.2s" },
+  { code: "ke", label: "Kenya", delay: "1.5s" },
+  { code: "gh", label: "Ghana", delay: "1.8s" },
+  { code: "in", label: "India", delay: "2.1s" },
 ];
 
-const marqueeItems = ["🇬🇧 United Kingdom", "🇨🇦 Canada", "🇳🇬 Nigeria", "🇦🇪 UAE", "🇺🇸 United States", "🇰🇪 Kenya", "🇬🇭 Ghana", "🇮🇳 India"];
+const marqueeItems = [
+  { code: "gb", name: "United Kingdom" },
+  { code: "ca", name: "Canada" },
+  { code: "ng", name: "Nigeria" },
+  { code: "ae", name: "UAE" },
+  { code: "us", name: "United States" },
+  { code: "ke", name: "Kenya" },
+  { code: "gh", name: "Ghana" },
+  { code: "in", name: "India" },
+];
 
 export function Markets() {
   const ref = useRef<HTMLElement>(null);
@@ -50,7 +69,9 @@ export function Markets() {
             {mapNodes.map((node) => (
               <div className="map-node" key={node.label}>
                 <div className="map-node-dot" style={{ animationDelay: node.delay }} />
-                <div className="map-node-flag">{node.flag}</div>
+                <div className="map-node-flag">
+                  <Flag code={node.code} size={28} />
+                </div>
                 <div className="map-node-label">{node.label}</div>
               </div>
             ))}
@@ -59,14 +80,19 @@ export function Markets() {
         <div className="markets-marquee-wrap" aria-hidden="true">
           <div className="markets-track">
             {[...marqueeItems, ...marqueeItems].map((item, i) => (
-              <span className="market-name-pill" key={i}>{item}</span>
+              <span className="market-name-pill" key={i} style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                <Flag code={item.code} size={16} />
+                {item.name}
+              </span>
             ))}
           </div>
         </div>
         <div className="countries-grid fade-up">
           {countries.map((c) => (
             <div className="country-card" key={c.name}>
-              <div className="country-flag">{c.flag}</div>
+              <div className="country-flag" style={{ fontSize: "unset" }}>
+                <Flag code={c.code} size={40} />
+              </div>
               <div className="country-name">{c.name}</div>
               <div className="country-reg">{c.reg}</div>
               <span className={`country-status ${c.active ? "status-active" : "status-soon"}`}>{c.status}</span>

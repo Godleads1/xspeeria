@@ -1,10 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 
+const Flag = ({ code, size = 28 }: { code: string; size?: number }) => (
+  <img
+    src={`https://flagcdn.com/${size}x${Math.round(size * 0.75)}/${code}.png`}
+    alt={code.toUpperCase()}
+    width={size}
+    height={Math.round(size * 0.75)}
+    style={{ borderRadius: "3px", display: "inline-block" }}
+  />
+);
+
 const fxPairs = [
-  { fromFlag: "🇺🇸", fromCur: "USD", toFlag: "🇳🇬", toCur: "NGN", rate: 1567, send: 1000 },
-  { fromFlag: "🇬🇧", fromCur: "GBP", toFlag: "🇳🇬", toCur: "NGN", rate: 2040.5, send: 1000 },
-  { fromFlag: "🇨🇦", fromCur: "CAD", toFlag: "🇳🇬", toCur: "NGN", rate: 1143.2, send: 1000 },
-  { fromFlag: "🇺🇸", fromCur: "USD", toFlag: "🇰🇪", toCur: "KES", rate: 129.4, send: 1000 },
+  { fromCode: "us", fromCur: "USD", toCode: "ng", toCur: "NGN", rate: 1567, send: 1000 },
+  { fromCode: "gb", fromCur: "GBP", toCode: "ng", toCur: "NGN", rate: 2040.5, send: 1000 },
+  { fromCode: "ca", fromCur: "CAD", toCode: "ng", toCur: "NGN", rate: 1143.2, send: 1000 },
+  { fromCode: "us", fromCur: "USD", toCode: "ke", toCur: "KES", rate: 129.4, send: 1000 },
+];
+
+const tickerItems = [
+  { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
+  { code: "ca", text: "CAD/NGN · 1 CAD = 1,143.20 NGN" },
+  { code: "ae", text: "AED/NGN · 1 AED = 426.80 NGN" },
+  { code: "ke", text: "USD/KES · 1 USD = 129.40 KES" },
+  { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
 ];
 
 export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
@@ -125,7 +143,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               </div>
 
               <div className="fx-row">
-                <div className="fx-flag">{pair.fromFlag}</div>
+                <div className="fx-flag"><Flag code={pair.fromCode} size={32} /></div>
                 <div className="fx-field">
                   <div className="fx-label">You Send</div>
                   <div className="fx-val">{pair.send.toLocaleString()}</div>
@@ -142,7 +160,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               </div>
 
               <div className="fx-row">
-                <div className="fx-flag">{pair.toFlag}</div>
+                <div className="fx-flag"><Flag code={pair.toCode} size={32} /></div>
                 <div className="fx-field">
                   <div className="fx-label">They Receive</div>
                   <div className="fx-val" style={{ color: "var(--mint)", opacity: recvOpacity, transition: "opacity .3s" }}>
@@ -169,19 +187,18 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
                 </div>
               </div>
 
-              <button className="fx-cta">
-                Start Exchange →
-              </button>
+              <button className="fx-cta">Start Exchange →</button>
 
               <div>
                 <div className="fx-label" style={{ marginBottom: "5px", marginTop: "14px" }}>Active P2P Pairs</div>
                 <div className="ticker-wrap" aria-label="Active currency pairs">
                   <div className="ticker-inner">
-                    <div className="ticker-item">🇬🇧 GBP/NGN · 1 GBP = 2,040.50 NGN</div>
-                    <div className="ticker-item">🇨🇦 CAD/NGN · 1 CAD = 1,143.20 NGN</div>
-                    <div className="ticker-item">🇦🇪 AED/NGN · 1 AED = 426.80 NGN</div>
-                    <div className="ticker-item">🇰🇪 USD/KES · 1 USD = 129.40 KES</div>
-                    <div className="ticker-item">🇬🇧 GBP/NGN · 1 GBP = 2,040.50 NGN</div>
+                    {tickerItems.map((item, i) => (
+                      <div className="ticker-item" key={i} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Flag code={item.code} size={14} />
+                        {item.text}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
