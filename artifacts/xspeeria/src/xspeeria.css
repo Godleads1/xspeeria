@@ -429,6 +429,11 @@ section{padding:96px 0}
 .cert-pills{display:flex;gap:8px;flex-wrap:wrap}
 .cert-pill{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:4px 12px;border-radius:999px;font-size:.66rem;color:#64748b;font-weight:600}
 
+/* ── FOOTER SOCIALS ──────────────────────── */
+.footer-socials{display:flex;gap:10px;margin:16px 0 12px}
+.footer-social-btn{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.55);transition:background .2s,color .2s,transform .15s;text-decoration:none}
+.footer-social-btn:hover{background:var(--mint);border-color:var(--mint);color:#fff;transform:translateY(-2px)}
+
 /* footer logo text override */
 #cta-footer .logo-text{color:#fff}
 #cta-footer .logo-mark{background:var(--mint)}
