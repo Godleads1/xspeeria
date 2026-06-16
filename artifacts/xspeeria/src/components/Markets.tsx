@@ -1,14 +1,22 @@
 import { useEffect, useRef } from "react";
 
-const Flag = ({ code, size = 24 }: { code: string; size?: number }) => (
-  <img
-    src={`https://flagcdn.com/${size}x${Math.round(size * 0.75)}/${code}.png`}
-    alt={code.toUpperCase()}
-    width={size}
-    height={Math.round(size * 0.75)}
-    style={{ borderRadius: "2px", display: "inline-block" }}
-  />
-);
+const VALID_SIZES = [20, 24, 32, 40, 48, 56, 64, 72, 80] as const;
+function nearestSize(n: number) {
+  return VALID_SIZES.reduce((a, b) => Math.abs(b - n) < Math.abs(a - n) ? b : a);
+}
+
+const Flag = ({ code, size = 24 }: { code: string; size?: number }) => {
+  const s = nearestSize(size);
+  return (
+    <img
+      src={`https://flagcdn.com/${s}x${Math.round(s * 0.75)}/${code}.png`}
+      alt={code.toUpperCase()}
+      width={size}
+      height={Math.round(size * 0.75)}
+      style={{ borderRadius: "2px", display: "inline-block", flexShrink: 0 }}
+    />
+  );
+};
 
 const countries = [
   { code: "gb", name: "United Kingdom", reg: "FCA-aligned", status: "Live Q2 2025", active: true },
