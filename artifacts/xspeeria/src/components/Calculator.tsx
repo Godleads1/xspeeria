@@ -17,28 +17,29 @@ export function Calculator() {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    fetch("https://open.er-api.com/v6/latest/USD")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data?.rates) return;
-        const r = data.rates as Record<string, number>;
-        const ngn = r.NGN ?? FALLBACK["USD-NGN"];
-        const kes = r.KES ?? FALLBACK["USD-KES"];
-        const ghs = r.GHS ?? FALLBACK["USD-GHS"];
-        const gbp = r.GBP ?? 1;
-        const cad = r.CAD ?? 1;
-        const aed = r.AED ?? 1;
-        const round = (n: number) => Math.round(n * 100) / 100;
-        setCalcRates({
-          "USD-NGN": round(ngn),       "USD-KES": round(kes),       "USD-GHS": round(ghs),
-          "GBP-NGN": round(ngn / gbp), "GBP-KES": round(kes / gbp), "GBP-GHS": round(ghs / gbp),
-          "CAD-NGN": round(ngn / cad), "CAD-KES": round(kes / cad), "CAD-GHS": round(ghs / cad),
-          "AED-NGN": round(ngn / aed), "AED-KES": round(kes / aed), "AED-GHS": round(ghs / aed),
-        });
-        const updatedAt = new Date(data.time_last_update_utc ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        setRatesLabel(`Live mid-market rate · Updated ${updatedAt}`);
-      })
-      .catch(() => {});
+    const PRIMARY = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json";
+    const FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.json";
+    const round = (n: number) => Math.round(n * 100) / 100;
+    const apply = (data: { usd?: Record<string, number>; date?: string }) => {
+      const r = data?.usd;
+      if (!r) return;
+      const ngn = r.ngn ?? FALLBACK["USD-NGN"];
+      const kes = r.kes ?? FALLBACK["USD-KES"];
+      const ghs = r.ghs ?? FALLBACK["USD-GHS"];
+      const gbp = r.gbp ?? 1;
+      const cad = r.cad ?? 1;
+      const aed = r.aed ?? 1;
+      setCalcRates({
+        "USD-NGN": round(ngn),       "USD-KES": round(kes),       "USD-GHS": round(ghs),
+        "GBP-NGN": round(ngn / gbp), "GBP-KES": round(kes / gbp), "GBP-GHS": round(ghs / gbp),
+        "CAD-NGN": round(ngn / cad), "CAD-KES": round(kes / cad), "CAD-GHS": round(ghs / cad),
+        "AED-NGN": round(ngn / aed), "AED-KES": round(kes / aed), "AED-GHS": round(ghs / aed),
+      });
+      setRatesLabel(`Live mid-market rate · ${data.date ?? "today"}`);
+    };
+    fetch(PRIMARY)
+      .then((r) => r.json()).then(apply)
+      .catch(() => fetch(FALLBACK_URL).then((r) => r.json()).then(apply).catch(() => {}));
   }, []);
 
   useEffect(() => {

@@ -43,33 +43,36 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
   const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    fetch("https://open.er-api.com/v6/latest/USD")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data?.rates) return;
-        const r = data.rates as Record<string, number>;
-        const ngn = r.NGN ?? 1567;
-        const kes = r.KES ?? 129.4;
-        const gbp = r.GBP ?? 1;
-        const cad = r.CAD ?? 1;
-        const aed = r.AED ?? 1;
-        const computed: Record<string, number> = {
-          "USD-NGN": Math.round(ngn * 10) / 10,
-          "GBP-NGN": Math.round((ngn / gbp) * 10) / 10,
-          "CAD-NGN": Math.round((ngn / cad) * 10) / 10,
-          "USD-KES": Math.round(kes * 10) / 10,
-        };
-        setRates(computed);
-        const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        setTicker([
-          { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
-          { code: "ca", text: `CAD/NGN · 1 CAD = ${fmt(ngn / cad)} NGN` },
-          { code: "ae", text: `AED/NGN · 1 AED = ${fmt(ngn / aed)} NGN` },
-          { code: "ke", text: `USD/KES · 1 USD = ${fmt(kes)} KES` },
-          { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
-        ]);
-      })
-      .catch(() => {});
+    const PRIMARY = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json";
+    const FALLBACK = "https://latest.currency-api.pages.dev/v1/currencies/usd.json";
+    const load = (url: string): Promise<void> =>
+      fetch(url)
+        .then((r) => r.json())
+        .then((data) => {
+          const r = data?.usd as Record<string, number> | undefined;
+          if (!r) return;
+          const ngn = r.ngn ?? 1567;
+          const kes = r.kes ?? 129.4;
+          const gbp = r.gbp ?? 1;
+          const cad = r.cad ?? 1;
+          const aed = r.aed ?? 1;
+          const round1 = (n: number) => Math.round(n * 10) / 10;
+          setRates({
+            "USD-NGN": round1(ngn),
+            "GBP-NGN": round1(ngn / gbp),
+            "CAD-NGN": round1(ngn / cad),
+            "USD-KES": round1(kes),
+          });
+          const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          setTicker([
+            { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
+            { code: "ca", text: `CAD/NGN · 1 CAD = ${fmt(ngn / cad)} NGN` },
+            { code: "ae", text: `AED/NGN · 1 AED = ${fmt(ngn / aed)} NGN` },
+            { code: "ke", text: `USD/KES · 1 USD = ${fmt(kes)} KES` },
+            { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
+          ]);
+        });
+    load(PRIMARY).catch(() => load(FALLBACK).catch(() => {}));
   }, []);
 
   useEffect(() => {
