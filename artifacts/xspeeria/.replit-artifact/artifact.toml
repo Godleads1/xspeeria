@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Xspeeria – P2P FX Marketplace"
+version = "1.0.0"
+id = "artifacts/xspeeria"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22016
+
+[services.development]
+run = "pnpm --filter @workspace/xspeeria run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/xspeeria", "run", "build" ]
+publicDir = "artifacts/xspeeria/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22016"
+BASE_PATH = "/"
