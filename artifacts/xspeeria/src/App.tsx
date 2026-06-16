@@ -13,8 +13,6 @@ import { Markets } from "@/components/Markets";
 import { AppDownload } from "@/components/AppDownload";
 import { CtaFooter } from "@/components/CtaFooter";
 import { VideoModal } from "@/components/VideoModal";
-import { StickyCta } from "@/components/StickyCta";
-
 function XspeeriaApp() {
   const [videoOpen, setVideoOpen] = useState(false);
 
@@ -34,7 +32,6 @@ function XspeeriaApp() {
         <AppDownload />
       </main>
       <CtaFooter />
-      <StickyCta />
       <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} />
     </>
   );
