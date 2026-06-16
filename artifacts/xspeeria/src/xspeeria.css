@@ -380,12 +380,14 @@ section{padding:96px 0}
 
 /* ── APP DOWNLOAD ────────────────────────── */
 #app-download{}
-.app-download-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
-.app-download-text .eyebrow{margin-bottom:10px}
-.app-download-text h2{margin-bottom:16px}
-.app-download-text p{margin-bottom:32px}
+.app-download-centered{text-align:center;max-width:660px;margin:0 auto}
+.app-download-centered .eyebrow{margin-bottom:12px}
+.app-download-centered h2{margin-bottom:16px}
 .store-buttons{display:flex;gap:14px;flex-wrap:wrap}
+.store-buttons-centered{justify-content:center}
 .store-btn{display:flex;align-items:center;gap:12px;background:var(--text-main);color:#fff;padding:13px 22px;border-radius:14px;transition:opacity .2s,transform .2s;cursor:pointer;text-decoration:none}
+.store-btn-light{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.store-btn-light:hover{background:rgba(255,255,255,.22)!important;opacity:1!important}
 [data-theme="night"] .store-btn{background:var(--bg-card);border:1px solid var(--bg-border);color:var(--text-main)}
 [data-theme="night"] .store-btn:hover{border-color:rgba(16,185,129,.4)}
 .store-btn:hover{opacity:.88;transform:translateY(-2px)}
@@ -395,29 +397,10 @@ section{padding:96px 0}
 .store-btn-name{font-size:.95rem;font-weight:800;color:#fff}
 [data-theme="night"] .store-btn-name{color:var(--text-main)}
 .app-features{display:flex;flex-direction:column;gap:10px;margin-top:28px}
+.app-features-centered{align-items:center}
 .app-feature-item{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--text-sub)}
-.app-feature-check{width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mint);font-size:.7rem;font-weight:700}
-.app-mockup{position:relative;display:flex;justify-content:center;align-items:center}
-.phone-frame{width:220px;background:var(--bg-card);border:1px solid var(--bg-border);border-radius:40px;padding:16px;position:relative;box-shadow:var(--shadow-lg)}
-.phone-notch{width:70px;height:8px;background:var(--bg-border);border-radius:999px;margin:0 auto 12px}
-.phone-screen{background:var(--bg-mid);border-radius:26px;padding:16px;min-height:320px;display:flex;flex-direction:column;gap:10px}
-.phone-app-header{font-size:.65rem;font-weight:800;color:var(--text-main);letter-spacing:-.01em}
-.phone-balance{background:var(--mint);border-radius:14px;padding:14px;color:#fff;margin:4px 0}
-.phone-balance-label{font-size:.55rem;font-weight:600;opacity:.8;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
-.phone-balance-amount{font-size:1.3rem;font-weight:800}
-.phone-balance-sub{font-size:.55rem;opacity:.75;margin-top:2px}
-.phone-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.phone-action{background:var(--bg-card);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--bg-border)}
-.phone-action-icon{font-size:1rem;margin-bottom:3px}
-.phone-action-label{font-size:.55rem;font-weight:700;color:var(--text-sub)}
-.phone-rate-row{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.16);border-radius:10px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between}
-.phone-rate-left{font-size:.6rem;color:var(--text-dim);font-weight:600}
-.phone-rate-right{font-size:.65rem;font-weight:800;color:var(--mint)}
-.phone-home-bar{width:50px;height:4px;background:var(--bg-border);border-radius:999px;margin:6px auto 0}
-.app-qr-hint{text-align:center;margin-top:20px}
-.app-qr-box{display:inline-flex;flex-direction:column;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--bg-border);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow-sm)}
-.app-qr-placeholder{width:70px;height:70px;background:var(--bg-mid);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
-.app-qr-label{font-size:.66rem;color:var(--text-dim);font-weight:600}
+.app-feature-item-light{color:rgba(232,237,245,.7)}
+.app-feature-check{width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.45);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mint);font-size:.7rem;font-weight:700}
 
 /* ── CTA FOOTER ──────────────────────────── */
 #cta-footer{background:var(--footer-bg);border-top:1px solid var(--footer-border)}
