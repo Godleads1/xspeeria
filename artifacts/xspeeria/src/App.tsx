@@ -32,7 +32,7 @@ function XspeeriaApp() {
         <AppDownload />
       </main>
       <CtaFooter />
-      <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} />
+      <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} videoUrl="" />
     </>
   );
 }

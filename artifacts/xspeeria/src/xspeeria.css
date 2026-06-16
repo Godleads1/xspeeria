@@ -472,4 +472,10 @@ section{padding:96px 0}
   .compare-row{grid-template-columns:1fr}
   .map-dots-container{grid-template-columns:repeat(4,1fr)}
   .press-logos{gap:20px}
+  .hero-ctas{flex-wrap:nowrap;gap:10px}
+  .btn-primary{padding:12px 16px;font-size:.82rem}
+  .btn-secondary{font-size:.82rem}
+  .hero-store-badges{flex-wrap:nowrap}
+  .hero-store-btn{padding:9px 12px;flex:1;min-width:0}
+  .hero-store-btn-name{font-size:.78rem}
 }
