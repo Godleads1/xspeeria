@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const calcRates: Record<string, number> = {
+const FALLBACK: Record<string, number> = {
   "USD-NGN": 1567, "USD-KES": 129.4, "USD-GHS": 14.8,
   "GBP-NGN": 2040, "GBP-KES": 168.5, "GBP-GHS": 19.2,
   "CAD-NGN": 1143, "CAD-KES": 94.5, "CAD-GHS": 10.8,
@@ -12,7 +12,34 @@ export function Calculator() {
   const [amount, setAmount] = useState(1000);
   const [from, setFrom] = useState("USD");
   const [to, setTo] = useState("NGN");
+  const [calcRates, setCalcRates] = useState<Record<string, number>>(FALLBACK);
+  const [ratesLabel, setRatesLabel] = useState("Illustrative mid-market estimates");
   const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data?.rates) return;
+        const r = data.rates as Record<string, number>;
+        const ngn = r.NGN ?? FALLBACK["USD-NGN"];
+        const kes = r.KES ?? FALLBACK["USD-KES"];
+        const ghs = r.GHS ?? FALLBACK["USD-GHS"];
+        const gbp = r.GBP ?? 1;
+        const cad = r.CAD ?? 1;
+        const aed = r.AED ?? 1;
+        const round = (n: number) => Math.round(n * 100) / 100;
+        setCalcRates({
+          "USD-NGN": round(ngn),       "USD-KES": round(kes),       "USD-GHS": round(ghs),
+          "GBP-NGN": round(ngn / gbp), "GBP-KES": round(kes / gbp), "GBP-GHS": round(ghs / gbp),
+          "CAD-NGN": round(ngn / cad), "CAD-KES": round(kes / cad), "CAD-GHS": round(ghs / cad),
+          "AED-NGN": round(ngn / aed), "AED-KES": round(kes / aed), "AED-GHS": round(ghs / aed),
+        });
+        const updatedAt = new Date(data.time_last_update_utc ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setRatesLabel(`Live mid-market rate · Updated ${updatedAt}`);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -24,7 +51,7 @@ export function Calculator() {
   }, []);
 
   const key = `${from}-${to}`;
-  const rate = calcRates[key] ?? 1567;
+  const rate = calcRates[key] ?? FALLBACK[key] ?? 1567;
   const sym = currSymbols[to] ?? "";
   const xspRecv = Math.round(amount * rate);
   const bankRecv = Math.round(xspRecv * 0.95);
@@ -74,7 +101,7 @@ export function Calculator() {
               </select>
             </div>
             <p style={{ fontSize: ".78rem", color: "var(--text-dim)" }}>
-              * Rates are illustrative mid-market estimates for demonstration purposes.
+              * {ratesLabel}
             </p>
           </div>
           <div className="calc-result">

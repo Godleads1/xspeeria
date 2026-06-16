@@ -18,25 +18,59 @@ const Flag = ({ code, size = 28 }: { code: string; size?: number }) => {
   );
 };
 
-const fxPairs = [
-  { fromCode: "us", fromCur: "USD", toCode: "ng", toCur: "NGN", rate: 1567, send: 1000 },
-  { fromCode: "gb", fromCur: "GBP", toCode: "ng", toCur: "NGN", rate: 2040.5, send: 1000 },
-  { fromCode: "ca", fromCur: "CAD", toCode: "ng", toCur: "NGN", rate: 1143.2, send: 1000 },
-  { fromCode: "us", fromCur: "USD", toCode: "ke", toCur: "KES", rate: 129.4, send: 1000 },
+const BASE_PAIRS = [
+  { fromCode: "us", fromCur: "USD", toCode: "ng", toCur: "NGN", send: 1000 },
+  { fromCode: "gb", fromCur: "GBP", toCode: "ng", toCur: "NGN", send: 1000 },
+  { fromCode: "ca", fromCur: "CAD", toCode: "ng", toCur: "NGN", send: 1000 },
+  { fromCode: "us", fromCur: "USD", toCode: "ke", toCur: "KES", send: 1000 },
 ];
 
-const tickerItems = [
-  { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
-  { code: "ca", text: "CAD/NGN · 1 CAD = 1,143.20 NGN" },
-  { code: "ae", text: "AED/NGN · 1 AED = 426.80 NGN" },
-  { code: "ke", text: "USD/KES · 1 USD = 129.40 KES" },
-  { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
-];
+const FALLBACK_RATES: Record<string, number> = {
+  "USD-NGN": 1567, "GBP-NGN": 2040.5, "CAD-NGN": 1143.2, "USD-KES": 129.4,
+};
 
 export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
   const [fxIdx, setFxIdx] = useState(0);
   const [recvOpacity, setRecvOpacity] = useState(1);
+  const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES);
+  const [ticker, setTicker] = useState([
+    { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
+    { code: "ca", text: "CAD/NGN · 1 CAD = 1,143.20 NGN" },
+    { code: "ae", text: "AED/NGN · 1 AED = 426.80 NGN" },
+    { code: "ke", text: "USD/KES · 1 USD = 129.40 KES" },
+    { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
+  ]);
   const heroRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data?.rates) return;
+        const r = data.rates as Record<string, number>;
+        const ngn = r.NGN ?? 1567;
+        const kes = r.KES ?? 129.4;
+        const gbp = r.GBP ?? 1;
+        const cad = r.CAD ?? 1;
+        const aed = r.AED ?? 1;
+        const computed: Record<string, number> = {
+          "USD-NGN": Math.round(ngn * 10) / 10,
+          "GBP-NGN": Math.round((ngn / gbp) * 10) / 10,
+          "CAD-NGN": Math.round((ngn / cad) * 10) / 10,
+          "USD-KES": Math.round(kes * 10) / 10,
+        };
+        setRates(computed);
+        const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        setTicker([
+          { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
+          { code: "ca", text: `CAD/NGN · 1 CAD = ${fmt(ngn / cad)} NGN` },
+          { code: "ae", text: `AED/NGN · 1 AED = ${fmt(ngn / aed)} NGN` },
+          { code: "ke", text: `USD/KES · 1 USD = ${fmt(kes)} KES` },
+          { code: "gb", text: `GBP/NGN · 1 GBP = ${fmt(ngn / gbp)} NGN` },
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -51,15 +85,16 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
     const interval = setInterval(() => {
       setRecvOpacity(0.3);
       setTimeout(() => {
-        setFxIdx((i) => (i + 1) % fxPairs.length);
+        setFxIdx((i) => (i + 1) % BASE_PAIRS.length);
         setRecvOpacity(1);
       }, 300);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  const pair = fxPairs[fxIdx];
-  const recvVal = Math.round(pair.send * pair.rate);
+  const pair = BASE_PAIRS[fxIdx];
+  const rate = rates[`${pair.fromCur}-${pair.toCur}`] ?? FALLBACK_RATES[`${pair.fromCur}-${pair.toCur}`] ?? 1567;
+  const recvVal = Math.round(pair.send * rate);
 
   return (
     <section id="hero" ref={heroRef}>
@@ -68,7 +103,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
           <div className="fade-up">
             <div className="badge">
               <div className="badge-dot" aria-hidden="true" />
-              Peer-to-Peer FX Marketplace
+              Bank-Settled FX Infrastructure
             </div>
 
             <h1 className="hero-headline" aria-label="Exchange at the real market rate.">
@@ -160,7 +195,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               </div>
 
               <div className="fx-swap-row">
-                <button className="fx-swap-btn" aria-label="Swap currencies" onClick={() => setFxIdx((i) => (i + 1) % fxPairs.length)}>
+                <button className="fx-swap-btn" aria-label="Swap currencies" onClick={() => setFxIdx((i) => (i + 1) % BASE_PAIRS.length)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
                   </svg>
@@ -180,8 +215,8 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
 
               <div className="rate-bar">
                 <div className="fx-label" style={{ marginBottom: "4px" }}>Mid-Market P2P Rate</div>
-                <div className="rate-val">1 {pair.fromCur} = {pair.rate.toLocaleString()} {pair.toCur}</div>
-                <div className="rate-sub">Updated 3s ago · Based on live peer offers</div>
+                <div className="rate-val">1 {pair.fromCur} = {rate.toLocaleString()} {pair.toCur}</div>
+                <div className="rate-sub">Live mid-market rate · Bank-settled</div>
               </div>
 
               <div className="compare-row">
@@ -201,7 +236,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
                 <div className="fx-label" style={{ marginBottom: "5px", marginTop: "14px" }}>Active P2P Pairs</div>
                 <div className="ticker-wrap" aria-label="Active currency pairs">
                   <div className="ticker-inner">
-                    {tickerItems.map((item, i) => (
+                    {ticker.map((item, i) => (
                       <div className="ticker-item" key={i} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <Flag code={item.code} size={14} />
                         {item.text}

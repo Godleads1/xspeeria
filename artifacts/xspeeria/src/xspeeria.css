@@ -471,7 +471,5 @@ section{padding:96px 0}
   .footer-links-row{grid-template-columns:1fr}
   .compare-row{grid-template-columns:1fr}
   .map-dots-container{grid-template-columns:repeat(4,1fr)}
-  .store-buttons{flex-direction:column}
-  .hero-store-badges{flex-direction:column}
   .press-logos{gap:20px}
 }

@@ -32,9 +32,9 @@ export function AppDownload() {
       <div className="container" style={{ position: "relative", zIndex: 1 }}>
         <div className="app-download-centered fade-up">
           <div className="eyebrow" style={{ color: "var(--mint)" }}>Download the App</div>
-          <h2 style={{ color: "#e8edf5" }}>Exchange Currency.<br />Anywhere. Anytime.</h2>
+          <h2 style={{ color: "#e8edf5" }}>Settlement Infrastructure.<br />In Your Pocket.</h2>
           <p style={{ color: "rgba(232,237,245,.65)", maxWidth: "540px", margin: "0 auto 36px" }}>
-            The Xspeeria app puts a full P2P FX marketplace in your pocket. Match with verified peers and settle through licensed partner banks — in under 60 seconds, from anywhere in the world.
+            Xspeeria is a regulated technology layer — not a bank, not a wallet. Match with verified peers and settle exclusively through licensed partner banks, from anywhere in the world.
           </p>
 
           <div className="store-buttons store-buttons-centered">
