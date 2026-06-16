@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 const pressLogos = [
   { name: "TechCrunch", icon: "🟠" },
   { name: "Forbes", icon: "📊" },
@@ -21,9 +23,33 @@ const complianceItems = [
 const doubled = [...complianceItems, ...complianceItems];
 
 export function TrustBar() {
+  const pressRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const logos = pressRef.current?.querySelectorAll<HTMLElement>(".press-logo-item");
+    if (!logos) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            logos.forEach((logo, i) => {
+              setTimeout(() => logo.classList.add("visible"), i * 100);
+            });
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    if (pressRef.current) observer.observe(pressRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
-      <div id="press-bar" aria-label="As seen in press">
+      <div id="press-bar" aria-label="As seen in press" ref={pressRef}>
         <div className="container">
           <p className="press-label">As seen in</p>
           <div className="press-logos">

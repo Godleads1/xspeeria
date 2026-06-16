@@ -110,7 +110,7 @@ export function HowItWorks() {
             </button>
           ))}
         </div>
-        <div className="step-panel active" role="tabpanel">
+        <div className="step-panel active" key={current} role="tabpanel">
           <div>
             <div className="step-num">{step.num}</div>
             <div className="step-title">{step.title}</div>

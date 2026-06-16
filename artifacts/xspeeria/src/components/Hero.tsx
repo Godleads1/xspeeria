@@ -114,7 +114,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
             </div>
           </div>
 
-          <div className="fade-up" style={{ transitionDelay: ".15s" }}>
+          <div className="slide-in-right">
             <div className="fx-widget" aria-label="Live FX rate widget">
               <div className="fx-header">
                 <span className="fx-title">Live P2P Rate Engine</span>
