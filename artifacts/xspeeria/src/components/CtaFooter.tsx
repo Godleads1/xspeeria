@@ -4,6 +4,7 @@ export function CtaFooter() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("Free to join. No credit card required.");
   const [msgColor, setMsgColor] = useState("rgba(255,255,255,.35)");
+  const [logoError, setLogoError] = useState(false);
 
   const joinWaitlist = () => {
     if (email && /\S+@\S+\.\S+/.test(email)) {
@@ -40,17 +41,28 @@ export function CtaFooter() {
 
         <div className="footer-links-row">
           <div className="footer-brand">
-            <div style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--mint)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-.03em", color: "#fff" }}>Xspeeria<span style={{ color: "var(--mint)" }}>.</span></span>
+            <div style={{ marginBottom: "14px" }}>
+              {logoError ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--mint)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5"/>
+                      <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-.03em", color: "#fff" }}>Xspeeria<span style={{ color: "var(--mint)" }}>.</span></span>
+                </div>
+              ) : (
+                <img
+                  src="/logo-night.png"
+                  alt="Xspeeria"
+                  style={{ height: 60, width: "auto", display: "block" }}
+                  onError={() => setLogoError(true)}
+                />
+              )}
             </div>
-            <p>The P2P FX marketplace by IntelYtics Limited. Connecting People. Connecting Currencies. Connecting Benefit.</p>
+            <p>The FX Exchange Network by IntelYtics Limited. Connecting People. Connecting Currencies. Connecting Benefit.</p>
             <div className="footer-socials">
               <a href="https://twitter.com/xspeeria" target="_blank" rel="noopener noreferrer" aria-label="Follow Xspeeria on X (Twitter)" className="footer-social-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -73,7 +85,7 @@ export function CtaFooter() {
           <div className="footer-col">
             <h4>Product</h4>
             <ul>
-              <li><a href="#why">Why P2P</a></li>
+              <li><a href="#why">About Xspeeria</a></li>
               <li><a href="#features">Features</a></li>
               <li><a href="#how">How It Works</a></li>
               <li><a href="#calculator">Calculator</a></li>

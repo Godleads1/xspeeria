@@ -33,6 +33,12 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
   const [fxIdx, setFxIdx] = useState(0);
   const [recvOpacity, setRecvOpacity] = useState(1);
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES);
+  const [showToast, setShowToast] = useState(false);
+
+  const handleStoreClick = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+  };
   const [ticker, setTicker] = useState([
     { code: "gb", text: "GBP/NGN · 1 GBP = 2,040.50 NGN" },
     { code: "ca", text: "CAD/NGN · 1 CAD = 1,143.20 NGN" },
@@ -116,7 +122,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               <span className="line line-3 c-mint">market rate.</span>
             </h1>
 
-            <p className="hero-sub">Connect with verified peers across 8 countries. Settlements flow through licensed partner banks — no custody, no hidden fees, just the mid-market rate.</p>
+            <p className="hero-sub">Connect with verified members across 8 countries. Settlements flow through licensed partner banks — no custody, no hidden fees, just the mid-market rate.</p>
 
             <div className="hero-trust" aria-label="User ratings">
               <div className="hero-stars" aria-label="5 out of 5 stars">★★★★★</div>
@@ -139,21 +145,28 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
             </div>
 
             <div className="hero-store-badges" aria-label="Download the app">
-              <a href="#app-download" className="hero-store-btn" aria-label="Download on the App Store">
-                <span className="hero-store-btn-icon">🍎</span>
+              <button onClick={handleStoreClick} className="hero-store-btn" aria-label="Download on the App Store">
+                <span className="hero-store-btn-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.029 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+                </span>
                 <div>
                   <div className="hero-store-btn-label">Download on the</div>
                   <div className="hero-store-btn-name">App Store</div>
                 </div>
-              </a>
-              <a href="#app-download" className="hero-store-btn" aria-label="Get it on Google Play">
-                <span className="hero-store-btn-icon">▶</span>
+              </button>
+              <button onClick={handleStoreClick} className="hero-store-btn" aria-label="Get it on Google Play">
+                <span className="hero-store-btn-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3.18 23.76c.3.17.64.24.99.19L15.5 12 11.67 8.17 3.18 23.76z" fill="#EA4335"/><path d="M20.82 10.55 17.5 8.67 13.33 12l4.17 4.17 3.32-1.88c.95-.54.95-1.82 0-2.74z" fill="#FBBC05"/><path d="M3.18.24A1.5 1.5 0 0 0 2.5 1.5v21a1.5 1.5 0 0 0 .68 1.26L15.5 12 3.18.24z" fill="#4285F4"/><path d="M15.5 12 3.18 23.76c.35.2.78.2 1.13 0L17.5 16.17 15.5 12z" fill="#34A853"/></svg>
+                </span>
                 <div>
                   <div className="hero-store-btn-label">Get it on</div>
                   <div className="hero-store-btn-name">Google Play</div>
                 </div>
-              </a>
+              </button>
             </div>
+            {showToast && (
+              <div className="store-toast" role="alert">🚀 Not Available Yet — Coming Soon!</div>
+            )}
 
             <div className="social-proof" aria-label="Platform statistics">
               <div className="sp-item">
@@ -218,9 +231,9 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               </div>
 
               <div className="rate-bar">
-                <div className="fx-label" style={{ marginBottom: "4px" }}>Mid-Market P2P Rate</div>
+                <div className="fx-label" style={{ marginBottom: "4px" }}>Live Market Rate Engine</div>
                 <div className="rate-val">1 {pair.fromCur} = {p2pRate.toLocaleString()} {pair.toCur}</div>
-                <div className="rate-sub">Live mid-market rate · Bank-settled</div>
+                <div className="rate-sub">Live Market Rate Engine · Bank-settled</div>
               </div>
 
               <div className="compare-row">
@@ -237,7 +250,7 @@ export function Hero({ onVideoOpen }: { onVideoOpen: () => void }) {
               <button className="fx-cta">Start Exchange →</button>
 
               <div>
-                <div className="fx-label" style={{ marginBottom: "5px", marginTop: "14px" }}>Active P2P Pairs</div>
+                <div className="fx-label" style={{ marginBottom: "5px", marginTop: "14px" }}>Active Members Pairs</div>
                 <div className="ticker-wrap" aria-label="Active currency pairs">
                   <div className="ticker-inner">
                     {ticker.map((item, i) => (

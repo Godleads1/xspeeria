@@ -17,10 +17,10 @@ export function Nav({ onVideoOpen }: { onVideoOpen: () => void }) {
     <>
       <nav id="nav" className={scrolled ? "scrolled" : ""} role="navigation" aria-label="Main navigation">
         <div className="container">
-          <div className="nav-inner">
+          <div className="nav-inner" style={{ position: "relative" }}>
             <Logo />
             <ul className="nav-links" aria-label="Site sections">
-              <li><a href="#why">Why P2P</a></li>
+              <li><a href="#why">About Xspeeria</a></li>
               <li><a href="#features">Features</a></li>
               <li><a href="#how">How It Works</a></li>
               <li><a href="#markets">Markets</a></li>
@@ -65,7 +65,7 @@ export function Nav({ onVideoOpen }: { onVideoOpen: () => void }) {
           </div>
         </div>
         <div className={`mobile-menu${menuOpen ? " open" : ""}`} role="menu">
-          <a href="#why" onClick={() => setMenuOpen(false)}>Why P2P</a>
+          <a href="#why" onClick={() => setMenuOpen(false)}>About Xspeeria</a>
           <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
           <a href="#how" onClick={() => setMenuOpen(false)}>How It Works</a>
           <a href="#markets" onClick={() => setMenuOpen(false)}>Markets</a>

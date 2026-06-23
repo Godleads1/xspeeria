@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
 
 const pressLogos = [
-  { name: "TechCrunch", icon: "🟠" },
-  { name: "Forbes", icon: "📊" },
-  { name: "Bloomberg", icon: "📰" },
-  { name: "CNN Business", icon: "📡" },
-  { name: "Y Combinator", icon: "🔶" },
+  { name: "Arise News", icon: "📺" },
+  { name: "Channels TV", icon: "📡" },
+  { name: "BusinessDay", icon: "📰" },
   { name: "TechCabal", icon: "📱" },
+  { name: "Bloomberg", icon: "📊" },
+  { name: "Forbes", icon: "🏆" },
 ];
 
 const complianceItems = [
@@ -51,7 +51,7 @@ export function TrustBar() {
     <>
       <div id="press-bar" aria-label="As seen in press" ref={pressRef}>
         <div className="container">
-          <p className="press-label">As seen in</p>
+          <p className="press-label"></p>
           <div className="press-logos">
             {pressLogos.map((p) => (
               <div key={p.name} className="press-logo-item">

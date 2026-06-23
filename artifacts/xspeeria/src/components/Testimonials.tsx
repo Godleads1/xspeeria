@@ -39,7 +39,7 @@ export function Testimonials() {
     <section id="testimonials" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">What People Say</div>
+          <div className="eyebrow"></div>
           <h2>Trusted by People<br />Who Move Money</h2>
         </div>
         <div className="testi-grid fade-up" aria-label="Customer testimonials">

@@ -17,7 +17,7 @@ export function WhyP2P() {
       img: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=600&q=80&auto=format",
       imgAlt: "Family receiving remittance",
       title: "Send More Home",
-      desc: "Skip the bank FX desk markup. Remittances are matched to verified peers and settled through licensed banking rails at mid-market rates. Every naira matters.",
+      desc: "Skip the bank FX desk markup. Remittances are matched to verified members and settled through licensed banking rails at mid-market rates. Every naira matters.",
       savings: "💰 Save on every transfer home",
       delay: "0s",
     },
@@ -26,7 +26,7 @@ export function WhyP2P() {
       img: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&q=80&auto=format",
       imgAlt: "Traveler with phone",
       title: "Swap at Local Rates",
-      desc: "Swap cash with verified peers in-country. Arrive with the rate locals get — not the tourist markup.",
+      desc: "Swap cash with verified members in-country. Arrive with the rate locals get — not the tourist markup.",
       savings: "✈️ Swap cash at local rates",
       delay: ".1s",
     },
@@ -35,7 +35,7 @@ export function WhyP2P() {
       img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&q=80&auto=format",
       imgAlt: "Business owner",
       title: "Pay Suppliers Directly",
-      desc: "Settle invoices in your supplier's currency. Matched peer transactions flow through licensed local banks — no correspondent bank FX markup, no hidden margins.",
+      desc: "Settle invoices in your supplier's currency. Matched Verified members transactions flow through licensed local banks — no correspondent bank FX markup, no hidden margins.",
       savings: "🏭 Pay suppliers in their currency",
       delay: ".2s",
     },
@@ -45,9 +45,9 @@ export function WhyP2P() {
     <section id="why" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">Who Xspeeria Serves</div>
-          <h2>Built for Real People<br />Moving Real Money</h2>
-          <p>Whether you're sending money home, traveling abroad, or paying international suppliers — Xspeeria gives you the rate you deserve.</p>
+          <div className="eyebrow"></div>
+          <h2>The Direct FX Exchange Network<br />Built for Africa & Beyond</h2>
+          <p>Xspeeria is a regulated technology Exchange Network that connects buyers and sellers of foreign currency directly — with all settlements flowing through licensed partner banks. No custody. No hidden margins. Just the rate you negotiate.</p>
         </div>
         <div className="why-grid">
           {cards.map((card) => (

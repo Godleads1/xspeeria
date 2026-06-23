@@ -66,7 +66,7 @@ export function Markets() {
     <section id="markets" className="section-alt" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">Global Markets</div>
+          <div className="eyebrow"></div>
           <h2>Global Rails. Local Trust.</h2>
           <p>Xspeeria integrates with banking infrastructure across eight high-diaspora corridors — built to serve people who move money across borders every day.</p>
         </div>

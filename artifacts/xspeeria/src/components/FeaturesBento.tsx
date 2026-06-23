@@ -4,7 +4,7 @@ const features = [
   {
     iconClass: "bi-blue",
     icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M10.5 10.5l3 3"/></svg>,
-    title: "P2P Matching Engine",
+    title: "Smart Matching Engine",
     desc: "Real-time algorithmic matching connects currency buyers and sellers across borders — no intermediary markup, no delay.",
     tag: "Real-Time", tagClass: "bt-blue", wide: false, delay: "0s",
   },
@@ -19,7 +19,7 @@ const features = [
     iconClass: "bi-gold",
     icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>,
     title: "AI Rate Optimization",
-    desc: "Smart FX discovery scans live peer offers and routes each exchange to the most favorable mid-market rate automatically.",
+    desc: "Smart FX discovery scans live Verified members offers and routes each exchange to the most favorable mid-market rate automatically.",
     tag: "AI-Driven", tagClass: "bt-blue", wide: false, delay: ".16s",
   },
   {
@@ -60,7 +60,7 @@ export function FeaturesBento() {
     <section id="features" className="section-alt" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">Architectural Features</div>
+          <div className="eyebrow"></div>
           <h2>Built for Speed.<br />Secured by Design.</h2>
           <p>Every layer of Xspeeria is engineered for trust — from matching to settlement, compliance to delivery.</p>
         </div>

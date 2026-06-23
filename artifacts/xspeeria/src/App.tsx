@@ -20,6 +20,7 @@ function XspeeriaApp() {
     <>
       <Background />
       <Nav onVideoOpen={() => setVideoOpen(true)} />
+      <div className="coming-soon-bar" aria-label="App launching soon">🚀 COMING SOON</div>
       <main>
         <Hero onVideoOpen={() => setVideoOpen(true)} />
         <TrustBar />

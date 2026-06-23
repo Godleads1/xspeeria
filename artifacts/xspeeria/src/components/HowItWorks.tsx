@@ -26,7 +26,7 @@ const steps = [
   {
     tab: "3. Match",
     num: "03", title: "Smart Auto-Matching",
-    desc: "Our algorithm scans compatible peer offers in real-time. When a match is found, both parties receive instant notification to confirm before any funds move.",
+    desc: "Our algorithm scans compatible Verified members offers in real-time. When a match is found, both parties receive instant notification to confirm before any funds move.",
     items: [
       { icon: "⚡", bg: "rgba(139,92,246,.1)", label: "Match Found", sub: "Sub-second algorithmic scan" },
       { icon: "🔔", bg: "rgba(16,185,129,.1)", label: "Both Parties Notified", sub: "Push + in-app confirmation" },
@@ -61,8 +61,8 @@ const steps = [
     num: "06", title: "Rate & Earn Rewards",
     desc: "After each successful exchange, rate your experience. High-quality ratings unlock referral rewards, priority matching, and reduced fees on future transactions.",
     items: [
-      { icon: "⭐", bg: "rgba(245,158,11,.1)", label: "Rate Your Peer", sub: "Builds trust score for both parties" },
-      { icon: "🎁", bg: "rgba(16,185,129,.1)", label: "Referral Reward Earned", sub: "Invite peers · earn credit" },
+      { icon: "⭐", bg: "rgba(245,158,11,.1)", label: "Rate Our Verified members", sub: "Builds trust score for both parties" },
+      { icon: "🎁", bg: "rgba(16,185,129,.1)", label: "Referral Reward Earned", sub: "Invite others · earn credit" },
       { icon: "📈", bg: "rgba(26,86,219,.1)", label: "Priority Access Unlocked", sub: "Better match rates over time" },
     ],
     pips: [true, true, true, true, true, true],
@@ -93,7 +93,7 @@ export function HowItWorks() {
     <section id="how" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">How It Works</div>
+          <div className="eyebrow"></div>
           <h2>Six Steps to Seamless FX</h2>
           <p>From sign-up to settlement, every step is designed for clarity, speed, and zero friction.</p>
         </div>

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 
 const FALLBACK: Record<string, number> = {
-  "USD-NGN": 1567, "USD-KES": 129.4, "USD-GHS": 14.8,
-  "GBP-NGN": 2040, "GBP-KES": 168.5, "GBP-GHS": 19.2,
-  "CAD-NGN": 1143, "CAD-KES": 94.5, "CAD-GHS": 10.8,
-  "AED-NGN": 426.8, "AED-KES": 35.2, "AED-GHS": 4.0,
+  "USD-NGN": 1371, "USD-KES": 129.4, "USD-GHS": 14.8,
+  "GBP-NGN": 1780, "GBP-KES": 168.5, "GBP-GHS": 19.2,
+  "CAD-NGN": 1010, "CAD-KES": 94.5, "CAD-GHS": 10.8,
+  "AED-NGN": 373,  "AED-KES": 35.2, "AED-GHS": 4.0,
 };
 const currSymbols: Record<string, string> = { NGN: "₦", KES: "KSh", GHS: "GH₵" };
 
@@ -12,8 +12,9 @@ export function Calculator() {
   const [amount, setAmount] = useState(1000);
   const [from, setFrom] = useState("USD");
   const [to, setTo] = useState("NGN");
-  const [calcRates, setCalcRates] = useState<Record<string, number>>(FALLBACK);
+  const [liveRates, setLiveRates] = useState<Record<string, number>>(FALLBACK);
   const [ratesLabel, setRatesLabel] = useState("Illustrative mid-market estimates");
+  const [customRate, setCustomRate] = useState<number | "">(0);
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -29,12 +30,13 @@ export function Calculator() {
       const gbp = r.gbp ?? 1;
       const cad = r.cad ?? 1;
       const aed = r.aed ?? 1;
-      setCalcRates({
+      const rates = {
         "USD-NGN": round(ngn),       "USD-KES": round(kes),       "USD-GHS": round(ghs),
         "GBP-NGN": round(ngn / gbp), "GBP-KES": round(kes / gbp), "GBP-GHS": round(ghs / gbp),
         "CAD-NGN": round(ngn / cad), "CAD-KES": round(kes / cad), "CAD-GHS": round(ghs / cad),
         "AED-NGN": round(ngn / aed), "AED-KES": round(kes / aed), "AED-GHS": round(ghs / aed),
-      });
+      };
+      setLiveRates(rates);
       setRatesLabel(`Live mid-market rate · ${data.date ?? "today"}`);
     };
     fetch(PRIMARY)
@@ -52,29 +54,39 @@ export function Calculator() {
   }, []);
 
   const key = `${from}-${to}`;
-  const midRate = calcRates[key] ?? FALLBACK[key] ?? 1567;
+  const officialRate = liveRates[key] ?? FALLBACK[key] ?? 1371;
   const sym = currSymbols[to] ?? "";
-  const xspRecv   = Math.round(amount * midRate * 1.04);   // P2P market rate — beats bank
-  const bankRecv  = Math.round(amount * midRate * 1.01);   // real bank rate (~₦1,373 for NGN)
-  const walletRecv = Math.round(amount * midRate * 0.98);  // wallet apps after fees
-  const savingsVsBank = xspRecv - bankRecv;
-  const savingsVsWallet = xspRecv - walletRecv;
+
+  useEffect(() => {
+    setCustomRate(officialRate);
+  }, [officialRate, from, to]);
+
+  const myRate = typeof customRate === "number" && customRate > 0 ? customRate : officialRate;
+  const buyerPaysYou = Math.round(amount * myRate);
+  const atOfficialRate = Math.round(amount * officialRate);
+  const diff = buyerPaysYou - atOfficialRate;
+  const diffLabel = diff >= 0
+    ? `+${sym}${Math.abs(diff).toLocaleString()} above official`
+    : `${sym}${Math.abs(diff).toLocaleString()} below official`;
+  const diffColor = diff >= 0 ? "var(--mint)" : "var(--red, #ef4444)";
 
   return (
     <section id="calculator" className="section-alt" ref={ref}>
       <div className="container">
         <div className="section-header fade-up">
-          <div className="eyebrow">Savings Calculator</div>
-          <h2>See What You Save</h2>
-          <p>Enter an amount and currency pair — see exactly how much more stays in your pocket with Xspeeria.</p>
+          <div className="eyebrow"></div>
+          <h2>Set Your Own Rate</h2>
+          <p>On Xspeeria, you decide the rate you want. Post your listing — buyers find you and pay exactly what you set. All settlements through licensed partner banks.</p>
         </div>
         <div className="calc-grid fade-up">
           <div className="calc-form">
-            <h3>Calculate Your Savings</h3>
-            <p>Compare Xspeeria vs banks and wallets in real time.</p>
+            <h3>Post Your Rate</h3>
+            <p style={{ fontSize: ".86rem", color: "var(--text-sub)", marginBottom: "20px" }}>
+              Set the rate you want to sell at. You're in control — buyers accept your terms.
+            </p>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="calc-amount">Amount</label>
+                <label htmlFor="calc-amount">I'm Selling</label>
                 <input
                   type="number"
                   id="calc-amount"
@@ -84,7 +96,7 @@ export function Calculator() {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="calc-from">From Currency</label>
+                <label htmlFor="calc-from">Currency</label>
                 <select id="calc-from" value={from} onChange={(e) => setFrom(e.target.value)}>
                   <option value="USD">🇺🇸 USD</option>
                   <option value="GBP">🇬🇧 GBP</option>
@@ -93,46 +105,69 @@ export function Calculator() {
                 </select>
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: "20px" }}>
-              <label htmlFor="calc-to">To Currency</label>
+            <div className="form-group" style={{ marginBottom: "16px" }}>
+              <label htmlFor="calc-to">Buyer Pays In</label>
               <select id="calc-to" value={to} onChange={(e) => setTo(e.target.value)}>
                 <option value="NGN">🇳🇬 NGN — Nigerian Naira</option>
                 <option value="KES">🇰🇪 KES — Kenyan Shilling</option>
                 <option value="GHS">🇬🇭 GHS — Ghanaian Cedi</option>
               </select>
             </div>
-            <p style={{ fontSize: ".78rem", color: "var(--text-dim)" }}>
+            <div className="form-group" style={{ marginBottom: "8px" }}>
+              <label htmlFor="calc-rate">
+                My Rate ({sym} per {from})
+                <span style={{ fontWeight: 400, color: "var(--text-dim)", marginLeft: 6, fontSize: ".78rem" }}>
+                  — Official today: {sym}{officialRate.toLocaleString()}
+                </span>
+              </label>
+              <input
+                type="number"
+                id="calc-rate"
+                value={customRate}
+                min={1}
+                onChange={(e) => setCustomRate(parseFloat(e.target.value) || "")}
+                placeholder={`e.g. ${officialRate}`}
+                style={{ fontWeight: 700 }}
+              />
+            </div>
+            <p style={{ fontSize: ".75rem", color: "var(--text-dim)" }}>
               * {ratesLabel}
             </p>
           </div>
+
           <div className="calc-result">
             <div className="result-main">
-              <div className="result-label">You Save vs Banks</div>
-              <div className="result-amount">{sym}{savingsVsBank.toLocaleString()}</div>
-              <div className="result-sub">on a {from} {amount.toLocaleString()} exchange</div>
+              <div className="result-label">Buyer Pays You</div>
+              <div className="result-amount">{sym}{buyerPaysYou.toLocaleString()}</div>
+              <div className="result-sub">for {from} {amount.toLocaleString()} at your rate</div>
             </div>
+
             <table className="comparison-table">
               <thead>
-                <tr><th>Platform</th><th>Peer Receives</th><th>vs Xspeeria</th></tr>
+                <tr><th>Rate Scenario</th><th>You Receive</th><th>Difference</th></tr>
               </thead>
               <tbody>
                 <tr className="highlight-row">
-                  <td>✦ Xspeeria</td>
-                  <td>{sym}{xspRecv.toLocaleString()}</td>
-                  <td><span className="savings-tag">Best</span></td>
+                  <td>✦ Your Rate ({sym}{myRate.toLocaleString()})</td>
+                  <td>{sym}{buyerPaysYou.toLocaleString()}</td>
+                  <td><span style={{ color: diffColor, fontWeight: 700, fontSize: ".78rem" }}>{diffLabel}</span></td>
                 </tr>
                 <tr>
-                  <td>Traditional Banks</td>
-                  <td>{sym}{bankRecv.toLocaleString()}</td>
-                  <td><span className="loss-tag">−{sym}{savingsVsBank.toLocaleString()}</span></td>
+                  <td>Official Mid-Market</td>
+                  <td>{sym}{atOfficialRate.toLocaleString()}</td>
+                  <td><span className="savings-tag">Reference</span></td>
                 </tr>
                 <tr>
-                  <td>Wallet Apps</td>
-                  <td>{sym}{walletRecv.toLocaleString()}</td>
-                  <td><span className="loss-tag">−{sym}{savingsVsWallet.toLocaleString()}</span></td>
+                  <td>Traditional Bank</td>
+                  <td>{sym}{Math.round(amount * officialRate * 0.96).toLocaleString()}</td>
+                  <td><span className="loss-tag">−4% margin</span></td>
                 </tr>
               </tbody>
             </table>
+
+            <div style={{ marginTop: 16, padding: "12px 16px", background: "rgba(16,185,129,.08)", borderRadius: 10, border: "1px solid rgba(16,185,129,.2)", fontSize: ".8rem", color: "var(--text-sub)", lineHeight: 1.6 }}>
+              <strong style={{ color: "var(--mint)" }}>How it works:</strong> Post your rate on Xspeeria. Buyers browsing the Exchange Network find your listing and accept your terms. Settlement flows instantly through our licensed banking partners — you never hold counterparty funds.
+            </div>
           </div>
         </div>
       </div>
