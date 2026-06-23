@@ -2,7 +2,7 @@ import { useState } from "react";
 
 export function CtaFooter() {
   const [email, setEmail] = useState("");
-  const [msg, setMsg] = useState("Free to join. No credit card required.");
+  const [msg, setMsg] = useState("Free to join the waitlist. No credit card required.");
   const [msgColor, setMsgColor] = useState("rgba(255,255,255,.35)");
   const [logoError, setLogoError] = useState(false);
 
@@ -22,7 +22,7 @@ export function CtaFooter() {
     <footer id="cta-footer">
       <div className="container">
         <div className="cta-block">
-          <div className="eyebrow" style={{ marginBottom: "12px" }}>Get Started Free</div>
+          <div className="eyebrow" style={{ marginBottom: "12px" }}>Early Access</div>
           <h2>Ready to Exchange<br />at the Real Rate?</h2>
           <p>Join thousands of people already saving on every international transfer.</p>
           <div className="waitlist-form">
@@ -34,7 +34,7 @@ export function CtaFooter() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") joinWaitlist(); }}
             />
-            <button onClick={joinWaitlist}>Create Free Account</button>
+            <button onClick={joinWaitlist}>Join Waitlist</button>
           </div>
           <div className="waitlist-note" style={{ color: msgColor }}>{msg}</div>
         </div>

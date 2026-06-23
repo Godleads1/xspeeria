@@ -20,7 +20,19 @@ function XspeeriaApp() {
     <>
       <Background />
       <Nav onVideoOpen={() => setVideoOpen(true)} />
-      <div className="coming-soon-bar" aria-label="App launching soon">🚀 COMING SOON</div>
+      <div className="coming-soon-bar" aria-label="Xspeeria waitlist">
+        <div className="csb-track">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <span key={i} className="csb-item">
+              <span className="csb-dot" aria-hidden="true">✦</span>
+              <span className="csb-text">
+                <span className="csb-brand">Xspeeria</span> is coming.
+              </span>
+              <span className="csb-cta">Get early access — join the waitlist now</span>
+            </span>
+          ))}
+        </div>
+      </div>
       <main>
         <Hero onVideoOpen={() => setVideoOpen(true)} />
         <TrustBar />
