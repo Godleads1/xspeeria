@@ -1,0 +1,81 @@
+# ==============================
+# XSPEERIA — GIT IGNORE
+# ==============================
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# Claude local/private settings
+.claude/settings.local.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+
+# --- Node / frontend ---
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# --- IDE / OS ---
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp ---
+*.log
+logs/
+tmp/
+temp/
+
+# --- Local databases ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Secrets / certificates / keys ---
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# --- Infrastructure / deployment secrets ---
+terraform.tfstate
+terraform.tfstate.*
+*.tfvars
+*.tfvars.json
+secrets/
+private/
+
+# --- Local backups ---
+.backup-before-repair/
+
+# --- Misc ---
+*.swp
+*.swo
