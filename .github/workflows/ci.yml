@@ -81,7 +81,7 @@ jobs:
         if: steps.tests.outputs.found == 'true'
         run: pytest
 
-      -       - name: Detect dependency files
+      - name: Detect dependency files
         id: dependencies
         shell: bash
         run: |
@@ -92,7 +92,7 @@ jobs:
             echo "found=true" >> "$GITHUB_OUTPUT"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No application dependency lock/file exists yet."
+            echo "No application dependency file exists yet."
           fi
 
       - name: Dependency audit
@@ -103,5 +103,5 @@ jobs:
           elif [ -f requirements-dev.txt ]; then
             pip-audit -r requirements-dev.txt
           else
-            echo "Dependency lock file detected; project-specific audit configuration will be added with dependency management."
+            echo "Dependency lock file detected; project-specific audit will be configured with dependency management."
           fi
