@@ -1,0 +1,40 @@
+[project]
+name = "xspeeria"
+version = "0.0.0"
+description = "Xspeeria application"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    ".git",
+    ".claude",
+    ".impeccable",
+    ".backup-before-repair",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+exclude = [
+    "^\\.claude/",
+    "^\\.impeccable/",
+    "^\\.backup-before-repair/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.bandit]
+exclude_dirs = [
+    ".claude",
+    ".impeccable",
+    ".backup-before-repair",
+    "tests",
+]

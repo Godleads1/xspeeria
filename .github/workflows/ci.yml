@@ -1,0 +1,85 @@
+name: Xspeeria CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    name: Python Quality & Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CI tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff mypy pytest bandit pip-audit
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Detect Python source files
+        id: python_files
+        shell: bash
+        run: |
+          FILES=$(find . -type f -name "*.py" \
+            -not -path "./.git/*" \
+            -not -path "./.claude/*" \
+            -not -path "./.impeccable/*" \
+            -not -path "./.backup-before-repair/*")
+
+          if [ -n "$FILES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No Python source files exist yet."
+          fi
+
+      - name: MyPy
+        if: steps.python_files.outputs.found == 'true'
+        run: |
+          FILES=$(find . -type f -name "*.py" \
+            -not -path "./.git/*" \
+            -not -path "./.claude/*" \
+            -not -path "./.impeccable/*" \
+            -not -path "./.backup-before-repair/*")
+          mypy $FILES
+
+      - name: Bandit
+        if: steps.python_files.outputs.found == 'true'
+        run: |
+          bandit -r . \
+            -x ./.claude,./.impeccable,./.backup-before-repair,./tests
+
+      - name: Detect tests
+        id: tests
+        shell: bash
+        run: |
+          if find tests -type f \( -name "test_*.py" -o -name "*_test.py" \) | grep -q .; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No pytest tests exist yet."
+          fi
+
+      - name: Pytest
+        if: steps.tests.outputs.found == 'true'
+        run: pytest
+
+      - name: Dependency audit
+        run: pip-audit
