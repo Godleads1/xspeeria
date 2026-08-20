@@ -108,7 +108,6 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 - **Typefaces are undecided.** SF Pro / Inter is documented intent, not a licensed decision. Record the choice when it is made.
 
-
 - **8pt spacing system.** Currency and numeric values render in tabular figures, right-aligned in lists, never truncated.
 - **Visual references only:** aspects of Apple Wallet's polish, Revolut's financial information clarity, Stripe's precision, and Linear's interaction discipline may inform visual craft.
 - These references do not define product architecture or product metaphors. Xspeeria must never visually imply stored-value wallet functionality, custody, card balances, cryptocurrency trading, or banking services.
@@ -116,7 +115,7 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 ## Evidence on Hand
 
-**Exists:** the logo/wordmark (user-supplied, not yet in the repo); the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
+**Exists:** the official logo/wordmark at `assets/brand/xspeeria-logo.png`; the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
 
 **Does not exist — never fabricate:**
 
