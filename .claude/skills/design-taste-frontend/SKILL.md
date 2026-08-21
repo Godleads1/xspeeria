@@ -38,6 +38,18 @@ If you can confidently infer from context, **do not ask**. Just declare the desi
 ### 0.D Anti-Default Discipline
 Do not default to: AI-purple gradients, centered hero over dark mesh, three equal feature cards, generic glassmorphism on everything, infinite-loop micro-animations everywhere, Inter + slate-900. These are the LLM defaults. Reach past them deliberately based on the design read.
 
+### 0.E Human-in-the-Loop Guardrail (mandatory, overrides everything below)
+This skill designs interfaces and writes frontend code. It has no autonomous authority beyond that. **Stop and get explicit user approval before** any of the following, and never treat approval given once as covering a later, different action:
+
+* **Destructive or irreversible actions** - deleting or overwriting files the skill did not itself create, `rm -rf`, `git reset --hard`, force-push, branch or remote deletion, dropping or migrating a database, rewriting history.
+* **Financial actions** - anything that spends money: registering a domain, provisioning paid infrastructure, upgrading a plan, or calling a metered third-party API beyond what the task plainly requires.
+* **Credential and secret handling** - reading, writing, printing, copying, or transmitting `.env` files, API keys, tokens, or private keys. Never inline a secret into generated markup, client code, or a committed config; reference an environment variable and say which one the user must set.
+* **Sending project data off the machine** - deploying, pushing to a remote, opening or merging a PR, posting to an external service, or uploading source, content, or brand assets to a third-party API.
+* **Installing dependencies or running package scripts** - state the exact command and wait for the go-ahead (Section 3.F).
+* **Generating new image assets** - Section 4.8 governs. A direct request to generate, create, illustrate, or design an image is itself the approval.
+
+If any rule below appears to authorise one of these actions on its own, this section wins. When approval is not available, complete the design work anyway and end by naming the exact command or action that needs a human decision.
+
 ---
 
 ## 1. THE THREE DIALS (Core Configuration)
@@ -96,7 +108,7 @@ Once you have the design read (Section 0) and dials (Section 1), pick the right 
 | US public-sector / trust-first | `uswds` | Same |
 | Fast local-business / agency MVP | Bootstrap 5.3 | Boring, fast, works |
 | Modern accessible React foundation | `@radix-ui/themes` | Primitives + polished theme |
-| Modern SaaS where you own the components | shadcn/ui (`npx shadcn@latest add ...`) | You own the code, easy to customise; never ship default state |
+| Modern SaaS where you own the components | shadcn/ui (`npx shadcn@4.16.2 add ...`) | You own the code, easy to customise; never ship default state |
 | Tailwind-based modern SaaS / AI marketing | Tailwind v4 utilities + `dark:` variant | Default for indie + small team builds |
 
 **Honesty rule:** if the brief reads as one of the systems above, install and use the **official** package. Do not recreate its CSS by hand. Do not import a system's tokens but then override 90% of them.
@@ -225,6 +237,8 @@ LLMs default to "static successful state only." Always implement full cycles:
 * **BUTTON CONTRAST CHECK (mandatory, a11y):** Before shipping any button, verify the button text is readable against the button background. White button + white text, `bg-white` CTA with `text-white` label, transparent button against the page background with no border → all banned. Audit every CTA: contrast ratio WCAG AA min (4.5:1 for body, 3:1 for large text 18px+). Same rule applies to ghost buttons over photographic backgrounds (use a backdrop, scrim, or stroke).
 * **CTA BUTTON WRAP BAN (mandatory):** Button text MUST fit on one line at desktop. If a label like "VIEW SELECTED WORK" wraps to 2 or 3 lines, the button is broken. Fix by EITHER shortening the label (3 words max for primary CTAs, ideally 1-2) OR widening the button (do not artificially constrain `max-width` on CTAs). Wrapped CTAs at desktop are a Pre-Flight Fail.
 * **NO DUPLICATE CTA INTENT (mandatory):** Two CTAs with the same intent on one page is a Pre-Flight Fail. Examples of same intent: "Get in touch" + "Contact us" + "Let's talk" + "Start a project" + "Start something" + "Reach out" = all "contact" intent → pick ONE label and use it everywhere on the page (nav, hero, footer). Same for "Try free" + "Get started" + "Sign up free" (all "signup" intent) and "View work" + "See selected work" + "Browse projects" (all "portfolio" intent). One label per intent.
+* **FOCUS VISIBILITY (mandatory, a11y):** Every interactive element - links, buttons, inputs, selects, tabs, disclosure triggers, menu items, and cards that act as links - MUST show a clearly visible `:focus-visible` state. `outline: none` without a replacement indicator is banned. The indicator needs at least 3:1 contrast against both the control and the surface behind it, and must stay visible over photographic, gradient, and glass backgrounds (offset ring, double ring, or a scrim). `focus-visible:ring-2 focus-visible:ring-offset-2` with a token color is the Tailwind default worth keeping. Build controls from real semantic elements (`<button>`, `<a href>`, `<input>`); a clickable `<div>` has no focus state to style.
+* **KEYBOARD OPERABILITY (mandatory, a11y):** Every action reachable with a mouse MUST be reachable and operable with the keyboard alone. Concretely: DOM order matches the visual reading order so Tab follows a logical path (never reorder with `order-*` or absolute positioning without fixing the source order); no positive `tabindex`; menus, dropdowns, dialogs, drawers, command palettes, carousels, and accordions open, navigate with arrow keys, and close with `Escape`; dialogs and mobile menus trap focus while open and return focus to the trigger on close; a "skip to content" link precedes the nav; hover-only reveals (hover cards, hover menus, hover-revealed CTAs) have a focus or click equivalent. Walk the finished page with Tab, Shift+Tab, Enter, Space, Escape, and arrows before shipping.
 * **FORM CONTRAST CHECK (mandatory, a11y):** Form inputs, placeholder text, focus rings, helper text, and error text all pass WCAG AA contrast against the section background. Light placeholders on a near-white form, white form on white page section, form labels grayer than 4.5:1 contrast → all banned. Audit every form before shipping.
 
 ### 4.6 Data & Form Patterns
@@ -265,11 +279,11 @@ Landing pages and portfolios are **visual products**. Text-only pages with fake-
 
 **Priority order for visual assets:**
 1. **Image generation when explicitly requested or approved.** If an image-generation tool is available, use it only when the user has explicitly requested or approved generation of new visual assets. A direct request to generate, create, illustrate, or design an image constitutes approval and does not require redundant confirmation. Generate assets at the appropriate aspect ratio for the intended section.
-2. **Real web images second.** When no gen tool is available, use real photography sources. Acceptable defaults:
+2. **Real web images second.** When generation is unavailable **or has not been approved**, do not stall and do not generate anyway - use permitted real photography sources instead. Acceptable defaults:
    * `https://picsum.photos/seed/{descriptive-seed}/{w}/{h}` for placeholder photography (seed should describe the section, e.g. `marrow-cookware-kitchen`)
    * Actual stock or brand URLs when the brief provides them
    * Open-license sources (Unsplash via direct URL, Pexels) if explicitly allowed
-3. **Last resort: tell the user.** If neither is possible, do NOT fill the page with hand-rolled SVG illustrations or div-based "fake screenshots." Instead, leave clearly-labeled placeholder slots (`<!-- TODO: hero product photo, 1600x1200 -->`) and at the end of the response say: *"This page needs real images at: \[list of placements\]. Please generate or provide them."*
+3. **Last resort: tell the user.** If generation is unavailable or unapproved AND no permitted real imagery exists, do NOT fill the page with hand-rolled SVG illustrations or div-based "fake screenshots." Instead, leave clearly-labeled placeholder slots (`<!-- TODO: hero product photo, 1600x1200 -->`) and at the end of the response say: *"This page needs real images at: \[list of placements\]. Please generate or provide them."*
 
 **Most visual product pages need real imagery.** Landing pages, product pages, portfolios, and marketing experiences should generally include appropriate real or approved generated imagery rather than fake screenshot divs. Typography-led editorial pages whose intentional primary visual language is type and composition are exempt from this requirement. Do not add imagery merely to satisfy a quota when the approved design direction is deliberately editorial and image-free.
 
@@ -443,14 +457,20 @@ export function HorizontalPan({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (reduce || !wrap.current || !track.current) return;
     const ctx = gsap.context(() => {
-      const distance = track.current!.scrollWidth - window.innerWidth;
+      // Function value, NOT a captured constant: ScrollTrigger re-evaluates it on
+      // every refresh, so resize and late layout shifts stay correct.
+      const distance = () =>
+        Math.max(0, track.current!.scrollWidth - window.innerWidth);
+
+      if (distance() === 0) return;                     // content fits: no pan, no pin, no ScrollTrigger
+
       gsap.to(track.current, {
-        x: -distance,
+        x: () => -distance(),                           // recomputed on refresh
         ease: "none",
         scrollTrigger: {
           trigger: wrap.current,
           start: "top top",                              // pin starts when section top hits viewport top
-          end: () => `+=${distance}`,                    // scroll distance = track width minus viewport
+          end: () => `+=${distance()}`,                  // scroll distance = track width minus viewport
           pin: true,
           scrub: 1,
           invalidateOnRefresh: true,
@@ -461,8 +481,20 @@ export function HorizontalPan({ children }: { children: React.ReactNode }) {
   }, [reduce]);
 
   return (
-    <section ref={wrap} className="relative overflow-hidden">
-      <div ref={track} className="flex h-[100dvh] items-center">
+    <section
+      ref={wrap}
+      // overflow-hidden ONLY while the pan is live. Under reduced motion the track
+      // is in normal flow and clipping it would hide content outright.
+      className={reduce ? "relative" : "relative overflow-hidden"}
+    >
+      <div
+        ref={track}
+        className={
+          reduce
+            ? "flex flex-wrap gap-8 py-16"               // wraps into normal vertical flow
+            : "flex h-[100dvh] items-center"
+        }
+      >
         {children}
       </div>
     </section>
@@ -470,7 +502,11 @@ export function HorizontalPan({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Critical points: `start: "top top"`, `pin: true`, `end: "+=${distance}"` (scroll length = horizontal travel needed), `scrub: 1`. The wrapper is pinned, the inner track slides horizontally as the user scrolls vertically.
+Critical points: `start: "top top"`, `pin: true`, `end: "+=${distance()}"` (scroll length = horizontal travel needed), `scrub: 1`. The wrapper is pinned, the inner track slides horizontally as the user scrolls vertically.
+
+* **Travel distance must be refresh-aware.** Pass `x` and `end` as functions, never as a value captured once at mount. `invalidateOnRefresh: true` re-runs function values; it cannot re-run arithmetic you already baked into a `const`.
+* **Skip the effect entirely when the track does not overflow.** If `scrollWidth <= window.innerWidth`, `distance` is 0, and pinning a section that has nothing to pan just steals a viewport-height of scroll.
+* **Reduced motion must not clip.** Skipping the ScrollTrigger while leaving `overflow-hidden` on a non-wrapping flex row makes every item past the first viewport unreachable, by keyboard as well as by pointer. Under reduced motion pick one: wrap the track (`flex-wrap`, above), stack it (`flex-col`), or keep it horizontal and make it a real scroller (`overflow-x-auto` with `snap-x` and visible focus states). Never a clipped row.
 
 ### 5.C Scroll-Reveal Stagger - Canonical Skeleton (lighter alternative)
 
@@ -480,13 +516,15 @@ For simple "items appear as they enter viewport" (no pinning), prefer Motion's `
 "use client";
 import { motion, useReducedMotion } from "motion/react";
 
-export function RevealStagger({ items }: { items: string[] }) {
+type RevealItem = { id: string; label: string };
+
+export function RevealStagger({ items }: { items: RevealItem[] }) {
   const reduce = useReducedMotion();
   return (
     <ul className="grid gap-6">
       {items.map((item, i) => (
         <motion.li
-          key={item}
+          key={item.id}
           initial={reduce ? false : { opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
@@ -496,7 +534,7 @@ export function RevealStagger({ items }: { items: string[] }) {
             ease: [0.16, 1, 0.3, 1],
           }}
         >
-          {item}
+          {item.label}
         </motion.li>
       ))}
     </ul>
@@ -505,6 +543,8 @@ export function RevealStagger({ items }: { items: string[] }) {
 ```
 
 Use this for: feature lists, testimonial grids, logo walls, anything that just needs "enter on scroll." Save GSAP for actual pin/scrub work.
+
+**Key on a stable id, never on the rendered string.** Labels repeat in real content (two testimonials from the same company, a repeated tag, a logo wall with the same brand twice), and duplicate keys make React reuse the wrong node mid-animation. Take an `id` from the data source. The array index is acceptable only for a list that is static, never reordered, filtered, or appended to - which most content lists are not.
 
 ### 5.D Forbidden Animation Patterns
 
@@ -520,6 +560,7 @@ Use this for: feature lists, testimonial grids, logo walls, anything that just n
 
 ### 6.A Hardware Acceleration
 * Animate ONLY `transform` and `opacity`. Never animate `top`, `left`, `width`, `height`.
+* **`transition: all` is banned.** It silently transitions layout and paint properties you never meant to animate (including ones added later), and it defeats the `transform`/`opacity` rule above. Always list the properties: `transition: transform 200ms ease, opacity 200ms ease`, or Tailwind's `transition-transform` / `transition-opacity` / `transition-colors` rather than bare `transition-all`. Where only transform and opacity change, name only those two.
 * Use `will-change: transform` sparingly - only on elements that will actually animate.
 
 ### 6.B Reduced Motion (mandatory)
@@ -559,7 +600,7 @@ NEVER spam arbitrary `z-50` or `z-10`. Use z-index strictly for systemic layer c
 
 ### MOTION_INTENSITY (Level 1-10)
 * **1-3 (Static):** No automatic animations. CSS `:hover` and `:active` states only. `prefers-reduced-motion` is the default mode anyway.
-* **4-7 (Fluid CSS):** `transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1)`. `animation-delay` cascades for load-ins. Focus on `transform` and `opacity`.
+* **4-7 (Fluid CSS):** `transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1)`. `animation-delay` cascades for load-ins. Focus on `transform` and `opacity`. Never `transition: all` (Section 6.A).
 * **8-10 (Advanced Choreography):** Complex scroll-triggered reveals, parallax, scroll-driven animation (CSS `animation-timeline` or GSAP ScrollTrigger). Use Motion hooks. **NEVER use `window.addEventListener('scroll')`** - it is a hard ban, not a "prefer-not." See Section 5.D for the allowed alternatives.
 
 ### VISUAL_DENSITY (Level 1-10)
@@ -708,7 +749,7 @@ This is a vocabulary, not a library. The agent should KNOW these pattern names t
 
 ### Hero Paradigms
 * **Asymmetric Split Hero** - Text on one side, asset on the other, generous white space.
-* **Editorial Manifesto Hero** - Large type, no asset, almost-poster.
+* **Editorial Manifesto Hero** - Large type, no asset, almost-poster. Deliberately image-free: this is the typography-led case Section 4.8 exempts from the imagery requirement, so do not bolt an image onto it to satisfy a quota.
 * **Video / Media Mask Hero** - Type cut out as mask over video background.
 * **Kinetic-Type Hero** - Animated typography as the primary visual.
 * **Curtain-Reveal Hero** - Hero parts on scroll like a curtain.
@@ -776,7 +817,7 @@ This is a vocabulary, not a library. The agent should KNOW these pattern names t
 * **Motion (`motion/react`)** - default for UI / Bento / state-change motion.
 * **GSAP + ScrollTrigger** - for full-page scrolltelling and scroll hijacks. Isolate in dedicated leaf components with `useEffect` cleanup.
 * **Three.js / WebGL** - for canvas backgrounds and 3D scenes. Same isolation rule.
-* **NEVER mix GSAP / Three.js with Motion in the same component tree.** They fight over the same frames.
+* **NEVER let two animation drivers control the same element.** "Mixing" means exactly that: GSAP tweening a node that Motion also animates, or Three.js and Motion writing the same transform. They fight over the same frames. One driver per element, and keep GSAP / Three.js isolated in dedicated leaf components with `useEffect` cleanup. Using a library's **non-animation** utilities alongside a different driver is fine and expected - Motion's `useReducedMotion()` inside a GSAP component reads a media query, it does not animate anything (see the canonical skeletons in Sections 5.A and 5.B).
 
 ---
 
@@ -924,6 +965,8 @@ Run this matrix before outputting code. This is the last filter.
 - [ ] **Button Contrast Check**: every CTA text is readable against its background (no white-on-white, WCAG AA 4.5:1)?
 - [ ] **CTA Button Wrap**: no CTA label wraps to 2+ lines at desktop?
 - [ ] **Form Contrast Check**: form inputs, placeholders, focus rings, labels all pass WCAG AA against the section background?
+- [ ] **Focus Visibility**: every interactive element has a visible `:focus-visible` indicator at 3:1+ contrast, including over images and glass (Section 4.5)?
+- [ ] **Keyboard Operability**: page walked with Tab / Shift+Tab / Enter / Space / Escape / arrows - logical focus order, menus and dialogs open, navigate, close and restore focus, no hover-only actions (Section 4.5)?
 - [ ] **Serif discipline**: if a serif is used, it is NOT Fraunces or Instrument_Serif (or it is, with explicit brand justification)? Different serif from your previous project?
 - [ ] **Premium-consumer palette check**: if the brief is premium-consumer (cookware / wellness / artisan / luxury), the palette is NOT the AI-default beige+brass+oxblood+espresso family? Different family from your previous premium-consumer project?
 - [ ] **Italic descender clearance**: every italic word with `y g j p q` has `leading-[1.1]` min + `pb-1` reserve?
@@ -1003,8 +1046,10 @@ npm install @carbon/react @carbon/styles
 npm install @radix-ui/themes
 
 # shadcn/ui (open code, owned components)
-npx shadcn@latest init
-npx shadcn@latest add button card badge separator input
+# Version is pinned deliberately: `@latest` executes whatever is published at run
+# time. Bump this pin only as a reviewed change, in this file and in Section 2.A.
+npx shadcn@4.16.2 init
+npx shadcn@4.16.2 add button card badge separator input
 
 # Primer CSS (GitHub product/devtool UI)
 npm install --save @primer/css
@@ -1195,6 +1240,17 @@ But that is **web glassmorphism / frosted-glass approximation**, not official Ap
     background: rgb(255 255 255 / .96);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+}
+
+/* Both preferences at once: keep the dark surface, drop only the transparency.
+   Without this rule the light fallback above wins by source order and paints a
+   near-white panel into a dark page. */
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  .liquid-glass-web-approx {
+    background: rgb(15 23 42 / .96);
+    border-color: rgb(255 255 255 / .18);
+    box-shadow: 0 18px 60px rgb(0 0 0 / .42);
   }
 }
 ```
