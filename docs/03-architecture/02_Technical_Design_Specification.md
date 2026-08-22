@@ -373,7 +373,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 - **Root:** `User`
 - **Entities:** `Profile`, `Device`, `Session`
 - **Value Objects:** `Email`, `PhoneNumber`, `Password Hash`
-- **Invariants:** A `User` cannot transition to `verified` status without an associated `KYCProfile` in `approved` state.
+- **Invariants:** A `User` cannot be treated as identity-verified for KYC-gated actions without an associated KYC case in `approved` state. The authoritative KYC state is `KycCases.status = approved` (`05_API_Contract_Data_Dictionary.md`, KYCCases entity). *Vocabulary note: "verified" is used descriptively here and elsewhere in this document for the same condition; it is not a value of `Users.status`, whose enumeration is `pending_verification, active, suspended, closed`.*
 
 ### 5.3.2 KYCProfile Aggregate
 

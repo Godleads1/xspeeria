@@ -36,7 +36,9 @@ Executive Summary
 
 This document is the binding contract between Xspeeria’s FastAPI backend and all consuming clients — the React Native mobile app, the Next.js Admin console, and any future banking-partner integrations. It specifies REST conventions, authentication mechanics, every MVP endpoint across the eleven core modules identified in ARCHITECTURE.md, a standardized error catalogue, the full data dictionary for every persisted entity, and the domain event catalogue that underlies the platform’s asynchronous (Celery/Redis) processing model.
 
-> **ASSUMPTION:** *API_DATA_DICTIONARY.md names eight entities and one absolute rule (Decimal for money). ARCHITECTURE.md names the module list and technology stack. Every endpoint path, request/response schema, field-level validation rule, error code, and event payload below is a derived specification consistent with those two documents and with SECURITY.md’s stated controls (Argon2, JWT + rotating refresh, MFA, RBAC, AES-256, audit logging, webhook verification). None of this has been confirmed against an actual implementation and must be ratified by backend engineering before being treated as frozen.*
+> **ASSUMPTION:** *API_DATA_DICTIONARY.md names eight entities and one absolute rule (Decimal for money). ARCHITECTURE.md names the module list and technology stack. Every endpoint path, request/response schema, field-level validation rule, error code, and event payload below is a derived specification consistent with those two documents and with the security controls assumed at the time of writing (Argon2, JWT + rotating refresh, MFA, RBAC, AES-256, audit logging, webhook verification) — whose normative source is unresolved, see the note below. None of this has been confirmed against an actual implementation and must be ratified by backend engineering before being treated as frozen.*
+
+> **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Statements below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists.** No normative Security Baseline Specification currently exists in this repository, and the security-baseline decision (Decision 2, `AUDIT_PHASE0_2026-08-18.md` §14) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined** — the controls described therefore lack their expected normative grounding. Documented requirements are not evidence of implementation or verification.
 
 1\. API Standards
 
@@ -88,11 +90,11 @@ All state-mutating POST endpoints that initiate money movement or matching (offe
 |---------------|-------------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | **Token**     | **Lifetime**      | **Storage**                                         | **Notes**                                                                                                     |
 | Access Token  | 15 minutes        | In-memory (mobile), httpOnly cookie (Admin web)     | Bears user_id, role, session_id, kyc_status claims                                                            |
-| Refresh Token | 30 days, rotating | Secure storage (Expo SecureStore) / httpOnly cookie | Single-use; each refresh issues a new refresh token and invalidates the prior one (rotation), per SECURITY.md |
+| Refresh Token | 30 days, rotating | Secure storage (Expo SecureStore) / httpOnly cookie | Single-use; each refresh issues a new refresh token and invalidates the prior one (rotation), per the applicable approved security policy |
 
 2.2 MFA
 
-MFA is enforced at login for all users post-KYC-approval and is mandatory (non-optional) for any Admin-role account, consistent with SECURITY.md’s RBAC posture. Supported factors: SMS OTP, Email OTP, and TOTP authenticator app.
+MFA is enforced at login for all users post-KYC-approval and is mandatory (non-optional) for any Admin-role account, consistent with the RBAC posture of the applicable approved security policy. Supported factors: SMS OTP, Email OTP, and TOTP authenticator app.
 
 2.3 Device Sessions
 
@@ -130,7 +132,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Success Response | 200 OK — { access_token, refresh_token, mfa_required: false } or { mfa_challenge_id, mfa_required: true }  |
 | Error Responses  | AUTH_401_INVALID_CREDENTIALS, AUTH_429_RATE_LIMITED                                                        |
 | Validation Rules | Rate-limited to 5 attempts per 15 minutes per account and per IP                                           |
-| Business Rules   | Failed attempts increment a rolling counter; account locks for 15 minutes after threshold, per SECURITY.md |
+| Business Rules   | Failed attempts increment a rolling counter; account locks for 15 minutes after threshold, per the applicable approved security policy |
 
 **POST /v1/auth/mfa/verify**
 
@@ -260,7 +262,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Success Response | 201 Created — { document_id, status: "uploaded" }                                                   |
 | Error Responses  | VAL_422_FILE_TOO_LARGE, VAL_422_UNSUPPORTED_FORMAT, KYC_409_CASE_NOT_EDITABLE                       |
 | Validation Rules | Max 10MB per file; only jpg/png/pdf accepted                                                        |
-| Business Rules   | Documents are AES-256 encrypted at rest per SECURITY.md; upload does not itself advance case status |
+| Business Rules   | Documents are AES-256 encrypted at rest per the applicable approved security policy; upload does not itself advance case status |
 
 **POST /v1/kyc/cases/{kyc_case_id}/submit**
 
@@ -302,7 +304,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Success Response | 200 OK — updated KycCase                                                                         |
 | Error Responses  | AUTH_403_FORBIDDEN, VAL_422_REASON_REQUIRED                                                      |
 | Validation Rules | Reason is mandatory on rejection and is surfaced to the user verbatim                            |
-| Business Rules   | Approval unlocks Marketplace/Transaction access for the user; fully audit-logged per SECURITY.md |
+| Business Rules   | Approval unlocks Marketplace/Transaction access for the user; fully audit-logged per the applicable approved security policy |
 
 3.4 Marketplace, Offers & Requests
 
@@ -676,7 +678,7 @@ Core identity and authentication record.
 | email         | VARCHAR(255) | No           | Unique, RFC-5322                                | Login identifier; immutable post-registration |
 | phone         | VARCHAR(20)  | Yes          | E.164 format                                    | Used for SMS OTP and notifications            |
 | password_hash | VARCHAR(255) | No           | Argon2id hash                                   | Never exposed via any API response            |
-| role          | ENUM         | No           | user, business, admin, support                  | Drives RBAC permission set per SECURITY.md    |
+| role          | ENUM         | No           | user, business, admin, support                  | Drives RBAC permission set per the applicable approved security policy |
 | status        | ENUM         | No           | pending_verification, active, suspended, closed | Gates login and marketplace access            |
 | created_at    | TIMESTAMPTZ  | No           | System-set                                      | Audit trail                                   |
 

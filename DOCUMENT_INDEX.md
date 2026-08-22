@@ -375,6 +375,25 @@ Where required, use:
 
 # 11. UI / UX
 
+## Primary visual source of truth — application UI/UX
+
+The **Xspeeria Figma** (`docs/references/figma/Xspeeria.fig` — human-provided design source,
+**untracked pending a versioning decision**). Human authority, 2026-08-22. Where a document in this
+section disagrees with the Figma on a **visual** matter (colour, surface, spacing, visual
+hierarchy), the Figma governs. The documents below remain authoritative for screen behaviour,
+flows, states, interaction detail and accessibility requirements that the Figma does not settle.
+
+Two limits on that authority:
+
+- The Figma contains **painted swatches, not a bound token/variable system**. Xspeeria therefore has
+  **no production design-token system**, and none may be claimed. Observed values are recorded as
+  **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** until human approval freezes them.
+- The Figma is **not** the authority for **logo/brand-asset colours**, which remain open pending
+  confirmation against the original vector — see `PRODUCT.md` “Brand Commitments”.
+
+Observed palette, the Figma Success-swatch label defect, and measured WCAG contrast findings are
+recorded in `docs/09-ui-ux/DESIGN_SYSTEM.md`.
+
 ## Application flow
 
 `docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`

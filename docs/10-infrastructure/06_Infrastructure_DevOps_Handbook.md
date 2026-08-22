@@ -34,9 +34,11 @@ Table of Contents
 
 Executive Summary
 
-This handbook defines how Xspeeria’s infrastructure is provisioned, deployed, monitored, and recovered. It operationalizes the technology choices in ARCHITECTURE.md (FastAPI, PostgreSQL, Redis, SQLAlchemy, Celery, React Native/Expo, Next.js) and the tooling mandated by SECURITY.md (Bandit, Ruff, MyPy, Pytest, pip-audit) into a concrete environment strategy, CI/CD pipeline, Infrastructure-as-Code approach, observability stack, and a set of on-call runbooks for the failure modes most relevant to a real-money P2P exchange platform.
+This handbook defines how Xspeeria’s infrastructure is provisioned, deployed, monitored, and recovered. It operationalizes the technology choices in ARCHITECTURE.md (FastAPI, PostgreSQL, Redis, SQLAlchemy, Celery, React Native/Expo, Next.js) and the quality-gate tooling documented for the project (Bandit, Ruff, MyPy, Pytest, pip-audit) — whose normative source is unresolved, see the note below — into a concrete environment strategy, CI/CD pipeline, Infrastructure-as-Code approach, observability stack, and a set of on-call runbooks for the failure modes most relevant to a real-money P2P exchange platform.
 
-> **ASSUMPTION:** *ARCHITECTURE.md and SECURITY.md specify the technology stack and required quality-gate tools but not a specific cloud provider, region, or hosting topology. This document assumes an AWS-centric deployment (consistent with the "AWS Principal DevOps Architect" role in MASTER_PROMPT.md) as the reference implementation. Provider-specific service names (RDS, ElastiCache, ECS/Fargate) are illustrative and should be confirmed against final infrastructure procurement decisions.*
+> **ASSUMPTION:** *ARCHITECTURE.md specifies the technology stack, and the required quality-gate tools are documented without a normative source (see the note below), but neither specifies a specific cloud provider, region, or hosting topology. This document assumes an AWS-centric deployment (consistent with the "AWS Principal DevOps Architect" role in MASTER_PROMPT.md) as the reference implementation. Provider-specific service names (RDS, ElastiCache, ECS/Fargate) are illustrative and should be confirmed against final infrastructure procurement decisions.*
+
+> **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Statements below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists.** No normative Security Baseline Specification currently exists in this repository, and the security-baseline decision (Decision 2, `AUDIT_PHASE0_2026-08-18.md` §14) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined** — the controls described therefore lack their expected normative grounding. Documented requirements are not evidence of implementation or verification.
 
 1\. Infrastructure Overview
 
@@ -100,7 +102,7 @@ The platform runs as a set of independently deployable services fronting a share
 | Local           | Individual developer machines; full stack via Docker Compose         | Synthetic seed data only                                                      | Developer machine, no shared credentials                                             |
 | Development     | Shared integration environment for in-progress feature branches      | Synthetic data, reset weekly                                                  | Engineering team (VPN-gated)                                                         |
 | Staging         | Production-parity environment for release candidates and QA sign-off | Anonymized/synthetic data mirroring production schema                         | Engineering + QA + Product (VPN-gated)                                               |
-| Production      | Live customer-facing environment                                     | Real customer and financial data, encrypted at rest (AES-256 per SECURITY.md) | Least-privilege RBAC; break-glass procedure for emergency access, fully audit-logged |
+| Production      | Live customer-facing environment                                     | Real customer and financial data, encrypted at rest (AES-256 — requirement documented; normative source unresolved) | Least-privilege RBAC; break-glass procedure for emergency access, fully audit-logged |
 
 Every environment is provisioned from the same Terraform modules (Section 5) with environment-specific variable files, so staging is structurally identical to production — the primary source of "works in staging, fails in production" defects.
 
@@ -181,7 +183,7 @@ Local/Development use a git-ignored .env file loaded via docker-compose’s env_
 | Bandit    | Static application security testing (SAST) for Python                | Blocks merge on high/critical findings |
 | pip-audit | Known-vulnerability scan of Python dependencies                      | Blocks merge on high/critical CVEs     |
 
-This is the exact tool set specified in SECURITY.md, applied as hard CI gates rather than advisory checks — no override path exists that bypasses these gates for main-branch merges.
+This is the tool set presently configured in the repository CI workflow (`.github/workflows/ci.yml`), applied as hard CI gates rather than advisory checks — no override path exists that bypasses these gates for main-branch merges. This is the **current repository configuration**, and must not be represented as an **approved normative security baseline**: no Security Baseline Specification exists and Decision 2 is open.
 
 4.3 Deployment Flow
 

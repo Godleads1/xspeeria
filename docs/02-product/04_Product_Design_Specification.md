@@ -22,6 +22,8 @@ Wallet-less Peer-to-Peer Fiat Currency Exchange
 | Status           | Draft — Pre-Development Blueprint                   |
 | Date             | August 2026                                         |
 
+> **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Screen behaviours below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists**, and the security-baseline decision (Decision 2) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined**; the behaviours described therefore lack their expected normative grounding. Frontend behaviour is never an authoritative security control in any case — authorization is enforced server-side.
+
 Version History
 
 |             |          |             |                                                              |
@@ -72,27 +74,67 @@ Colors are sourced directly from DESIGN_SYSTEM.md and are treated as immutable b
 |                     |          |                                                             |
 |---------------------|----------|-------------------------------------------------------------|
 | **Token**           | **Hex**  | **Usage**                                                   |
-| color.primary.blue  | \#001B68 | Brand identity, primary buttons, headers, active nav, links |
-| color.success.green | \#179A43 | Completed settlement, positive balance delta, success toast |
-| color.alert.red     | \#E52421 | Errors, failed transactions, destructive actions, disputes  |
-| color.accent.gold   | \#F4C21F | Premium accents, badges, KYC-verified marker, rare emphasis |
-| color.bg.base       | \#F8FAFC | App background                                              |
+| color.primary.blue  | \#1F3A8A | Brand identity, primary buttons, headers, active nav, links |
+| color.success.green | \#10B981 | Completed settlement, positive balance delta, success toast |
+| color.alert.red     | \#EF4444 | Errors, failed transactions, destructive actions, disputes  |
+| color.accent.gold   | \#F4C21F | Premium accents, badges, KYC-verified marker, rare emphasis — **no Figma counterpart, `UNKNOWN — NOT VERIFIED`** |
+| color.bg.base       | \#FFFFFF | Application canvas — default screen background              |
 | color.text.primary  | \#111827 | Body copy, headings                                         |
+
+> **RECONCILED — Xspeeria Figma, the primary visual source of truth for application UI/UX.**
+> `color.primary.blue` was `#001B68`, `color.success.green` was `#179A43`, `color.alert.red` was
+> `#E52421`; each is now the Figma-observed value. These are **FIGMA-OBSERVED COLOURS / CANDIDATE
+> APPLICATION TOKENS**, not frozen production tokens — the Figma holds painted swatches, **not** a
+> bound token/variable system, so no production token set exists and none may be claimed until
+> human approval freezes one.
+>
+> `color.bg.base` = `#FFFFFF` was corrected earlier against the human decision in `PRODUCT.md`
+> “Brand Commitments”, 2026-08-20, and is **unchanged** — the Figma agrees. The pre-Figma
+> supporting neutral `#F8FAFC` is superseded by the Figma supporting soft surface `#F8F9FD`.
+>
+> **`UNKNOWN — NOT VERIFIED`:** `color.accent.gold` `#F4C21F` has **no counterpart in the observed
+> Figma palette**. It is retained pending human determination and must not be represented as
+> Figma-confirmed.
+>
+> **Observed in the Figma with no token defined here** — naming these requires design-system
+> approval and is not done in this pass: Secondary `#3B82F6`, Body text `#4B5563`, Warning
+> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`.
+>
+> **Logo/brand-asset colours are a separate question** and are not settled by the Figma — see
+> `PRODUCT.md` “Brand Commitments”. Full observed palette, the Figma Success-swatch label defect,
+> and measured WCAG contrast findings: `DESIGN_SYSTEM.md`.
+>
+> **Consequence (unchanged):** `surface.card` `#FFFFFF` is the same value as the canvas and must be
+> separated by border, elevation or spacing, never by fill.
+
 
 > **ASSUMPTION:** *The following tints/shades and semantic aliases are design-system extensions not present in the source documents, added for implementation completeness.*
 
 |                            |            |                                      |
 |----------------------------|------------|--------------------------------------|
 | **Token**                  | **Hex**    | **Usage**                            |
-| color.primary.blue.10      | \#001B681A | Selected row / active tab background |
-| color.primary.blue.hover   | \#002885   | Button hover                         |
-| color.primary.blue.pressed | \#001350   | Button pressed                       |
-| color.success.green.10     | \#179A431A | Success banner background            |
-| color.alert.red.10         | \#E524211A | Error banner background              |
-| color.gray.100             | \#F3F4F6   | Card borders, dividers               |
-| color.gray.400             | \#9CA3AF   | Placeholder text, disabled icons     |
-| color.gray.600             | \#6B7280   | Secondary text, captions             |
+| color.primary.blue.10      | \#1F3A8A1A | Selected row / active tab background |
+| color.primary.blue.hover   | \#002885   | Button hover — **stale: derived from the superseded `#001B68`, `UNKNOWN — NOT VERIFIED`** |
+| color.primary.blue.pressed | \#001350   | Button pressed — **stale: derived from the superseded `#001B68`, `UNKNOWN — NOT VERIFIED`** |
+| color.success.green.10     | \#10B9811A | Success banner background            |
+| color.alert.red.10         | \#EF44441A | Error banner background              |
+| color.gray.100             | \#E5E7EB   | Card borders, dividers — Figma-observed border/divider value (was `#F3F4F6`) |
+| color.gray.400             | \#9CA3AF   | Placeholder text, disabled icons — matches the Figma disabled-text value exactly |
+| color.gray.600             | \#6B7280   | Secondary text, captions — **ambiguous vs Figma body text `#4B5563`, `UNKNOWN — NOT VERIFIED`** |
 | color.overlay.scrim        | \#00000066 | Modal backdrop                       |
+
+> **Figma reconciliation of the extension tokens.** The three `.10` tints are definitionally the
+> base colour at 10% alpha, so they moved with their bases to the Figma-observed values. The hand-
+> picked `hover` and `pressed` shades were derived from the superseded `#001B68` and have **not**
+> been re-derived — re-deriving them is a design decision, not a mechanical one. `color.gray.100`
+> was repointed to the Figma-observed border/divider value `#E5E7EB` because its stated role
+> ("card borders, dividers") is exactly the role the Figma names.
+>
+> **`UNKNOWN — NOT VERIFIED` — unresolved role mapping.** The Figma observes a **Body text** colour
+> of `#4B5563`, while this document uses `color.text.primary` `#111827` for body copy and
+> `color.gray.600` `#6B7280` for secondary text and captions. Whether `#4B5563` replaces `#6B7280`,
+> replaces `#111827` for body copy, or introduces a third role is **not determinable from the
+> observed swatches**. No value was changed on this row. This requires a human design decision.
 
 2.2 Typography
 
@@ -170,12 +212,12 @@ Tokens are structured for direct export to a theme file consumed by React Native
 |---------------------|---------------------------------|------------------------------------|
 | **Semantic Token**  | **Maps To**                     | **Purpose**                        |
 | action.primary      | color.primary.blue              | Primary button fill, active states |
-| action.primary.text | color.bg.base (#F8FAFC on blue) | Text on primary buttons            |
+| action.primary.text | color.bg.base (#FFFFFF on blue) | Text on primary buttons            |
 | feedback.positive   | color.success.green             | Success states                     |
 | feedback.negative   | color.alert.red                 | Error / destructive states         |
 | feedback.premium    | color.accent.gold               | Verified / premium markers         |
 | surface.base        | color.bg.base                   | Screen background                  |
-| surface.card        | \#FFFFFF                        | Card surfaces atop base background |
+| surface.card        | \#FFFFFF                        | Card surfaces — same value as the canvas; separate by border/elevation, not fill |
 | border.default      | color.gray.100                  | Dividers, input borders (resting)  |
 | border.focus        | color.primary.blue              | Input border on focus              |
 
@@ -195,7 +237,7 @@ The single highest-emphasis action on a screen (e.g., "Confirm Match", "Send").
 | Variants             | Full-width, Inline (auto-width), Icon-leading, Icon-only (44×44 min)                                                     |
 | States               | Default, Hover (web), Pressed, Disabled, Loading (inline spinner replaces label)                                         |
 | Spacing (8pt grid)   | Height 52px, radius.lg (24px), horizontal padding space.4 (24px), min touch target 44×44                                 |
-| Accessibility        | Role: button. Minimum contrast 4.5:1 (white text on \#001B68 = 12.6:1). Disabled state announced via accessibilityState. |
+| Accessibility        | Role: button. Minimum contrast 4.5:1. White text on the Figma-observed primary \#1F3A8A measures **10.34:1** (the superseded `#001B68` measured 15.48:1; the previously stated "12.6:1" was incorrect for either value). Disabled state announced via accessibilityState. |
 | Interaction Behavior | Scale to 0.97 on press (motion.instant), haptic light impact on mobile press, loading state disables re-entry            |
 
 Secondary Button
@@ -477,7 +519,7 @@ Login
 | Component Tree     | ScrollView \> Logo \> FormFields \> GhostButton(forgot) \> PrimaryButton \> GhostButton(register) \> BiometricButton                        |
 | Navigation         | Submit → MFA (if enabled) or Home; Forgot Password link → Forgot Password; Register link → Register                                         |
 | Empty State        | N/A                                                                                                                                         |
-| Error State        | Inline field errors + banner for invalid credentials (rate-limited after 5 attempts per SECURITY.md posture)                                |
+| Error State        | Inline field errors + banner for invalid credentials (rate-limited after 5 attempts per the applicable approved security policy)                                |
 | Loading State      | Primary Button Loading state                                                                                                                |
 | Micro-interactions | Biometric icon pulses once on screen mount if Face ID/Touch ID available                                                                    |
 | Accessibility      | Rate-limit lockout message explicitly states retry time, announced via live region                                                          |
@@ -507,7 +549,7 @@ MFA
 | Component Tree     | Header \> OTPInput \> CountdownText/ResendGhostButton                                                               |
 | Navigation         | Auto-submits on 6th digit → Home (or next protected screen); "Use another method" → channel selection               |
 | Empty State        | N/A                                                                                                                 |
-| Error State        | Error state on OTP Input + shake animation on incorrect code; lockout after configured max attempts per SECURITY.md |
+| Error State        | Error state on OTP Input + shake animation on incorrect code; lockout after configured max attempts per the applicable approved security policy |
 | Loading State      | Digits disabled during verification call; spinner overlays OTP row                                                  |
 | Micro-interactions | Success: OTP row flashes success-green border before navigation                                                     |
 | Accessibility      | Resend button disabled state clearly communicated with remaining-seconds label, not just grayed out                 |
@@ -751,7 +793,7 @@ Admin Mobile
 | Layout             | Condensed admin console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot                      |
 | Visual Hierarchy   | Queue-first layout, system health as a persistent top strip                                                                         |
 | Component Tree     | HealthStripBanner \> TabBar(KYC Queue / Disputes / Alerts) \> QueueList(ActionableCard)                                             |
-| Navigation         | Queue item → detail/action screen (approve/reject KYC, resolve dispute) with RBAC-gated actions per SECURITY.md                     |
+| Navigation         | Queue item → detail/action screen (approve/reject KYC, resolve dispute) with RBAC-gated actions per the applicable approved security policy                     |
 | Empty State        | Illustration + "Queue clear" (positive)                                                                                             |
 | Error State        | Full-screen retry state if queue fails to load (this is an operational tool; silent partial failure is not acceptable)              |
 | Loading State      | List skeleton                                                                                                                       |

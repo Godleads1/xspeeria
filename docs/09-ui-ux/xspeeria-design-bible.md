@@ -9,6 +9,8 @@ Xspeeria is a wallet-less, non-custodial peer-to-peer fiat exchange marketplace.
 
 > **Source of truth:** this edition is built directly from `Xspeeria_UIUX_AppFlow_Spec_v2.docx` (Doc Version 2.0, August 2026, Internal — Confidential — Pre-Development Blueprint), the authoritative, sign-off-ready UI/UX specification covering all 22 MVP screens. Every token, flow, and screen spec below is reproduced faithfully from that source — nothing here contradicts it. This replaces an earlier internal draft that used an unsourced dark-theme palette; that draft has been fully discarded.
 
+> **`UNKNOWN — NOT VERIFIED` — dangling normative reference.** This document previously grounded rate-limiting, lockout and RBAC behaviour in a repository document named `SECURITY.md`. **No such document exists.** Those citations now read "the applicable approved security policy", which is **not yet determined** and is the subject of the open security-baseline decision (Decision 2). Frontend behaviour is never an authoritative security control in any case — authorization is enforced server-side.
+
 ---
 
 # Page 2 — What This Version Corrects
@@ -43,14 +45,41 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 
 | Token | Hex | Usage |
 |---|---|---|
-| `color.primary.blue` | `#001B68` | Brand identity, primary buttons, headers, active nav, links |
-| `color.success.green` | `#179A43` | Completed settlement, positive outcome, success toast |
-| `color.alert.red` | `#E52421` | Errors, failed transactions, destructive actions, disputes |
-| `color.accent.gold` | `#F4C21F` | Premium accents, badges, KYC-verified marker, rare emphasis |
-| `color.bg.base` | `#F8FAFC` | App background |
+| `color.primary.blue` | `#1F3A8A` | Brand identity, primary buttons, headers, active nav, links |
+| `color.success.green` | `#10B981` | Completed settlement, positive outcome, success toast |
+| `color.alert.red` | `#EF4444` | Errors, failed transactions, destructive actions, disputes |
+| `color.accent.gold` | `#F4C21F` | Premium accents, badges, KYC-verified marker, rare emphasis — **no Figma counterpart, `UNKNOWN — NOT VERIFIED`** |
+| `color.bg.base` | `#FFFFFF` | Application canvas — default screen background |
 | `color.text.primary` | `#111827` | Body copy, headings |
 
-This is the complete confirmed palette — six tokens, no more. Any additional token (secondary text tint, hairline border color, a distinct warning hue) is an implementation detail engineering will need to derive and route through design sign-off before locking; none is specified in the source and none should be treated as final without that review.
+> **RECONCILED — Xspeeria Figma, the primary visual source of truth for application UI/UX.**
+> `color.primary.blue` was `#001B68`, `color.success.green` was `#179A43`, `color.alert.red` was
+> `#E52421`; each is now the Figma-observed value. These are **FIGMA-OBSERVED COLOURS / CANDIDATE
+> APPLICATION TOKENS**, not frozen production tokens — the Figma holds painted swatches, **not** a
+> bound token/variable system, so no production token set exists and none may be claimed until
+> human approval freezes one.
+>
+> `color.bg.base` = `#FFFFFF` was corrected earlier against the human decision in `PRODUCT.md`
+> “Brand Commitments”, 2026-08-20, and is **unchanged** — the Figma agrees. The pre-Figma
+> supporting neutral `#F8FAFC` is superseded by the Figma supporting soft surface `#F8F9FD`.
+>
+> **`UNKNOWN — NOT VERIFIED`:** `color.accent.gold` `#F4C21F` has **no counterpart in the observed
+> Figma palette**. It is retained pending human determination and must not be represented as
+> Figma-confirmed.
+>
+> **Observed in the Figma with no token defined here** — naming these requires design-system
+> approval and is not done in this pass: Secondary `#3B82F6`, Body text `#4B5563`, Warning
+> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`.
+>
+> **Logo/brand-asset colours are a separate question** and are not settled by the Figma — see
+> `PRODUCT.md` “Brand Commitments”. Full observed palette, the Figma Success-swatch label defect,
+> and measured WCAG contrast findings: `DESIGN_SYSTEM.md`.
+>
+> **Consequence (unchanged):** `surface.card` `#FFFFFF` is the same value as the canvas and must be
+> separated by border, elevation or spacing, never by fill.
+
+
+**Superseded.** This was previously described as the complete confirmed palette — six tokens, no more. The Xspeeria Figma is now the primary visual source of truth for application UI/UX and observes further roles that this six-token set does not cover: Secondary `#3B82F6`, Body text `#4B5563`, Warning `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`. Those are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** — the Figma holds painted swatches, not a bound token/variable system, so no production token set exists yet. Assigning token names to the observed roles, and freezing any of them, requires design-system sign-off and is **not** done by this pass. The full observed palette is recorded in `DESIGN_SYSTEM.md`.
 
 ---
 
@@ -142,7 +171,7 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Register** — Scrollable form: header, full name, email, phone, password (with strength meter), terms checkbox, primary CTA, login link. Submit → OTP; inline per-field validation + banner for server errors (e.g. email already registered). Password field has visible show/hide toggle with `accessibilityLabel "Show password"`; strength meter has a text equivalent, not color-only.
 
-**Login** — Centered form: logo, email, password, "Forgot password?" link, primary CTA, "Create account" link, biometric quick-login if enrolled. Submit → MFA (if enabled) or Home. Rate-limited after 5 attempts per `SECURITY.md` posture; lockout message states retry time via a live region.
+**Login** — Centered form: logo, email, password, "Forgot password?" link, primary CTA, "Create account" link, biometric quick-login if enrolled. Submit → MFA (if enabled) or Home. Rate-limited after 5 attempts per the applicable approved security policy; lockout message states retry time via a live region.
 
 ---
 
@@ -150,7 +179,7 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Forgot Password** — Single email field, explanatory copy, submit CTA, back link. Submit → confirmation screen ("check your email") → back to Login. Confirmation cross-fades in place of the form over `motion.base` and is announced via a live region.
 
-**MFA** — OTP input, countdown resend timer, channel indicator (SMS/Email/Authenticator). Auto-submits on 6th digit → Home. Error state shakes the OTP row on incorrect code; lockout after configured max attempts per `SECURITY.md`. Success flashes a green border before navigating. Resend button's disabled state shows a remaining-seconds label, not just gray-out.
+**MFA** — OTP input, countdown resend timer, channel indicator (SMS/Email/Authenticator). Auto-submits on 6th digit → Home. Error state shakes the OTP row on incorrect code; lockout after configured max attempts per the applicable approved security policy. Success flashes a green border before navigating. Resend button's disabled state shows a remaining-seconds label, not just gray-out.
 
 ---
 
@@ -208,7 +237,7 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 
 **Business Dashboard** — SME/importer-oriented summary: aggregate FX volume, active offers/requests, settlement calendar, downloadable statements. KPI cards top, activity/calendar below. KPI cards → filtered Transaction Timeline; Export → async statement generation with a ready-notification. Empty: "No business activity yet — verify your business account" if business KYC is incomplete. Each KPI card fetches and retries independently. KPI numbers count up on load. Each KPI card exposes value + label + trend direction as a single accessible string, not three fragments.
 
-**Admin Mobile** — Condensed console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot as a persistent top strip. Queue item → approve/reject KYC or resolve dispute, RBAC-gated per `SECURITY.md`. Empty: "Queue clear" (positive). This is an operational tool — a full-screen retry state on load failure is required; silent partial failure is not acceptable. Approved/resolved items animate out of the queue (slide + fade) rather than vanishing instantly. **Destructive/high-consequence actions (reject KYC, force-resolve dispute) require an explicit confirmation Modal, never a single tap.**
+**Admin Mobile** — Condensed console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot as a persistent top strip. Queue item → approve/reject KYC or resolve dispute, RBAC-gated per the applicable approved security policy. Empty: "Queue clear" (positive). This is an operational tool — a full-screen retry state on load failure is required; silent partial failure is not acceptable. Approved/resolved items animate out of the queue (slide + fade) rather than vanishing instantly. **Destructive/high-consequence actions (reject KYC, force-resolve dispute) require an explicit confirmation Modal, never a single tap.**
 
 ---
 
@@ -236,11 +265,11 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 **Developer Handoff Tokens (Tailwind-ready):**
 ```js
 colors: {
-  primary: { blue: '#001B68' },
-  success: '#179A43',
-  alert: '#E52421',
+  primary: { blue: '#1F3A8A' },
+  success: '#10B981',
+  alert: '#EF4444',
   accent: { gold: '#F4C21F' },
-  bg: { base: '#F8FAFC' },
+  bg: { base: '#FFFFFF' },
   text: { primary: '#111827' },
 }
 borderRadius: { md: '16px', lg: '24px', xl: '32px' }
@@ -249,4 +278,4 @@ spacing: { 2: '8px', 3: '16px', 4: '24px', 6: '32px' }
 
 ---
 
-**THIS DOCUMENT IS THE SINGLE VISUAL SOURCE OF TRUTH FOR XSPEERIA, REPRODUCED FROM XSPEERIA_UIUX_APPFLOW_SPEC_V2.DOCX.**
+**SUPERSEDED CLAIM.** This document previously declared itself *"the single visual source of truth for Xspeeria"*. For **application UI/UX** the **Xspeeria Figma** is now the primary visual source of truth (human authority, 2026-08-22). This document remains the reproduction of `XSPEERIA_UIUX_APPFLOW_SPEC_V2.DOCX` and stays authoritative for screen behaviour, flows, states and interaction detail that the Figma does not settle; where it disagrees with the Figma on **visual** matters, the Figma governs. Logo/brand-asset colours are settled by neither — see `PRODUCT.md` “Brand Commitments”.

@@ -43,6 +43,17 @@ Python + FastAPI
 - [x] Decision 1 document reconciliation completed
 - [x] Decision 5 approved — financial event and accounting-ledger architecture (ADR-002 / DEC-004)
 - [x] Decision 5 document reconciliation completed
+- [x] Documentation-integrity corrections — dangling `SECURITY.md` references repointed, primary canvas set to
+      `#FFFFFF`, TDS KYC vocabulary corrected (`CORRECTIONS_v3.md` §7). Closes no decision.
+- [x] Application UI palette reconciled to the Figma-observed colours (`CORRECTIONS_v3.md` §8). **Partial —
+      documentation only.** Values are FIGMA-OBSERVED / CANDIDATE, **not frozen production tokens**; the Figma
+      has painted swatches, not bound variables, so Xspeeria has no production design-token system.
+- [ ] Design-system reconciliation — **NOT COMPLETE.** Open: accent/gold has no Figma counterpart; body-text
+      role collision (`#4B5563` vs `#111827`/`#6B7280`); hover/pressed shades not re-derived; four Figma
+      colours fail WCAG AA on the white canvas; logo/brand-asset colours still await vector confirmation;
+      production tokens not frozen. See `CORRECTIONS_v3.md` §8.8.
+- [ ] Versioning decision for `docs/references/figma/Xspeeria.fig` (~70.1 MB) — human-provided design source,
+      untracked pending decision. Not staged, gitignored or LFS-tracked.
 - [ ] Decision 2 — security baseline authority
 - [ ] Decision 3 — corridor substrate (NGN⇄GBP pilot)
 - [ ] Decision 4 — regulatory posture confirmation

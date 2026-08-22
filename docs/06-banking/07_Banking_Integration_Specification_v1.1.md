@@ -36,7 +36,9 @@ Executive Summary
 
 This specification defines how Xspeeria integrates with banking and payment-rail partners to settle matched FX transactions, beginning with the NGN⇄GBP pilot corridor and extending to NGN⇄USD as the Year 2 corridor per the 5-Year Business Plan. It is deliberately provider-agnostic: it defines an internal Banking Abstraction Layer (BAL) and a contract that any compliant banking partner must satisfy, rather than naming or assuming behavior from a specific institution. This document names no banking licence, regulatory approval, or specific partner relationship as held or pending — those are business/legal facts outside this document’s authority and must be confirmed separately by Compliance and Legal.
 
-> **ASSUMPTION:** *No source document specifies an actual banking partner, licence, or settlement rail. Every mechanism below (webhook contract, reconciliation cadence, SLA figures) is a reference architecture consistent with ARCHITECTURE.md’s module list (Settlement) and SECURITY.md’s webhook-verification requirement, intended to be the specification a real banking partner integration is built against once one is contracted.*
+> **ASSUMPTION:** *No source document specifies an actual banking partner, licence, or settlement rail. Every mechanism below (webhook contract, reconciliation cadence, SLA figures) is a reference architecture consistent with ARCHITECTURE.md’s module list (Settlement) and the webhook-verification requirement of the applicable approved security policy (see the note below), intended to be the specification a real banking partner integration is built against once one is contracted.*
+
+> **`UNKNOWN — NOT VERIFIED` — dangling normative reference.** Earlier drafts of this document grounded requirements in a repository document named `SECURITY.md`. **No such document exists**, and the security baseline designated in `DOCUMENT_INDEX.md` is an audit prompt containing no normative controls. Those citations have been replaced below with "the applicable approved security policy", which is **not yet determined** — it is the subject of the open security-baseline decision (`AUDIT_PHASE0_2026-08-18.md` §14, Decision 2). The requirements themselves (HMAC-SHA256 webhook signature verification, constant-time comparison, 401-and-discard on mismatch) remain as specified here; only their grounding is unresolved. The Version History row for v0.1 is left unaltered as a historical record.
 
 1\. Settlement Philosophy
 
@@ -218,7 +220,7 @@ Evidence classification:
 
 5.2 HMAC Signature Verification
 
-The BAL computes HMAC-SHA256 over the exact raw request body bytes using a per-partner shared secret (stored in AWS Secrets Manager per Document 06, Section 5.3) and performs a constant-time comparison against X-Xspeeria-Signature. Any mismatch results in an immediate 401 response and the payload is discarded without processing, consistent with SECURITY.md’s webhook-verification requirement.
+The BAL computes HMAC-SHA256 over the exact raw request body bytes using a per-partner shared secret (stored in AWS Secrets Manager per Document 06, Section 5.3) and performs a constant-time comparison against X-Xspeeria-Signature. Any mismatch results in an immediate 401 response and the payload is discarded without processing, consistent with the webhook-verification requirement of the applicable approved security policy.
 
 5.3 Replay Protection
 

@@ -92,15 +92,34 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 - **Official logo/wordmark:** the approved Xspeeria logo is stored at `assets/brand/xspeeria-logo.png` and is the canonical brand mark. Do not redesign, redraw, substitute, recolor, distort, or materially alter it without explicit design approval.
 
-- **Official brand palette:** Xspeeria's core brand colors are derived from the official logo supplied by the user: navy blue, green, red, and gold/yellow. The official logo is the visual source of truth for brand identity.
+- **Two distinct colour questions — do not conflate them.** **(A) Logo / brand-asset colours** are
+  governed by the official logo and remain open pending vector confirmation. **(B) Application UI
+  colours** are governed by the **Xspeeria Figma**, which is the **primary visual source of truth
+  for application UI/UX** (human authority, 2026-08-22). The logo values below are **not** the
+  authority for the application palette.
 
-- **Current digital color references:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. Exact production tokens should be confirmed from the original vector/brand asset before being frozen.
+- **(A) Official brand palette — logo artwork:** Xspeeria's core brand colors are derived from the official logo supplied by the user: navy blue, green, red, and gold/yellow. The official logo is the visual source of truth for brand identity.
+
+- **(A) Logo colour references — still unconfirmed:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. These are **logo/brand-asset** values and must still be confirmed against the original vector/brand asset before being frozen. They are **not** application UI tokens and must not be used as such.
+
+- **(B) Application UI palette — Figma-observed:** Primary `#1F3A8A`, Secondary `#3B82F6`, canvas
+  `#FFFFFF`, supporting soft surface `#F8F9FD`, border/divider `#E5E7EB`, headline text `#111827`,
+  body text `#4B5563`, disabled text `#9CA3AF`, success `#10B981`, warning `#F59E0B`, error
+  `#EF4444`. These are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS**, **not frozen
+  production tokens** — the Figma contains painted swatches, **not** a bound token/variable system,
+  so Xspeeria has **no production design-token system** and none may be claimed. Freezing requires
+  human approval. Recorded in full, with the Figma Success-swatch label defect (fill `#10B981`,
+  label text `#FFFFFF`) and measured WCAG contrast findings, in `docs/09-ui-ux/DESIGN_SYSTEM.md`.
+
+- **`UNKNOWN — NOT VERIFIED`:** the observed Figma palette contains **no accent/gold role**. The
+  design documents retain `color.accent.gold` `#F4C21F` pending a human determination; it is not
+  Figma-confirmed. Whether the gold of the logo carries into the application UI at all is open.
 
 - **Primary interface background:** `#FFFFFF` pure white is the required default background across Xspeeria mobile and web interfaces.
 
-- **Supporting neutral surface:** `#F8FAFC` may be used only for secondary surfaces such as subtle panels, grouped sections, inactive areas, or low-emphasis containers where visual separation from the white canvas is required.
+- **Supporting neutral surface:** `#F8F9FD` (Figma-observed; supersedes the earlier `#F8FAFC`) may be used only for secondary surfaces such as subtle panels, grouped sections, inactive areas, or low-emphasis containers where visual separation from the white canvas is required. At 1.05:1 against the canvas it provides almost no separation on its own — pair it with border, elevation or spacing.
 
-- **Primary text:** `#111827` is the current primary interface text color.
+- **Primary text:** `#111827` is the current primary interface text color, matching the Figma headline-text value. The Figma additionally observes a distinct body-text value `#4B5563`; how the two divide between headings and body copy is **`UNKNOWN — NOT VERIFIED`** and requires a human design decision.
 
 - White is the dominant canvas. Xspeeria must not use tinted, dark, gradient, or brand-colored page backgrounds as the default product surface unless a specific design state has been explicitly approved.
 
@@ -115,7 +134,7 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 ## Evidence on Hand
 
-**Exists:** the official logo/wordmark at `assets/brand/xspeeria-logo.png`; the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
+**Exists:** the **Xspeeria Figma** at `docs/references/figma/Xspeeria.fig` — human-provided design source, ~70.1 MB, **UNTRACKED PENDING A VERSIONING DECISION** (not staged, not committed, not gitignored, not in Git LFS; how it is versioned is a human decision that has not been taken). It is the primary visual source of truth for application UI/UX, and it carries **painted swatches, not bound variables** — there is no production token system. The official logo/wordmark at `assets/brand/xspeeria-logo.png`; the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
 
 **Does not exist — never fabricate:**
 

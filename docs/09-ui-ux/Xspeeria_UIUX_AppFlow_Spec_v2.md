@@ -20,6 +20,8 @@ Version 2.0 — Wallet-less Consistency Fix, Full MVP Scope (22 screens)
 | **Date**             | August 2026                                                                                                 |
 | **Classification**   | Internal — Confidential — Pre-Development Blueprint                                                         |
 
+> **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Screen behaviours below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists**, and the security-baseline decision (Decision 2) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined**; the behaviours described therefore lack their expected normative grounding. Frontend behaviour is never an authoritative security control in any case — authorization is enforced server-side.
+
 # 1. What Changed in This Version
 
 The v1.0 UI/UX Screen Spec and Product Design Specification disagreed with each other. The Master Prompt Kit's UI_UX_SCREEN_SPEC.md had already been corrected to remove a stored balance and wallet ID from Home, but the fuller Product Design Specification (the DOCX book) still specified a “Balance Card” showing a balance and wallet ID, and a five-tab bottom navigation including “Cards” and “Scan” — both of which directly contradict Xspeeria's core wallet-less, non-custodial architecture. This version resolves that contradiction everywhere it appeared, and extends the spec from one confirmed screen (Home) to all 22 MVP screens with a consolidated app flow.
@@ -60,12 +62,39 @@ Xspeeria's design language is Apple Wallet × Revolut Ultra × Stripe × Linear:
 |                     |          |                                                             |
 |---------------------|----------|-------------------------------------------------------------|
 | **Token**           | **Hex**  | **Usage**                                                   |
-| color.primary.blue  | \#001B68 | Brand identity, primary buttons, headers, active nav, links |
-| color.success.green | \#179A43 | Completed settlement, positive outcome, success toast       |
-| color.alert.red     | \#E52421 | Errors, failed transactions, destructive actions, disputes  |
-| color.accent.gold   | \#F4C21F | Premium accents, badges, KYC-verified marker, rare emphasis |
-| color.bg.base       | \#F8FAFC | App background                                              |
+| color.primary.blue  | \#1F3A8A | Brand identity, primary buttons, headers, active nav, links |
+| color.success.green | \#10B981 | Completed settlement, positive outcome, success toast       |
+| color.alert.red     | \#EF4444 | Errors, failed transactions, destructive actions, disputes  |
+| color.accent.gold   | \#F4C21F | Premium accents, badges, KYC-verified marker, rare emphasis — **no Figma counterpart, `UNKNOWN — NOT VERIFIED`** |
+| color.bg.base       | \#FFFFFF | Application canvas — default screen background              |
 | color.text.primary  | \#111827 | Body copy, headings                                         |
+
+> **RECONCILED — Xspeeria Figma, the primary visual source of truth for application UI/UX.**
+> `color.primary.blue` was `#001B68`, `color.success.green` was `#179A43`, `color.alert.red` was
+> `#E52421`; each is now the Figma-observed value. These are **FIGMA-OBSERVED COLOURS / CANDIDATE
+> APPLICATION TOKENS**, not frozen production tokens — the Figma holds painted swatches, **not** a
+> bound token/variable system, so no production token set exists and none may be claimed until
+> human approval freezes one.
+>
+> `color.bg.base` = `#FFFFFF` was corrected earlier against the human decision in `PRODUCT.md`
+> “Brand Commitments”, 2026-08-20, and is **unchanged** — the Figma agrees. The pre-Figma
+> supporting neutral `#F8FAFC` is superseded by the Figma supporting soft surface `#F8F9FD`.
+>
+> **`UNKNOWN — NOT VERIFIED`:** `color.accent.gold` `#F4C21F` has **no counterpart in the observed
+> Figma palette**. It is retained pending human determination and must not be represented as
+> Figma-confirmed.
+>
+> **Observed in the Figma with no token defined here** — naming these requires design-system
+> approval and is not done in this pass: Secondary `#3B82F6`, Body text `#4B5563`, Warning
+> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`.
+>
+> **Logo/brand-asset colours are a separate question** and are not settled by the Figma — see
+> `PRODUCT.md` “Brand Commitments”. Full observed palette, the Figma Success-swatch label defect,
+> and measured WCAG contrast findings: `DESIGN_SYSTEM.md`.
+>
+> **Consequence (unchanged):** `surface.card` `#FFFFFF` is the same value as the canvas and must be
+> separated by border, elevation or spacing, never by fill.
+
 
 ## 3.2 Typography
 
@@ -257,7 +286,7 @@ All 22 MVP screens, grouped by journey. Each spec covers layout, visual hierarch
 | **Component Tree**     | ScrollView \> Logo \> FormFields \> GhostButton(forgot) \> PrimaryButton \> GhostButton(register) \> BiometricButton                        |
 | **Navigation**         | Submit → MFA (if enabled) or Home; Forgot Password link → Forgot Password; Register link → Register                                         |
 | **Empty State**        | N/A                                                                                                                                         |
-| **Error State**        | Inline field errors + banner for invalid credentials (rate-limited after 5 attempts per SECURITY.md posture)                                |
+| **Error State**        | Inline field errors + banner for invalid credentials (rate-limited after 5 attempts per the applicable approved security policy)                                |
 | **Loading State**      | Primary Button Loading state                                                                                                                |
 | **Micro-interactions** | Biometric icon pulses once on screen mount if Face ID/Touch ID available                                                                    |
 | **Accessibility**      | Rate-limit lockout message explicitly states retry time, announced via live region                                                          |
@@ -287,7 +316,7 @@ All 22 MVP screens, grouped by journey. Each spec covers layout, visual hierarch
 | **Component Tree**     | Header \> OTPInput \> CountdownText/ResendGhostButton                                                               |
 | **Navigation**         | Auto-submits on 6th digit → Home (or next protected screen); "Use another method" → channel selection               |
 | **Empty State**        | N/A                                                                                                                 |
-| **Error State**        | Error state on OTP Input + shake animation on incorrect code; lockout after configured max attempts per SECURITY.md |
+| **Error State**        | Error state on OTP Input + shake animation on incorrect code; lockout after configured max attempts per the applicable approved security policy |
 | **Loading State**      | Digits disabled during verification call; spinner overlays OTP row                                                  |
 | **Micro-interactions** | Success: OTP row flashes success-green border before navigation                                                     |
 | **Accessibility**      | Resend button disabled state clearly communicated with remaining-seconds label, not just grayed out                 |
@@ -533,7 +562,7 @@ All 22 MVP screens, grouped by journey. Each spec covers layout, visual hierarch
 | **Layout**             | Condensed admin console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot                      |
 | **Visual Hierarchy**   | Queue-first layout, system health as a persistent top strip                                                                         |
 | **Component Tree**     | HealthStripBanner \> TabBar(KYC Queue / Disputes / Alerts) \> QueueList(ActionableCard)                                             |
-| **Navigation**         | Queue item → detail/action screen (approve/reject KYC, resolve dispute) with RBAC-gated actions per SECURITY.md                     |
+| **Navigation**         | Queue item → detail/action screen (approve/reject KYC, resolve dispute) with RBAC-gated actions per the applicable approved security policy                     |
 | **Empty State**        | Illustration + "Queue clear" (positive)                                                                                             |
 | **Error State**        | Full-screen retry state if queue fails to load (this is an operational tool; silent partial failure is not acceptable)              |
 | **Loading State**      | List skeleton                                                                                                                       |

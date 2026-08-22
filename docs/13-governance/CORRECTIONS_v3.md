@@ -184,3 +184,133 @@ methodology) was left as-is by the v3 pass. *(Dispute representation and settlem
 state have since been changed by Section 4 above; the rest stands.)* The 5-Year Business Plan introduces a named
 leadership team and advisor list not present elsewhere in the suite — no
 other document names individuals, so there was nothing to reconcile there.
+
+## 7. Dangling normative references, background-colour roles, and KYC vocabulary
+
+Applied 2026-08-21/22. Three unrelated document-integrity defects, none of which
+resolves an open decision.
+
+**7.1 — `SECURITY.md` dangling normative references.** `AUDIT_PHASE0_2026-08-18.md`
+§12 / C-6 recorded that several documents grounded normative requirements in a
+repository document named `SECURITY.md` that **does not exist**. Every such
+citation in `docs/` now reads *"the applicable approved security policy"*, and each
+affected document carries an `UNKNOWN — NOT VERIFIED` banner stating that this
+policy **is not yet determined** — it is the subject of open **Decision 2**
+(security-baseline authority). Affected: `04_Product_Design_Specification.md`,
+`05_API_Contract_Data_Dictionary.md`, `07_Banking_Integration_Specification_v1.1.md`,
+`xspeeria-design-bible.md`, `Xspeeria_UIUX_AppFlow_Spec_v2.md`,
+`06_Infrastructure_DevOps_Handbook.md`. The requirements themselves (HMAC-SHA256
+webhook verification, AES-256 at rest, rotation-on-refresh, RBAC, lockout
+thresholds) are unchanged — only their grounding is now stated as unresolved.
+Version-History rows citing `SECURITY.md` are left intact as historical record.
+Occurrences in `Xspeeria_Master_Prompt_Python_Backend.md` are **not** dangling:
+that document *requires* `SECURITY.md` to be produced as a deliverable.
+`reference/` is archival source material and was not edited.
+**This does not close C-6 and does not pre-empt Decision 2.**
+
+**7.2 — Background-colour roles.** `PRODUCT.md` "Brand Commitments" records the
+human decision of 2026-08-20 that `#FFFFFF` is the **required default background**
+across Xspeeria mobile and web, with `#F8FAFC` permitted for secondary surfaces
+only. Four documents contradicted it by defining `color.bg.base` = `#F8FAFC` as
+"App background". `color.bg.base` is now `#FFFFFF` in
+`04_Product_Design_Specification.md`, `Xspeeria_UIUX_AppFlow_Spec_v2.md` and
+`xspeeria-design-bible.md` (palette table and Tailwind handoff block), and
+`DESIGN_SYSTEM.md` states both roles. No token name was assigned to the supporting
+`#F8FAFC` surface — the design bible fixes the palette at six tokens, so naming a
+seventh requires design-system approval. Consequence recorded in each document:
+`surface.card` (`#FFFFFF`) no longer differs in colour from the canvas and must be
+separated by border, elevation or spacing, never by fill.
+
+**Not reconciled here — subsequently superseded, see §8.** This section previously
+concluded that the application palette mismatch between `PRODUCT.md`
+(≈`#001A6E` / `#208B3B` / `#F90A09` / `#FEB700`) and the design documents
+(`#001B68` / `#179A43` / `#E52421` / `#F4C21F`) could not be resolved until the original
+vector asset was available. **That conclusion is withdrawn.** It conflated logo/brand-asset
+colours with the application UI palette. The application UI palette is settled by the
+Xspeeria Figma (§8); only the **logo artwork** colours still await vector confirmation.
+
+**7.3 — KYC vocabulary in the TDS.** `02_Technical_Design_Specification.md` §5.3.1
+stated that a `User` "cannot transition to `verified` status" without an approved
+KYC profile. `verified` is not a value of `Users.status`, whose enumeration in
+`05_API_Contract_Data_Dictionary.md` is `pending_verification, active, suspended,
+closed`. The invariant now names the authoritative field (`KycCases.status =
+approved`) and flags "verified" as descriptive vocabulary only. No behavioural change.
+
+## 8. Application UI palette reconciled to the Xspeeria Figma
+
+Applied 2026-08-22. Human authority: the Xspeeria Figma is the **primary visual source of
+truth for application UI/UX**. This section records a **documentation reconciliation only** —
+no product logic, settlement semantics or security decision was touched, and no ADR or DEC
+identifier was created.
+
+**8.1 — The distinction this pass enforces.** **(A) Logo / brand-asset colours** — the
+approximate values in `PRODUCT.md` (`#001A6E`, `#208B3B`, `#F90A09`, `#FEB700`) still require
+confirmation against the original vector. **(B) Application UI colours** — governed by the
+Figma. The two were previously conflated, including by §7.2 of this document, which is
+corrected above. Logo values are **not** application tokens.
+
+**8.2 — Figma-observed application palette.** Primary `#1F3A8A`; Secondary `#3B82F6`;
+canvas / pure white `#FFFFFF`; supporting soft surface `#F8F9FD`; border/divider `#E5E7EB`;
+headline text `#111827`; body text `#4B5563`; disabled text `#9CA3AF`; success `#10B981`;
+warning `#F59E0B`; error `#EF4444`.
+
+**8.3 — Not production tokens.** The Figma contains **painted swatches, not a bound
+token/variable system**. Xspeeria has **no production design-token system**, and this
+repository must not claim one. All values above are recorded as **FIGMA-OBSERVED COLOURS /
+CANDIDATE APPLICATION TOKENS** until human approval freezes them. No Figma variable migration
+was designed or implied by this pass.
+
+**8.4 — Figma defect recorded, not corrected.** The Figma Success swatch has fill `#10B981`
+while its visible text label reads `#FFFFFF`. The observed **fill governs**; the label is a
+defect to be fixed at source. This repository does not modify the Figma.
+
+**8.5 — Corrections applied.** `color.primary.blue` `#001B68` → `#1F3A8A`,
+`color.success.green` `#179A43` → `#10B981`, `color.alert.red` `#E52421` → `#EF4444` in
+`04_Product_Design_Specification.md`, `Xspeeria_UIUX_AppFlow_Spec_v2.md` and
+`xspeeria-design-bible.md` (palette tables, and the bible's Tailwind handoff block).
+`DESIGN_SYSTEM.md` now carries the full observed palette. `PRODUCT.md` separates (A) from (B).
+`DOCUMENT_INDEX.md` §11 records the Figma as the primary visual source of truth for
+application UI/UX, with both limits stated. The design bible's claim to be "the single visual
+source of truth for Xspeeria" and its "six tokens, no more" statement are marked superseded;
+it remains authoritative for behaviour, flows, states and interaction detail.
+
+**8.6 — Supporting surface.** `#F8FAFC` was the pre-Figma supporting neutral; the Figma-observed
+value is `#F8F9FD`. `#F8FAFC` was **not** globally replaced. Each occurrence was classified:
+`PRODUCT.md` "Supporting neutral surface" and `DESIGN_SYSTEM.md` were the only live
+supporting-surface declarations and were repointed to `#F8F9FD`. All remaining occurrences are
+**historical references inside supersession notes** (in this document and in the three design
+documents) and were deliberately left intact. `#FFFFFF` remains the primary canvas everywhere —
+unchanged by this pass, and consistent with both the Figma and the 2026-08-20 human decision.
+
+**8.7 — Derived and adjacent tokens (`04_Product_Design_Specification.md`).** The three `.10`
+tints are definitionally their base colour at 10% alpha and moved with their bases
+(`#1F3A8A1A`, `#10B9811A`, `#EF44441A`). `color.gray.100` was repointed `#F3F4F6` → `#E5E7EB`
+because its stated role — card borders, dividers — is exactly the role the Figma names.
+`color.gray.400` `#9CA3AF` already matches the Figma disabled-text value exactly.
+
+**8.8 — Left unresolved, flagged in place as `UNKNOWN — NOT VERIFIED`.**
+
+- **No accent/gold in the observed Figma palette.** `color.accent.gold` `#F4C21F` (premium
+  accents, badges, KYC-verified marker) has no Figma counterpart. Retained, not Figma-confirmed.
+  Whether the logo's gold carries into the application UI at all is open.
+- **Body-text role collision.** The Figma observes body text `#4B5563`; the design documents use
+  `#111827` for body copy and `color.gray.600` `#6B7280` for secondary text. Whether `#4B5563`
+  replaces one, the other, or introduces a third role is not determinable from the swatches. No
+  value was changed.
+- **`color.primary.blue.hover` `#002885` and `.pressed` `#001350`** were hand-derived from the
+  superseded `#001B68`. They were **not** re-derived — that is a design decision, not a
+  mechanical one.
+- **Accessibility.** Measured WCAG contrast for the observed palette is recorded in
+  `DESIGN_SYSTEM.md`. Secondary `#3B82F6` (3.68:1), error `#EF4444` (3.76:1), success `#10B981`
+  (2.54:1) and warning `#F59E0B` (2.15:1) all fail AA 4.5:1 for normal-size text on the white
+  canvas; success and warning also fail the 3:1 non-text threshold, and border `#E5E7EB` (1.24:1)
+  fails it for meaningful boundaries. These are **findings for human design review** — no colour
+  was altered to fix them. The incorrect claim in `04_Product_Design_Specification.md` that white
+  text on `#001B68` measured 12.6:1 was corrected: it measures 15.48:1, and white on the new
+  primary `#1F3A8A` measures 10.34:1.
+
+**8.9 — Design source file.** `docs/references/figma/Xspeeria.fig` (~70.1 MB) is classified
+**HUMAN-PROVIDED DESIGN SOURCE — UNTRACKED PENDING VERSIONING DECISION**. Not staged, not
+committed, not deleted, not moved, not gitignored, not placed in Git LFS. `.gitignore` was not
+modified and `docs/references/` was not blanket-ignored. How this file is versioned is a human
+decision that has not been taken.
