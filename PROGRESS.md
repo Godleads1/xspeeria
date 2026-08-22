@@ -48,10 +48,15 @@ Python + FastAPI
 - [x] Application UI palette reconciled to the Figma-observed colours (`CORRECTIONS_v3.md` §8). **Partial —
       documentation only.** Values are FIGMA-OBSERVED / CANDIDATE, **not frozen production tokens**; the Figma
       has painted swatches, not bound variables, so Xspeeria has no production design-token system.
-- [ ] Design-system reconciliation — **NOT COMPLETE.** Open: accent/gold has no Figma counterpart; body-text
-      role collision (`#4B5563` vs `#111827`/`#6B7280`); hover/pressed shades not re-derived; four Figma
-      colours fail WCAG AA on the white canvas; logo/brand-asset colours still await vector confirmation;
-      production tokens not frozen. See `CORRECTIONS_v3.md` §8.8.
+- [x] Design-system freeze Phase 1 — human decisions converted to normative documentation
+      (`CORRECTIONS_v3.md` §9): application colour direction, semantic token architecture, border
+      roles, primary interaction states, gold restriction, Home account-readiness structure, bottom
+      navigation, mobile/admin consistency. **Documentation only — IMPLEMENTATION STATUS: NOT
+      IMPLEMENTED, VERIFICATION STATUS: NOT VERIFIED.**
+- [ ] Design-system freeze Phase 2 — **NOT COMPLETE.** Open: typography (Satoshi/admin, blocked on
+      licence, embedding rights, tabular figures, React Native asset strategy); gold rating-glyph
+      execution; logo/brand-asset colours pending vector confirmation; production token freeze.
+      See `DESIGN_SYSTEM.md` and `CORRECTIONS_v3.md` §9.6.
 - [ ] Versioning decision for `docs/references/figma/Xspeeria.fig` (~70.1 MB) — human-provided design source,
       untracked pending decision. Not staged, gitignored or LFS-tracked.
 - [ ] Decision 2 — security baseline authority

@@ -402,9 +402,16 @@ recorded in `docs/09-ui-ux/DESIGN_SYSTEM.md`.
 
 `docs/09-ui-ux/UI_UX_SCREEN_SPEC.md`
 
-## Design system
+## Design system — normative token authority
 
 `docs/09-ui-ux/DESIGN_SYSTEM.md`
+
+Authoritative for the application colour direction, the semantic token architecture
+(PRIMITIVE → SEMANTIC → COMPONENT), status-family roles, border roles, primary interaction
+states, the gold restriction, and the legacy-name mapping. **HUMAN APPROVED, 2026-08-22.**
+Where another UI/UX document states a colour value or token role that conflicts with it, this
+document governs. Values are **candidate production tokens, not frozen**, and no application
+code exists — **IMPLEMENTATION STATUS: NOT IMPLEMENTED**. Typography is **OPEN — NOT FROZEN**.
 
 ## Design bible
 

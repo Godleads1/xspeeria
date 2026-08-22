@@ -70,8 +70,10 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 **Hard constraints:**
 
-- Never display a stored balance, wallet ID, or account-number figure anywhere in the product.
-- Bottom navigation is Home, Marketplace, Track, Notifications, Profile. "Cards" is deferred to Phase 12; no Scan flow exists; Analytics is out of MVP scope.
+- Never display a stored balance, wallet ID, or account-number figure anywhere in the product. **This extends to any aggregate currency figure in a hero position** — a large single amount reads as a balance regardless of its label. Amounts stay attached to the individual Offer or allocation they belong to. **HUMAN APPROVED, 2026-08-22.**
+- **Home has no balance region.** The former balance region is **Account Readiness**, carrying exactly three dimensions: Identity / KYC, Security / qualifying MFA, Eligible to transact. It collapses to a compact confirmation once all three are satisfied. Beneficiary, payout and funding readiness are **allocation-specific** and must never become Home account-readiness dimensions. **HUMAN APPROVED, 2026-08-22.**
+- Bottom navigation is **Home, Marketplace, Track, Cards, Profile** — **HUMAN APPROVED, 2026-08-22**, superseding the earlier *Home, Marketplace, Track, Notifications, Profile*. **Cards is COMING SOON**: it opens a real destination, never a dead or disabled tab, and exposes no card functionality, no card balances, and nothing implying stored-value wallet or card functionality. Notifications live behind the bell, notification centre and push. No Scan flow exists; Analytics is out of MVP scope.
+- **Gold is not a status colour.** It must never represent KYC approval, verified identity, success, funding confirmation, settlement completion or warning. A narrowly scoped decorative role for rating indicators is permitted. Identity verification uses the brand-primary family — verification is an identity fact, not a financial success state. **HUMAN APPROVED, 2026-08-22.**
 - Financial state must be exact — never binary floating point (`CLAUDE.md`).
 - Frontend restrictions are not security controls; authorization is verified server-side.
 - Canonical transaction and settlement state semantics are owned by ADR-001 / DEC-003. UI design may present approved states but must not create, rename, merge, remove, or reinterpret canonical financial states.
@@ -102,30 +104,42 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 - **(A) Logo colour references — still unconfirmed:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. These are **logo/brand-asset** values and must still be confirmed against the original vector/brand asset before being frozen. They are **not** application UI tokens and must not be used as such.
 
-- **(B) Application UI palette — Figma-observed:** Primary `#1F3A8A`, Secondary `#3B82F6`, canvas
-  `#FFFFFF`, supporting soft surface `#F8F9FD`, border/divider `#E5E7EB`, headline text `#111827`,
-  body text `#4B5563`, disabled text `#9CA3AF`, success `#10B981`, warning `#F59E0B`, error
-  `#EF4444`. These are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS**, **not frozen
-  production tokens** — the Figma contains painted swatches, **not** a bound token/variable system,
-  so Xspeeria has **no production design-token system** and none may be claimed. Freezing requires
-  human approval. Recorded in full, with the Figma Success-swatch label defect (fill `#10B981`,
-  label text `#FFFFFF`) and measured WCAG contrast findings, in `docs/09-ui-ux/DESIGN_SYSTEM.md`.
+- **(B) Application UI palette — HUMAN APPROVED, 2026-08-22:** Primary `#1F3A8A`, Secondary
+  `#3B82F6`, canvas `#FFFFFF`, supporting soft surface `#F8F9FD`, border/divider `#E5E7EB`,
+  headline text `#111827`, body text `#4B5563`, disabled text `#9CA3AF`, success `#10B981`,
+  warning `#F59E0B`, error `#EF4444`. `#1F3A8A` is **deliberately retained** and must not be
+  normalised to `#1E3A8A` merely because that is a framework default. The resemblance of this
+  palette to Tailwind defaults does not invalidate it.
 
-- **`UNKNOWN — NOT VERIFIED`:** the observed Figma palette contains **no accent/gold role**. The
-  design documents retain `color.accent.gold` `#F4C21F` pending a human determination; it is not
-  Figma-confirmed. Whether the gold of the logo carries into the application UI at all is open.
+  The **semantic architecture** built on these values is also approved: status families split
+  into `.fill` / `.surface` / `.border` / `.text` so that one colour never performs every role;
+  `#E5E7EB` is a decorative boundary only, with `#6B7280` as the strong boundary for controls;
+  primary interaction states are `#1F3A8A` / `#1E40AF` / `#172554` with a `#1D4ED8` focus ring.
+  Full normative detail, measured WCAG contrast, and the legacy-name mapping are in
+  `docs/09-ui-ux/DESIGN_SYSTEM.md`.
+
+  These remain **candidate production tokens**, **not frozen** — the Figma contains painted
+  swatches, **not** a bound token/variable system, so Xspeeria has **no production design-token
+  system** and none may be claimed. **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION
+  STATUS: NOT VERIFIED** — no application code exists or consumes them. The Figma Success-swatch
+  label defect (fill `#10B981`, label text `#FFFFFF`) is recorded in `DESIGN_SYSTEM.md`.
+
+- **RESOLVED — HUMAN APPROVED, 2026-08-22:** the observed Figma palette contains **no accent/gold
+  role**, and `#F4C21F` is not Figma-confirmed. Gold is retained for **decorative rating
+  indicators only** and is never a status colour. The glyph treatment remains `UNKNOWN — NOT
+  VERIFIED` — at 1.67:1 on canvas the mark needs an outline or a darker fill.
 
 - **Primary interface background:** `#FFFFFF` pure white is the required default background across Xspeeria mobile and web interfaces.
 
 - **Supporting neutral surface:** `#F8F9FD` (Figma-observed; supersedes the earlier `#F8FAFC`) may be used only for secondary surfaces such as subtle panels, grouped sections, inactive areas, or low-emphasis containers where visual separation from the white canvas is required. At 1.05:1 against the canvas it provides almost no separation on its own — pair it with border, elevation or spacing.
 
-- **Primary text:** `#111827` is the current primary interface text color, matching the Figma headline-text value. The Figma additionally observes a distinct body-text value `#4B5563`; how the two divide between headings and body copy is **`UNKNOWN — NOT VERIFIED`** and requires a human design decision.
+- **Text roles — HUMAN APPROVED, 2026-08-22:** `#111827` for headings, high-emphasis labels and primary content; `#4B5563` for **body copy**, descriptions, supporting text and metadata; `#9CA3AF` for genuinely disabled/inactive text only. `#6B7280` is the strong boundary value for controls, **not** a body-text token — its use as a disabled-control label stays scoped to that interaction state.
 
 - White is the dominant canvas. Xspeeria must not use tinted, dark, gradient, or brand-colored page backgrounds as the default product surface unless a specific design state has been explicitly approved.
 
 - Supporting semantic tokens such as borders, muted text, surfaces, hover states, focus rings, disabled states, success backgrounds, warning backgrounds, and destructive backgrounds may be derived from the official brand palette, but must preserve accessibility and require design-system approval.
 
-- **Typefaces are undecided.** SF Pro / Inter is documented intent, not a licensed decision. Record the choice when it is made.
+- **Typefaces are undecided — OPEN, NOT FROZEN.** SF Pro / Inter is documented intent, not a licensed decision. **Satoshi** is the leading mobile candidate from the Figma, and **must not** be declared production-standard pending licence verification, mobile and web embedding rights, confirmed tabular/lining figure support, and React Native support with an asset strategy. Admin typography is open pending admin design provenance, dashboard-kit licence, dense-table legibility and numeric rendering. **Neither Satoshi nor Nunito Sans is production-standard.** The tabular-figure commitment below gates every candidate. Record the choice when it is made.
 
 - **8pt spacing system.** Currency and numeric values render in tabular figures, right-aligned in lists, never truncated.
 - **Visual references only:** aspects of Apple Wallet's polish, Revolut's financial information clarity, Stripe's precision, and Linear's interaction discipline may inform visual craft.

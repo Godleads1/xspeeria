@@ -13,18 +13,27 @@ Header:
 - Greeting
 - Notification Button
 
-Status Overview Card:
-*(Replaces "Balance Card" — Xspeeria is wallet-less and non-custodial, so the
-home screen must never display a stored balance or a wallet identifier. This
-card shows marketplace/transaction status instead.)*
+Account Readiness Region:
+*(SUPERSEDES the "Status Overview Card", which itself replaced a "Balance Card"
+— HUMAN APPROVED, design-system freeze Phase 1. Xspeeria is wallet-less and
+non-custodial, so the home screen must never display a stored balance, a wallet
+identifier, or any aggregate currency figure. A large single amount in the hero
+position reads as a balance regardless of its label.)*
 - Radius 32
-- Xspeeria Blue Gradient
-- Active FX requests (count)
-- Pending settlements (count)
-- Preferred currency pair shortcut
+- Exactly three dimensions: Identity / KYC, Security / qualifying MFA,
+  Eligible to transact
+- Collapses to a compact confirmation state once all three are satisfied
+- Beneficiary, payout and funding readiness are allocation-specific and must
+  never appear here
+- No currency amount of any kind
 
-Quick Actions:
-New FX Request, Browse Marketplace, Track Transaction, Support
+Primary Action:
+New FX Request / Browse Marketplace
+
+Active Activity:
+Open Offers, MatchAllocations requiring attention, in-flight settlement
+activity — most time-critical item first. Amounts stay attached to the
+individual Offer or allocation and are never summed into one figure.
 
 Recent Transactions:
 Three floating premium cards — each shows currency pair, current stage in the
@@ -32,9 +41,13 @@ transaction state machine (e.g. Matched, Settlement Pending), and the next
 action available to the user. No balance figures on these cards.
 
 Bottom Navigation:
-Home, Marketplace, Track, Notifications, Profile
+Home, Marketplace, Track, Cards, Profile
 
-*(Dropped "Cards" and "Scan" from the original spec — no scanning flow exists
-anywhere else in the Xspeeria product docs, and the optional debit-card
-feature is Phase 12/deferred, so it doesn't belong in MVP primary nav. Add a
-"Cards" tab back only once Phase 12 actually ships.)*
+*(HUMAN APPROVED, design-system freeze Phase 1. "Cards" is COMING SOON: the tab
+opens a real destination explaining the future feature — never a dead or
+disabled tab — and exposes no active card functionality, no card balances, and
+nothing implying stored-value wallet or card functionality. This supersedes the
+earlier guidance to add Cards back only once Phase 12 ships. Notifications move
+out of the bar to the notification bell, the notification centre and push
+notifications for time-sensitive events. "Scan" still does not exist anywhere
+in the Xspeeria product docs, and Analytics is not in MVP scope.)*

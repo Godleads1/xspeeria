@@ -18,8 +18,14 @@ Xspeeria is a wallet-less, non-custodial peer-to-peer fiat exchange marketplace.
 The source spec itself documents a resolved contradiction worth surfacing here, because it's a case study in the discipline this product demands: an earlier internal spec described a Home screen "Balance Card" showing a stored balance and wallet ID, and a five-tab navigation including "Cards" and "Scan." Both directly contradicted Xspeeria's wallet-less, non-custodial architecture — Xspeeria never holds customer funds, so a balance figure has no meaning.
 
 **Resolved:**
-- "Balance Card" → **Status Overview Card** — shows active FX request count, pending settlement count, and a preferred currency-pair shortcut. No balance figure, no wallet ID, anywhere, ever.
+- "Balance Card" → **Status Overview Card** — shows active FX request count, pending settlement count, and a preferred currency-pair shortcut. No balance figure, no wallet ID, anywhere, ever. *(Superseded by the **Account Readiness Region** — see the note above and Page 12.)*
 - Bottom navigation → **Home, Marketplace, Track, Notifications, Profile.** Cards is a deferred Phase 12 feature; no Scan flow exists in the product; Analytics isn't in MVP scope.
+
+  > **SUPERSEDED — HUMAN APPROVED, design-system freeze Phase 1.** Navigation is now **Home,
+  > Marketplace, Track, Cards, Profile**, with **Cards = COMING SOON** opening a real destination.
+  > Notifications move to the bell, notification centre and push. Scan and Analytics remain absent.
+  > The Balance Card correction below is **strengthened, not reversed**: the replacement region is
+  > now **Account Readiness**, and no aggregate currency figure may occupy the hero position either.
 - Home quick actions → **New FX Request, Browse Marketplace, Track Transaction, Support** — marketplace-native language, not wallet-native.
 - Typography and elevation token usage notes updated to remove every balance reference.
 
@@ -48,7 +54,7 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 | `color.primary.blue` | `#1F3A8A` | Brand identity, primary buttons, headers, active nav, links |
 | `color.success.green` | `#10B981` | Completed settlement, positive outcome, success toast |
 | `color.alert.red` | `#EF4444` | Errors, failed transactions, destructive actions, disputes |
-| `color.accent.gold` | `#F4C21F` | Premium accents, badges, KYC-verified marker, rare emphasis — **no Figma counterpart, `UNKNOWN — NOT VERIFIED`** |
+| `color.accent.gold` | `#F4C21F` | **Decorative rating indicators only.** Not a status colour. Must not represent KYC approval, verified identity, success, funding confirmation, settlement completion or warning |
 | `color.bg.base` | `#FFFFFF` | Application canvas — default screen background |
 | `color.text.primary` | `#111827` | Body copy, headings |
 
@@ -63,13 +69,16 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 > “Brand Commitments”, 2026-08-20, and is **unchanged** — the Figma agrees. The pre-Figma
 > supporting neutral `#F8FAFC` is superseded by the Figma supporting soft surface `#F8F9FD`.
 >
-> **`UNKNOWN — NOT VERIFIED`:** `color.accent.gold` `#F4C21F` has **no counterpart in the observed
-> Figma palette**. It is retained pending human determination and must not be represented as
-> Figma-confirmed.
+> **RESOLVED — HUMAN APPROVED, 2026-08-22.** `color.accent.gold` `#F4C21F` has **no counterpart in
+> the observed Figma palette** and is **not** Figma-confirmed. It is retained for **decorative
+> rating indicators only**, always accompanied by the numeric rating. It must never represent KYC
+> approval, verified identity, success, funding confirmation, settlement completion or warning.
+> Identity verification uses the brand-primary family. The glyph treatment itself remains
+> `UNKNOWN — NOT VERIFIED` — at 1.67:1 on canvas the mark needs an outline or a darker fill.
 >
-> **Observed in the Figma with no token defined here** — naming these requires design-system
-> approval and is not done in this pass: Secondary `#3B82F6`, Body text `#4B5563`, Warning
-> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`.
+> **Observed in the Figma and since named** — Secondary `#3B82F6`, Body text `#4B5563`, Warning
+> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`
+> now carry semantic tokens in `DESIGN_SYSTEM.md`. **HUMAN APPROVED**, 2026-08-22.
 >
 > **Logo/brand-asset colours are a separate question** and are not settled by the Figma — see
 > `PRODUCT.md` “Brand Commitments”. Full observed palette, the Figma Success-swatch label defect,
@@ -77,6 +86,13 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 >
 > **Consequence (unchanged):** `surface.card` `#FFFFFF` is the same value as the canvas and must be
 > separated by border, elevation or spacing, never by fill.
+>
+> **DESIGN SYSTEM FREEZE — PHASE 1, HUMAN APPROVED.** The application colour direction above is
+> approved. The normative semantic-token architecture — surfaces, text, borders, brand, the
+> success/warning/error `.fill`/`.surface`/`.border`/`.text` families, primary interaction states,
+> the gold restriction and the legacy-name mapping — lives in `DESIGN_SYSTEM.md` and governs.
+> **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
+> code exists. Typography is **OPEN — NOT FROZEN**.
 
 
 **Superseded.** This was previously described as the complete confirmed palette — six tokens, no more. The Xspeeria Figma is now the primary visual source of truth for application UI/UX and observes further roles that this six-token set does not cover: Secondary `#3B82F6`, Body text `#4B5563`, Warning `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`. Those are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** — the Figma holds painted swatches, not a bound token/variable system, so no production token set exists yet. Assigning token names to the observed roles, and freezing any of them, requires design-system sign-off and is **not** done by this pass. The full observed palette is recorded in `DESIGN_SYSTEM.md`.
@@ -106,9 +122,9 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 | `space.6` | 32px | Screen-edge margins |
 | `radius.md` | 16px | Standard cards, inputs |
 | `radius.lg` | 24px | Buttons, bottom sheets |
-| `radius.xl` | 32px | Status Overview Card — reserved exclusively for this component |
+| `radius.xl` | 32px | Account Readiness Region — reserved exclusively for this component (was "Status Overview Card") |
 | `elevation.1` | `0 1px 2px rgba(17,24,39,0.06)` | Resting cards |
-| `elevation.2` | `0 4px 12px rgba(0,27,104,0.12)` | Status Overview Card, floating transaction cards |
+| `elevation.2` | `0 4px 12px rgba(0,27,104,0.12)` | Account Readiness Region, floating transaction cards |
 | `elevation.3` | `0 8px 24px rgba(0,27,104,0.18)` | Modals, bottom sheets, FAB |
 
 ---
@@ -127,7 +143,7 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 
 # Page 8 — App Structure & Flows
 
-**Structure:** every screen sits under one of five bottom-navigation destinations — **Home, Marketplace, Track, Notifications, Profile** — reached only after identity verification. No Cards, Scan, or Analytics tab.
+**Structure:** every screen sits under one of five bottom-navigation destinations — **Home, Marketplace, Track, Cards, Profile** — reached only after identity verification. **HUMAN APPROVED.** **Cards is COMING SOON**: it opens a real destination explaining the future feature, never a dead or disabled tab, and exposes no card functionality, no card balance and nothing implying stored-value wallet or card functionality. Notifications are reached through the bell, the notification centre and push notifications for time-sensitive events. No Scan or Analytics tab.
 
 **Onboarding & authentication:**
 ```
@@ -185,7 +201,9 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 # Page 12 — Core Application: Home & Marketplace
 
-**Home** — Header (avatar, greeting, notification bell) → **Status Overview Card** (`radius.xl` 32px, solid Xspeeria Blue, active FX requests count, pending settlements count, preferred currency-pair shortcut — no balance, no wallet ID, ever) → Quick Actions (New FX Request, Browse Marketplace, Track Transaction, Support) → Recent Transactions (up to 3 cards: pair, stage chip, next action) → Bottom Navigation. Bell → Notifications; pair chip on Status Card → Marketplace pre-filtered to that pair; Transaction Card → Match Details or Settlement Tracking depending on current stage. Empty: "No transactions yet — create your first offer." Status counts increment on load; pull-to-refresh triggers a brief flat-fill pulse. **No balance or account-number figures ever appear on this screen** — this removes the shoulder-surfing concern flagged against the earlier v1 spec entirely, rather than hiding it behind a show/hide toggle.
+**Home** — **HUMAN APPROVED structure.** Header (avatar, greeting, notification bell) → **Account Readiness Region** (`radius.xl` 32px; exactly three dimensions — Identity/KYC, Security/qualifying MFA, Eligible to transact; collapses to a compact confirmation line once all three are satisfied so it does not permanently dominate Home) → **Primary action** (New FX Request / Browse Marketplace) → **Active activity** (open Offers, MatchAllocations requiring attention, in-flight settlements; the most time-critical item first) → Recent activity (up to 3 cards: pair, stage chip, next action) → Bottom Navigation. Bell → Notification centre; readiness dimension → its completion flow; activity item → Match Details or Settlement Tracking depending on current stage. Empty: "No active offers — create your first offer." Pull-to-refresh triggers a brief flat-fill pulse.
+
+**Beneficiary, payout and funding readiness are allocation-specific and must never appear as Home account-readiness dimensions.** Amounts stay attached to the individual Offer or allocation they belong to and are **never summed into one figure**: **no balance, no wallet ID, no account-number figure, and no aggregate currency hero, ever.** A large single currency figure in the hero position reads as a balance regardless of its label, which is why the region carries readiness rather than money. This removes the shoulder-surfing concern at source rather than hiding it behind a show/hide toggle.
 
 **Marketplace** — Segmented control (Offers / Requests), filter bar (currency, amount range, rate), scrollable list of listing cards (rate-sorted), FAB "Create." Tap listing → Offer/Match Details; FAB → Create Offer or Create Request. Empty: "No offers match your filters" + "Clear filters" CTA. New listings matching active filters slide in from top with a brief highlight pulse. Filter bar fully screen-reader operable with an explicit "N filters active" summary.
 
@@ -245,8 +263,8 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 
 | Component | Specification |
 |---|---|
-| **Status Overview Card** | Primary trust surface on Home. Displays FX marketplace/transaction activity — active request count, pending settlement count, preferred currency-pair shortcut. **Never displays a stored balance or wallet ID:** Xspeeria is wallet-less and non-custodial, and this card must not imply otherwise. |
-| **Bottom Navigation** | Persistent across top-level screens: Home, Marketplace, Track, Notifications, Profile. No Cards, Scan, or Analytics tab in MVP. |
+| **Account Readiness Region** | Primary trust surface on Home. **SUPERSEDES the Status Overview Card — HUMAN APPROVED.** Exactly three dimensions: Identity/KYC, Security/qualifying MFA, Eligible to transact. Collapses to a compact confirmation once all three are satisfied. Beneficiary, payout and funding readiness are allocation-specific and never appear here. **Never displays a stored balance, wallet ID or any currency amount:** Xspeeria is wallet-less and non-custodial, and this region must not imply otherwise. |
+| **Bottom Navigation** | Persistent across top-level screens: **Home, Marketplace, Track, Cards, Profile** — **HUMAN APPROVED**. Cards is **COMING SOON**, opening a real destination rather than a dead tab, with no card functionality and no card balance. Notifications live behind the bell, notification centre and push. No Scan or Analytics tab. |
 | **Transaction Card** | Represents a single transaction/settlement in lists and the Home "Recent Transactions" rail. Shows currency pair, current state-machine stage, and next available action — never a balance figure. |
 | **Primary Button** | Single highest-emphasis action per screen. Height 52px, `radius.lg` (24px), scale to 0.97 on press, light haptic. |
 
@@ -260,7 +278,7 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 - Final icon set licensing (Phosphor vs. SF Symbols-derived custom set) for cross-platform parity.
 - Whether Admin (Next.js) requires a distinct component library instance or directly consumes the mobile token set via a shared package.
 - Exact copy for empty/error states across all 22 screens — this spec defines structure and intent; final microcopy needs a content-design pass.
-- *Resolved, no longer open:* balance visibility on Home (removed entirely, not hidden-by-default) and whether Cards/Analytics are in MVP scope (they are not).
+- *Resolved, no longer open:* balance visibility on Home (removed entirely, not hidden-by-default) and whether Analytics is in MVP scope (it is not). **Updated — HUMAN APPROVED:** **Cards** now occupies a bottom-navigation destination as **COMING SOON**, opening a real destination with no card functionality and no card balance.
 
 **Developer Handoff Tokens (Tailwind-ready):**
 ```js
@@ -268,7 +286,7 @@ colors: {
   primary: { blue: '#1F3A8A' },
   success: '#10B981',
   alert: '#EF4444',
-  accent: { gold: '#F4C21F' },
+  accent: { gold: '#F4C21F' },   // decorative rating indicators only — never a status colour
   bg: { base: '#FFFFFF' },
   text: { primary: '#111827' },
 }

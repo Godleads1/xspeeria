@@ -293,7 +293,7 @@ because its stated role — card borders, dividers — is exactly the role the F
 - **No accent/gold in the observed Figma palette.** `color.accent.gold` `#F4C21F` (premium
   accents, badges, KYC-verified marker) has no Figma counterpart. Retained, not Figma-confirmed.
   Whether the logo's gold carries into the application UI at all is open.
-- **Body-text role collision.** The Figma observes body text `#4B5563`; the design documents use
+- **Body-text role collision.** *(Closed by human decision 2026-08-22 — see §9.6a.)* The Figma observes body text `#4B5563`; the design documents use
   `#111827` for body copy and `color.gray.600` `#6B7280` for secondary text. Whether `#4B5563`
   replaces one, the other, or introduces a third role is not determinable from the swatches. No
   value was changed.
@@ -314,3 +314,133 @@ because its stated role — card borders, dividers — is exactly the role the F
 committed, not deleted, not moved, not gitignored, not placed in Git LFS. `.gitignore` was not
 modified and `docs/references/` was not blanket-ignored. How this file is versioned is a human
 decision that has not been taken.
+
+## 9. Design-system freeze — Phase 1
+
+Applied 2026-08-22. **HUMAN APPROVED.** This section converts approved human design decisions into
+normative documentation. **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT
+VERIFIED** — no application code exists, none consumes these tokens, and none of the Home or
+navigation changes is built. No ADR or DEC identifier was created. No settlement, security, legal
+or regulatory decision was touched, and Decisions 2, 3 and 4 remain open and untouched.
+
+**9.1 — Application colour direction, frozen.** Primary `#1F3A8A`; Secondary `#3B82F6`; canvas
+`#FFFFFF`; supporting soft surface `#F8F9FD`; headline `#111827`; body `#4B5563`; disabled
+`#9CA3AF`; success base `#10B981`; warning base `#F59E0B`; error base `#EF4444`; subtle border
+`#E5E7EB`. `#1F3A8A` is **deliberately retained** and must not be normalised to `#1E3A8A`. The
+palette's resemblance to framework defaults does not invalidate it. The approximate logo-derived
+values remain **brand-asset** colours pending vector confirmation and are **not** application UI
+tokens.
+
+**9.2 — Semantic architecture, frozen in principle.** One status colour does not perform every
+role. Status families split into `.fill` / `.surface` / `.border` / `.text`. The Figma base is
+preserved in every family and the darker values are **additions, not replacements**:
+
+| Family | fill | surface | border | text |
+|---|---|---|---|---|
+| success | `#10B981` | `#ECFDF5` | `#059669` | `#047857` |
+| warning | `#F59E0B` | `#FFFBEB` | `#D97706` | `#B45309` |
+| error | `#EF4444` | `#FEF2F2` | `#EF4444` | `#B91C1C` |
+
+`error.text` is `#B91C1C`, not `#DC2626`: `#DC2626` measures 4.41:1 on `#FEF2F2`, below AA for
+normal-size text. Full role-by-role permitted use, with measurements, is in `DESIGN_SYSTEM.md`.
+
+**9.3 — Border and surface roles, frozen.** `#FFFFFF` is the primary canvas; `#F8F9FD` is a
+supporting/sunken surface only; `#E5E7EB` is a **decorative boundary only** (1.24:1); `#6B7280` is
+the **strong boundary** (4.83:1) for text inputs, selectable rows and interactive form fields.
+`#E5E7EB` must never be the sole boundary of a control. Visual hierarchy is built in the order
+spacing/grouping → typography → subtle borders → supporting surface → restrained elevation. No
+card-on-card layouts and no shadow-heavy interfaces.
+
+**9.4 — Primary interaction states, frozen as candidates.** default `#1F3A8A` · hover `#1E40AF` ·
+pressed `#172554` · focus ring `#1D4ED8` · on-primary `#FFFFFF` · disabled fill `#F3F4F6` with
+label `#6B7280`. States move bidirectionally because the base is a dark navy with little
+darkening headroom. The focus ring is deliberately **not** `#3B82F6`, which measures 2.81:1
+against the primary fill. Disabled is a fill swap, not reduced opacity. **`#002885` and `#001350`
+are withdrawn** — both were derived from the obsolete `#001B68`.
+
+**9.5 — Gold, restricted.** Gold is **not** a financial or status semantic colour. It must not
+represent KYC approval, verified identity, success, funding confirmation, settlement completion or
+warning. A narrowly scoped decorative role for **rating indicators only** is permitted, always
+accompanied by the numeric rating. **`04_Product_Design_Specification.md` previously specified the
+KYC verification badge in gold; that is corrected** — identity verification uses the brand-primary
+family, not gold and not success-green, because verification is an **identity fact**, not a
+financial success state. The `feedback.premium` semantic alias is withdrawn.
+
+**9.6 — Left open, not frozen.** Typography, including Satoshi as leading mobile candidate and the
+admin question, blocked on licence, embedding rights, tabular/lining figures and React Native
+asset strategy — **neither Satoshi nor Nunito Sans is production-standard**. The gold
+rating-glyph execution, which may remain an implementation/design-detail item. Logo/brand-asset
+colours pending vector confirmation. The production token freeze itself.
+
+**9.6a — Text roles, resolved.** The body-text role collision recorded in §8.8 is **closed by
+human decision, 2026-08-22**: `color.text.primary` `#111827` for headings, high-emphasis labels
+and primary content; `color.text.secondary` `#4B5563` for **body copy**, descriptions, supporting
+text and metadata — directly FIGMA OBSERVED, 7.56:1 on canvas, and semantically distinct from
+primary; `color.text.disabled` `#9CA3AF` for genuinely disabled/inactive text only.
+`color.border.strong` `#6B7280` is a **boundary value, not a text token** — where it appears as
+readable text it is scoped to the disabled-control treatment (fill `#F3F4F6`, label `#6B7280`)
+and must not be generalised into `color.text.secondary`.
+
+**9.7 — Home, semantic correction.** Xspeeria has **no Available Balance, wallet balance, stored
+balance, custodial balance or withdrawable balance, and no aggregate balance hero.** The concept is
+**removed, not renamed** — the previously documented "net position across pending settlements" was
+the same prohibited affordance under another label, and a large single currency figure in the hero
+position reads as a balance regardless of its label.
+
+The former balance region becomes **Account Readiness**, carrying exactly three dimensions:
+Identity / KYC, Security / qualifying MFA, Eligible to transact. It collapses to a compact
+confirmation state once all three are satisfied. **Beneficiary, payout and funding readiness are
+allocation-specific and must never become Home account-readiness dimensions.**
+
+Approved Home hierarchy: greeting/identity header → notification bell → Account Readiness →
+primary action (create/browse offer) → Active activity → Recent activity. Active activity carries
+open Offers, MatchAllocations requiring attention and in-flight settlement activity as **discrete
+items**; amounts stay attached to the individual Offer or allocation and are **never summed into
+one figure**. The show/hide balance privacy toggle is removed — the shoulder-surfing concern is
+resolved at source by having no balance, not by hiding one.
+
+Reconciled in `04_Product_Design_Specification.md` (Balance Card component → Account Readiness
+Region, Home screen specification, Appendix A open decisions), `Xspeeria_UIUX_AppFlow_Spec_v2.md`,
+`xspeeria-design-bible.md`, `UI_UX_SCREEN_SPEC.md` and `PRODUCT.md`.
+
+**9.8 — Bottom navigation.** **Home, Marketplace, Track, Cards, Profile.** Cards is **COMING
+SOON** and must open a real destination — never a dead or disabled tab. That destination may
+explain the future feature and may later carry a notify-me/waitlist CTA if separately approved. It
+must expose **no active card functionality, no card balances, and nothing implying stored-value
+wallet or card functionality** — `PRODUCT.md` "Brand Commitments" forbids implying card balances,
+so the Coming Soon copy is a compliance-relevant surface, not decoration.
+
+**This reverses a documented prior correction and the reversal is recorded rather than silent.**
+The original specification listed *Home, Cards, Scan, Analytics, Profile*; a prior pass corrected
+it to *Home, Marketplace, Track, Notifications, Profile* on the grounds that Cards matched no MVP
+feature. The human decision restores Cards as Coming Soon and moves Notifications out of the bar.
+Both prior states are retained in the affected documents as supersession history. **Scan** still
+does not exist in the product and **Analytics** remains out of MVP scope — that part of the prior
+correction stands.
+
+Notifications are reached through the bell, the notification centre, and push notifications for
+time-sensitive events — conceptually match available, replacement match, preparation deadline,
+funding deadline, partner confirmation, settlement/payout progress, and dispute/support events.
+**Exact push/SMS policy is not frozen by this pass.**
+
+**9.9 — Mobile / admin consistency.** One Xspeeria brand, different density for the customer app
+and the operator admin. Shared: brand colours, semantic status colours **and their meanings**,
+logo/wordmark treatment, core spacing logic, form and error semantics, financial number formatting
+principles, and state vocabulary. Admin may differ in density, table structures, sidebar
+navigation, keyboard interactions, information volume, reduced motion and compact forms. Mobile
+card layouts are not forced into admin, and admin dashboard density is not forced into mobile.
+**No new settlement state may be invented for UI presentation** — the state vocabulary is owned by
+`docs/adr/001-transaction-state-machine.md`.
+
+**9.10 — Token architecture.** PRIMITIVE → SEMANTIC → COMPONENT. Application components consume
+**semantic** tokens only. Names are role-based, not hue-based (`color.brand.primary`, not
+`color.primary.blue`). No 50–950 ramp is exposed to product code. No component-specific tokens
+without a demonstrated exception. Alpha derivations are computed, not tokenised. **No `info`
+status family** until an actual product need exists. A legacy-name mapping table in
+`DESIGN_SYSTEM.md` carries the hue-based names in the existing documents across to the semantic
+set, so the older tables remain readable without being authoritative.
+
+**9.11 — Design source file, unchanged.** `docs/references/figma/Xspeeria.fig` remains
+**HUMAN-PROVIDED DESIGN SOURCE · UNTRACKED · VERSIONING DECISION OPEN**. Not staged, committed,
+ignored, moved, deleted or LFS-tracked. `.gitignore` was not modified and `docs/references/` was
+not blanket-ignored. The Figma itself was not modified.
