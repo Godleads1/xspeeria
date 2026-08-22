@@ -8,6 +8,7 @@
 | **Supersedes** | All prior transaction/settlement state models in the Xspeeria document suite |
 | **Source** | Phase 0 Audit (`AUDIT_PHASE0_2026-08-18.md`) §13 C-1, §14 Decision 1 |
 | **Authority** | Human-approved architecture decision — `DOCUMENT_INDEX.md` §1 rank 2 |
+| **Amendments** | **A1 — 2026-08-22**, allocation preparation window and `ALLOCATION_FUNDING_READY` (§14). Narrow precondition only; no state, phase or transition altered. No new ADR/DEC number |
 
 ---
 
@@ -414,3 +415,127 @@ Nothing in this ADR names, describes, or implies possession of any money-transmi
 ## 13. Verification status
 
 This ADR is `DOCUMENTED`. No implementation exists. Nothing in it is `IMPLEMENTED` or `VERIFIED`.
+
+---
+
+## 14. Amendment A1 — Allocation preparation window and `ALLOCATION_FUNDING_READY`
+
+| Attribute | Value |
+|---|---|
+| **Amendment** | **A1** |
+| **Status** | **APPROVED** |
+| **Date** | 2026-08-22 |
+| **Authority** | Human-approved domain decision, canonical domain reconciliation pass |
+| **Decision ID** | None — recorded under DEC-003; **no new ADR or DEC number is created** |
+| **Scope** | Narrow. Adds a pre-funding precondition. Alters no state, no phase and no transition |
+
+### 14.1 What this amendment does **not** change
+
+Explicitly unchanged and not weakened:
+
+- **Exactly two `SettlementLeg` rows per `Settlement`**, `UNIQUE(settlement_id, party_role)`.
+- The 9 `SettlementLeg` states and the 10 `Settlement.phase` phases.
+- All 13 phase transitions in §5.1, including T-7, T-8 and T-9.
+- **`PAID_OUT` is irreversible and has zero outbound transitions.**
+- **Authoritative funding remains the authenticated, signature-verified regulated-partner
+  webhook.** No user or client action may establish `FUNDED`. This amendment does not broaden that
+  mechanism for any hypothetical alternative.
+- The forbidden-invariant set in §5.2, the release-authorization outbox in §6, and the separation
+  of concerns in §7.
+
+### 14.2 The distinction this amendment draws
+
+Two lifecycles were previously conflated by the surrounding documents:
+
+| Concern | Owner | Vocabulary |
+|---|---|---|
+| **Allocation preparation** — beneficiary selection and validation, allocation-specific requirements | `Match` (conceptual `MatchAllocation`) | Preparation lifecycle, `ALLOCATION_FUNDING_READY` |
+| **Settlement funding and payout** | `SettlementLeg` | `PENDING` … `PAID_OUT` (§4) |
+
+**Preparation is not a settlement state.** It occurs on the allocation, before any escrow exists,
+and it carries no monetary fact. Nothing in preparation may be recorded as, or derived into, a
+`SettlementLeg.state`.
+
+### 14.3 The added precondition
+
+`ALLOCATION_FUNDING_READY` is a **derived gate on the allocation**, satisfied when every applicable
+preparation requirement for that allocation is complete — at minimum an eligible **validated**
+beneficiary destination selection.
+
+> **Normative:** partner provisioning and settlement instructions **must not become actionable**
+> for a leg until the allocation it belongs to has reached `ALLOCATION_FUNDING_READY`.
+
+In terms of the existing model, this constrains **when** a leg may leave `PENDING` toward
+`ESCROW_PROVISIONED`. It adds no state and changes no transition: T-2
+(`INITIALIZING → AWAITING_FUNDING` on both legs `ESCROW_PROVISIONED`) is untouched, and the
+funding window of T-5 and T-6 continues to run only after provisioning.
+
+### 14.4 Two windows, both configurable
+
+| Window | Starts | Ends | Duration |
+|---|---|---|---|
+| **Preparation** | `Match.accepted_at` — a **trusted server timestamp** | Preparation deadline, or `ALLOCATION_FUNDING_READY` | **OPEN / CONFIGURABLE** |
+| **Funding** | Partner instructions active after provisioning | Funding deadline (T-5, T-6) | **OPEN / CONFIGURABLE — U-2** |
+
+**No duration value is set by this amendment.** Funding-window duration remains **U-2, TBD** per
+§11. Preparation-window duration is added to the governance-deferred set on the same terms: it must
+be implemented as a configurable policy value and **must not be assumed**.
+
+The previously documented hard-coded values — a 30-minute match confirmation expiry and an
+`Offer.settlement_window_hours` range of 1–72 — are **superseded** and are not replaced with new
+numbers.
+
+### 14.5 Preparation failure — pre-funding replacement matching
+
+If preparation is not completed before its deadline, or fails:
+
+- the allocation **terminates with an attributable cause**, recorded;
+- its allocated amount **returns to the Offer's remaining capacity**;
+- **other allocations on the same Offer are unaffected** — each allocation is an independent
+  failure domain, guaranteed structurally by one `Match` → one `Transaction` → one `Settlement`;
+- a fresh eligible acceptance may receive a new allocation. If the same participant returns, they
+  accept again and receive a **new** trusted server timestamp.
+
+**This is pre-funding replacement matching.** It is distinct from, and must never be merged with,
+post-funding **rematching**, **recovery** (`RECOVERY_REQUIRED`) or **unwind** (`UNWINDING`) — those
+concern legs that hold or have moved customer funds, and are governed unchanged by §5 and §5.3.
+Preparation failure occurs before any escrow is funded and therefore involves no customer funds.
+
+### 14.6 Beneficiary invalidation across the boundary
+
+| When invalidation occurs | Effect |
+|---|---|
+| Before funding | `ALLOCATION_FUNDING_READY` fails; provisioning is not actionable |
+| During funding, before authoritative funding | Funding becomes non-actionable/paused pending valid beneficiary correction |
+| After partner-confirmed funding, before payout | **Funding remains true** — the money fact is not reversed. Payout is blocked pending correction. This is consistent with §4: release is gated on `beneficiary_validated_at` being non-null |
+| After irreversible payout | Historical destination and payout remain **immutable** |
+
+Whether a corrected beneficiary resumes the original deadline or starts a new one is
+**OPEN / CONFIGURABLE**.
+
+### 14.7 Split payouts — structure only
+
+A `SettlementLeg` may have `PayoutExecution 0..n` child records where a payout is distributed
+across multiple eligible validated beneficiary destinations. Split amounts must sum **exactly** to
+the amount due for that leg, in integer minor units.
+
+> **`PayoutExecution` children are NOT additional `SettlementLeg` rows.** The exactly-two-leg rule
+> and `UNIQUE(settlement_id, party_role)` are unchanged. Children hang beneath a leg and are never
+> counted as legs.
+
+> **OPEN — REQUIRES CANONICAL RECONCILIATION.** The aggregate derivation from children to leg state
+> — where some children succeed irreversibly and others fail or pause — is **not resolved by this
+> amendment**. `PAID_OUT` is **not** redefined, and the aggregate meaning of T-7, T-8 and T-9 is
+> **unchanged**. Until this is reconciled, no implementation may derive a leg's `PAID_OUT`,
+> `PAYOUT_FAILED` or any phase transition from child records. **This remains a production
+> financial-semantics blocker.**
+
+### 14.8 Amendment record
+
+| Item | Value |
+|---|---|
+| ADR-001 body (§1–§13) | **Unchanged** |
+| States, phases, transitions | **Unchanged** |
+| New governance-deferred parameter | **Preparation-window duration** — Product/Risk, TBD, on the same terms as §11 |
+| Related open item | Payout child → leg aggregate semantics (§14.7) |
+| ADR-002 | **Unchanged.** No amendment required |

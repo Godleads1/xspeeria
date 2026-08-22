@@ -210,6 +210,12 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Beneficiary, payout and funding readiness are allocation-specific and must never appear as Home account-readiness dimensions.** Amounts stay attached to the individual Offer or allocation they belong to and are **never summed into one figure**: **no balance, no wallet ID, no account-number figure, and no aggregate currency hero, ever.** A large single currency figure in the hero position reads as a balance regardless of its label, which is why the region carries readiness rather than money. This removes the shoulder-surfing concern at source rather than hiding it behind a show/hide toggle.
 
+> **Terminology note.** **`MatchAllocation`** is canonical **product language** for one accepted
+> partial or full allocation of an Offer. It maps to the existing persisted/API entity **`Match`**
+> — there is **no separate `MatchAllocation` table or entity**. See the canonical glossary in
+> `DOCUMENT_INDEX.md` §2A.
+
+
 **Marketplace** — Segmented control (Offers / Requests), filter bar (currency, amount range, rate), scrollable list of listing cards (rate-sorted), FAB "Create." Tap listing → Offer/Match Details; FAB → Create Offer or Create Request. Empty: "No offers match your filters" + "Clear filters" CTA. New listings matching active filters slide in from top with a brief highlight pulse. Filter bar fully screen-reader operable with an explicit "N filters active" summary.
 
 ---

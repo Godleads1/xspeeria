@@ -40,6 +40,21 @@ This document is the binding contract between Xspeeria’s FastAPI backend and a
 
 > **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Statements below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists.** No normative Security Baseline Specification currently exists in this repository, and the security-baseline decision (Decision 2, `AUDIT_PHASE0_2026-08-18.md` §14) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined** — the controls described therefore lack their expected normative grounding. Documented requirements are not evidence of implementation or verification.
 
+> **CANONICAL DOMAIN RECONCILIATION — 2026-08-22.** The schemas and endpoints below have been
+> reconciled to **HUMAN-APPROVED PRODUCT SEMANTICS**. Two things must be read separately:
+>
+> - **HUMAN-APPROVED SEMANTICS** — the meaning: Offer-centred publish-and-accept, partial
+>   acceptance, one Offer to many allocations, ceiling-only rate validation, the two-window
+>   allocation lifecycle, per-allocation beneficiary selection. These are decided.
+> - **PROPOSED API SHAPE** — every path, field name, enum literal and error identifier below.
+>   **This document remains DERIVED and NOT RATIFIED** (see the ASSUMPTION above). Reconciling it
+>   to approved semantics does **not** make its naming backend-ratified. No endpoint or error-code
+>   identifier here is frozen.
+>
+> Canonical conceptual terminology maps to persisted/API terminology per the glossary in
+> `DOCUMENT_INDEX.md`: **`MatchAllocation` = `Match`**, **`KycCase` = `KYCCases`**,
+> **`BeneficiaryAccount` = `BENEFICIARIES`**. No table, route or entity is renamed.
+
 1\. API Standards
 
 1.1 REST Conventions
@@ -330,11 +345,11 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Purpose          | Create a new FX offer.                                                                                                             |
 | Permissions      | Authenticated, KYC-approved                                                                                                        |
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                                      |
-| Request JSON     | source_currency, target_currency, source_amount (Decimal string), desired_rate (Decimal string), settlement_window_hours (integer) |
+| Request JSON     | source_currency, target_currency, source_amount (Decimal string), desired_rate (Decimal string). **`settlement_window_hours` is withdrawn** — window durations are configurable policy, not user input (ADR-001 §14.4) |
 | Success Response | 201 Created — Offer object, status: "active"                                                                                       |
-| Error Responses  | VAL_422_RATE_OUT_OF_BAND, VAL_422_AMOUNT_BELOW_MINIMUM, AUTH_403_KYC_REQUIRED                                                      |
-| Validation Rules | desired_rate must fall within ±15% of the current reference market rate; source_amount ≥ corridor minimum                          |
-| Business Rules   | Rate-band check protects counterparties from mispriced or manipulative offers                                                      |
+| Error Responses  | VAL_422_RATE_ABOVE_CEILING *(proposed; supersedes `VAL_422_RATE_OUT_OF_BAND`)*, VAL_422_AMOUNT_BELOW_MINIMUM, AUTH_403_KYC_REQUIRED |
+| Validation Rules | **HUMAN-APPROVED:** `desired_rate` must be **≤ the applicable approved reference ceiling** — above the ceiling is a **hard block**. **There is no approved floor**; the superseded ±15% symmetric band is withdrawn. Reference-rate source, update cadence, staleness and provider-unavailable policy remain **OPEN / configurable**. `source_amount` ≥ corridor minimum                          |
+| Business Rules   | **Ceiling check** protects counterparties from mispriced or manipulative offers. `seller_rate ≤ applicable approved reference ceiling`; above it is a hard block; **no floor applies**. Re-checked at acceptance; locked on the resulting Match |
 
 **POST /v1/requests**
 
@@ -358,7 +373,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Purpose          | Edit an active, unmatched offer.                                                                         |
 | Permissions      | Authenticated (owner)                                                                                    |
 | Required Headers | Authorization: Bearer {access_token}                                                                     |
-| Request JSON     | desired_rate (optional), settlement_window_hours (optional)                                              |
+| Request JSON     | desired_rate (optional) — **`settlement_window_hours` is withdrawn**; window durations are configurable policy, not user input (ADR-001 §14.4) |
 | Success Response | 200 OK — updated Offer                                                                                   |
 | Error Responses  | RES_409_OFFER_ALREADY_MATCHED, AUTH_403_NOT_OWNER                                                        |
 | Validation Rules | Same rate-band validation as creation                                                                    |
@@ -369,14 +384,14 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 |                  |                                                                                                                  |
 |------------------|------------------------------------------------------------------------------------------------------------------|
 | **Field**        | **Specification**                                                                                                |
-| Purpose          | Cancel an active offer.                                                                                          |
+| Purpose          | **Withdraw an Offer's remaining availability** — close the Offer to further matching. |
 | Permissions      | Authenticated (owner)                                                                                            |
 | Required Headers | Authorization: Bearer {access_token}                                                                             |
 | Request JSON     | none                                                                                                             |
-| Success Response | 200 OK — { status: "cancelled" }                                                                                 |
-| Error Responses  | RES_409_OFFER_ALREADY_MATCHED                                                                                    |
+| Success Response | 200 OK — Offer closed to further matching. Response literal is **PROPOSED, not ratified**; no persisted enum is introduced solely for this clarification |
+| Error Responses  | ~~RES_409_OFFER_ALREADY_MATCHED~~ — **superseded**: an Offer carrying valid allocations may still withdraw its remaining availability |
 | Validation Rules | N/A                                                                                                              |
-| Business Rules   | Cannot cancel an offer once matched; must go through dispute/cancellation-with-counterparty-consent flow instead |
+| Business Rules   | **HUMAN-APPROVED, clarified 2026-08-22.** The seller **withdraws the remaining availability**, **closing the Offer to further matching**. This is **not** a cancellation that cascades from Offer to Match. It **must not** cancel, invalidate or alter the `allocated_amount` of any existing Match; **must not** unwind a Transaction or terminate a Settlement; **must not** return capacity already committed to a valid allocation; and **must not** affect any other Match under the same Offer. Every existing valid allocation continues as an **independent failure domain**, and all Match/Transaction/Settlement history remains intact. Only the **uncommitted remainder** becomes unavailable: no new acceptance may consume it. Committed allocations are unwound only through the per-allocation dispute / cancellation-with-counterparty-consent flow. *Example — original 2,000 with an existing Match of 1,000: after withdrawal that Match continues untouched, the remaining 1,000 is no longer acceptable by anyone, and the Offer is closed to further matching.* |
 
 3.5 Matching
 
@@ -385,16 +400,21 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 |                  |                                                                                                           |
 |------------------|-----------------------------------------------------------------------------------------------------------|
 | **Field**        | **Specification**                                                                                         |
-| Purpose          | Accept an offer, creating a Match.                                                                        |
-| Permissions      | Authenticated, KYC-approved, not the offer owner                                                          |
+| Purpose          | Accept **some or all of an Offer's currently available remaining amount**, creating one `Match` — the persisted form of a conceptual `MatchAllocation` |
+| Permissions      | Authenticated, KYC-approved, TRANSACTION_ELIGIBLE, not the offer owner |
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                             |
-| Request JSON     | none                                                                                                      |
-| Success Response | 201 Created — Match object, status: "pending_confirmation"                                                |
-| Error Responses  | RES_409_OFFER_UNAVAILABLE, AUTH_403_SELF_MATCH_FORBIDDEN                                                  |
-| Validation Rules | A user cannot match against their own offer                                                               |
-| Business Rules   | Acceptance locks the offer (status → "matched") atomically to prevent double-acceptance under concurrency |
+| Request JSON     | **`accepted_amount` (Decimal string, required)** — **HUMAN-APPROVED:** partial acceptance. Omission may default to the full remaining amount; that default is **PROPOSED, not ratified** |
+| Success Response | 201 Created — Match object carrying `allocated_amount` and the server-set `accepted_at` |
+| Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_RATE_ABOVE_CEILING *(proposed)* |
+| Validation Rules | A user cannot match against their own offer. `accepted_amount` > 0, ≤ the Offer's remaining amount, and within applicable corridor allocation constraints. Rate policy is **re-checked at acceptance** |
+| Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount** — row-level locking on the Offer's amount fields, never a whole-Offer lock. Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match |
 
-**POST /v1/matches/{match_id}/confirm**
+**POST /v1/matches/{match_id}/confirm** — **SUPERSEDED, HUMAN DECISION 2026-08-22**
+
+> **Withdrawn.** Acceptance itself establishes the allocation, fixed by the server-set trusted
+> `accepted_at` timestamp. **No second bilateral confirmation step precedes preparation**, and the
+> 30-minute confirmation expiry is withdrawn with no replacement value. The block below is retained
+> as superseded history only and must not be implemented.
 
 |                  |                                                                                                       |
 |------------------|-------------------------------------------------------------------------------------------------------|
@@ -403,10 +423,10 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Permissions      | Authenticated (either matched party)                                                                  |
 | Required Headers | Authorization: Bearer {access_token}                                                                  |
 | Request JSON     | none                                                                                                  |
-| Success Response | 200 OK — { status: "confirmed_by_you", both_confirmed: boolean }                                      |
+| Success Response | ~~200 OK — { status: "confirmed_by_you", both_confirmed: boolean }~~ **SUPERSEDED**                                      |
 | Error Responses  | RES_409_MATCH_ALREADY_CONFIRMED, RES_410_MATCH_EXPIRED                                                |
-| Validation Rules | Match auto-expires and reverts the offer to active if not confirmed by both parties within 30 minutes |
-| Business Rules   | Settlement initiation (Section 3.6) is only triggered once both_confirmed = true                      |
+| Validation Rules | ~~Match auto-expires and reverts the offer to active if not confirmed by both parties within 30 minutes.~~ **SUPERSEDED** — no bilateral confirmation, no 30-minute expiry. Allocation timing is governed by the configurable preparation and funding windows (ADR-001 Amendment A1 §14.4) |
+| Business Rules   | ~~Settlement initiation is only triggered once both_confirmed = true.~~ **SUPERSEDED** — partner provisioning becomes actionable only once the allocation reaches **`ALLOCATION_FUNDING_READY`** (ADR-001 §14.3) |
 
 **GET /v1/matches/{match_id}**
 
@@ -616,7 +636,7 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | VAL_422_UNDERAGE             | 422             | Declared date of birth implies age below 18        |
 | VAL_422_FILE_TOO_LARGE       | 422             | Uploaded file exceeds 10MB                         |
 | VAL_422_UNSUPPORTED_FORMAT   | 422             | File type not in accepted list                     |
-| VAL_422_RATE_OUT_OF_BAND     | 422             | Desired rate exceeds ±15% of reference market rate |
+| VAL_422_RATE_ABOVE_CEILING *(proposed name)* | 422 | **HUMAN-APPROVED semantics:** desired rate exceeds the applicable approved reference ceiling — hard block. **Supersedes `VAL_422_RATE_OUT_OF_BAND`**, which encoded a symmetric ±15% band and an unapproved floor. The identifier itself is **PROPOSED, not ratified** |
 | VAL_422_AMOUNT_BELOW_MINIMUM | 422             | Source amount below corridor minimum               |
 | VAL_422_REASON_REQUIRED      | 422             | A required justification field was omitted         |
 | VAL_422_MALFORMED_JSON       | 422             | Request body is not valid JSON                     |
@@ -751,9 +771,49 @@ Individual uploaded documents within a KYC case.
 | storage_uri   | TEXT     | No           | AES-256 encrypted object reference                   | Never returned as a raw public URL |
 | status        | ENUM     | No           | uploaded, verified, rejected                         | Per-document review outcome        |
 
+BeneficiaryAccount
+
+**HUMAN APPROVED, 2026-08-22.** A reusable, profile-level payout destination owned by a User:
+`User → BeneficiaryAccount 0..n`. This is the canonical model for the **existing `BENEFICIARIES`
+concept** already present in `02_Technical_Design_Specification.md` §5 — it is **extended, not
+duplicated**, and no table is renamed.
+
+| | | | | |
+|---|---|---|---|---|
+| **Field** | **Type** | **Nullable** | **Validation** | **Business Meaning** |
+| id | UUID | No | Primary key | Beneficiary identifier |
+| user_id | UUID | No | FK -\> Users.id | Owning user |
+| currency | CHAR(3) | No | ISO 4217 | Payout currency |
+| account_ref | VARCHAR(255) | No | **Tokenised reference; never a raw account number** — same handling as `SettlementLeg.escrow_account_ref` | Partner-resolvable destination |
+| validation_state | ENUM | No | Must express: **pending, validated, failed/rejected, invalidated**. Persisted literals may differ for compatibility | A saved beneficiary may exist in any of these states |
+| validated_at | TIMESTAMPTZ | Yes | Set on successful validation | Evidence timestamp |
+
+> **Only an eligible `validated` beneficiary may satisfy `ALLOCATION_FUNDING_READY`.** Selection is
+> **per Match / conceptual `MatchAllocation`** — different Matches under one Offer may use
+> different destinations, and one allocation may distribute across several destinations (see
+> `PayoutExecution`).
+>
+> **Invalidation semantics** are recorded in ADR-001 §14.6: before funding, readiness fails; during
+> funding before authoritative funding, funding is paused pending correction; **after
+> partner-confirmed funding, the funding fact remains true** and payout is blocked pending
+> correction; after irreversible payout, the historical destination is immutable. Whether a
+> correction resumes the original deadline or starts a new one is **OPEN / CONFIGURABLE**.
+>
+> No raw bank-detail storage guarantee or tokenisation mechanism beyond existing approved
+> security/partner guidance is specified here.
+
 FXRequest
 
 A user’s request to exchange currency (inverse of Offer).
+
+> **DISPOSITION — HUMAN APPROVED, 2026-08-22: LEGACY / API-COMPATIBILITY + OPTIONAL DEMAND-SIDE
+> PRODUCT CONCEPT.** `FXRequest` is **retained** — the table, the `/fx-requests` route and all
+> historical references stand, and nothing is deleted or renamed. It is **no longer a required
+> canonical matching primitive.** A `Match` must be creatable from an Offer, an accepting
+> counterparty, an accepted amount and a trusted server timestamp **without any `FXRequest`**;
+> accordingly `Match.fx_request_id` is **optional/nullable**. `FXRequest` must not drive the
+> canonical matching algorithm, and the marketplace "Requests" experience must not create a second
+> competing allocation model.
 
 |                 |               |              |                                     |                                     |
 |-----------------|---------------|--------------|-------------------------------------|-------------------------------------|
@@ -763,12 +823,38 @@ A user’s request to exchange currency (inverse of Offer).
 | source_currency | CHAR(3)       | No           | ISO 4217                            | Currency being offered by requester |
 | target_currency | CHAR(3)       | No           | ISO 4217, != source_currency        | Currency desired                    |
 | source_amount   | NUMERIC(18,2) | No           | \> corridor minimum                 | Decimal precision, never float      |
-| desired_rate    | NUMERIC(12,6) | No           | Within ±15% of reference rate       | Requested exchange rate             |
+| desired_rate    | NUMERIC(12,6) | No           | **≤ applicable approved reference ceiling; no floor** | Requested exchange rate |
 | status          | ENUM          | No           | active, matched, cancelled, expired | Marketplace visibility              |
 
 Offer
 
-A user’s offer to exchange currency.
+A user’s offer to exchange currency. **Canonical parent matching intent — HUMAN APPROVED,
+2026-08-22.** One Offer may carry **0..n** Matches (conceptual `MatchAllocation`s), each an
+independent settlement failure domain.
+
+> **Canonical amount invariant:** `original_amount = matched_amount + remaining_amount`.
+> `matched_amount` is the sum of **currently valid, non-expired allocations plus successfully
+> completed allocations**. When an allocation expires or is released pre-funding, it **ceases to
+> contribute** and its amount returns to `remaining_amount`; the terminated allocation record
+> remains immutable audit history.
+>
+> **`remaining_amount` is DERIVED**, not persisted as an independently mutable source of truth,
+> unless a later technical review proves material need.
+>
+> **Withdrawing remaining availability.** A seller may **withdraw the Offer's remaining availability**,
+> **closing it to further matching**. This is **not** a cancellation cascading from Offer to Match: existing
+> Matches, their `allocated_amount`, their Transactions and their Settlements are **untouched**, other
+> allocations under the same Offer are **unaffected**, and committed capacity is **never returned**. Only the
+> uncommitted remainder becomes unavailable to new acceptances. Each existing allocation continues as an
+> **independent failure domain**.
+>
+> **Allocation arithmetic uses exact integer minor units** with explicit currency exponent/scale —
+> never binary floating point. This is **marketplace/allocation arithmetic** and is distinct from
+> **ledger posting representation**, which remains governed by ADR-002 (`amount_minor` BIGINT +
+> `scale` + `currency_def_version`, with `ROUND_HALF_EVEN` applied at exactly one conversion
+> point). ADR-002 is unchanged and remains authoritative for the ledger boundary. The
+> `NUMERIC(18,2)` column type below is a **PROPOSED shape**, not ratified; the approved semantics
+> are exactness and minor-unit arithmetic.
 
 |                         |               |              |                                     |                                            |
 |-------------------------|---------------|--------------|-------------------------------------|--------------------------------------------|
@@ -777,28 +863,48 @@ A user’s offer to exchange currency.
 | user_id                 | UUID          | No           | FK -\> Users.id                     | Offering user                              |
 | source_currency         | CHAR(3)       | No           | ISO 4217                            | Currency offered                           |
 | target_currency         | CHAR(3)       | No           | ISO 4217                            | Currency desired in exchange               |
-| source_amount           | NUMERIC(18,2) | No           | \> corridor minimum                 | Decimal precision, never float             |
-| desired_rate            | NUMERIC(12,6) | No           | Within ±15% of reference rate       | Offered exchange rate                      |
-| settlement_window_hours | SMALLINT      | No           | 1–72                                | Max time allowed for settlement post-match |
-| status                  | ENUM          | No           | active, matched, cancelled, expired | Marketplace visibility                     |
+| source_amount           | NUMERIC(18,2) | No           | \> corridor minimum; exact, never float | **Original amount.** Conceptually `original_amount` |
+| matched_amount          | NUMERIC(18,2) | No           | 0 ≤ matched_amount ≤ source_amount, enforced under row lock | Sum of valid + completed allocations |
+| *remaining_amount*      | *derived*     | —            | `source_amount − matched_amount`    | **DERIVED — not persisted** |
+| desired_rate            | NUMERIC(12,6) | No           | **≤ applicable approved reference ceiling; no floor.** Validated at publication; re-checked at acceptance; **locked** on the resulting Match | Seller-selected exchange rate |
+| ~~settlement_window_hours~~ | ~~SMALLINT~~ | — | **WITHDRAWN** | Superseded: window durations are configurable policy, not user input (ADR-001 §14.4) |
+| status                  | ENUM          | No           | **Must express: open, partially matched, fully matched, cancelled, expired.** Persisted enum literals may retain existing names for compatibility — the *conceptual* lifecycle is what is approved. The former binary `active \| matched` is **insufficient** | Marketplace visibility. **A partially matched Offer remains available for its remaining amount** |
 
 Match
 
-A confirmed pairing between an Offer and an accepting counterparty.
+**One accepted partial or full allocation of one Offer by one counterparty.** This is the
+persisted/API form of the conceptual **`MatchAllocation`** — see the glossary in
+`DOCUMENT_INDEX.md`. **HUMAN APPROVED, 2026-08-22:** the entity is **extended, not renamed**, and
+**no second `MatchAllocation` table or entity exists**.
+
+> Each Match is an **independent transaction/settlement failure domain**: Match → one Transaction
+> (`match_id` UNIQUE) → one Settlement → **exactly two SettlementLegs** (ADR-001, unchanged).
+>
+> **Partner provisioning state is owned by `SettlementLeg`** (`ESCROW_PROVISIONED`,
+> `PROVISION_FAILED`, `partner_id`, `escrow_account_ref`) per ADR-001 and is **not duplicated
+> here**.
 
 |                      |               |              |                                                     |                                   |
 |----------------------|---------------|--------------|-----------------------------------------------------|-----------------------------------|
 | **Field**            | **Type**      | **Nullable** | **Validation**                                      | **Business Meaning**              |
-| id                   | UUID          | No           | Primary key                                         | Match identifier                  |
-| offer_id             | UUID          | No           | FK -\> Offer.id                                     | Matched offer                     |
-| counterparty_user_id | UUID          | No           | FK -\> Users.id                                     | Accepting user                    |
-| agreed_rate          | NUMERIC(12,6) | No           | Locked at match time                                | Immutable once set                |
-| status               | ENUM          | No           | pending_confirmation, confirmed, expired, cancelled | Drives settlement eligibility     |
-| expires_at           | TIMESTAMPTZ   | No           | 30 minutes from creation                            | Auto-reverts offer if unconfirmed |
+| id                   | UUID          | No           | Primary key                                         | Allocation identifier |
+| offer_id             | UUID          | No           | FK -\> Offer.id                                     | Parent Offer |
+| fx_request_id        | UUID          | **Yes**      | FK -\> FXRequest.id. **Optional/nullable** — a Match is creatable without any FXRequest | Legacy/compatibility linkage only |
+| counterparty_user_id | UUID          | No           | FK -\> Users.id                                     | Accepting user |
+| allocated_amount     | NUMERIC(18,2) | No           | \> 0; Σ valid allocations ≤ Offer.source_amount, enforced under row lock. Exact minor-unit arithmetic | **Amount allocated by this acceptance.** Reconciles the TDS `matched_amount` on Match — **one amount concept, not two** |
+| agreed_rate          | NUMERIC(12,6) | No           | Locked at acceptance; never silently re-priced      | Immutable once set |
+| accepted_at          | TIMESTAMPTZ   | No           | **Server-set trusted timestamp.** A client-supplied value is never trusted | Establishes the allocation and its acceptance priority |
+| preparation_state    | ENUM          | No           | Preparation lifecycle for this allocation           | **Window 1.** Beneficiary selection/validation and allocation-specific requirements |
+| preparation_deadline | TIMESTAMPTZ   | No           | **Duration is OPEN / CONFIGURABLE — no value is set** | End of the preparation window |
+| funding_state        | ENUM          | No           | Funding lifecycle for this allocation               | **Window 2.** Runs only after `ALLOCATION_FUNDING_READY` |
+| funding_deadline     | TIMESTAMPTZ   | Yes          | **Duration is OPEN / CONFIGURABLE — U-2 TBD**       | End of the funding window |
+| allocation_requirements | JSONB      | Yes          | Applicable allocation-specific requirements         | Evaluated during preparation |
+| ~~status~~           | ~~ENUM~~      | —            | ~~pending_confirmation, confirmed, expired, cancelled~~ **SUPERSEDED** — no bilateral confirmation step exists | Replaced by `preparation_state` / `funding_state` |
+| ~~expires_at~~       | ~~TIMESTAMPTZ~~ | —          | ~~30 minutes from creation~~ **WITHDRAWN**, no replacement value | Replaced by the two configurable deadlines |
 
 Transaction
 
-The financial record created once a Match is fully confirmed.
+The financial record created for a Match. **HUMAN APPROVED, 2026-08-22: the Transaction layer is KEPT** — not collapsed into Match or Settlement. `Match → one Transaction (match_id UNIQUE) → one Settlement → exactly two SettlementLegs` preserves the independent allocation/settlement boundary and avoids changes adjacent to ADR-001. *(The former "once a Match is fully confirmed" wording is superseded: there is no bilateral confirmation step.)*
 
 |            |             |              |                                                  |                               |
 |------------|-------------|--------------|--------------------------------------------------|-------------------------------|
@@ -856,6 +962,35 @@ SettlementLeg
 | escrow_account_ref       | VARCHAR(255)  | Yes          | Tokenized reference; never a raw account number                                | Partner-held escrow                    |
 | beneficiary_validated_at | TIMESTAMPTZ   | Yes          | Required non-null before release authorization                                 | Account-name-inquiry gate (Doc 07 §3.3) |
 | funded_at / paid_out_at / returned_at | TIMESTAMPTZ | Yes | Set only by signature-verified partner webhook                              | Money-fact timestamps                  |
+
+PayoutExecution
+
+**HUMAN APPROVED as structure, 2026-08-22.** A child payout record beneath a single
+`SettlementLeg`, used where one allocation distributes its payout across multiple eligible
+**validated** beneficiary destinations: `SettlementLeg → PayoutExecution 0..n`.
+
+| | | | | |
+|---|---|---|---|---|
+| **Field** | **Type** | **Nullable** | **Validation** | **Business Meaning** |
+| id | UUID | No | Primary key | Payout child identifier |
+| leg_id | UUID | No | FK -\> SettlementLeg.leg_id | Parent leg |
+| beneficiary_account_id | UUID | No | FK -\> BeneficiaryAccount.id; must be `validated` | Destination |
+| amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point** | Split amount |
+| currency | CHAR(3) | No | ISO 4217; = leg currency | Payout currency |
+| scale | SMALLINT | No | Stored on the row | Minor-unit exponent |
+
+> **Exact-total invariant:** the sum of a leg's `PayoutExecution.amount_minor` values must equal
+> **exactly** the amount due for that leg. Validated in integer minor units.
+>
+> **`PayoutExecution` children are NOT additional `SettlementLeg` rows.** ADR-001's
+> **exactly-two-leg** rule and `UNIQUE(settlement_id, party_role)` are **unchanged**; children are
+> never counted as legs.
+>
+> **OPEN — REQUIRES CANONICAL RECONCILIATION.** The aggregate derivation from children to leg
+> state, where some children succeed irreversibly and others fail or pause, is **not resolved**.
+> `PAID_OUT` is **not** redefined and the aggregate meaning of ADR-001 **T-7, T-8 and T-9 is
+> unchanged**. No implementation may derive a leg's `PAID_OUT` or `PAYOUT_FAILED`, or any phase
+> transition, from child records. **This remains a production financial-semantics blocker.**
 
 WebhookReceipt
 
@@ -1078,7 +1213,7 @@ Appendix A: Open Items for Backend Engineering Ratification
 
 - Confirm final corridor minimum/maximum amounts for the NGN⇄GBP launch (pilot) corridor, and separately for the NGN⇄USD Year 2 corridor (referenced but not numerically fixed above).
 
-- Confirm exact rate-band tolerance (±15% used here as a placeholder consistent with typical P2P FX marketplaces) against actual liquidity/risk modeling.
+- ~~Confirm exact rate-band tolerance (±15% placeholder).~~ **RESOLVED — HUMAN APPROVED 2026-08-22.** The rule is `seller_rate ≤ applicable approved reference ceiling`, hard block above, **no floor**. The ±15% symmetric band was a self-declared placeholder and is withdrawn. Still **OPEN / configurable**: reference-rate provider, update cadence, staleness policy, provider-unavailable behaviour. If an unmatched remaining Offer later violates a changed ceiling it is **paused/revalidated** — its seller-selected rate is never silently modified.
 
 - Expand the Error Catalogue to the full 50+ target as each module’s edge cases are implemented and tested, rather than pre-specifying untested codes.
 

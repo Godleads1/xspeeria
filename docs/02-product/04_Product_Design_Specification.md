@@ -603,6 +603,12 @@ Home
 | Component Tree     | SafeAreaView \> Header \> AccountReadinessRegion \> PrimaryAction \> ActiveActivitySection \> RecentActivitySection(TransactionCard×3) \> BottomNavigation |
 | Navigation         | Bell → Notification centre; readiness dimension → its completion flow (KYC, MFA enrolment); primary action → Create Offer or Marketplace; activity item → Match Details or Settlement Tracking by current stage; Bottom Nav → Home, Marketplace, Track, Cards *(Coming Soon)*, Profile |
 | Active activity    | Discrete items: open Offers, MatchAllocations requiring attention, in-flight settlement activity. The most time-critical item surfaces first. **Amounts remain attached to the individual Offer or allocation they belong to and are never summed into one figure** |
+
+> **Terminology note.** **`MatchAllocation`** is canonical **product language** for one accepted
+> partial or full allocation of an Offer. It maps to the existing persisted/API entity **`Match`**
+> — there is **no separate `MatchAllocation` table or entity**. See the canonical glossary in
+> `DOCUMENT_INDEX.md` §2A.
+
 | Empty State        | Active activity: "No active offers — create your first offer." Recent activity: "No transactions yet." Both name a next action |
 | Error State        | Readiness region and Active activity each show a compact inline error + retry independently; the rest of the screen remains interactive |
 | Loading State      | Readiness region, Active activity and Transaction Cards render Loading Skeletons matching final dimensions on cold load |

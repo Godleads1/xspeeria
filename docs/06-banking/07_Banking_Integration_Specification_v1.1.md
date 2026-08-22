@@ -327,6 +327,14 @@ Bank Downtime
 | User Communication | Marketplace/Settlement screens display a scoped service-status banner if a specific corridor leg is affected, rather than a generic app-wide error                |
 | Audit Logging      | Circuit-breaker state transitions logged; feeds the P2/P1 alerting policy in Document 06, Section 6.3                                                             |
 
+> **ADR-001 Amendment A1, 2026-08-22 — provisioning precondition.** Partner provisioning and
+> settlement instructions **must not become actionable** for a leg until the allocation it
+> belongs to has reached **`ALLOCATION_FUNDING_READY`** (preparation complete, including an
+> eligible validated beneficiary destination). This adds a precondition only: no leg state, no
+> settlement phase and no transition changes, and **authoritative funding remains the
+> authenticated, signature-verified partner webhook**. A user or client action never establishes
+> `FUNDED`.
+
 8\. Banking SLA
 
 > **ASSUMPTION:** *The following SLA figures are illustrative reference targets for evaluating and contracting a real banking partner — they are not commitments made by, or confirmed with, any actual partner, and must be replaced with the executed partner agreement’s real terms once one exists.*

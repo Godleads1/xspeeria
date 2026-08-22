@@ -373,6 +373,40 @@ Where required, use:
 
 ---
 
+# 2A. CANONICAL DOMAIN GLOSSARY
+
+**HUMAN APPROVED, 2026-08-22.** Authoritative mapping between canonical **conceptual** terminology
+and existing **persisted/API** terminology. Product and UI documentation may use the conceptual
+term freely; it never implies a separate table, route or entity.
+
+**No table, route, endpoint or entity is renamed by this mapping.**
+
+| Conceptual term | Persisted / API term | Meaning |
+|---|---|---|
+| **MatchAllocation** | **`Match`** | One accepted partial or full allocation of one Offer by one counterparty. One Offer carries **0..n**. Each is an independent settlement failure domain |
+| **KycCase** | **`KYCCases`** | The onboarding/review case lifecycle. Canonical for onboarding and review history |
+| **BeneficiaryAccount** | **`BENEFICIARIES`** | Reusable profile-level payout destination, `User → 0..n` |
+| **Offer** | `Offer` | Parent matching intent. `original_amount = matched_amount + remaining_amount`; remaining is **derived** |
+| **Settlement / SettlementLeg** | same | ADR-001, unchanged. Exactly two legs per settlement |
+| **PayoutExecution** | `PayoutExecution` | Child payout record beneath one leg. **Never an additional leg** |
+| **CorridorConfig / JurisdictionProfile** | *(configuration schemas)* | Versioned configuration and policy interfaces — **not runtime-editable persisted entities yet** |
+| **MfaFactor** | *(none yet)* | Conceptual `User → MfaFactor 0..n`. Persistence and policy **OPEN — Decision 2** |
+
+Two structural notes:
+
+- **`Match` is extended, not renamed.** There is **no** second `MatchAllocation` table or entity.
+- **`KYC_PROFILES`** in `02_Technical_Design_Specification.md` §5, if retained, is a **summary /
+  projection / current-profile representation** — **not** a competing canonical case lifecycle.
+
+Canonical relationship chain, unchanged where ADR-001 governs:
+
+```
+Offer → Match (0..n) → Transaction (1, match_id UNIQUE) → Settlement (1)
+      → SettlementLeg (exactly 2) → PayoutExecution (0..n)
+```
+
+---
+
 # 11. UI / UX
 
 ## Primary visual source of truth — application UI/UX

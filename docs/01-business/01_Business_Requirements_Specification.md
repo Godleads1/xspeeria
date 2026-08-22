@@ -39,6 +39,14 @@
 15. MVP Definition
 16. Product Roadmap
 
+> **CANONICAL DOMAIN RECONCILIATION — 2026-08-22.** The canonical marketplace model is
+> **Offer-centred publish-and-accept**. `FXRequest` is **retained** as a legacy/API-compatibility
+> concept and as an **optional demand-side product capability**; it is **not** a required
+> matching primitive, and it must not create a second competing allocation model. Whether the
+> demand-side "post a request" capability remains user-facing in MVP is an **open product
+> decision**. Demand-side language below should be read in that light. See `DOCUMENT_INDEX.md`
+> §2A.
+
 # 1. EXECUTIVE SUMMARY
 
 Xspeeria is a premium, wallet-less, peer-to-peer fiat currency exchange platform. It connects individuals and businesses who need to exchange currency — starting with the Nigerian Naira and British Pound corridor (NGN ⇄ GBP) — directly with one another, with NGN ⇄ USD added as the second corridor in Year 2, with settlement executed through licensed banking and payment partners rather than through Xspeeria holding customer funds.
@@ -303,7 +311,7 @@ Each feature area below includes description, business rules, acceptance criteri
 
 **Acceptance Criteria:** A proposed match is generated within an acceptable latency window of a compatible offer/request becoming available; both parties are notified.
 
-**Edge Cases:** Simultaneous compatible candidates — resolved via price-time priority (best rate first, then oldest listing first).
+**Edge Cases:** Simultaneous acceptances of the same Offer — resolved by **first eligible acceptance by trusted server timestamp**. **SUPERSEDED 2026-08-22:** the former *"price-time priority (best rate first, then oldest listing first)"* rule is withdrawn — best-rate and price-time **allocation** priority are not used, and no central-limit-order-book semantics apply. Marketplace discovery/ranking may still order listings by rate or time; ranking a listing is not allocating it.
 
 **Dependencies:** Marketplace module, Redis (locking), Notification module.
 

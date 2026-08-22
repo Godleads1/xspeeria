@@ -40,6 +40,10 @@ Three floating premium cards — each shows currency pair, current stage in the
 transaction state machine (e.g. Matched, Settlement Pending), and the next
 action available to the user. No balance figures on these cards.
 
+*(Terminology: "MatchAllocation" is product language for one accepted allocation of an
+Offer; it maps to the persisted entity "Match" — no separate table exists. See
+DOCUMENT_INDEX.md section 2A.)*
+
 Bottom Navigation:
 Home, Marketplace, Track, Cards, Profile
 

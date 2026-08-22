@@ -392,12 +392,18 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - **Root:** `Offer`
 - **Value Objects:** `Money`, `OfferedRate`, `AvailabilityWindow`
-- **Invariants:** Total `matched_amount` across all `Match` entities referencing an `Offer` cannot exceed `Offer.amount`.
+- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of **currently valid, non-expired allocations plus successfully completed allocations**, and `remaining_amount` is **derived, not persisted**. Total allocated across all `Match` entities referencing an `Offer` can never exceed the Offer's original amount, enforced under row lock. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
+- **Withdrawal semantics:** withdrawing an Offer's remaining availability **closes it to further matching** and **does not cascade to allocations** — existing Matches, their allocated amounts, Transactions and Settlements are untouched, other allocations are unaffected, and committed capacity is never returned. Only the uncommitted remainder becomes unavailable.
+- **Lifecycle:** must express **open, partially matched, fully matched, cancelled, expired**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**.
+- **Arithmetic:** exact **integer minor units** with explicit currency exponent/scale; never binary floating point. This is marketplace/allocation arithmetic, distinct from ADR-002 ledger posting representation, which is unchanged and remains authoritative for the ledger conversion boundary.
 
 ### 5.3.5 Match Aggregate
 
-- **Root:** `Match`
-- **Entities:** none (references `FXRequest` and `Offer` by ID)
+- **Root:** `Match` — **the persisted form of the conceptual `MatchAllocation`**: one accepted partial or full allocation of one Offer by one counterparty. **HUMAN APPROVED, 2026-08-22:** extended, **not renamed**; no second `MatchAllocation` entity exists. See the glossary in `DOCUMENT_INDEX.md`.
+- **Entities:** none (references `Offer` by ID; **`FXRequest` reference is optional/nullable** — a Match is creatable from Offer + accepting counterparty + accepted amount + trusted server timestamp, with no `FXRequest`)
+- **Invariants:** `allocated_amount > 0`; `agreed_rate` is **locked at acceptance** and never silently re-priced; `accepted_at` is a **server-set trusted timestamp** establishing acceptance priority; each Match is an **independent settlement failure domain** — one Match → one Transaction → one Settlement → **exactly two SettlementLegs** (ADR-001, unchanged).
+- **Two-window lifecycle:** preparation (beneficiary selection and validation, allocation-specific requirements) → derived gate **`ALLOCATION_FUNDING_READY`** → funding. Both durations are **OPEN / CONFIGURABLE**. Partner provisioning must not become actionable before `ALLOCATION_FUNDING_READY`. See **ADR-001 Amendment A1 §14**.
+- **Partner provisioning state is owned by `SettlementLeg`**, not duplicated onto `Match`.
 - **Value Objects:** `MatchedAmount`, `AgreedRate`
 - **Invariants:** A `Match` is immutable once `confirmed`; corrections require a compensating `Transaction` event, never a mutation.
 
@@ -439,12 +445,13 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         USERS ||--o| PROFILES : has
         USERS ||--o| KYC_PROFILES : has
         USERS ||--o{ BENEFICIARIES : owns
+        MATCHES }o--o{ BENEFICIARIES : "selects per allocation"
         USERS ||--o{ FX_REQUESTS : creates
         USERS ||--o{ OFFERS : creates
         KYC_PROFILES ||--o{ KYC_DOCUMENTS : contains
         KYC_PROFILES ||--o{ SCREENING_RESULTS : contains
-        FX_REQUESTS ||--o{ MATCHES : "matched via"
-        OFFERS ||--o{ MATCHES : "matched via"
+        FX_REQUESTS ||--o{ MATCHES : "optional legacy linkage"
+        OFFERS ||--o{ MATCHES : "allocated via (0..n)"
         MATCHES ||--|| TRANSACTIONS : produces
         TRANSACTIONS ||--o{ TRANSACTION_EVENTS : logs
         TRANSACTIONS ||--o| SETTLEMENTS : "settled via"
@@ -900,6 +907,28 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 ## 9.2 Matching Algorithm (Exact/Partial)
 
+> **SUPERSEDED — HUMAN DECISION, 2026-08-22. The canonical marketplace behaviour is PUBLISH AND
+> ACCEPT.** A seller publishes an Offer; an eligible counterparty accepts some or all of the
+> currently available remainder, creating one `Match` (conceptual `MatchAllocation`).
+>
+> The following are **withdrawn** and must not be implemented:
+>
+> - **automated Match creation** from Offer + FXRequest events;
+> - **price-time allocation priority** — the "Oldest first (price-time priority)" sort below;
+> - **best-rate allocation priority** among several users accepting the same Offer;
+> - **central-limit-order-book semantics** of any kind.
+>
+> Acceptance priority within one Offer is **first eligible acceptance by trusted server
+> timestamp** (`Match.accepted_at`, server-set; a client-supplied timestamp is never trusted).
+>
+> **Marketplace discovery and ranking remain separate and permitted** — listings may be ordered by
+> rate, amount, corridor, availability or time. Ranking a listing is not allocating it.
+>
+> **What survives from the flow below:** the partial-overlap concept, and all of §9.3 concurrency
+> protection, which applies unchanged to concurrent acceptances of one Offer. The diagram is
+> retained as superseded history.
+
+
     flowchart TD
         Start["New Offer or FXRequest event"] --> Lock["Acquire Redis lock on candidate ID"]
         Lock --> Query["Query counter-side candidates:\nsame currency pair, compatible rate,\nstatus=active, not expired"]
@@ -916,6 +945,13 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         NoMatch --> ReleaseEnd["Release lock"]
 
 ## 9.3 Concurrency Protection
+
+> **RETAINED AND APPLICABLE — HUMAN APPROVED.** These controls now guard **concurrent acceptances
+> of a single Offer**. The invariant they must enforce is that the **sum of valid allocation
+> amounts never exceeds the Offer's original amount**. Locking is scoped to the Offer's amount
+> fields; **whole-Offer "lock after first Match" semantics are withdrawn**, because a partially
+> matched Offer remains available for its remaining amount.
+
 
 - **Distributed locking:** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id`/`fx_request_id` being evaluated, preventing two concurrent matching runs from double-allocating the same liquidity.
 - **Database-level guard:** `matched_amount` updates on `offers`/`fx_requests` use `SELECT ... FOR UPDATE` row locking within a single DB transaction as a second line of defense against race conditions, independent of the Redis lock.

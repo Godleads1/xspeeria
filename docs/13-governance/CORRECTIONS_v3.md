@@ -514,3 +514,148 @@ retrieved as text — and are recorded as such, not as verified fact.
 **10.9 — Figma versioning, unchanged.** `docs/references/figma/Xspeeria.fig` remains
 **HUMAN-PROVIDED DESIGN SOURCE · UNTRACKED · VERSIONING DECISION OPEN**. Not staged, committed,
 ignored, moved, deleted or LFS-tracked.
+
+## 11. Canonical domain model reconciliation
+
+Applied 2026-08-22. **HUMAN APPROVED.** Documentation only — no application code, no database
+migration, no new ADR or DEC number. ADR-001 is amended in place as **Amendment A1** under the
+existing DEC-003 governance record. ADR-002 is **unchanged**. Decisions 2, 3 and 4 remain open and
+untouched, and the implementation NO-GO standing instruction in `PROGRESS.md` is **unchanged**.
+
+**11.1 — Authority ranking applied.** ADR-001/ADR-002 are human-ratified. The human-approved
+product substance in this pass ranks above `02_Technical_Design_Specification.md`
+(PRIMARY-designated, no ratification record) and above `05_API_Contract_Data_Dictionary.md`
+(**self-declared derived and NOT RATIFIED**). No lower-ranked source was allowed to override a
+higher-ranked rule, and reconciling the API contract to approved semantics does **not** make its
+endpoint or error-code naming backend-ratified.
+
+**11.2 — MatchAllocation ↔ Match.** Conceptual **`MatchAllocation`** maps to the existing persisted
+entity **`Match`**, which is **extended, not renamed**. **No second table or entity is created**,
+and no table, route or contract field is renamed for terminology. One Offer carries **0..n**
+Matches, each one accepted partial or full allocation by one counterparty, each an independent
+settlement failure domain guaranteed by `Match → one Transaction (match_id UNIQUE) → one
+Settlement → exactly two SettlementLegs`.
+
+**11.3 — Match attributes.** Added conceptually: `allocated_amount` (reconciling the TDS
+`matched_amount` on Match — **one amount concept, not two**), server-set trusted `accepted_at`,
+`preparation_state` / `preparation_deadline`, `funding_state` / `funding_deadline`,
+`allocation_requirements`, and beneficiary selection linkage. `agreed_rate` already existed and is
+locked at acceptance. **Partner provisioning state stays on `SettlementLeg`** per ADR-001 and is
+not duplicated onto `Match`. `fx_request_id` becomes **optional/nullable**.
+
+**11.4 — Origination model.** Canonical behaviour is **publish and accept**. The TDS §9.2 automated
+two-sided matcher is **superseded**, together with **price-time allocation priority**, best-rate
+allocation priority among competing accepters, and all central-limit-order-book semantics.
+Acceptance priority within one Offer is **first eligible acceptance by trusted server timestamp**.
+Marketplace discovery and ranking remain separate and permitted. TDS §9.3 concurrency protection is
+**retained** and now guards concurrent acceptances of one Offer.
+
+**11.5 — Transaction layer kept.** Not collapsed into Match or Settlement, preserving the
+allocation/settlement boundary and avoiding changes adjacent to ADR-001.
+
+**11.6 — FXRequest.** Retained: table, `/fx-requests` route and all historical references stand.
+Classified **legacy/API-compatibility plus optional demand-side product concept**. It is **not** a
+required canonical matching primitive and must not drive the matching algorithm or create a second
+allocation model. Whether the demand-side capability remains user-facing in MVP is flagged in the
+BRS as an **open product decision**.
+
+**11.7 — Offer model.** `original_amount = matched_amount + remaining_amount`, where
+`matched_amount` is the sum of currently valid, non-expired allocations plus successfully completed
+allocations. Expired or pre-funding-released allocations cease contributing and their amount
+returns to remaining capacity; terminated allocation records remain immutable audit history.
+**`remaining_amount` is DERIVED**, not persisted as an independently mutable source of truth.
+Lifecycle must express **open, partially matched, fully matched, cancelled, expired** — the former
+binary `active → matched` is insufficient; persisted enum literals may keep existing names for
+compatibility. A partially matched Offer **remains available for its remaining amount**.
+
+**11.8 — Partial acceptance.** The accept endpoint now conceptually carries an amount. The previous
+rule *"acceptance locks the offer (status → matched)"* is **withdrawn** — whole-Offer locking is
+replaced by row-level locking on the Offer's amount fields, enforcing that the **sum of valid
+allocations never exceeds the original amount**. *"Cannot cancel an offer once matched"* is revised.
+
+**11.8a — Withdrawal semantics, clarified by human decision 2026-08-22.** A seller **withdraws the
+Offer's remaining availability**, **closing the Offer to further matching**. This is **not** a
+cancellation cascading from Offer to Match. It must not cancel or invalidate an existing Match, alter
+its `allocated_amount`, unwind a Transaction, terminate a Settlement, return capacity already
+committed to a valid allocation, or affect any other Match under the same Offer. Existing
+Match/Transaction/Settlement history remains intact and each allocation stays an **independent
+failure domain**; only the uncommitted remainder becomes unavailable to new acceptances. Committed
+allocations are unwound only through the per-allocation dispute / cancellation-with-counterparty-consent
+flow. **No persisted enum was introduced for this clarification.**
+
+**11.9 — Monetary arithmetic.** Offer and allocation arithmetic uses **exact integer minor units**
+with explicit currency exponent/scale; never binary floating point. This **marketplace/allocation
+arithmetic** is documented as distinct from **ledger posting representation**, which remains
+governed by ADR-002 (`amount_minor` BIGINT + `scale` + `currency_def_version`, `ROUND_HALF_EVEN` at
+exactly one conversion point). **ADR-002 semantics are not rewritten.** The `NUMERIC(18,2)` column
+types in the contract are marked as proposed shape, not approved semantics.
+
+**11.10 — Rate rule.** All ±15% symmetric-band language is superseded. Canonical:
+`seller_rate ≤ applicable approved reference ceiling`, **hard block** above, **no approved floor**.
+Validated at publication, re-checked at acceptance, **locked** on the resulting Match; never
+silently re-priced. If a changed ceiling invalidates an unmatched remaining Offer, the Offer is
+**paused/revalidated** — the seller-selected rate is never silently modified. Reference-rate
+provider, update cadence, staleness policy and provider-unavailable behaviour remain **OPEN /
+configurable**. `VAL_422_RATE_OUT_OF_BAND` is superseded by a ceiling-specific semantic error whose
+**identifier is proposed, not frozen**.
+
+**11.11 — Bilateral confirmation removed.** `POST /v1/matches/{match_id}/confirm`, both-party
+confirmation and the 30-minute confirmation expiry are **superseded**, with no replacement value.
+Acceptance alone establishes the allocation, fixed by the server-set trusted `accepted_at`.
+
+**11.12 — Two-window lifecycle and ADR-001 Amendment A1.** Preparation window → derived
+`ALLOCATION_FUNDING_READY` → funding window. Partner provisioning must not become actionable before
+readiness. Recorded as **ADR-001 Amendment A1** (§14), approved 2026-08-22, under DEC-003 — **no new
+ADR or DEC number**. The amendment adds a precondition only: exactly-two-legs, the 9 leg states, the
+10 phases, all 13 transitions, irreversible `PAID_OUT`, and authenticated-partner-webhook funding
+truth are **all unchanged and explicitly protected**. Hard-coded values withdrawn: the 30-minute
+match expiry and `Offer.settlement_window_hours 1–72`. **No replacement durations invented** —
+preparation duration joins the governance-deferred set; funding duration remains **U-2 TBD**.
+
+**11.13 — Pre-funding replacement matching.** Preparation failure terminates the allocation with
+attributable cause, returns its amount to the Offer's remaining capacity, leaves other allocations
+unaffected, and permits a fresh eligible acceptance — the same participant returning receives a
+**new** trusted timestamp. Recorded in ADR-001 §14.5 as **distinct from** post-funding rematching,
+recovery and unwind, which concern legs holding or having moved customer funds.
+
+**11.14 — BeneficiaryAccount.** Added to the API/data documentation as the canonical model for the
+**existing `BENEFICIARIES` concept** — extended, not duplicated, not renamed. Profile-level,
+`User → 0..n`, with validation states expressing pending, validated, failed/rejected and
+invalidated. **Only an eligible validated beneficiary satisfies `ALLOCATION_FUNDING_READY`.**
+Selection is **per allocation**; different allocations under one Offer may use different
+destinations. Invalidation semantics across the funding boundary are recorded in ADR-001 §14.6, with
+resume-versus-new-deadline behaviour left **OPEN / CONFIGURABLE**. No raw bank-detail storage or
+tokenisation guarantee beyond existing approved guidance was invented.
+
+**11.15 — PayoutExecution.** Added as **structure only**: `SettlementLeg → PayoutExecution 0..n`,
+integer minor units, exact-total invariant against the amount due for that leg. **Children are not
+additional SettlementLegs**; the exactly-two-leg rule and `UNIQUE(settlement_id, party_role)` are
+unchanged.
+
+> **OPEN — REQUIRES CANONICAL RECONCILIATION.** Aggregate child-to-leg derivation where some
+> children succeed irreversibly and others fail or pause is **not resolved**. `PAID_OUT` is **not**
+> redefined; the aggregate meaning of **T-7, T-8 and T-9 is unchanged**; no implementation may
+> derive leg state or a phase transition from child records. **This remains a production
+> financial-semantics blocker.**
+
+**11.16 — KYC and MFA.** Conceptual `KycCase` maps to existing **`KYCCases`**, which is canonical
+for onboarding and review history; nothing is renamed. The TDS `KYC_PROFILES` concept, if retained,
+is recorded as a **summary/projection/current-profile representation**, not a competing case
+lifecycle. `MfaFactor` is documented conceptually as `User → MfaFactor 0..n` with persistence and
+policy marked **OPEN — Decision 2**; no qualifying factors, enrolment policy, factor hierarchy,
+timeout or recovery rules were invented.
+
+**11.17 — Corridor and jurisdiction.** `CorridorConfig` and `JurisdictionProfile` are recorded as
+**versioned configuration schemas and policy interfaces** — **not** runtime-editable persisted
+entities. No production corridors, currencies, providers or legal requirements were populated.
+Decision 3 remains open/configurable; Decision 4 remains external Legal/Compliance authority.
+
+**11.18 — Authoritative funding, unchanged.** A user or client action **must not** create
+authoritative `FUNDED` state. The ratified authenticated, signature-verified regulated-partner
+webhook mechanism stands, and ADR-001 was **not** broadened for any hypothetical alternative.
+
+**11.19 — Canonical glossary.** Added at `DOCUMENT_INDEX.md` §2A, covering MatchAllocation ↔ Match,
+KycCase ↔ KYCCases, BeneficiaryAccount ↔ BENEFICIARIES, plus Offer, Settlement/SettlementLeg,
+PayoutExecution, CorridorConfig/JurisdictionProfile and MfaFactor. UI documents may use the
+conceptual terms as product language without implying separate persisted entities; short mapping
+notes were added where those terms appear.
