@@ -117,7 +117,10 @@ Xspeeria's design language is Apple Wallet × Revolut Ultra × Stripe × Linear:
 > success/warning/error `.fill`/`.surface`/`.border`/`.text` families, primary interaction states,
 > the gold restriction and the legacy-name mapping — lives in `DESIGN_SYSTEM.md` and governs.
 > **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
-> code exists. Typography is **OPEN — NOT FROZEN**.
+> code exists. Typography is a **PARTIAL FREEZE**: **Inter is HUMAN APPROVED as the financial/
+> numeric face**; brand/UI typography remains **OPEN** with Satoshi the leading candidate and
+> **not** production-approved; Nunito Sans is **not** an Xspeeria production standard. See
+> `DESIGN_SYSTEM.md`.
 
 
 ## 3.2 Typography
@@ -132,7 +135,9 @@ Xspeeria's design language is Apple Wallet × Revolut Ultra × Stripe × Linear:
 | Title 2 (22/28, Semibold)           | 22 / 28                | Section headers, modal titles                                    |
 | Headline (17/22, Semibold)          | 17 / 22                | Card titles, list item primary text                              |
 | Body (15/20, Regular)               | 15 / 20                | Default body copy                                                |
-| Numeral — Tabular (17–34, Semibold) | 17–34                  | All currency and numeric values, tabular-figure variant          |
+| Numeral — Tabular (17–34, Semibold) | 17–34                  | All currency and numeric values — **Inter, tabular/lining figures required** |
+
+**Typeface — PARTIAL FREEZE, `DESIGN_SYSTEM.md` governs.** **Inter is HUMAN APPROVED (2026-08-22) as the Xspeeria financial/numeric face** across applicable surfaces. The normative requirement is the rendering outcome — financial numerics must support tabular/lining figures wherever alignment requires it — not any particular font build or preprocessing method. Brand and UI typography remains **OPEN**: Satoshi is the leading candidate and is **not production-approved**; Nunito Sans is **not** an Xspeeria production standard. Inter is not required on non-numeric text.
 
 ## 3.3 Spacing, radius, elevation
 

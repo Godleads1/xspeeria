@@ -411,7 +411,10 @@ Authoritative for the application colour direction, the semantic token architect
 states, the gold restriction, and the legacy-name mapping. **HUMAN APPROVED, 2026-08-22.**
 Where another UI/UX document states a colour value or token role that conflicts with it, this
 document governs. Values are **candidate production tokens, not frozen**, and no application
-code exists — **IMPLEMENTATION STATUS: NOT IMPLEMENTED**. Typography is **OPEN — NOT FROZEN**.
+code exists — **IMPLEMENTATION STATUS: NOT IMPLEMENTED**. Typography is a **PARTIAL FREEZE**:
+**Inter is HUMAN APPROVED as the financial/numeric face**; brand/UI typography remains **OPEN**
+with Satoshi the leading candidate and **not** production-approved; Nunito Sans is **not** an
+Xspeeria production standard.
 
 ## Design bible
 

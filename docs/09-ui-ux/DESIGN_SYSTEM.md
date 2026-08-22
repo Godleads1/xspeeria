@@ -238,21 +238,94 @@ authoritative going forward.
 
 ## Open items — **NOT FROZEN**
 
-- **Typography — OPEN, NOT FROZEN.** **Satoshi** is the leading mobile candidate, based on the
-  Figma. It must not be declared production-standard pending: licence verification; mobile and web
-  embedding rights; confirmed tabular/lining figure support; and React Native support with an
-  asset strategy (variable-axis support is limited and static instances may be required). Admin
-  typography is likewise open pending admin design provenance, dashboard-kit licence, dense-table
-  legibility review, and numeric rendering. **Neither Satoshi nor Nunito Sans is production-standard.**
-  `PRODUCT.md` commits Xspeeria to tabular figures for currency and numeric values — that
-  commitment gates any typeface choice.
+- **Typography — PARTIAL FREEZE.** See the dedicated section below. Inter is **HUMAN APPROVED** as
+  the financial/numeric face; Satoshi remains **OPEN**; Nunito Sans is **not** an Xspeeria
+  production standard.
 - **Accent/gold glyph treatment** — see above.
+
+---
+
+# Typography — **PARTIAL FREEZE**
+
+**IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No font files exist
+in this repository and none may be added by documentation work.
+
+## Inter — **HUMAN APPROVED, 2026-08-22: the Xspeeria financial / numeric typeface**
+
+Inter is approved across applicable surfaces for numeric content where precision, alignment or
+financial legibility matters:
+
+currency amounts · exchange rates · fees · percentages · financial totals · transaction amounts ·
+settlement amounts · allocation amounts · numeric table columns · admin operational data ·
+right-aligned monetary values · any other numeric data requiring tabular alignment.
+
+**The normative requirement is the rendering outcome, not the preprocessing method:**
+
+> **Financial numerics must support tabular/lining figures wherever alignment requires it.**
+
+How that outcome is achieved is an **implementation decision and is not frozen**. In particular, a
+pre-built Inter instance carrying `tnum` as its default is an **implementation recommendation
+only**, not a frozen architecture requirement. It is recorded because `fontVariant:
+['tabular-nums']` is **not reliably applied to custom fonts on iOS** (expo/expo issue #20048) while
+Android does support it (React Native PR #27006) — so a runtime feature call alone cannot be
+assumed to deliver the outcome. Any method that delivers the outcome is acceptable.
+
+**Inter is not required on non-numeric text.** Do not force two typefaces into every screen: Inter
+is required specifically where numeric correctness and alignment matter.
+
+## Satoshi — **OPEN. Leading mobile/brand UI candidate. NOT production-approved.**
+
+Satoshi is the dominant face in the Figma mobile work and remains the leading candidate for brand
+and UI typography. It **must not** be described as production-approved. Blocking items:
+
+1. Primary licence verification — the ITF Free Font Licence text has not been obtained as a
+   first-party artifact.
+2. Mobile-app embedding rights.
+3. Redistribution and bundling rights — redistribution of the font files is reportedly prohibited.
+4. The exact licence applicable to the Satoshi files actually used in the Figma.
+5. Web self-hosting versus CDN decision — self-hosting reportedly requires written consent.
+6. Production specimen review.
+7. React Native delivery strategy.
+
+**No font files may be downloaded, added or embedded** while these are open.
+
+## Nunito Sans — **not selected as an Xspeeria production standard**
+
+Nunito Sans is dominant in the Figma admin work, but it is **not adopted**. Its admin usage appears
+**inherited from imported/adapted design material** rather than deliberately chosen; the provenance
+and licence of that material are **`UNKNOWN — NOT VERIFIED`**; and its numeric suitability is not
+sufficiently established for financial data.
+
+**This is not a mandate to redesign the admin.** Admin structure, layout and operational UI
+architecture are preserved. Typography may be harmonised later without replacing them.
+
+## Current status by surface
+
+| Surface | Role | Status |
+|---|---|---|
+| Mobile | Brand / UI typography | **OPEN** — Satoshi leading candidate |
+| Mobile | Financial / numeric | **Inter — HUMAN APPROVED** |
+| Admin | Headings / chrome | **OPEN** — Satoshi if licence verification succeeds; Inter across admin is an acceptable fallback |
+| Admin | Financial / data / tables | **Inter — HUMAN APPROVED** |
+
+## Fallback stacks — implementation guidance only
+
+These are **not brand authority** and freeze no assumption about proprietary or locally installed
+font availability. Where the platform supports it, **financial numerics must retain tabular
+alignment in fallback**.
+
+| Surface | Guidance |
+|---|---|
+| iOS | Brand → system (SF Pro) while Satoshi is open. Numerics → Inter, falling back to the system face with tabular figures, which the platform supports for system fonts |
+| Android | Brand → system (Roboto) while Satoshi is open. Numerics → Inter, falling back to the system face with tabular figures |
+| Web | Numerics → Inter with `font-variant-numeric: tabular-nums`, then `system-ui` and the platform sans stack |
+| Admin web | Numerics → Inter with `font-variant-numeric: tabular-nums` on every numeric cell, then `system-ui` and the platform sans stack |
 
 ---
 
 # Layout, spacing and platform
 
-Use an 8pt spacing system, 16px cards, 24px buttons. Typography is **OPEN** — see above.
+Use an 8pt spacing system, 16px cards, 24px buttons. Typography is a **PARTIAL FREEZE** — see above.
 
 ## Visual hierarchy — **HUMAN APPROVED**
 
@@ -309,6 +382,8 @@ Luxury minimal fintech aesthetic inspired by Apple HIG.
 | Figma production tokens | **DO NOT EXIST** — the Figma holds painted swatches, not bound variables |
 | Application code using these tokens | **NONE** — IMPLEMENTATION STATUS: NOT IMPLEMENTED |
 | Home / navigation changes | Documented only — **NOT IMPLEMENTED** |
-| Typography | **OPEN — NOT FROZEN** |
+| Typography — financial/numeric (Inter) | **HUMAN APPROVED** |
+| Typography — brand/UI (Satoshi) | **OPEN — NOT FROZEN, not production-approved** |
+| Typography — Nunito Sans | **Not selected as a production standard** |
 | `docs/references/figma/Xspeeria.fig` | **HUMAN-PROVIDED DESIGN SOURCE · UNTRACKED · VERSIONING DECISION OPEN** |
 | Logo / brand-asset colours | Separate question — pending vector confirmation, see `PRODUCT.md` |

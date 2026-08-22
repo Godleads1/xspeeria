@@ -366,9 +366,11 @@ KYC verification badge in gold; that is corrected** — identity verification us
 family, not gold and not success-green, because verification is an **identity fact**, not a
 financial success state. The `feedback.premium` semantic alias is withdrawn.
 
-**9.6 — Left open, not frozen.** Typography, including Satoshi as leading mobile candidate and the
-admin question, blocked on licence, embedding rights, tabular/lining figures and React Native
-asset strategy — **neither Satoshi nor Nunito Sans is production-standard**. The gold
+**9.6 — Left open, not frozen.** *(Typography partially resolved 2026-08-22 — see §10: Inter is
+approved as the financial/numeric face; Satoshi remains open; Nunito Sans is not selected.)*
+Typography, including Satoshi as leading mobile candidate and the admin question, blocked on
+licence, embedding rights, tabular/lining figures and React Native asset strategy — **neither
+Satoshi nor Nunito Sans is production-standard**. The gold
 rating-glyph execution, which may remain an implementation/design-detail item. Logo/brand-asset
 colours pending vector confirmation. The production token freeze itself.
 
@@ -444,3 +446,71 @@ set, so the older tables remain readable without being authoritative.
 **HUMAN-PROVIDED DESIGN SOURCE · UNTRACKED · VERSIONING DECISION OPEN**. Not staged, committed,
 ignored, moved, deleted or LFS-tracked. `.gitignore` was not modified and `docs/references/` was
 not blanket-ignored. The Figma itself was not modified.
+
+## 10. Typography — partial freeze
+
+Applied 2026-08-22. **HUMAN APPROVED.** Documentation only. No font files were downloaded, added
+or embedded; none exist in this repository. No ADR or DEC identifier was created. No product,
+settlement, security, legal or architecture content was altered.
+
+**10.1 — Inter, approved.** **Inter is the Xspeeria financial/numeric typeface** across applicable
+surfaces: currency amounts, exchange rates, fees, percentages, financial totals, transaction,
+settlement and allocation amounts, numeric table columns, admin operational data, right-aligned
+monetary values, and any other numeric data requiring tabular alignment.
+
+**10.2 — What is normative is the outcome, not the method.**
+
+> Financial numerics must support tabular/lining figures wherever alignment requires it.
+
+How that outcome is produced is an **implementation decision and is not frozen**. A pre-built Inter
+instance carrying `tnum` as its default is recorded as an **implementation recommendation only**,
+because `fontVariant: ['tabular-nums']` is not reliably applied to custom fonts on iOS
+(expo/expo issue #20048) while Android supports it (React Native PR #27006) — so a runtime feature
+call cannot be assumed sufficient on its own. No font build pipeline is frozen in normative
+product documentation. **Inter is not required on non-numeric text**; two typefaces must not be
+forced into every screen.
+
+**10.3 — Satoshi, still open.** Satoshi remains the **leading mobile/brand UI candidate** and is
+**not production-approved**. It must not be described as approved anywhere. Blocking items:
+primary licence verification; mobile-app embedding rights; redistribution and bundling rights; the
+licence applicable to the Satoshi files actually used in the Figma; the web self-hosting versus CDN
+decision; a production specimen review; and a React Native delivery strategy. **No font files may
+be downloaded, added or embedded** while these remain open.
+
+**10.4 — Nunito Sans, not selected.** Nunito Sans is **not** adopted as an Xspeeria production
+typography standard. Its admin usage appears **inherited from imported or adapted design
+material** rather than deliberately chosen; the provenance and licence of that material are
+**`UNKNOWN — NOT VERIFIED`**; and its numeric suitability for financial data is not sufficiently
+established. **This is not a mandate to redesign the admin** — admin structure, layout and
+operational UI architecture are preserved, and typography may be harmonised later without
+replacing them.
+
+**10.5 — Status by surface.** Mobile brand/UI: **OPEN**, Satoshi leading. Mobile financial/numeric:
+**Inter, approved**. Admin headings/chrome: **OPEN** — Satoshi may become the shared brand face if
+licence verification succeeds, and Inter across admin is an acceptable fallback if it does not.
+Admin financial/data/tables: **Inter, approved**.
+
+**10.6 — Fallbacks are guidance, not authority.** No assumption is frozen about proprietary or
+locally installed font availability. System-face fallback stacks are recorded in `DESIGN_SYSTEM.md`
+as implementation guidance only. Where the platform supports it, **financial numerics must retain
+tabular alignment in fallback**.
+
+**10.7 — Superseded statements.** `04_Product_Design_Specification.md` stated a frozen typeface
+pairing of "SF Pro (iOS) / Inter (Android, Web, Admin)"; that is superseded as a frozen statement
+by this partial freeze. Its Display type-style row still read *"Balance amount on Home"* — a
+surviving contradiction with the Phase 1 balance removal, corrected here to activity count
+numerals and KPI figures. The design bible and AppFlow spec had already corrected the equivalent
+row in an earlier pass.
+
+**10.8 — Evidence.** The Figma was read, not modified. Font usage counts taken from the decoded
+`canvas.fig` payload: `SatoshiVariable-*` 1,589 uses; `NunitoSans-*` 1,172; `RobotoRoman-Regular`
+and `Roboto-Regular` 606; `SFPro*` ~147; with `Poppins`, `Inter`, `IBMPlexSans`, `Mulish` and
+`Lato` also present. Eight or more unrelated families in one file, an external placeholder-image
+host belonging to another project, and a stray third-party comment string are the basis for the
+finding that the admin typography is inherited rather than chosen. Licence and OpenType findings
+for Satoshi came from **secondary sources only** — the Fontshare licence page could not be
+retrieved as text — and are recorded as such, not as verified fact.
+
+**10.9 — Figma versioning, unchanged.** `docs/references/figma/Xspeeria.fig` remains
+**HUMAN-PROVIDED DESIGN SOURCE · UNTRACKED · VERSIONING DECISION OPEN**. Not staged, committed,
+ignored, moved, deleted or LFS-tracked.

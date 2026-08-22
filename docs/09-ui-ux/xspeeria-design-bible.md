@@ -92,7 +92,10 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 > success/warning/error `.fill`/`.surface`/`.border`/`.text` families, primary interaction states,
 > the gold restriction and the legacy-name mapping — lives in `DESIGN_SYSTEM.md` and governs.
 > **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
-> code exists. Typography is **OPEN — NOT FROZEN**.
+> code exists. Typography is a **PARTIAL FREEZE**: **Inter is HUMAN APPROVED as the financial/
+> numeric face**; brand/UI typography remains **OPEN** with Satoshi the leading candidate and
+> **not** production-approved; Nunito Sans is **not** an Xspeeria production standard. See
+> `DESIGN_SYSTEM.md`.
 
 
 **Superseded.** This was previously described as the complete confirmed palette — six tokens, no more. The Xspeeria Figma is now the primary visual source of truth for application UI/UX and observes further roles that this six-token set does not cover: Secondary `#3B82F6`, Body text `#4B5563`, Warning `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`. Those are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** — the Figma holds painted swatches, not a bound token/variable system, so no production token set exists yet. Assigning token names to the observed roles, and freezing any of them, requires design-system sign-off and is **not** done by this pass. The full observed palette is recorded in `DESIGN_SYSTEM.md`.
@@ -108,9 +111,11 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 | Title 2 (Semibold) | 22 / 28 | Section headers, modal titles |
 | Headline (Semibold) | 17 / 22 | Card titles, list item primary text |
 | Body (Regular) | 15 / 20 | Default body copy |
-| Numeral — Tabular (Semibold) | 17–34 | All currency and numeric values, tabular-figure variant |
+| Numeral — Tabular (Semibold) | 17–34 | All currency and numeric values — **Inter, tabular/lining figures required** |
 
-**Note on "Display":** this was explicitly corrected from an earlier "balance amount on Home" usage — it never renders a money figure on Home; it renders the Status Overview Card's activity counts instead.
+**Note on "Display":** this was explicitly corrected from an earlier "balance amount on Home" usage — it never renders a money figure on Home; it renders the Account Readiness Region's activity counts instead.
+
+**Typeface — PARTIAL FREEZE, `DESIGN_SYSTEM.md` governs.** **Inter is HUMAN APPROVED (2026-08-22) as the financial/numeric face**; the normative requirement is that financial numerics support tabular/lining figures wherever alignment requires it, with the preprocessing method left to implementation. Brand and UI typography remains **OPEN** — Satoshi is the leading candidate and is **not production-approved**. Inter is not required on non-numeric text.
 
 ---
 

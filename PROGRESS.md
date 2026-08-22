@@ -53,10 +53,14 @@ Python + FastAPI
       roles, primary interaction states, gold restriction, Home account-readiness structure, bottom
       navigation, mobile/admin consistency. **Documentation only — IMPLEMENTATION STATUS: NOT
       IMPLEMENTED, VERIFICATION STATUS: NOT VERIFIED.**
-- [ ] Design-system freeze Phase 2 — **NOT COMPLETE.** Open: typography (Satoshi/admin, blocked on
-      licence, embedding rights, tabular figures, React Native asset strategy); gold rating-glyph
-      execution; logo/brand-asset colours pending vector confirmation; production token freeze.
-      See `DESIGN_SYSTEM.md` and `CORRECTIONS_v3.md` §9.6.
+- [x] Typography partial freeze — **Inter HUMAN APPROVED as the financial/numeric typeface**
+      (`CORRECTIONS_v3.md` §10). Documentation only; no font files added.
+- [ ] Design-system freeze Phase 2 — **NOT COMPLETE.** Open: **Satoshi** brand/UI typography, blocked
+      on primary licence verification, mobile-app embedding, redistribution/bundling rights, the
+      licence covering the Figma-used files, web self-hosting vs CDN, specimen review and React Native
+      delivery strategy; admin headings/chrome; gold rating-glyph execution; logo/brand-asset colours
+      pending vector confirmation; production token freeze. See `DESIGN_SYSTEM.md`, `CORRECTIONS_v3.md`
+      §9.6 and §10.
 - [ ] Versioning decision for `docs/references/figma/Xspeeria.fig` (~70.1 MB) — human-provided design source,
       untracked pending decision. Not staged, gitignored or LFS-tracked.
 - [ ] Decision 2 — security baseline authority

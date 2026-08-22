@@ -115,7 +115,10 @@ Colors are sourced directly from DESIGN_SYSTEM.md and are treated as immutable b
 > success/warning/error `.fill`/`.surface`/`.border`/`.text` families, primary interaction states,
 > the gold restriction and the legacy-name mapping — lives in `DESIGN_SYSTEM.md` and governs.
 > **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
-> code exists. Typography is **OPEN — NOT FROZEN**.
+> code exists. Typography is a **PARTIAL FREEZE**: **Inter is HUMAN APPROVED as the financial/
+> numeric face**; brand/UI typography remains **OPEN** with Satoshi the leading candidate and
+> **not** production-approved; Nunito Sans is **not** an Xspeeria production standard. See
+> `DESIGN_SYSTEM.md`.
 
 
 > **ASSUMPTION:** *The following tints/shades and semantic aliases are design-system extensions not present in the source documents, added for implementation completeness.*
@@ -149,19 +152,23 @@ Colors are sourced directly from DESIGN_SYSTEM.md and are treated as immutable b
 
 2.2 Typography
 
-Typeface: SF Pro (iOS) / Inter (Android, Web, Admin) — a native-first pairing that preserves platform-appropriate rendering while keeping visual parity, per DESIGN_SYSTEM.md.
+**Typeface — PARTIAL FREEZE, see `DESIGN_SYSTEM.md`.** The earlier "SF Pro (iOS) / Inter (Android, Web, Admin)" pairing is **superseded as a frozen statement**.
+
+**Inter is HUMAN APPROVED (2026-08-22) as the Xspeeria financial/numeric typeface** on all applicable surfaces — currency amounts, rates, fees, percentages, totals, transaction/settlement/allocation amounts, numeric table columns, admin operational data and right-aligned monetary values. The normative requirement is the **rendering outcome**: financial numerics must support tabular/lining figures wherever alignment requires it. The preprocessing method is an implementation decision and is **not frozen**.
+
+**Brand and UI typography remains OPEN.** Satoshi is the leading candidate and is **not production-approved** pending licence, embedding, redistribution, specimen and delivery-strategy verification. Inter is **not** required on non-numeric text — do not force two typefaces into every screen. System faces are fallback guidance only, not brand authority.
 
 |                   |                        |                |                                                         |
 |-------------------|------------------------|----------------|---------------------------------------------------------|
 | **Style**         | **Size / Line Height** | **Weight**     | **Usage**                                               |
-| Display           | 34 / 41                | Bold (700)     | Balance amount on Home                                  |
+| Display           | 34 / 41                | Bold (700)     | Activity count numerals on Home, KPI figures on the Business Dashboard. **Corrected — never a balance amount: Xspeeria has none** |
 | Title 1           | 28 / 34                | Bold (700)     | Screen titles                                           |
 | Title 2           | 22 / 28                | Semibold (600) | Section headers, modal titles                           |
 | Headline          | 17 / 22                | Semibold (600) | Card titles, list item primary text                     |
 | Body              | 15 / 20                | Regular (400)  | Default body copy                                       |
 | Callout           | 14 / 18                | Regular (400)  | Secondary descriptions                                  |
 | Caption           | 12 / 16                | Regular (400)  | Timestamps, helper text, legal                          |
-| Numeral (Tabular) | 17–34 / —              | Semibold (600) | All currency and numeric values, tabular-figure variant |
+| Numeral (Tabular) | 17–34 / —              | Semibold (600) | All currency and numeric values — **Inter, tabular/lining figures required** |
 
 2.3 Spacing, Radius, Elevation
 
