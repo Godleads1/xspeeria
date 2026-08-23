@@ -40,10 +40,32 @@ export const brandTextStyle: TextStyle = {
   fontFamily: fontFamily.brand,
 };
 
+/**
+ * The five roles below are the approved type scale
+ * (`docs/09-ui-ux/xspeeria-design-bible.md`, page 5). Sizes and line heights are taken
+ * from it unchanged; the optical letter-spacing on the two display sizes is a rendering
+ * detail of the system face, not a new type role.
+ */
 export const typography = {
-  title: { ...brandTextStyle, fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  sectionTitle: { ...brandTextStyle, fontSize: 22, lineHeight: 28, fontWeight: '600' },
+  title: { ...brandTextStyle, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.4 },
+  sectionTitle: {
+    ...brandTextStyle,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
   headline: { ...brandTextStyle, fontSize: 17, lineHeight: 22, fontWeight: '600' },
   body: { ...brandTextStyle, fontSize: 15, lineHeight: 20, fontWeight: '400' },
   caption: { ...brandTextStyle, fontSize: 12, lineHeight: 16, fontWeight: '400' },
+
+  /**
+   * COMPONENT tier, not new scale roles: emphasis variants of `body` and `caption` used
+   * for list-row labels, chip text and navigation labels. They add weight, not a new
+   * size, so the approved scale is unchanged.
+   */
+  rowLabel: { ...brandTextStyle, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  chipLabel: { ...brandTextStyle, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  /** 11pt is a platform navigation convention; "Marketplace" must not truncate. */
+  navLabel: { ...brandTextStyle, fontSize: 11, lineHeight: 14, fontWeight: '600' },
 } as const satisfies Record<string, TextStyle>;

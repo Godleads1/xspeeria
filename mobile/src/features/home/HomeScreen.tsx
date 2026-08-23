@@ -10,7 +10,7 @@ import type { ReactElement } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  Caption,
+  Body,
   ErrorState,
   LoadingState,
   PrimaryButton,
@@ -22,6 +22,7 @@ import type { ActivityItem, ReadinessDimension } from '../../fixtures';
 import { space } from '../../theme';
 import { AccountReadiness } from './AccountReadiness';
 import { ActivityList } from './ActivityList';
+import { HomeHeader } from './HomeHeader';
 
 export type HomeStatus = 'ready' | 'loading' | 'error';
 
@@ -32,6 +33,7 @@ export function HomeScreen({
   status = 'ready',
   onRetry,
   onCreateOffer,
+  onNotifications,
 }: {
   greeting?: string;
   dimensions: readonly ReadinessDimension[];
@@ -39,12 +41,16 @@ export function HomeScreen({
   status?: HomeStatus;
   onRetry?: () => void;
   onCreateOffer?: () => void;
+  onNotifications?: () => void;
 }): ReactElement {
   return (
     <Screen testID="home-screen">
-      <View style={styles.header}>
-        <Title>{greeting}</Title>
-        <Caption>Notifications are in the bell above</Caption>
+      <View style={styles.top}>
+        <HomeHeader onNotifications={onNotifications} />
+        <View style={styles.greeting}>
+          <Title>{greeting}</Title>
+          <Body>Here is what needs your attention.</Body>
+        </View>
       </View>
 
       {status === 'loading' ? <LoadingState label="Loading your account" /> : null}
@@ -60,8 +66,10 @@ export function HomeScreen({
             onPress={onCreateOffer}
             testID="home-primary-action"
           />
-          <SectionTitle>Active activity</SectionTitle>
-          <ActivityList items={activity} onCreateOffer={onCreateOffer} />
+          <View style={styles.section}>
+            <SectionTitle>Active activity</SectionTitle>
+            <ActivityList items={activity} onCreateOffer={onCreateOffer} />
+          </View>
         </>
       ) : null}
     </Screen>
@@ -69,5 +77,8 @@ export function HomeScreen({
 }
 
 const styles = StyleSheet.create({
-  header: { gap: space.xs },
+  /** Header bar and greeting are one block; the screen gap below it is `space.md`. */
+  top: { gap: space.md },
+  greeting: { gap: 4 },
+  section: { gap: space.sm },
 });

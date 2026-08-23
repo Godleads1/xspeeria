@@ -86,6 +86,18 @@ describe('Home structure', () => {
   });
 });
 
+describe('Home header', () => {
+  it('reaches notifications from the header, not from the bottom navigation', async () => {
+    await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />);
+    expect(screen.getByLabelText('Notifications')).toBeTruthy();
+  });
+
+  it('summarises readiness as a step count, never as a figure with a currency', async () => {
+    await render(<HomeScreen dimensions={READINESS_INCOMPLETE} activity={ACTIVITY_ITEMS} />);
+    expect(screen.getByText('1 of 3 complete')).toBeTruthy();
+  });
+});
+
 describe('Home load states', () => {
   it('renders a loading state', async () => {
     await render(

@@ -7,4 +7,9 @@ module.exports = [
   {
     ignores: ['node_modules/**', '.expo/**', 'coverage/**'],
   },
+  {
+    // The Jest setup file runs in the test environment, not the app bundle.
+    files: ['jest.setup.js'],
+    languageOptions: { globals: { jest: 'readonly' } },
+  },
 ];

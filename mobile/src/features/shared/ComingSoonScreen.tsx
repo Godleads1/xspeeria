@@ -36,5 +36,5 @@ export function ComingSoonScreen(): ReactElement {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: space.xs },
+  header: { gap: space.xs, alignItems: 'flex-start' },
 });
