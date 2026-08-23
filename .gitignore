@@ -69,6 +69,12 @@ temp/
 *.pfx
 *.crt
 *.cer
+*.jks
+*.keystore
+
+# --- Large design/reference material (never tracked; see scripts/check_sensitive_files.py) ---
+docs/references/
+*.fig
 
 # --- Infrastructure / deployment secrets ---
 terraform.tfstate

@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
 
@@ -35,7 +35,7 @@ jobs:
         run: uv run ruff check .
 
       - name: MyPy (strict)
-        run: uv run mypy backend
+        run: uv run mypy backend scripts
 
       - name: Bandit
         run: uv run bandit -r backend -x backend/tests -q
@@ -69,10 +69,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
           cache: npm
@@ -112,3 +112,49 @@ jobs:
       # The threshold stays at high. Do not lower it to hide a real finding.
       - name: npm audit (production dependencies)
         run: npm audit --omit=dev --audit-level=high
+
+  repo-hygiene:
+    name: Secret Scanning & Tracked-File Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth: 0 so gitleaks scans the whole history, not just the tip commit.
+      # A secret that was committed and later deleted is still in history and still
+      # compromised.
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      # The gitleaks CLI from its official release, pinned by version AND verified
+      # against the SHA-256 published in that release, rather than the gitleaks Action.
+      # Rationale: the Action is a third-party wrapper that would itself need pinning
+      # and, for organisation-owned repositories, requires a GITLEAKS_LICENSE secret.
+      # This step needs no secret and no license, and the checksum makes the download
+      # immutable in the same way an action SHA does.
+      - name: Install gitleaks (pinned + checksum-verified)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          ARCHIVE="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download"
+          curl -fsSL --retry 3 -o "$ARCHIVE" "${BASE}/v${GITLEAKS_VERSION}/${ARCHIVE}"
+          echo "${GITLEAKS_SHA256}  ${ARCHIVE}" | sha256sum --check --status
+          tar -xzf "$ARCHIVE" gitleaks
+          install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      # `gitleaks git` scans commit history. Exit code 1 on any finding fails the job:
+      # there is no continue-on-error and no baseline/allowlist file, so a finding
+      # cannot be silently suppressed. --redact keeps the matched value out of the
+      # public build log; the finding, its file and its commit are still reported.
+      - name: Secret scan (full history)
+        run: gitleaks git . --redact --verbose --exit-code 1
+
+      # Complements the scan above: gitleaks looks for secret-shaped *content*, this
+      # looks for sensitive *paths* that are tracked at all - including a file that was
+      # force-added past .gitignore, which an ignore rule cannot protect against.
+      - name: Tracked sensitive-file guard
+        run: python3 scripts/check_sensitive_files.py

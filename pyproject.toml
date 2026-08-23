@@ -54,7 +54,8 @@ exclude = [
     "^admin/",
     "^packages/",
 ]
-mypy_path = "backend"
+# `scripts` is on the path so the repo-hygiene guard is strict-checked like app code.
+mypy_path = "backend:scripts"
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
