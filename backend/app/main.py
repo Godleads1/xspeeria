@@ -27,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.0.0",
         docs_url=resolved.docs_url,
         redoc_url=resolved.redoc_url,
+        openapi_url=resolved.openapi_url,
     )
 
     application.state.settings = resolved

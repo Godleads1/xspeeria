@@ -84,6 +84,17 @@ class Settings(BaseSettings):
     def redoc_url(self) -> str | None:
         return "/redoc" if self.enable_redoc and not self.is_production else None
 
+    @property
+    def openapi_url(self) -> str | None:
+        """The schema is disabled in production alongside the docs UIs.
+
+        Gated on the environment alone, not on ``enable_docs``: outside production the
+        schema must stay reachable for the docs UI to load, and the machine-readable
+        schema is the more useful artefact to an attacker, so it must not outlive the
+        UIs that render it.
+        """
+        return None if self.is_production else "/openapi.json"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

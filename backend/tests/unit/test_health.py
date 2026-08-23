@@ -52,8 +52,30 @@ class TestErrorEnvelope:
 
 
 class TestDocsExposure:
+    """Documentation exposure.
+
+    Asserting only ``/docs`` let the machine-readable schema stay public in production
+    while this test reported green. Every documentation surface is named explicitly.
+    """
+
     def test_docs_are_served_locally(self) -> None:
         assert _client(app_env="local", enable_docs=True).get("/docs").status_code == 200
 
+    def test_redoc_is_served_locally_when_enabled(self) -> None:
+        client = _client(app_env="local", enable_docs=True, enable_redoc=True)
+        assert client.get("/redoc").status_code == 200
+
+    def test_schema_is_served_locally(self) -> None:
+        assert _client(app_env="local", enable_docs=True).get("/openapi.json").status_code == 200
+
     def test_docs_are_not_served_in_production(self) -> None:
         assert _client(app_env="production", enable_docs=True).get("/docs").status_code == 404
+
+    def test_redoc_is_not_served_in_production(self) -> None:
+        client = _client(app_env="production", enable_docs=True, enable_redoc=True)
+        assert client.get("/redoc").status_code == 404
+
+    def test_schema_is_not_served_in_production(self) -> None:
+        """The schema outlived the UIs that render it. It must not."""
+        client = _client(app_env="production", enable_docs=True, enable_redoc=True)
+        assert client.get("/openapi.json").status_code == 404
