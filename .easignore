@@ -1,0 +1,51 @@
+# EAS Build upload scope.
+#
+# IMPORTANT: when this file exists, EAS uses it INSTEAD of .gitignore, so every
+# dependency/build directory must be repeated here or it will be uploaded.
+
+# --- Large reference material (never needed by a build) ---
+*.fig
+docs/references/
+docs/
+reference/
+
+# --- Node / frontend ---
+node_modules/
+.expo/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# --- Admin console (not part of the mobile build) ---
+admin/
+
+# --- Python backend (not part of the mobile build) ---
+backend/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# --- Misc ---
+.git/
+.github/
+.claude/
+.impeccable/
+*.log
+tmp/
+temp/
