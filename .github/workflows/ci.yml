@@ -20,88 +20,95 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
 
-      - name: Install CI tools
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ruff mypy pytest bandit pip-audit
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install project and dev dependencies
+        run: uv sync --all-groups --frozen
 
       - name: Ruff
-        run: ruff check .
+        run: uv run ruff check .
 
-      - name: Detect Python source files
-        id: python_files
-        shell: bash
-        run: |
-          FILES=$(find . -type f -name "*.py" \
-            -not -path "./.git/*" \
-            -not -path "./.claude/*" \
-            -not -path "./.impeccable/*" \
-            -not -path "./.backup-before-repair/*")
-
-          if [ -n "$FILES" ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No Python source files exist yet."
-          fi
-
-      - name: MyPy
-        if: steps.python_files.outputs.found == 'true'
-        run: |
-          FILES=$(find . -type f -name "*.py" \
-            -not -path "./.git/*" \
-            -not -path "./.claude/*" \
-            -not -path "./.impeccable/*" \
-            -not -path "./.backup-before-repair/*")
-          mypy $FILES
+      - name: MyPy (strict)
+        run: uv run mypy backend
 
       - name: Bandit
-        if: steps.python_files.outputs.found == 'true'
-        run: |
-          bandit -r . \
-            -x ./.claude,./.impeccable,./.backup-before-repair,./tests
-
-      - name: Detect tests
-        id: tests
-        shell: bash
-        run: |
-          if find tests -type f \( -name "test_*.py" -o -name "*_test.py" \) | grep -q .; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No pytest tests exist yet."
-          fi
+        run: uv run bandit -r backend -x backend/tests -q
 
       - name: Pytest
-        if: steps.tests.outputs.found == 'true'
-        run: pytest
+        run: uv run pytest
 
-      - name: Detect dependency files
-        id: dependencies
-        shell: bash
+      # The dependency audit must never pass by finding nothing to audit.
+      # uv.lock is the single source of dependency truth. The audit runs against the
+      # installed environment, which `uv sync --frozen` built from that lock: no
+      # re-resolution, no download step, nothing that can silently audit an empty set.
+      - name: Assert a dependency source exists
         run: |
-          if [ -f requirements.txt ] || \
-             [ -f requirements-dev.txt ] || \
-             [ -f poetry.lock ] || \
-             [ -f uv.lock ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No application dependency file exists yet."
+          test -f uv.lock || { echo "uv.lock is missing: dependency audit cannot run"; exit 1; }
+
+      - name: Assert the locked environment is populated
+        run: |
+          COUNT=$(uv pip list --format=json | python -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "Installed distributions: $COUNT"
+          if [ "$COUNT" -lt 5 ]; then
+            echo "Environment has almost nothing installed: refusing a false-green audit"
+            exit 1
           fi
 
-      - name: Dependency audit
-        if: steps.dependencies.outputs.found == 'true'
-        run: |
-          if [ -f requirements.txt ]; then
-            pip-audit -r requirements.txt
-          elif [ -f requirements-dev.txt ]; then
-            pip-audit -r requirements-dev.txt
-          else
-            echo "Dependency lock file detected; project-specific audit will be configured with dependency management."
-          fi
+      - name: Dependency audit (installed environment, incl. dev tooling)
+        run: uv run pip-audit --strict --progress-spinner off
+
+  node-quality:
+    name: Node & TypeScript Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install workspace from lockfile
+        run: npm ci
+
+      - name: Type-check all workspaces
+        run: npm run typecheck --workspaces --if-present
+
+      - name: Lint all workspaces
+        run: npm run lint --workspaces --if-present
+
+      - name: Design token tests
+        run: npm run test --workspace @xspeeria/tokens
+
+      - name: Mobile tests
+        run: npm run test --workspace @xspeeria/mobile
+
+      - name: Admin tests
+        run: npm run test --workspace @xspeeria/admin
+
+      # GREEN as of the Milestone 1 dependency remediation (verified 2026-08-23).
+      # Measured: 0 critical, 0 high, 10 moderate, 0 low across 787 production
+      # dependencies. The Expo SDK 52 -> 57 and Next 14 -> 16.3.2 upgrades cleared the
+      # previous high-severity findings: postcss now 8.5.23 (was 8.4.31, vulnerable at
+      # <=8.5.22) and sharp now 0.35.3 (was 0.34.5, vulnerable at <0.35.0).
+      #
+      # The 10 remaining moderates are ACCEPTED, not suppressed. All ten trace to one
+      # root advisory - GHSA-w5hq-g745-h8pq, uuid <11.1.1 missing buffer bounds check -
+      # reached only via expo -> @expo/config-plugins -> xcode@3.0.1 -> uuid@7.0.3.
+      # That path is iOS prebuild tooling that edits .pbxproj files at build time; it is
+      # a runtime dependency of `expo` but is not part of the shipped app bundle. npm's
+      # only proposed fix is expo@46.0.21, a major DOWNGRADE from the approved SDK 57,
+      # so no fix is applied. Re-evaluate when Expo ships config-plugins on uuid >=11.1.1.
+      #
+      # The threshold stays at high. Do not lower it to hide a real finding.
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high

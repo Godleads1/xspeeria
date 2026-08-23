@@ -39,6 +39,11 @@ node_modules/
 out/
 dist/
 coverage/
+.expo/
+expo-env.d.ts
+next-env.d.ts
+*.tsbuildinfo
+
 
 # --- IDE / OS ---
 .vscode/settings.json

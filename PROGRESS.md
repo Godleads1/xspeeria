@@ -2,11 +2,23 @@
 
 ## Current Phase
 
-PHASE 0 — DOCUMENTATION & ARCHITECTURE READINESS
+**PHASE 1 — CONTROLLED IMPLEMENTATION GO** — human decision, 2026-08-22.
+
+Supersedes *PHASE 0 — DOCUMENTATION & ARCHITECTURE READINESS* and its blanket
+implementation prohibition.
+
+| | |
+|---|---|
+| **Controlled implementation** | **GRANTED** — within explicitly approved milestones only |
+| **Full implementation GO** | **NOT GRANTED** |
+| **Production activation** | **NOT GRANTED** |
 
 ## Current Status
 
-Engineering environment hardening and readiness verification.
+Milestone 1 — Foundation, design system and app shell.
+
+Application implementation may begin **only** inside an approved milestone. No domain
+persistence, no partner integration and no live financial behaviour is authorized.
 
 ## Approved Architecture Decisions
 
@@ -69,23 +81,60 @@ Python + FastAPI
 - [ ] Decision 2 — security baseline authority
 - [ ] Decision 3 — corridor substrate (NGN⇄GBP pilot)
 - [ ] Decision 4 — regulatory posture confirmation
-- [ ] Architecture approved
-- [ ] Implementation started
+- [x] Architecture approved for controlled implementation — Phase 1 GO, 2026-08-22
+- [x] Implementation started — Milestone 1: foundation, design system, app shell
 
 ## Current Blockers
 
-Phase 0 audit verdict is **NO-GO for implementation** pending Decisions 2–5. Decision 1 is resolved and reconciled.
+**Decisions 2, 3 and 4 remain OPEN.** They continue to block the specific areas they
+govern — security parameters, corridor and rate configuration, and regulatory posture —
+and they continue to block **production activation**. They **no longer block** the
+approved Milestone 1 foundation work.
 
-Governance-deferred parameters awaiting external owners: U-1, U-2, U-5, U-8, U-9, U-10 (ADR-001 §11) and P-1 … P-11 (ADR-002 §9.2). None has been defaulted or assumed.
+| Decision | Still blocks | Does not block |
+|---|---|---|
+| **2 — security baseline** | Every numeric security parameter: MFA qualification, timeouts, lockout, password policy, session expiry, rate limits, recovery. RLS-vs-application authorization (S-2), tenant model (S-3) | Deny-by-default structure, config handling, validation framework, logging foundations, trusted timestamps |
+| **3 — corridor substrate** | Production corridors, currencies, reference-rate provider, cadence, staleness policy | Configuration interfaces and fixtures that name no production value |
+| **4 — regulatory posture** | Production KYC/vendor behaviour, jurisdiction legal requirements | Generic KYC UI shells and jurisdiction-configured abstractions |
+
+Decisions 1 and 5 are resolved and reconciled (DEC-003, DEC-004).
+
+Governance-deferred parameters awaiting external owners: U-1, U-2, U-5, U-8, U-9, U-10
+(ADR-001 §11, plus the preparation-window duration added by Amendment A1) and P-1 … P-11
+(ADR-002 §9.2). None has been defaulted or assumed.
+
+**Production financial-semantics blocker:** the `PayoutExecution` child-to-leg aggregate
+derivation remains **OPEN** (ADR-001 §14.7). No implementation may derive leg state or a
+phase transition from child payout records.
 
 ## Next Action
 
-1. Take Decision 2 (security baseline authority) — gates the admin-authorized phase transitions in ADR-001 §5.1 and the database-role model in ADR-002 §8.
-2. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time, gates launch phases.
-3. Open P-1 … P-11 with Finance and Accounting — P-2 blocks Phase 3, and none may be assumed by implementation.
-4. Re-audit after all decisions are approved and reconciled.
+1. Complete and review **Milestone 1** — foundation, design system and app shell.
+2. Take Decision 2 (security baseline authority) — gates the admin-authorized phase
+   transitions in ADR-001 §5.1 and the database-role model in ADR-002 §8. **S-3**
+   (tenant/organization model) is worth resolving first: retrofitting tenant scoping
+   after tables exist is expensive.
+3. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time.
+4. Open P-1 … P-11 with Finance and Accounting — none may be assumed by implementation.
+5. Resolve the `PayoutExecution` aggregate semantics before any settlement work.
 
-Do not begin implementation until Decisions 2, 3 and 4 are resolved.
+**Superseded instruction:** *"Do not begin implementation until Decisions 2, 3 and 4 are
+resolved."* Replaced by the human decision of 2026-08-22 recorded above. Implementation
+is permitted **only** within approved milestones; the open decisions still gate their own
+areas and gate production activation.
+
+## Milestone 1 boundary — approved scope
+
+**Permitted:** backend application scaffolding, configuration, structured logging, error
+envelope, money primitives, health endpoint, test harness; Expo/React Native shell with
+the approved navigation and Home structure; Next.js admin shell; the shared semantic
+token package; quality tooling and CI.
+
+**Prohibited:** any domain persistence or migration (Offer, Match, Transaction,
+Settlement, SettlementLeg, Beneficiary, KYC, MFA factor, PayoutExecution); production
+partner calls; payment execution; live settlement instructions; real KYC vendor calls;
+production corridor configuration; production reference-rate integration; production
+ledger posting logic; Satoshi font files.
 
 ## Decision Log
 
