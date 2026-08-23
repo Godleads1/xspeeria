@@ -66,7 +66,18 @@ def to_minor(amount: Decimal | int | str, scale: int) -> int:
     if not value.is_finite():
         raise MoneyError("monetary values must be finite")
     quantum = Decimal(1).scaleb(-scale)
-    return int(value.quantize(quantum, rounding=ROUND_HALF_EVEN).scaleb(scale))
+    try:
+        return int(value.quantize(quantum, rounding=ROUND_HALF_EVEN).scaleb(scale))
+    except InvalidOperation as exc:
+        # `quantize` refuses rather than rounds when the result would need more digits
+        # than the decimal context allows. Letting `InvalidOperation` escape would put an
+        # exception type outside this module's contract on the money boundary, where a
+        # caller catching `MoneyError` would miss it. Refusing is the only correct answer:
+        # clamping or saturating would invent a monetary value the caller never supplied.
+        raise MoneyError(
+            f"amount is not exactly representable at scale {scale} "
+            "within the decimal context precision"
+        ) from exc
 
 
 def from_minor(minor: int, scale: int) -> Decimal:

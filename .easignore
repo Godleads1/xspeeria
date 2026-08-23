@@ -40,6 +40,8 @@ __pycache__/
 *.key
 *.p12
 *.pfx
+*.jks
+*.keystore
 
 # --- Misc ---
 .git/

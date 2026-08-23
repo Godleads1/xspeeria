@@ -8,6 +8,7 @@ import {
   NO_ACTIVITY,
   READINESS_COMPLETE,
   READINESS_INCOMPLETE,
+  type ReadinessDimension,
 } from '../src/fixtures';
 
 describe('Account Readiness Region', () => {
@@ -42,6 +43,66 @@ describe('Account Readiness Region', () => {
     expect(isFullyReady(READINESS_COMPLETE)).toBe(true);
     expect(isFullyReady(READINESS_INCOMPLETE)).toBe(false);
     expect(isFullyReady([])).toBe(false);
+  });
+
+  /**
+   * The collapsed region claims identity and security are verified. A payload that
+   * never mentions a dimension has not verified it, so anything short of all three
+   * present exactly once must stay expanded.
+   */
+  describe('requires all three dimensions, once each', () => {
+    const complete = (id: ReadinessDimension['id'], label: string): ReadinessDimension => ({
+      id,
+      label,
+      state: 'complete',
+      detail: 'Verified',
+    });
+
+    const identity = complete('identity', 'Identity');
+    const security = complete('security', 'Security');
+    const eligibility = complete('eligibility', 'Eligible to transact');
+
+    it('rejects a partial array even when every entry is complete', async () => {
+      expect(isFullyReady([identity])).toBe(false);
+      expect(isFullyReady([identity, security])).toBe(false);
+      expect(isFullyReady([security, eligibility])).toBe(false);
+    });
+
+    it('rejects a duplicated dimension standing in for a missing one', async () => {
+      expect(isFullyReady([identity, identity, security])).toBe(false);
+      expect(isFullyReady([identity, security, security])).toBe(false);
+    });
+
+    it('rejects a required dimension replaced by another', async () => {
+      expect(isFullyReady([identity, security, complete('identity', 'Identity again')])).toBe(
+        false,
+      );
+    });
+
+    it('rejects extra entries beyond the three approved dimensions', async () => {
+      expect(isFullyReady([identity, security, eligibility, identity])).toBe(false);
+    });
+
+    it('accepts exactly the three approved dimensions in any order', async () => {
+      expect(isFullyReady([eligibility, identity, security])).toBe(true);
+    });
+
+    it('still rejects when one of the three is not complete', async () => {
+      expect(
+        isFullyReady([identity, security, { ...eligibility, state: 'pending' }]),
+      ).toBe(false);
+    });
+  });
+
+  it('keeps the region expanded for a partial payload', async () => {
+    await render(
+      <HomeScreen
+        dimensions={READINESS_COMPLETE.slice(0, 2)}
+        activity={ACTIVITY_ITEMS}
+      />,
+    );
+    expect(screen.getByTestId('readiness-expanded')).toBeTruthy();
+    expect(screen.queryByTestId('readiness-collapsed')).toBeNull();
   });
 
   it('conveys each state as text, not colour alone', async () => {

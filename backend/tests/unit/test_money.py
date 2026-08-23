@@ -6,7 +6,7 @@ property-based tests as well as fixed cases.
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import pytest
 from hypothesis import given
@@ -155,3 +155,62 @@ class TestMoneyProperties:
         minor = to_minor(amount, scale)
         drift = abs(from_minor(minor, scale) - amount)
         assert drift <= Decimal("0.005")
+
+
+class TestConversionOverflowBoundary:
+    """Amounts too large for the decimal context must refuse, not leak.
+
+    ``Decimal.quantize`` raises ``InvalidOperation`` rather than rounding when the
+    result would need more digits than the context allows. That exception is outside
+    this module's contract: a caller guarding the money boundary with ``MoneyError``
+    would not catch it, and the failure would surface as an unhandled error instead of
+    a rejected amount.
+    """
+
+    @pytest.mark.parametrize(
+        ("amount", "scale"),
+        [
+            (Decimal("1E+30"), 2),
+            (Decimal("1e40"), 8),
+            ("9" * 30, 2),
+            (Decimal("-1E+30"), 2),
+        ],
+    )
+    def test_oversized_amount_raises_money_error(
+        self, amount: Decimal | str, scale: int
+    ) -> None:
+        with pytest.raises(MoneyError, match="not exactly representable"):
+            to_minor(amount, scale)
+
+    def test_invalid_operation_never_escapes(self) -> None:
+        """The precise regression: the caller must not see ``InvalidOperation``."""
+        try:
+            to_minor(Decimal("1E+30"), 2)
+        except MoneyError:
+            pass
+        except InvalidOperation:  # pragma: no cover - the defect this test pins
+            pytest.fail("InvalidOperation escaped the money boundary")
+
+    def test_chaining_is_preserved(self) -> None:
+        with pytest.raises(MoneyError) as excinfo:
+            to_minor(Decimal("1E+30"), 2)
+        assert isinstance(excinfo.value.__cause__, InvalidOperation)
+
+    def test_money_of_refuses_the_same_amount(self) -> None:
+        """The overflow guard holds through the ``Money`` constructor too."""
+        with pytest.raises(MoneyError):
+            Money.of(Decimal("1E+30"), "GBP", 2)
+
+    @pytest.mark.parametrize(
+        ("amount", "scale", "expected"),
+        [
+            ("9" * 20, 2, int("9" * 20) * 100),
+            (Decimal("12345678901234.56"), 2, 1234567890123456),
+            (Decimal("-0.005"), 2, 0),
+        ],
+    )
+    def test_large_but_representable_amounts_are_unchanged(
+        self, amount: Decimal | str, scale: int, expected: int
+    ) -> None:
+        """The guard must not narrow the range of amounts that already worked."""
+        assert to_minor(amount, scale) == expected

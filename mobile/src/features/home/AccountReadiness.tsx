@@ -37,8 +37,34 @@ const LABEL_FOR: Record<ReadinessState, string> = {
   pending: 'Pending',
 };
 
+/**
+ * The three dimensions that must each be present exactly once for the region to
+ * collapse. Kept as a literal rather than derived from the payload: deriving it would
+ * let a short payload define its own definition of "ready".
+ */
+const REQUIRED_DIMENSIONS = ['identity', 'security', 'eligibility'] as const;
+
+/**
+ * True only when all three approved dimensions are present, each exactly once, and
+ * every one is complete.
+ *
+ * The collapsed state renders "You're ready to transact", which is a claim about
+ * identity and security verification. A payload that omits a dimension has not proven
+ * it -- so a partial array, a duplicate id, or a required dimension swapped for another
+ * one all read as not ready. Eligibility is never inferred from an incomplete answer.
+ */
 export function isFullyReady(dimensions: readonly ReadinessDimension[]): boolean {
-  return dimensions.length > 0 && dimensions.every((d) => d.state === 'complete');
+  if (dimensions.length !== REQUIRED_DIMENSIONS.length) {
+    return false;
+  }
+  const ids = new Set(dimensions.map((d) => d.id));
+  if (ids.size !== dimensions.length) {
+    return false;
+  }
+  if (!REQUIRED_DIMENSIONS.every((id) => ids.has(id))) {
+    return false;
+  }
+  return dimensions.every((d) => d.state === 'complete');
 }
 
 export function AccountReadiness({

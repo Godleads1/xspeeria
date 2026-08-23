@@ -19,7 +19,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.logging import get_logger
+
 __all__ = ["AppError", "error_body", "install_exception_handlers"]
+
+_logger = get_logger(__name__)
 
 
 class AppError(Exception):
@@ -73,4 +77,25 @@ def install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=error_body("HTTP_ERROR", str(exc.detail)),
+        )
+
+    @app.exception_handler(Exception)
+    async def _unexpected_error(request: Request, _: Exception) -> JSONResponse:
+        """Last resort: anything the handlers above did not claim.
+
+        The response carries a fixed message and nothing else. Exception text, the
+        traceback, stack frames and local variables stay server-side, because any of
+        them can contain the request data that caused the failure -- a credential, a
+        token, a KYC field or an account number.
+
+        The log record deliberately names only the route. The request body is never
+        read here: it is the most likely place for a secret to be sitting.
+        """
+        _logger.exception(
+            "unhandled_exception",
+            extra={"path": request.url.path, "method": request.method},
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=error_body("INTERNAL_ERROR", "An unexpected error occurred."),
         )

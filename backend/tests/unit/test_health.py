@@ -51,6 +51,50 @@ class TestErrorEnvelope:
         assert isinstance(body["error"]["message"], str)
 
 
+class TestUnexpectedErrorEnvelope:
+    """An unhandled exception must leave through the envelope, carrying nothing.
+
+    The route below exists only inside this test. It raises with a distinctive marker
+    in the exception text so the assertions can prove that text never reaches the
+    client. ``raise_server_exceptions=False`` makes the TestClient return the response
+    the handler produced instead of re-raising, which is what a real client would see.
+    """
+
+    MARKER = "internal-detail-that-must-not-leak"
+
+    def _client(self) -> TestClient:
+        settings = Settings(_env_file=None)  # type: ignore[call-arg]
+        app = create_app(settings)
+
+        @app.get("/_test/unexpected")
+        async def _boom() -> None:
+            raise RuntimeError(f"{self.MARKER}: postgresql://user:pw@host/db")
+
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_returns_500(self) -> None:
+        assert self._client().get("/_test/unexpected").status_code == 500
+
+    def test_uses_the_standard_envelope(self) -> None:
+        body = self._client().get("/_test/unexpected").json()
+        assert set(body) == {"error"}
+        assert body["error"]["code"] == "INTERNAL_ERROR"
+        assert body["error"]["message"] == "An unexpected error occurred."
+        assert "details" not in body["error"]
+
+    def test_exposes_no_exception_text_or_traceback(self) -> None:
+        text = self._client().get("/_test/unexpected").text
+        for forbidden in (
+            self.MARKER,
+            "RuntimeError",
+            "Traceback",
+            "postgresql",
+            "_boom",
+            "test_health",
+        ):
+            assert forbidden not in text
+
+
 class TestDocsExposure:
     """Documentation exposure.
 
