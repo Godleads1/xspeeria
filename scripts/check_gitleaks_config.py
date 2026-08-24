@@ -27,8 +27,16 @@ The rules enforced:
     configuration whose contents this guard never sees.
   * No `allowlist` / `allowlists` key anywhere, at any depth, global or rule-scoped.
   * No baseline or stopword suppression key anywhere.
-  * Top-level keys limited to `title`, `extend`, `rules`, so a future suppression
-    mechanism has to be added here deliberately before it can take effect.
+  * **No custom rules at all.** `useDefault = true` loads the default rule set, but a
+    `[[rules]]` entry reusing a default rule's `id` *replaces* that default rather than
+    adding to it. A config could therefore keep `useDefault = true`, redefine
+    `private-key` with a regex matching only the canary's planted value, and pass both
+    this guard's earlier form and the canary -- which asserts the `private-key` rule
+    fired, and it would have. Every real private key would then walk through a green
+    scan. Narrowing a rule is suppression wearing a different hat, so Phase 1 permits no
+    custom rule definitions, and the approved config declares none.
+  * Top-level keys limited to `title` and `extend`, so a future suppression mechanism has
+    to be added here deliberately before it can take effect.
 
 The guard reads one file and parses it. No network call, no third-party dependency, and
 nothing from the file is printed except the *names* of the offending keys.
@@ -64,16 +72,18 @@ DENIED_KEYS: frozenset[str] = frozenset(
     {
         "allowlist",
         "allowlists",
-        "disabledrules",
         "baseline",
         "baselinepath",
+        "disabledrules",
+        "rules",
         "stopwords",
     }
 )
 
 #: Everything the approved configuration is permitted to declare. A key outside this set
-#: is refused rather than assumed harmless.
-ALLOWED_TOP_LEVEL: frozenset[str] = frozenset({"title", "extend", "rules"})
+#: is refused rather than assumed harmless. `rules` was permitted until 2026-08-24; the
+#: custom-rules note in the module docstring says why it no longer is.
+ALLOWED_TOP_LEVEL: frozenset[str] = frozenset({"title", "extend"})
 
 
 def _denied_key_paths(node: Any, trail: str = "") -> list[str]:
@@ -106,7 +116,10 @@ def violations(config: dict[str, Any]) -> list[str]:
         found.append(f"unexpected top-level key {key!r}: not part of the approved structure")
 
     for path in sorted(set(_denied_key_paths(config))):
-        found.append(f"suppression key at {path}: allowlists and baselines are not permitted")
+        found.append(
+            f"suppression key at {path}: allowlists, baselines, disabled default rules "
+            "and custom rule definitions are not permitted"
+        )
 
     return found
 
@@ -135,8 +148,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {message}", file=sys.stderr)
     print(
         "\nThis configuration exists to guarantee coverage. Anything that narrows "
-        "coverage -- an allowlist, a baseline, a disabled default rule, a chained "
-        "config -- does not belong in it. Resolve the finding instead of retiring it.",
+        "coverage -- an allowlist, a baseline, a disabled default rule, a custom rule "
+        "that replaces an inherited one, a chained config -- does not belong in it. "
+        "Resolve the finding instead of retiring it.",
         file=sys.stderr,
     )
     return 1

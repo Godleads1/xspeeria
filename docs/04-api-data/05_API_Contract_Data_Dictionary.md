@@ -1245,8 +1245,6 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 
 6.1 Event Specifications
 
-|                     |                         |                                                               |                                                       |                                                                                                     |                                            |
-|---------------------|-------------------------|---------------------------------------------------------------|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------|--------------------------------------------|
 > **`MatchConfirmed` carries ACCEPTANCE semantics — clarified 2026-08-24.** Bilateral
 > confirmation is withdrawn (`CORRECTIONS_v3.md` §11.11); acceptance alone establishes the
 > allocation. The event name is retained as a **compatibility alias** so existing consumer
@@ -1278,6 +1276,8 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 > naming decision with consumer impact, so it is **reported, not made here**. Until it is taken,
 > the alias above is the contract.
 
+|                     |                         |                                                               |                                                       |                                                                                                     |                                            |
+|---------------------|-------------------------|---------------------------------------------------------------|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------|--------------------------------------------|
 | **Event**           | **Producer**            | **Consumer(s)**                                               | **Payload (key fields)**                              | **Retry Policy**                                                                                    | **Idempotency**                            |
 | UserRegistered      | Auth service            | Notification worker, Analytics                                | user_id, email, created_at                            | Exponential backoff, 5 attempts                                                                     | Keyed on user_id; consumer upserts         |
 | KYCApproved         | Admin/KYC service       | Notification worker, Marketplace access-control cache         | user_id, kyc_case_id, approved_at                     | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |

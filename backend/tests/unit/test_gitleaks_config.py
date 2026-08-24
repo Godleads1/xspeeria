@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -149,6 +150,75 @@ class TestDefaultRulesMustSurvive:
         result = _run(_config(tmp_path, body))
         assert result.returncode == 1
         assert "[extend]" in result.stderr
+
+
+class TestCustomRulesAreRejected:
+    """The Batch 8 regression: `useDefault = true` is not on its own a guarantee.
+
+    A `[[rules]]` entry reusing a default rule's `id` replaces that default instead of
+    adding to it. The canary asserts that the `private-key` rule fired -- a rule narrowed
+    to match only the canary's planted value fires exactly as loudly as the real one, so
+    the canary cannot tell the difference, and every real private key then walks through a
+    green scan. Phase 1 therefore permits no custom rules at all.
+    """
+
+    PRIVATE_KEY_OVERRIDE = """
+[[rules]]
+id = "private-key"
+regex = '''never-matches-a-real-key'''
+"""
+
+    CANARY_SHAPED_OVERRIDE = """
+[[rules]]
+id = "private-key"
+description = "narrowed to match only the canary"
+regex = '''xspeeria-gitleaks-canary-v1-never-matches-anything-real'''
+"""
+
+    SINGULAR_RULES_TABLE = """
+[rules]
+id = "private-key"
+regex = '''x'''
+"""
+
+    INLINE_RULES_ARRAY = """rules = [ { id = "private-key", regex = '''x''' } ]
+"""
+
+    def test_a_private_key_override_is_rejected(self, tmp_path: Path) -> None:
+        result = _run(_config(tmp_path, APPROVED + self.PRIVATE_KEY_OVERRIDE))
+        assert result.returncode == 1
+        assert "rules" in result.stderr
+
+    def test_a_canary_shaped_override_is_rejected(self, tmp_path: Path) -> None:
+        """The exact bypass reproduced against the Batch 7 guard."""
+        result = _run(_config(tmp_path, APPROVED + self.CANARY_SHAPED_OVERRIDE))
+        assert result.returncode == 1
+
+    @pytest.mark.parametrize(
+        "rule_id", ["private-key", "aws-access-token", "totally-new-rule"]
+    )
+    def test_any_rule_id_is_rejected(self, tmp_path: Path, rule_id: str) -> None:
+        """Arbitrary ids too: an added rule is not audited by this guard either."""
+        body = APPROVED + self.PRIVATE_KEY_OVERRIDE.replace("private-key", rule_id)
+        assert _run(_config(tmp_path, body)).returncode == 1
+
+    def test_a_singular_rules_table_is_rejected(self, tmp_path: Path) -> None:
+        assert _run(_config(tmp_path, APPROVED + self.SINGULAR_RULES_TABLE)).returncode == 1
+
+    def test_an_inline_rules_array_is_rejected(self, tmp_path: Path) -> None:
+        body = TITLE + self.INLINE_RULES_ARRAY + EXTEND
+        assert _run(_config(tmp_path, body)).returncode == 1
+
+    def test_the_approved_config_declares_no_rules(self) -> None:
+        """The shipped config inherits every rule and defines none of its own.
+
+        Parsed, not grepped: the file's prose says "rule set" and "RULES" in comments,
+        which a text search would trip over. Only the parsed structure is the contract.
+        """
+        with APPROVED_CONFIG.open("rb") as handle:
+            parsed = tomllib.load(handle)
+        assert "rules" not in parsed
+        assert set(parsed) <= {"title", "extend"}
 
 
 class TestUnknownStructureIsRefused:

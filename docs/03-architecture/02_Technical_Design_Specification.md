@@ -675,7 +675,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | GET    | `/v1/offers`                              | List/search offers                  | Verified user             |
 | POST   | `/v1/offers/{offer_id}/accept`            | Accept some or all of an Offer's remaining amount, establishing a `Match` | Verified user (KYC-approved, `TRANSACTION_ELIGIBLE`, not the Offer owner) |
 | GET    | `/v1/transactions/{id}`                   | Get transaction detail              | Party to transaction      |
-| POST   | `/v1/transactions/{id}/fund-confirmation` | User confirms funds sent            | Party to transaction      |
+| POST   | `/v1/settlements/{settlement_id}/confirm-funds` | User's **advisory** claim that they have sent funds for one `SettlementLeg` (`leg_id` **required**) | Funding party for that leg |
 | POST   | `/v1/disputes`                            | Open a dispute                      | Party to transaction      |
 | POST   | `/v1/webhooks/settlement/{partner}`       | Inbound partner settlement callback | HMAC-signed, partner-only |
 
@@ -690,6 +690,34 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 > by acceptance (`05_API_Contract_Data_Dictionary.md`, event catalogue); it is not a second
 > user- or API-facing confirmation action, and consuming it authorizes nothing partner-facing
 > before `ALLOCATION_FUNDING_READY`.
+>
+> **`POST /v1/transactions/{id}/fund-confirmation` is SUPERSEDED / HISTORICAL — HUMAN
+> ARCHITECTURE DECISION, 2026-08-24.** This table published it as an active operation while
+> `05_API_Contract_Data_Dictionary.md` §4.3 defined the *same* user action as
+> `POST /v1/settlements/{settlement_id}/confirm-funds` with a **required `leg_id`**, a
+> different parent resource and a different response shape — two active contracts for one
+> action, which is what a client would have had to choose between.
+>
+> **The settlement contract is canonical.** A funding claim is made against one
+> `SettlementLeg` inside a `Settlement`, not against the `Transaction` as a whole: a
+> Transaction spans **both** legs, so a Transaction-parented endpoint cannot say *which* side
+> the claim is about without smuggling `leg_id` in anyway. `Transaction.status` is a
+> read-only presentation projection under ADR-001 (DEC-003) and owns no settlement state, so
+> parenting a settlement-affecting claim on it would invert the ownership the ADR
+> establishes. The ratified response semantics are unchanged: `leg_id`, `leg_state`,
+> `user_claim_recorded_at`.
+>
+> **Customer confirmation is an advisory claim and nothing more.** It records that a user
+> *says* they sent funds. It does **not** establish authoritative `FUNDED`, does **not**
+> authorize settlement release, does **not** start, satisfy or bypass
+> `ALLOCATION_FUNDING_READY`, and does **not** substitute for regulated-partner verification.
+> It does not mutate `SettlementLeg.state` and does not advance `Settlement.phase`.
+>
+> **Authoritative `FUNDED` is established only by the authenticated, signature-verified
+> regulated-partner webhook**, when that integration exists (ADR-001 F-6, F-7;
+> `07_Banking_Integration_Specification_v1.1.md`). A client asserting "I paid" never
+> establishes a money fact. The claim is retained for support and dispute evidence and may
+> drive UI messaging; it carries no financial authority.
 
 ## 7.4 Pagination Response Shape
 
