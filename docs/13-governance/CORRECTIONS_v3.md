@@ -574,6 +574,21 @@ Lifecycle must express **open, partially matched, fully matched, cancelled, expi
 binary `active → matched` is insufficient; persisted enum literals may keep existing names for
 compatibility. A partially matched Offer **remains available for its remaining amount**.
 
+**11.7a — Offer status enum amended, HUMAN-APPROVED 2026-08-25.** The canonical Offer status enum
+is **`open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`**. The
+lifecycle list in §11.7 above is amended by the addition of **`withdrawn`**; nothing else in §11.7
+changes. `withdrawn` means the Offer owner has **intentionally withdrawn the still-unmatched
+remainder**: the Offer is closed to further acceptance, no new `Match` may consume that remainder,
+and existing `Match`, `Transaction` and `Settlement` records **remain valid** — withdrawal does not
+cascade into existing allocations. It is **not** cancellation, **not** expiry and **not**
+`fully_matched`. Any previously matched amount **remains part of `matched_amount`** under the
+existing contributing/completed allocation rules of §11.7. The unmatched withdrawn remainder is no
+longer available to the marketplace, so `withdrawn` is **excluded** from `marketplace-active`
+listing, which includes only `open` and `partially_matched`. This closes the withdrawal
+status-model gap recorded during Batch 11 review. **The `FXRequest` status enum is unchanged.** No
+persistence or runtime implementation is authorized by this decision; the persisted representation
+belongs to the later domain-model milestone. No ADR is amended and no new ADR/DEC number is issued.
+
 **11.8 — Partial acceptance.** The accept endpoint now conceptually carries an amount. The previous
 rule *"acceptance locks the offer (status → matched)"* is **withdrawn** — whole-Offer locking is
 replaced by row-level locking on the Offer's amount fields, enforcing that the **sum of valid

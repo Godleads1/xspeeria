@@ -394,7 +394,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 - **Value Objects:** `Money`, `OfferedRate`, `AvailabilityWindow`
 - **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of two **disjoint** sets: allocations that are **active and committed** -- currently valid, non-expired and **not yet completed** -- and allocations that **completed successfully**. No allocation belongs to both, so every allocation is counted **exactly once**, and `remaining_amount` is **derived, not persisted**. The concurrency invariant is scoped to the **contributing** allocations, not to every `Match` row that has ever referenced the Offer: **the sum of allocations that currently contribute to `matched_amount` can never exceed `original_amount`**, enforced under row lock. Summing all historical `Match` records would be wrong, because terminated records are retained as audit history while their capacity has already returned to `remaining_amount` -- a replacement allocation would then push the historical total past `original_amount` while the Offer is in fact correctly allocated. **Contributing** is the predicate defined immediately above: an allocation is contributing when it is *active and committed* (valid, non-expired, not released or otherwise terminated pre-funding, and not yet completed) **or** *successfully completed*. It is stated here semantically because no persistence exists yet; its concrete persisted representation -- the status column or state enum the locking and validation query filters on -- belongs to the later domain-model milestone and is deliberately not fixed here. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
 - **Withdrawal semantics:** withdrawing an Offer's remaining availability **closes it to further matching** and **does not cascade to allocations** — existing Matches, their allocated amounts, Transactions and Settlements are untouched, other allocations are unaffected, and committed capacity is never returned. Only the uncommitted remainder becomes unavailable.
-- **Lifecycle:** must express **open, partially matched, fully matched, cancelled, expired**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**.
+- **Lifecycle:** **CANONICAL ENUM — HUMAN-APPROVED 2026-08-25:** **`open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**. **`withdrawn`** — added by that decision — means the owner **intentionally withdrew the still-unmatched remainder**: the Offer is closed to further acceptance and no new `Match` may consume that remainder, while existing `Match`, `Transaction` and `Settlement` records remain valid and untouched. It is **not** `cancelled`, **not** `expired` and **not** `fully_matched`; any previously matched amount **remains part of `matched_amount`** under the contributing/completed allocation rules above. A `withdrawn` Offer is **excluded from `marketplace-active`** listing (`05_API_Contract_Data_Dictionary.md` § marketplace listing). This closes the previously OPEN withdrawal status-model gap. The concrete persisted representation still belongs to the later domain-model milestone.
 - **Arithmetic:** exact **integer minor units** with explicit currency exponent/scale; never binary floating point. This is marketplace/allocation arithmetic, distinct from ADR-002 ledger posting representation, which is unchanged and remains authoritative for the ledger conversion boundary.
 
 ### 5.3.5 Match Aggregate
@@ -1055,6 +1055,66 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   whose canonical meaning is a **bound-key conflict** — see the shared note below);
   and **a retry must never consume Offer capacity twice**, which the acceptance serialization
   boundary in §9.2 already governs. No storage implementation is specified here.
+- **Atomic idempotency boundary for Offer acceptance — added 2026-08-25.** The bullet above
+  states *outcomes*; it does not say what holds under **simultaneous** retries, and §9.2 does not
+  close that gap. **Offer-row serialization orders concurrent requests; it does not deduplicate
+  them by key.** Two concurrent requests carrying the same `Idempotency-Key` and the same bound
+  logical acceptance can each be serialized correctly on the Offer capacity row, each observe no
+  prior idempotency record, and each create a `Match` — satisfying every sentence written above
+  and in §9.2 while producing exactly the duplicate they forbid, and consuming capacity twice.
+  Deduplication that commits **separately** from the Match insert does not prevent this; it only
+  narrows the window. The `confirm-funds` boundary below already states this invariant for the
+  *advisory* endpoint, and the *authoritative, money-sensitive* one must not be weaker.
+
+  **The invariant.** For `POST /v1/offers/{offer_id}/accept`, all of the following MUST occur
+  inside **one atomic logical persistence boundary**, committing as a unit or not at all:
+
+  1. authoritative Offer-capacity serialization;
+  2. authoritative `remaining_amount` read;
+  3. `accepted_amount` validation (**required**, `> 0`, `≤` authoritative remaining capacity);
+  4. `Idempotency-Key` binding and lookup;
+  5. establishment of the original idempotency record;
+  6. `accepted_at` assignment (**server-set trusted timestamp**);
+  7. `server_order_key` assignment;
+  8. `Match` establishment;
+  9. Offer capacity / allocation-state update;
+  10. binding of the response to the idempotency result;
+  11. commit.
+
+  **Key binding.** The key is scoped to `(authenticated principal, offer_id, the logical
+  acceptance operation, accepted_amount, the materially relevant request parameters)`. A
+  client-supplied ordering value never participates.
+
+  **Same key, same bound request — concurrent or retried.** Of two or more such requests,
+  **exactly one** logical acceptance wins: **exactly one `Match`** is established, Offer capacity
+  is consumed **exactly once**, and the original idempotency record is written once. Every other
+  concurrent request and every later retry **observes or replays that original result** — the
+  original `Match`, the original response, the original `accepted_at` and `server_order_key`.
+  **No second `Match`. No second capacity consumption.**
+
+  **Same key, materially different binding.** Rejected deterministically with
+  `SYS_409_IDEMPOTENCY_KEY_REUSED` — the existing §4.4 catalogue entry, whose canonical meaning is
+  a **bound-key conflict** — concurrently or otherwise. **No new error identifier is introduced.**
+
+  **Different keys racing for the same Offer capacity.** Out of scope for idempotency: the
+  existing acceptance serialization and authoritative `remaining_amount` rules (§9.2) decide the
+  outcome unchanged, `Σ valid allocations ≤ original_amount` holds, and a losing request is
+  **rejected** with `RES_409_INSUFFICIENT_REMAINING` — **never** silently reduced, resized,
+  clamped or partially filled. Priority remains `(accepted_at ASC, server_order_key ASC)`.
+
+  **No mechanism is chosen here** — no lock strategy, uniqueness constraint, isolation level,
+  advisory lock, storage engine, cache technology or ORM. Any mechanism meeting the invariant is
+  conformant, and the choice belongs to the persistence milestone. `server_order_key` durable
+  persistence remains a **REQUIRED** dependency of that milestone.
+
+  **Concurrency regression tests are REQUIRED at the persistence milestone** — three cases:
+  (a) **same-key concurrent acceptance** — N simultaneous same-key requests yield exactly one
+  `Match`, exactly one capacity consumption and N identical responses; (b) **different-key race**
+  — concurrent acceptances under different keys preserve the capacity invariant, with losers
+  rejected rather than clamped; (c) **same key, conflicting binding** — deterministic
+  `SYS_409_IDEMPOTENCY_KEY_REUSED`. These are **not** written now: this PR carries no domain,
+  persistence or runtime idempotency implementation, so such tests would assert nothing while
+  appearing to cover the case.
 - **`POST /v1/settlements/{settlement_id}/confirm-funds` — key scope stated, added 2026-08-24.**
   The endpoint already requires the header, and §1.4 of `05_API_Contract_Data_Dictionary.md`
   already retains the key-to-response mapping for **24 hours** and returns the original response

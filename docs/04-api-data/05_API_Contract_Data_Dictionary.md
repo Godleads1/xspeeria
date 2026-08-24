@@ -101,6 +101,8 @@ What changed is the list of operations. The previous wording named *"match confi
 
 **The endpoint contracts in §4.3 are authoritative for which endpoints carry the header:** an endpoint requires an `Idempotency-Key` when its **Required Headers** row names one. The money-sensitive operations under the active model are **`POST /v1/offers/{offer_id}/accept`** — the canonical acceptance operation that establishes a `Match` — and **`POST /v1/settlements/{settlement_id}/confirm-funds`**, the advisory customer funding claim, **which this policy explicitly covers**, alongside offer creation. **This correction adds the header requirement to no endpoint that did not already declare it**, and removes it from none.
 
+**The routes named above are illustrative canonical examples, NOT an exhaustive enumeration — clarified 2026-08-25.** This section states the *policy*; it is not a route registry, and it must not be read as one. An endpoint requires an `Idempotency-Key` **if and only if** its own §4.3 **Required Headers** row names one, and that declaration is authoritative on its own. Two consequences, both binding: an endpoint is **never exempt** from the header merely because this section does not name it — the FXRequest creation endpoint (§3.3) declares the header in its own contract and requires it — and naming an endpoint here **grants it nothing** its §4.3 contract does not already state. Where this section and an endpoint contract disagree, **the endpoint contract wins** and this section is the defect. *Scope note: this is an enumeration/authority clarification only. Whether FXRequest creation is an active MVP user flow or a compatibility-only surface is a **separate OPEN human product decision** and is neither settled nor implied here.*
+
 **"The same key" means the same *bound* request.** A key is bound to the logical request it was first used for; the binding for each endpoint is stated in that endpoint's contract (see the idempotency-scope note for `confirm-funds` in §4.3, and §9.4 of `02_Technical_Design_Specification.md` for acceptance). Presenting a bound key with a materially different request is a **bound-key conflict** and is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4) — never served the first request's response.
 
 2\. Authentication
@@ -341,7 +343,43 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Success Response | 200 OK — paginated list of Listing summaries                                                                      |
 | Error Responses  | AUTH_403_KYC_REQUIRED                                                                                             |
 | Validation Rules | N/A                                                                                                               |
-| Business Rules   | Only listings in status="active" are returned; a user’s own listings are included and flagged is_own: true        |
+| Business Rules   | **Corrected 2026-08-25 — `marketplace-active` is a FILTER SEMANTIC, not a status literal.** Only **marketplace-active** listings are returned; a user’s own listings are included and flagged is_own: true. See the definition below |
+
+> **`marketplace-active` — filter semantic, defined 2026-08-25.** This rule previously returned
+> only listings with `status="active"`. For **`FXRequest`** that literal is valid — `active` is a
+> member of its approved enum (`active, matched, cancelled, expired`). For **`Offer`** it is
+> **not**: the canonical Offer lifecycle is **`open, partially_matched, fully_matched, withdrawn,
+> cancelled, expired`**, and `active` is not a member of it. The listing endpoint spans **both** entity types
+> (`filter[type]` = `offer|request`), so a single literal cannot express the rule for both.
+>
+> **`marketplace-active` therefore means: the listing remains eligible for further acceptance.**
+> It is a **query projection over canonical statuses**, evaluated per entity type. **No new
+> persisted status literal is introduced, and no existing enum is altered.**
+>
+> | Entity | Included (marketplace-active) | Excluded |
+> |---|---|---|
+> | **`Offer`** | `open`, `partially_matched` | `fully_matched`, `withdrawn`, `cancelled`, `expired` |
+> | **`FXRequest`** | `active` | `matched`, `cancelled`, `expired` |
+>
+> `partially_matched` is **included** because a partially matched Offer **remains available for
+> its remaining amount** (Offer entity, `status`) — excluding it would hide live capacity. A
+> `remaining_amount` shown in any listing is **advisory and may be stale**; only the value read
+> inside the acceptance serialization boundary is authoritative, and discovery/ranking is **never**
+> allocation priority.
+>
+> **RESOLVED — HUMAN-APPROVED 2026-08-25: `withdrawn` is a canonical Offer status.** A prior
+> revision of this note recorded an OPEN status-model gap here, because the enum had no literal
+> expressing *"remainder withdrawn, existing allocations intact"* and withdrawal is explicitly
+> **not** `cancelled`, **not** `expired` and **not** `fully_matched`. That gap is **CLOSED** by
+> human decision: `withdrawn` is now a member of the canonical Offer enum (§ Offer entity,
+> `status`), meaning the owner **intentionally withdrew the still-unmatched remainder**.
+>
+> **`withdrawn` is EXCLUDED from `marketplace-active`.** The operative rule is unchanged — *no new
+> acceptance may consume the withdrawn remainder* — but the exclusion now rests on a **named
+> canonical status** rather than on an unrepresentable state. Existing `Match`, `Transaction` and
+> `Settlement` records under a withdrawn Offer **remain valid and are unaffected by this filter**;
+> withdrawal never cascades into allocations, and any previously matched amount **remains part of
+> `matched_amount`** under the existing contributing/completed allocation rules.
 
 **POST /v1/offers**
 
@@ -352,12 +390,33 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Permissions      | Authenticated, KYC-approved                                                                                                        |
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                                      |
 | Request JSON     | source_currency, target_currency, source_amount (Decimal string), desired_rate (Decimal string). **`settlement_window_hours` is withdrawn** — window durations are configurable policy, not user input (ADR-001 §14.4) |
-| Success Response | 201 Created — Offer object, status: "active"                                                                                       |
+| Success Response | 201 Created — Offer object. **Conceptual status is `open` — annotated 2026-08-25** (the canonical Offer lifecycle is `open, partially_matched, fully_matched, withdrawn, cancelled, expired`; `active` is **not** a member). The literal `"active"` shown in earlier revisions is permitted **only** as a retained persisted/wire name that **maps to `open`**, per the compatibility allowance on `Offer.status`; it asserts no separate state. **No enum is changed here** |
 | Error Responses  | VAL_422_RATE_ABOVE_CEILING *(proposed; supersedes `VAL_422_RATE_OUT_OF_BAND`)*, VAL_422_AMOUNT_BELOW_MINIMUM, AUTH_403_KYC_REQUIRED |
 | Validation Rules | **HUMAN-APPROVED:** `desired_rate` must be **≤ the applicable approved reference ceiling** — above the ceiling is a **hard block**. **There is no approved floor**; the superseded ±15% symmetric band is withdrawn. Reference-rate source, update cadence, staleness and provider-unavailable policy remain **OPEN / configurable**. `source_amount` ≥ corridor minimum                          |
 | Business Rules   | **Ceiling check** protects counterparties from mispriced or manipulative offers. `seller_rate ≤ applicable approved reference ceiling`; above it is a hard block; **no floor applies**. Re-checked at acceptance; locked on the resulting Match |
 
-**POST /v1/requests**
+**POST /v1/fx-requests**
+
+> **Canonical route reconciled 2026-08-25 — naming/compatibility only.** This endpoint was
+> published here as `POST /v1/requests` while three other authorities named `/fx-requests`. The
+> canonical identifier is **`/v1/fx-requests`**, established by existing repository evidence and
+> **not** by any new product decision: §1.1 REST Conventions names `/fx-requests` as its own
+> resource-naming example; the **HUMAN-APPROVED disposition of 2026-08-22** in the `FXRequest`
+> entity section below states that *"the `/fx-requests` route and all historical references
+> stand"*; `02_Technical_Design_Specification.md` §API table publishes `POST /v1/fx-requests`; and
+> `Xspeeria_Master_Prompt_Python_Backend.md` publishes `POST|GET /api/v1/fx-requests`. The bare
+> `/v1/requests` form was the sole outlier and contradicted a human-approved statement in this
+> same document.
+>
+> **`POST /v1/requests` is retained as a HISTORICAL / COMPATIBILITY ALIAS.** Nothing is deleted
+> and nothing is renamed, per that same approved disposition. Where the two forms appear, the
+> canonical `/v1/fx-requests` governs and `/v1/requests` is the alias.
+>
+> *Scope note — this reconciles **route naming only**. Whether FXRequest creation is an **active
+> MVP user flow** or a **compatibility-only surface** is a **separate OPEN human product
+> decision**, and it is **not** decided, narrowed or implied here. This endpoint's active-MVP
+> status is unchanged by this correction. `FXRequest` also remains barred from being an
+> alternative Offer-capacity serialization authority (§ Offer acceptance).*
 
 |                  |                                                               |
 |------------------|---------------------------------------------------------------|
@@ -394,10 +453,10 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Permissions      | Authenticated (owner)                                                                                            |
 | Required Headers | Authorization: Bearer {access_token}                                                                             |
 | Request JSON     | none                                                                                                             |
-| Success Response | 200 OK — Offer closed to further matching. Response literal is **PROPOSED, not ratified**; no persisted enum is introduced solely for this clarification |
+| Success Response | 200 OK — Offer closed to further matching, **`status: "withdrawn"`**. **RATIFIED 2026-08-25** — `withdrawn` is a canonical member of the Offer status enum by human decision; the earlier *"PROPOSED, not ratified"* qualifier is **superseded** |
 | Error Responses  | ~~RES_409_OFFER_ALREADY_MATCHED~~ — **superseded**: an Offer carrying valid allocations may still withdraw its remaining availability |
 | Validation Rules | N/A                                                                                                              |
-| Business Rules   | **HUMAN-APPROVED, clarified 2026-08-22.** The seller **withdraws the remaining availability**, **closing the Offer to further matching**. This is **not** a cancellation that cascades from Offer to Match. It **must not** cancel, invalidate or alter the `allocated_amount` of any existing Match; **must not** unwind a Transaction or terminate a Settlement; **must not** return capacity already committed to a valid allocation; and **must not** affect any other Match under the same Offer. Every existing valid allocation continues as an **independent failure domain**, and all Match/Transaction/Settlement history remains intact. Only the **uncommitted remainder** becomes unavailable: no new acceptance may consume it. Committed allocations are unwound only through the per-allocation dispute / cancellation-with-counterparty-consent flow. *Example — original 2,000 with an existing Match of 1,000: after withdrawal that Match continues untouched, the remaining 1,000 is no longer acceptable by anyone, and the Offer is closed to further matching.* |
+| Business Rules   | **HUMAN-APPROVED, clarified 2026-08-22.** The seller **withdraws the remaining availability**, **closing the Offer to further matching**. This is **not** a cancellation that cascades from Offer to Match. It **must not** cancel, invalidate or alter the `allocated_amount` of any existing Match; **must not** unwind a Transaction or terminate a Settlement; **must not** return capacity already committed to a valid allocation; and **must not** affect any other Match under the same Offer. Every existing valid allocation continues as an **independent failure domain**, and all Match/Transaction/Settlement history remains intact. Only the **uncommitted remainder** becomes unavailable: no new acceptance may consume it. Committed allocations are unwound only through the per-allocation dispute / cancellation-with-counterparty-consent flow. *Example — original 2,000 with an existing Match of 1,000: after withdrawal that Match continues untouched, the remaining 1,000 is no longer acceptable by anyone, and the Offer is closed to further matching.* **Status — HUMAN-APPROVED 2026-08-25:** the Offer moves to **`withdrawn`**, the canonical status for this outcome. It is **not** `cancelled`, **not** `expired` and **not** `fully_matched`. The previously matched amount **remains part of `matched_amount`** under the existing contributing/completed allocation rules, and a `withdrawn` Offer is **excluded from `marketplace-active`** |
 
 3.5 Matching
 
@@ -414,6 +473,28 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_RATE_ABOVE_CEILING *(proposed)*, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
 | Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and still *proposed*). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
 | Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount**. **Acceptance transaction boundary — clarified 2026-08-24: `offer_id` is the mandatory serialization key.** One transaction, serialized on the authoritative Offer capacity row, must: identify the Offer; lock/serialize that capacity; read the authoritative `remaining_amount`; validate the **required** `accepted_amount`; **reject** if it exceeds authoritative remaining capacity; assign `accepted_at`; assign the `server_order_key`; establish the `Match`; update the authoritative Offer allocation state; and **commit atomically**. An `FXRequest` may supply demand-side context where already approved, but is **never an alternative capacity-serialization authority** for accepting a seller Offer, and acceptance must not depend on its presence. *A database row lock is not the withdrawn product concept of locking the whole Offer lifecycle after its first Match: the Offer stays open for later partial acceptances.* Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` — human decision 2026-08-24.** It is server-generated, unique within the acceptance ordering scope, assigned inside the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation audit contract. **Durable persistence of this value is REQUIRED of the future persistence implementation** — it is not optional and not aspirational; the exact storage mechanism remains implementation-dependent. Phase 1 does not yet implement that persistence, so this is recorded as a **required dependency of the later domain-model/persistence milestone**. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
+
+> **Atomic idempotency boundary for acceptance — cross-reference added 2026-08-25.** The Business
+> Rules row above defines the acceptance transaction as **one atomic commit** covering capacity
+> serialization, the authoritative `remaining_amount` read, `accepted_amount` validation,
+> `accepted_at`, `server_order_key`, `Match` establishment and the Offer allocation update. It did
+> **not** place the **`Idempotency-Key` binding and the original idempotency record** inside that
+> same boundary, and §1.4 above referred to the acceptance binding as though it were already fully
+> stated. **Offer-row serialization orders concurrent requests; it does not deduplicate them by
+> key**, so an idempotency record committed outside this transaction leaves two concurrent
+> same-key acceptances able to create two `Match` rows and consume capacity twice.
+>
+> **`02_Technical_Design_Specification.md` §9.4 is authoritative for that boundary** and now
+> states it in full: idempotency binding, lookup and original-record establishment commit **inside
+> the same atomic logical persistence boundary** as `Match` creation and the capacity mutation;
+> of concurrent same-key requests with the same bound logical request **exactly one** wins —
+> **one `Match`, capacity consumed once**, all others replaying the original `Match` and original
+> response; a conflicting binding on the same key is rejected deterministically with
+> `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4, **no new identifier**); and different keys racing for
+> capacity are decided unchanged by the serialization rules, with losers **rejected** via
+> `RES_409_INSUFFICIENT_REMAINING` — **never clamped or partially filled**. **No persistence
+> mechanism is chosen**, and concurrency regression tests are **REQUIRED at the persistence
+> milestone**, not now.
 
 **POST /v1/matches/{match_id}/confirm** — **SUPERSEDED, HUMAN DECISION 2026-08-22**
 
@@ -916,6 +997,26 @@ independent settlement failure domain.
 > uncommitted remainder becomes unavailable to new acceptances. Each existing allocation continues as an
 > **independent failure domain**.
 >
+> **`withdrawn` is the canonical status for this outcome — HUMAN-APPROVED 2026-08-25.** The prior
+> revision recorded an OPEN status-model gap here: the enum had no literal expressing *"remainder
+> withdrawn, existing allocations intact"*, so withdrawal could not be represented without
+> misusing `cancelled`, `expired` or `fully_matched`. That gap is **CLOSED**. `withdrawn` is now a
+> member of the canonical Offer enum and means: **the Offer owner has intentionally withdrawn the
+> still-unmatched remainder.**
+>
+> Binding semantics — the Offer is **closed to further acceptance**, and **no new `Match` may
+> consume the withdrawn remainder**. Existing `Match`, `Transaction` and `Settlement` records
+> **remain valid**. Withdrawal **does NOT cascade** into existing allocations. Withdrawal is **NOT
+> cancellation**, **NOT expiry**, and **NOT `fully_matched`** — these are four distinct terminal
+> meanings and must never be collapsed. Any previously matched amount **remains part of
+> `matched_amount`** under the existing contributing/completed allocation rules (§ Offer
+> invariants) — withdrawal changes nothing about what has already been allocated. The unmatched
+> withdrawn remainder is **no longer available to the marketplace**.
+>
+> *This decision adds one Offer status literal and nothing else. The `FXRequest` status enum is
+> **unchanged**. No persistence or runtime implementation is introduced; the persisted
+> representation belongs to the later domain-model milestone.*
+>
 > **Allocation arithmetic uses exact integer minor units** with explicit currency exponent/scale —
 > never binary floating point. This is **marketplace/allocation arithmetic** and is distinct from
 > **ledger posting representation**, which remains governed by ADR-002 (`amount_minor` BIGINT +
@@ -936,7 +1037,7 @@ independent settlement failure domain.
 | *remaining_amount*      | *derived*     | —            | `source_amount − matched_amount`    | **DERIVED — not persisted** |
 | desired_rate            | NUMERIC(12,6) | No           | **≤ applicable approved reference ceiling; no floor.** Validated at publication; re-checked at acceptance; **locked** on the resulting Match | Seller-selected exchange rate |
 | ~~settlement_window_hours~~ | ~~SMALLINT~~ | — | **WITHDRAWN** | Superseded: window durations are configurable policy, not user input (ADR-001 §14.4) |
-| status                  | ENUM          | No           | **Must express: open, partially matched, fully matched, cancelled, expired.** Persisted enum literals may retain existing names for compatibility — the *conceptual* lifecycle is what is approved. The former binary `active \| matched` is **insufficient** | Marketplace visibility. **A partially matched Offer remains available for its remaining amount** |
+| status                  | ENUM          | No           | **CANONICAL ENUM — HUMAN-APPROVED 2026-08-25: `open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`.** `withdrawn` is **added** by that decision and closes the prior status-model gap. Persisted enum literals may retain existing names for compatibility — the *conceptual* lifecycle is what is approved. The former binary `active \| matched` is **insufficient** | Marketplace visibility. **A partially matched Offer remains available for its remaining amount.** `withdrawn` = owner withdrew the still-unmatched remainder; existing allocations are untouched |
 
 Match
 
@@ -963,12 +1064,38 @@ persisted/API form of the conceptual **`MatchAllocation`** — see the glossary 
 | agreed_rate          | NUMERIC(12,6) | No           | Locked at acceptance; never silently re-priced      | Immutable once set |
 | accepted_at          | TIMESTAMPTZ   | No           | **Server-set trusted timestamp.** A client-supplied value is never trusted | Establishes the allocation and its acceptance priority |
 | preparation_state    | ENUM          | No           | Preparation lifecycle for this allocation           | **Window 1.** Beneficiary selection/validation and allocation-specific requirements |
-| preparation_deadline | TIMESTAMPTZ   | No           | **Duration is OPEN / CONFIGURABLE — no value is set** | End of the preparation window |
+| preparation_deadline | TIMESTAMPTZ   | **Yes**      | **Duration is OPEN / CONFIGURABLE — no value is set (ADR-001 §14.4).** **Nullable — corrected 2026-08-25**, matching `funding_deadline` below, whose window carries the identical OPEN/CONFIGURABLE status. **NULL does NOT mean unlimited preparation**; see the note below the table | End of the preparation window |
 | funding_state        | ENUM          | No           | Funding lifecycle for this allocation               | **Window 2.** Runs only after `ALLOCATION_FUNDING_READY` |
 | funding_deadline     | TIMESTAMPTZ   | Yes          | **Duration is OPEN / CONFIGURABLE — U-2 TBD**       | End of the funding window |
 | allocation_requirements | JSONB      | Yes          | Applicable allocation-specific requirements         | Evaluated during preparation |
 | ~~status~~           | ~~ENUM~~      | —            | ~~pending_confirmation, confirmed, expired, cancelled~~ **SUPERSEDED** — no bilateral confirmation step exists | Replaced by `preparation_state` / `funding_state` |
 | ~~expires_at~~       | ~~TIMESTAMPTZ~~ | —          | ~~30 minutes from creation~~ **WITHDRAWN**, no replacement value | Replaced by the two configurable deadlines |
+
+> **Unset preparation window — representation corrected 2026-08-25.** `preparation_deadline` was
+> `NOT NULL` while the same row stated that the preparation-window duration is **OPEN /
+> CONFIGURABLE and no value is set**. Those two statements cannot both hold: with no approved
+> duration there is nothing from which to derive a deadline, so a new `Match` could not populate a
+> required column and the table was unimplementable as written. The sibling `funding_deadline`
+> carries the identical OPEN/CONFIGURABLE status (**U-2, TBD**) and was already **nullable**; the
+> asymmetry was a documentation defect, not a modelled difference.
+>
+> **The representation, not the duration, is what is fixed here.** `preparation_deadline` is
+> **nullable while no approved preparation-window duration exists**. Once the applicable policy
+> supplies that duration and the preparation window is instantiated for an allocation, the
+> deadline becomes **derivable** from `Match.accepted_at` — the trusted server timestamp that
+> starts the window (ADR-001 §14.4) — and is populated then.
+>
+> **NULL does NOT mean unlimited preparation, and does not mean the window has been waived.** It
+> means the policy value required to establish the deadline is **not yet configured**, so the
+> deadline has **not yet been instantiated**. Preparation-failure semantics (ADR-001 §14.5) are
+> **unchanged** and are not weakened by a null: an allocation whose preparation is not completed
+> before its deadline terminates with an attributable cause and returns its allocated amount to
+> the Offer's remaining capacity. **Production activation of any flow that depends on the
+> preparation deadline remains BLOCKED until the preparation-window duration is approved** — it is
+> governance-deferred on the same terms as §11 of ADR-001 and **must not be assumed or defaulted**.
+>
+> **No duration value is invented, proposed or implied by this correction.** No new field, state,
+> enum literal or transition is introduced, and ADR-001 is unamended.
 
 Transaction
 
@@ -1312,10 +1439,31 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 
 > **`MatchConfirmed` carries ACCEPTANCE semantics — clarified 2026-08-24.** Bilateral
 > confirmation is withdrawn (`CORRECTIONS_v3.md` §11.11); acceptance alone establishes the
-> allocation. The event name is retained as a **compatibility alias** so existing consumer
-> contracts do not break, and it is emitted when the `Match` is **established by acceptance** --
-> never on a second confirmation step, which does not exist. A downstream consumer must not
-> wait for a confirmation that will never arrive.
+> allocation. The event name is retained as a **NAME / ROUTING compatibility alias only**, and it
+> is emitted when the `Match` is **established by acceptance** -- never on a second confirmation
+> step, which does not exist. A downstream consumer must not wait for a confirmation that will
+> never arrive.
+>
+> **Semantic backward compatibility is NOT guaranteed — corrected 2026-08-25.** An earlier
+> revision of this note said the name was retained *"so existing consumer contracts do not
+> break"*. That was an **overclaim** and is **WITHDRAWN**. Retaining the name preserves the
+> **event name, topic and routing** so that subscriptions, bindings and dispatch tables continue
+> to resolve. It preserves **nothing about meaning**: the trigger moved from bilateral
+> confirmation to acceptance, so a consumer written against the old semantics is **already
+> wrong** even though its subscription still resolves. The dangerous failure is silent — the
+> event arrives on the expected route, and a stale consumer treats acceptance as confirmation and
+> starts a downstream action that is forbidden at that moment.
+>
+> **Consumer migration is therefore REQUIRED, not optional.** Every consumer of `MatchConfirmed`
+> must be migrated to the current acceptance semantics before that consumer is relied upon. In
+> particular: no consumer may wait for a second bilateral confirmation (none exists); no consumer
+> may treat receipt of this event as confirmation, funding, or authorization to provision;
+> Settlement consumption at acceptance is **RECORD-ONLY**; and partner-facing provisioning and
+> dispatch remain gated on **`ALLOCATION_FUNDING_READY`** (ADR-001 §14.3), which this event
+> neither starts, satisfies nor bypasses.
+>
+> *The event is **not** renamed here. Whether `MatchConfirmed` is ultimately renamed to
+> `MatchCreated` remains an **OPEN human decision** — see the renaming note in this section.*
 >
 > **The event does NOT authorize provisioning — added 2026-08-24.** Moving emission earlier
 > preserved the name and changed the timing, so the consumer contract has to be restated or a
