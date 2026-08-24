@@ -1051,7 +1051,8 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   the same authenticated principal replaying the same logical acceptance with the same key
   **must not create a second `Match`**, and after successful processing the replay returns or
   references the original `Match` per the API contract; reusing a key with a materially
-  different acceptance payload **fails deterministically** (`SYS_409_IDEMPOTENCY_KEY_REUSED`);
+  different acceptance payload **fails deterministically** (`SYS_409_IDEMPOTENCY_KEY_REUSED`,
+  whose canonical meaning is a **bound-key conflict** — see the shared note below);
   and **a retry must never consume Offer capacity twice**, which the acceptance serialization
   boundary in §9.2 already governs. No storage implementation is specified here.
 - **`POST /v1/settlements/{settlement_id}/confirm-funds` — key scope stated, added 2026-08-24.**
@@ -1072,6 +1073,36 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   `SettlementLeg.state` or advancing `Settlement.phase`, never authorizing release, and never
   starting, satisfying or bypassing `ALLOCATION_FUNDING_READY`. Authoritative `FUNDED` stays
   regulated-partner-webhook driven (§7.3). No storage implementation is specified here.
+- **Atomic idempotency boundary for `confirm-funds` — added 2026-08-24.** The bullet above
+  states an *outcome*; it does not by itself say what holds under simultaneous retries. Two
+  concurrent same-key requests could each observe no prior record and each create an advisory
+  claim, satisfying every sentence written there while producing the duplicate it forbids. The
+  invariant: **recording the scoped idempotency record and establishing or recognising the
+  advisory claim MUST occur inside one atomic logical persistence boundary.** Of two or more
+  concurrent requests carrying the same key and the same bound logical request, **exactly one**
+  establishes the original idempotency record and advisory claim; every other concurrent request
+  and every later retry **observes or replays that original result** — no duplicate advisory
+  claim, the original response, the original `user_claim_recorded_at`. A conflicting binding on
+  the same key is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED`, concurrently
+  or otherwise. **No mechanism is chosen here** -- no lock strategy, uniqueness constraint,
+  storage engine, cache technology or isolation level; any mechanism meeting the invariant is
+  conformant, and the choice belongs to the persistence milestone. **A concurrent same-key
+  regression test is REQUIRED at that milestone** (N simultaneous same-key requests, exactly one
+  claim record, N identical responses). It is **not** written now: this PR carries no runtime
+  idempotency or persistence implementation, so a test here would assert nothing while appearing
+  to cover the case.
+- **`SYS_409_IDEMPOTENCY_KEY_REUSED` means a bound-key conflict — one meaning, both documents,
+  added 2026-08-24.** The §4.4 catalogue previously defined it as a key *"reused with a different
+  request body"*, which is narrower than the bindings the two bullets above actually declare: an
+  authenticated principal arrives in the bearer token and a `settlement_id` is a path parameter,
+  so neither is a request body, yet a mismatch in either is precisely the conflict this code
+  exists to reject. Its canonical meaning across both authority documents is therefore a material
+  difference in **any bound component** — authenticated principal, resource identifier,
+  `settlement_id`, `leg_id`, the logical operation, or materially relevant request
+  parameters/payload. Each endpoint's contract states its own binding. Rejection is
+  **deterministic**, and the first request's response is **never** served to a conflicting one.
+  **One identifier covers every bound-key conflict on every idempotent endpoint; no new error
+  code is introduced and the §4.4 catalogue total remains 44.**
 
 ## 9.5 Matching Rules Table
 

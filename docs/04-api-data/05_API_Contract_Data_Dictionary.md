@@ -95,7 +95,13 @@ List endpoints accept a filter\[field\]=value query convention (e.g., filter\[st
 
 1.4 Idempotency
 
-All state-mutating POST endpoints that initiate money movement or matching (offer creation, match confirmation, settlement initiation) require an Idempotency-Key header (client-generated UUIDv4). The server persists the key-to-response mapping for 24 hours; a repeated request with the same key returns the original response without reprocessing.
+**Corrected 2026-08-24.** State-mutating POST endpoints that initiate money movement or matching require an `Idempotency-Key` header (client-generated UUIDv4). The server persists the key-to-response mapping for **24 hours**; a repeated request with the same key returns the original response **without reprocessing**. That retention and replay behaviour is **unchanged** by this correction.
+
+What changed is the list of operations. The previous wording named *"match confirmation"* and *"settlement initiation"* as its examples, and **both are stale**. Bilateral match confirmation is **withdrawn** (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is SUPERSEDED, §4.3), so the policy cited an operation that no longer exists. Client-triggered settlement initiation is likewise **not** an operation in the active model: no client-facing settlement-initiation endpoint exists, the *"initiation once `both_confirmed = true`"* rule is superseded (§4.3), and partner provisioning becomes actionable only when the allocation reaches `ALLOCATION_FUNDING_READY` (ADR-001 §14.3) — a server-derived gate, not a client POST.
+
+**The endpoint contracts in §4.3 are authoritative for which endpoints carry the header:** an endpoint requires an `Idempotency-Key` when its **Required Headers** row names one. The money-sensitive operations under the active model are **`POST /v1/offers/{offer_id}/accept`** — the canonical acceptance operation that establishes a `Match` — and **`POST /v1/settlements/{settlement_id}/confirm-funds`**, the advisory customer funding claim, **which this policy explicitly covers**, alongside offer creation. **This correction adds the header requirement to no endpoint that did not already declare it**, and removes it from none.
+
+**"The same key" means the same *bound* request.** A key is bound to the logical request it was first used for; the binding for each endpoint is stated in that endpoint's contract (see the idempotency-scope note for `confirm-funds` in §4.3, and §9.4 of `02_Technical_Design_Specification.md` for acceptance). Presenting a bound key with a materially different request is a **bound-key conflict** and is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4) — never served the first request's response.
 
 2\. Authentication
 
@@ -501,11 +507,38 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > **returns the original response** — the original `user_claim_recorded_at`, with the original
 > `leg_id` and `leg_state` response semantics unchanged. A retry is a retry, not a second claim.
 >
+> **Atomic boundary — added 2026-08-24.** The paragraph above states an *outcome*; on its own it
+> does not say what guarantees that outcome when two retries arrive at once. Without a stated
+> boundary, two concurrent same-key requests could each find no prior record and each create an
+> advisory claim, satisfying every sentence above while producing exactly the duplicate it
+> forbids. The invariant: **recording the scoped idempotency record and establishing or
+> recognising the advisory claim MUST occur inside one atomic logical persistence boundary.**
+>
+> For two or more concurrent requests carrying the same `Idempotency-Key` and the same bound
+> logical request: **exactly one** may establish the original idempotency record and advisory
+> claim; every other concurrent request and every later retry **observes or replays that original
+> result**, creating **no** duplicate advisory claim, returning the **original response** and
+> preserving the **original `user_claim_recorded_at`**. A same key presented with a conflicting
+> binding is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED`, concurrently or
+> otherwise.
+>
+> **The persistence mechanism is deliberately not chosen here** — no lock strategy, uniqueness
+> constraint, storage engine, cache technology or transaction isolation level is specified. Any
+> mechanism satisfying the invariant is conformant, and the choice belongs to the persistence
+> milestone.
+>
+> **A concurrent same-key regression test is REQUIRED at that milestone** — proving that N
+> simultaneous same-key requests yield exactly one advisory claim record and N identical
+> responses. It is **not** written now, and its absence here is not an oversight: this PR
+> contains no runtime idempotency or persistence implementation, so there is nothing to exercise.
+> A test written against no implementation would assert nothing while appearing to cover this.
+>
 > **Same key, materially different request** — a different `settlement_id`, a different
 > `leg_id`, a different authenticated principal, or a materially different payload or logical
 > operation — **must be rejected deterministically** with `SYS_409_IDEMPOTENCY_KEY_REUSED`, the
-> **existing** §4.4 entry ("Idempotency key reused with a different request body"). **No new
-> error identifier is introduced and the catalogue total remains 44.** Silently serving the
+> **existing** §4.4 entry, whose canonical meaning is a **bound-key conflict**: a material
+> difference in any bound component, not only in the request body. **No new error identifier is
+> introduced and the catalogue total remains 44.** Silently serving the
 > first response to a materially different request would let one confirmed leg's claim
 > masquerade as another's.
 >
@@ -712,7 +745,7 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | SYS_500_INTERNAL_ERROR         | 500             | Unhandled server error                                 |
 | SYS_503_SERVICE_UNAVAILABLE    | 503             | Dependency (DB, Redis, Celery) temporarily unavailable |
 | SYS_504_UPSTREAM_TIMEOUT       | 504             | A downstream/banking dependency timed out              |
-| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | Idempotency key reused with a different request body   |
+| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | **Bound-key conflict — meaning broadened 2026-08-24.** An `Idempotency-Key` was presented with a request that does not match the logical request the key was first bound to. The previous wording, *"reused with a different request body"*, was narrower than the binding the contracts actually define: an authenticated principal comes from the bearer token and a `settlement_id` is a path parameter, so neither is a request body, yet a mismatch in either is exactly the conflict this code exists to reject. The canonical meaning is a material difference in **any bound component** — authenticated principal, resource identifier, `settlement_id`, `leg_id`, the logical operation, or materially relevant request parameters/payload. Each endpoint's contract states its own binding (§4.3). Rejection is **deterministic**; the first request's response is **never** served to a conflicting one. **One identifier covers every bound-key conflict — no new code is introduced and the catalogue total remains 44** |
 
 > **ASSUMPTION:** *The catalogue above totals **44** explicitly enumerated codes across five namespaces (recounted 2026-08-24; the earlier figure of 39 predates several additions). Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
 
