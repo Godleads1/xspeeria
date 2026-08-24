@@ -407,7 +407,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Success Response | 201 Created — Match object carrying `allocated_amount` and the server-set `accepted_at` |
 | Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_RATE_ABOVE_CEILING *(proposed)*, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
 | Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and still *proposed*). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
-| Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount** — row-level locking on the Offer's amount fields, never a whole-Offer lock. Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. The ordering **contract** is defined now; replay from persisted state becomes **enforceable** only once `server_order_key` is persisted, in the later domain-model implementation. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
+| Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount**. **Acceptance transaction boundary — clarified 2026-08-24: `offer_id` is the mandatory serialization key.** One transaction, serialized on the authoritative Offer capacity row, must: identify the Offer; lock/serialize that capacity; read the authoritative `remaining_amount`; validate the **required** `accepted_amount`; **reject** if it exceeds authoritative remaining capacity; assign `accepted_at`; assign the `server_order_key`; establish the `Match`; update the authoritative Offer allocation state; and **commit atomically**. An `FXRequest` may supply demand-side context where already approved, but is **never an alternative capacity-serialization authority** for accepting a seller Offer, and acceptance must not depend on its presence. *A database row lock is not the withdrawn product concept of locking the whole Offer lifecycle after its first Match: the Offer stays open for later partial acceptances.* Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` — human decision 2026-08-24.** It is server-generated, unique within the acceptance ordering scope, assigned inside the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation audit contract. **Durable persistence of this value is REQUIRED of the future persistence implementation** — it is not optional and not aspirational; the exact storage mechanism remains implementation-dependent. Phase 1 does not yet implement that persistence, so this is recorded as a **required dependency of the later domain-model/persistence milestone**. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
 
 **POST /v1/matches/{match_id}/confirm** — **SUPERSEDED, HUMAN DECISION 2026-08-22**
 
@@ -606,7 +606,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 
 4\. Error Catalogue
 
-Errors follow a consistent envelope: { error_code, message, details? }. Codes are namespaced by domain prefix for fast triage. The following 54 codes constitute the MVP error catalogue; new codes require an update to this document before shipping.
+Errors follow a consistent envelope: { error_code, message, details? }. Codes are namespaced by domain prefix for fast triage. The following **44 codes** constitute the MVP error catalogue -- recounted 2026-08-24 and verified against the tables below (AUTH 12, VAL 10, KYC 4, RES 14, SYS 4, across five namespaces). New codes require an update to this document **and to this total** before shipping; the previously stated 54 was never reconciled to the enumerated rows.
 
 4.1 Authentication & Authorization (AUTH\_\*)
 
@@ -682,7 +682,7 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | SYS_504_UPSTREAM_TIMEOUT       | 504             | A downstream/banking dependency timed out              |
 | SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | Idempotency key reused with a different request body   |
 
-> **ASSUMPTION:** *The catalogue above totals 39 explicitly enumerated codes across five namespaces. Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
+> **ASSUMPTION:** *The catalogue above totals **44** explicitly enumerated codes across five namespaces (recounted 2026-08-24; the earlier figure of 39 predates several additions). Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
 
 5\. Data Dictionary
 
@@ -977,13 +977,30 @@ PayoutExecution
 | **Field** | **Type** | **Nullable** | **Validation** | **Business Meaning** |
 | id | UUID | No | Primary key | Payout child identifier |
 | leg_id | UUID | No | FK -\> SettlementLeg.leg_id | Parent leg |
-| beneficiary_account_id | UUID | No | FK -\> BeneficiaryAccount.id; must be `validated` | Destination |
+| beneficiary_account_id | UUID | No | FK -\> `BENEFICIARIES.id`; must be `validated` | Destination. *`BeneficiaryAccount` is the conceptual/domain name; `BENEFICIARIES` is the canonical persisted identifier per the `DOCUMENT_INDEX.md` §2A glossary, and no table is renamed.* |
 | amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point** | Split amount |
 | currency | CHAR(3) | No | ISO 4217; = leg currency | Payout currency |
-| scale | SMALLINT | No | Stored on the row | Minor-unit exponent |
+| scale | SMALLINT | No | **= the minor-unit scale of the parent leg's `currency` under the applicable currency definition (ADR-002 `currency_def_version`), and identical across every `PayoutExecution` of that leg.** Stored on the row | Minor-unit exponent |
 
 > **Exact-total invariant:** the sum of a leg's `PayoutExecution.amount_minor` values must equal
 > **exactly** the amount due for that leg. Validated in integer minor units.
+>
+> **One currency and one scale per leg — clarified 2026-08-24.** The invariant above adds
+> `amount_minor` integers, and that addition is only well defined when every addend shares one
+> scale: `1000` at scale 2 and `1000` at scale 4 are different amounts, and summing them yields a
+> number that means nothing. `currency` was already pinned to the leg currency; `scale` was not,
+> so the rule is now stated for both. Every `PayoutExecution` beneath one `SettlementLeg`
+> **must** carry that leg's currency **and** that currency's minor-unit scale; child amounts are
+> expressed in that common scale; the aggregate equals the applicable parent-leg payout amount
+> once the payout set is complete. **No cross-currency addition may occur within one leg.** Any
+> conversion happens **before** the leg amount is established and is **never** hidden inside child
+> payout aggregation. This restates a rule the model already implies -- ADR-001 confines a leg to
+> one currency, and `backend/app/core/money.py` already refuses arithmetic across differing
+> currency or scale -- and introduces **no** exchange-rate behaviour, no new `SettlementLeg`
+> field, and no change to the exactly-two-leg rule.
+>
+> *Scope note: this fixes the **representation** of child amounts only. The aggregate derivation
+> from child outcomes to leg state remains **OPEN** below and is untouched.*
 >
 > **`PayoutExecution` children are NOT additional `SettlementLeg` rows.** ADR-001's
 > **exactly-two-leg** rule and `UNIQUE(settlement_id, party_role)` are **unchanged**; children are
@@ -1167,12 +1184,25 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 
 |                     |                         |                                                               |                                                       |                                                                                                     |                                            |
 |---------------------|-------------------------|---------------------------------------------------------------|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------|--------------------------------------------|
+> **`MatchConfirmed` carries ACCEPTANCE semantics — clarified 2026-08-24.** Bilateral
+> confirmation is withdrawn (`CORRECTIONS_v3.md` §11.11); acceptance alone establishes the
+> allocation. The event name is retained as a **compatibility alias** so existing consumer
+> contracts do not break, and it is emitted when the `Match` is **established by acceptance** --
+> never on a second confirmation step, which does not exist. A downstream consumer must not
+> wait for a confirmation that will never arrive.
+>
+> **HUMAN DECISION REQUIRED — renaming.** `MatchCreated` already appears as an event name in
+> `02_Technical_Design_Specification.md` §7 (module layout) and in the governance master prompt,
+> and is the better fit for acceptance semantics. Promoting it into this canonical catalogue is a
+> naming decision with consumer impact, so it is **reported, not made here**. Until it is taken,
+> the alias above is the contract.
+
 | **Event**           | **Producer**            | **Consumer(s)**                                               | **Payload (key fields)**                              | **Retry Policy**                                                                                    | **Idempotency**                            |
 | UserRegistered      | Auth service            | Notification worker, Analytics                                | user_id, email, created_at                            | Exponential backoff, 5 attempts                                                                     | Keyed on user_id; consumer upserts         |
 | KYCApproved         | Admin/KYC service       | Notification worker, Marketplace access-control cache         | user_id, kyc_case_id, approved_at                     | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
 | KYCRejected         | Admin/KYC service       | Notification worker                                           | user_id, kyc_case_id, reason                          | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
 | OfferCreated        | Marketplace service     | Matching engine (rate-band index), Analytics                  | offer_id, currency_pair, rate, amount                 | 3 attempts, dead-letter to DLQ on exhaustion                                                        | Keyed on offer_id                          |
-| MatchConfirmed      | Matching engine         | Settlement service, Notification worker, Analytics            | match_id, offer_id, counterparty_user_id, agreed_rate | Exponential backoff, 5 attempts, DLQ + PagerDuty alert on exhaustion (money-movement critical path) | Keyed on match_id                          |
+| MatchConfirmed *(**compatibility alias — acceptance semantics**, clarified 2026-08-24)* | Marketplace/acceptance path | Settlement service, Notification worker, Analytics            | match_id, offer_id, counterparty_user_id, agreed_rate | Exponential backoff, 5 attempts, DLQ + PagerDuty alert on exhaustion (money-movement critical path) | Keyed on match_id                          |
 | ReleaseAuthorized   | Settlement service      | Banking abstraction layer (Document 07) via transactional outbox, Notification worker | settlement_id, leg_id (x2), release_authorized_at | Exponential backoff, 5 attempts, DLQ + alert on exhaustion. Dispatch is per-leg and at-least-once; a successful dispatch on one leg is never rolled back because the other failed | Keyed on settlement_id + leg_id + operation. Emitted only after both legs are FUNDED |
 | EscrowFunded        | Banking webhook handler | Settlement service                                            | settlement_id, leg_id, amount, currency, funded_at    | Exponential backoff, 5 attempts                                                                     | Keyed on settlement_id + leg_id + event_type + provider_event_id |
 | PayoutConfirmed     | Banking webhook handler | Settlement service, Notification worker                       | settlement_id, leg_id, paid_out_at                    | Exponential backoff, 5 attempts, DLQ + alert on exhaustion                                          | Keyed on settlement_id + leg_id + event_type + provider_event_id |

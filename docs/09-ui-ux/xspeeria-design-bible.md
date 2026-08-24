@@ -26,7 +26,7 @@ The source spec itself documents a resolved contradiction worth surfacing here, 
   > Notifications move to the bell, notification centre and push. Scan and Analytics remain absent.
   > The Balance Card correction below is **strengthened, not reversed**: the replacement region is
   > now **Account Readiness**, and no aggregate currency figure may occupy the hero position either.
-- Home quick actions → **New FX Request, Browse Marketplace, Track Transaction, Support** — marketplace-native language, not wallet-native.
+- Home quick actions → **New FX Request, Browse Marketplace, Track Transaction, Support** — marketplace-native language, not wallet-native. *HISTORICAL / SUPERSEDED (2026-08-24): that correction replaced wallet-native actions and is preserved for traceability, but the approved Home now carries **exactly one** primary action, **Create or browse an offer**, routing to the Marketplace. The four-item quick-actions row is withdrawn.*
 - Typography and elevation token usage notes updated to remove every balance reference.
 
 This is a template for how every future design decision should be checked: does this visual choice, even implicitly, suggest Xspeeria custodies funds? If yes, it's wrong regardless of how clean it looks.

@@ -941,9 +941,13 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 > `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a
 > client-supplied value never participates. The resulting order is stable and replayable, so an
 > audit or dispute re-derives the same sequence from persisted state. **The ordering contract is
-> defined now; replay from persisted state becomes enforceable only once `server_order_key` is
-> persisted, in the later domain-model implementation** -- until then this is a specification
-> commitment, not a property the current model can demonstrate. The seller's rate does not
+> **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` -- human decision
+> 2026-08-24.** Server-generated, unique within the acceptance ordering scope, assigned inside
+> the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation
+> audit contract. **Durable persistence of it is REQUIRED of the future persistence
+> implementation** -- not optional and not aspirational -- while the exact storage mechanism
+> stays implementation-dependent. Phase 1 does not implement that persistence yet, so it is a
+> **required dependency of the later domain-model/persistence milestone**. The seller's rate does not
 > become a priority mechanism and discovery/ranking does not become allocation priority — both
 > remain excluded above. The **persistence mechanism for `server_order_key` is
 > implementation-dependent** and is not fixed here; a monotonic sequence or a time-sortable
@@ -981,8 +985,18 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 > matched Offer remains available for its remaining amount.
 
 
-- **Distributed locking:** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id`/`fx_request_id` being evaluated, preventing two concurrent matching runs from double-allocating the same liquidity.
-- **Database-level guard:** `matched_amount` updates on `offers`/`fx_requests` use `SELECT ... FOR UPDATE` row locking within a single DB transaction as a second line of defense against race conditions, independent of the Redis lock.
+- **Distributed locking:** **Corrected 2026-08-24 — `offer_id` is the mandatory serialization
+  key for acceptance.** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id` whose
+  capacity is being consumed. The former `offer_id`/`fx_request_id` alternative is **withdrawn**:
+  it belonged to the automated-matching model, and an acceptance must never serialize on the
+  demand side. Locks scoped to preventing two concurrent matching runs from double-allocating the same liquidity.
+- **Database-level guard:** `matched_amount` updates on `offers` use `SELECT ... FOR UPDATE` row
+  locking within a single DB transaction as a second line of defense against race conditions.
+  **The `fx_requests` capacity-update path is withdrawn as an acceptance authority** (2026-08-24):
+  the authoritative capacity being consumed is the Offer's, and an acceptance without an
+  `FXRequest` must satisfy the same Offer-level invariant. *A row lock here is not the withdrawn
+  product concept of locking the whole Offer lifecycle after its first Match — the Offer remains
+  open for later partial acceptances*, independent of the Redis lock.
 - **Optimistic concurrency:** Each `offers`/`fx_requests` row carries a `version` column; updates include a `WHERE version = :expected_version` clause, rejecting stale writes.
 
 ## 9.4 Idempotency

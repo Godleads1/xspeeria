@@ -36,7 +36,7 @@ Table of Contents
 
 Executive Summary
 
-This Product Design Specification (PDS) is the single authoritative reference for how Xspeeria looks, feels, and behaves across mobile (React Native / Expo) and admin (Next.js) surfaces. It translates the brand and interaction principles established in DESIGN_SYSTEM.md and UI_UX_SCREEN_SPEC.md into implementation-ready detail: design tokens, a full component library, and screen-by-screen specifications covering layout, states, motion, and accessibility.
+This Product Design Specification (PDS) is the reference for how Xspeeria looks, feels, and behaves across mobile (React Native / Expo) and admin (Next.js) surfaces. **Qualified 2026-08-24:** it is **not** the sole authority. `DOCUMENT_INDEX.md` assigns UI/UX behaviour, flows, states and interaction detail to the UI/UX documents, and for application visual direction the Xspeeria Figma is the primary source (human authority, 2026-08-22). Where this document and those disagree, `DOCUMENT_INDEX.md` precedence governs. It translates the brand and interaction principles established in DESIGN_SYSTEM.md and UI_UX_SCREEN_SPEC.md into implementation-ready detail: design tokens, a full component library, and screen-by-screen specifications covering layout, states, motion, and accessibility.
 
 Xspeeria’s design language is defined as Apple Wallet × Revolut Ultra × Stripe × Linear: restrained, high-contrast, generously spaced, and engineered for trust. Every visual decision in this document is justified against one of three criteria: (1) it reduces cognitive load during a financial decision, (2) it reinforces trust and security perception, or (3) it accelerates task completion for time-sensitive FX activity.
 
@@ -60,7 +60,7 @@ Xspeeria operates in a category where trust is the primary conversion lever. Use
 |-------------------------------|--------------------------------------------------------------------------------------------------------------------------|
 | **Principle**                 | **Applied Rule**                                                                                                         |
 | One primary action per screen | Every screen has exactly one high-emphasis (filled, primary-blue) CTA; all other actions are secondary or ghost.         |
-| Financial numbers are sacred  | Amounts and balances always render in tabular (monospaced-numeral) figures, right-aligned in lists, never truncated.     |
+| Financial numbers are sacred  | Per-item amounts always render in tabular (monospaced-numeral) figures, right-aligned in lists, never truncated. *Corrected 2026-08-24: "balances" is withdrawn — Xspeeria renders per-Offer, per-allocation and per-transaction amounts, never a customer balance of any kind.* |
 | Status is always visible      | Any transaction, offer, or match in a non-terminal state shows a persistent status chip using the semantic color system. |
 | No dead ends                  | Every empty and error state includes a specific next action, never a bare message.                                       |
 | Motion has meaning            | Animation communicates state change (e.g., matched, settled) — it is never purely decorative.                            |
@@ -75,7 +75,7 @@ Colors are sourced directly from DESIGN_SYSTEM.md and are treated as immutable b
 |---------------------|----------|-------------------------------------------------------------|
 | **Token**           | **Hex**  | **Usage**                                                   |
 | color.primary.blue  | \#1F3A8A | Brand identity, primary buttons, headers, active nav, links |
-| color.success.green | \#10B981 | Completed settlement, positive balance delta, success toast |
+| color.success.green | \#10B981 | Completed settlement, successful activity, success toast *(corrected 2026-08-24: "positive balance delta" is withdrawn — there is no customer balance to move)* |
 | color.alert.red     | \#EF4444 | Errors, failed transactions, destructive actions, disputes  |
 | color.accent.gold   | \#F4C21F | **Decorative rating indicators only.** Not a status colour. Must not represent KYC approval, verified identity, success, funding confirmation, settlement completion or warning. No Figma counterpart; glyph treatment `UNKNOWN — NOT VERIFIED` |
 | color.bg.base       | \#FFFFFF | Application canvas — default screen background              |
@@ -255,7 +255,7 @@ The single highest-emphasis action on a screen (e.g., "Confirm Match", "Send").
 | Variants             | Full-width, Inline (auto-width), Icon-leading, Icon-only (44×44 min)                                                     |
 | States               | Default, Hover (web), Pressed, Disabled, Loading (inline spinner replaces label)                                         |
 | Spacing (8pt grid)   | Height 52px, radius.lg (24px), horizontal padding space.4 (24px), min touch target 44×44                                 |
-| Accessibility        | Role: button. Minimum contrast 4.5:1. White text on the Figma-observed primary \#1F3A8A measures **10.34:1** (the superseded `#001B68` measured 15.48:1; the previously stated "12.6:1" was incorrect for either value). Disabled state announced via accessibilityState. |
+| Accessibility        | Role: button. Minimum contrast 4.5:1. White text on the **approved production** primary \#1F3A8A measures **10.34:1** *(corrected 2026-08-24: `#1F3A8A` is the APPROVED PRODUCTION SEMANTIC TOKEN, not a Figma-observed raw value; the Figma-observed/legacy value is `#001B68`. The approved palette is unchanged by this correction.)* (the superseded `#001B68` measured 15.48:1; the previously stated "12.6:1" was incorrect for either value). Disabled state announced via accessibilityState. |
 | Interaction Behavior | Scale to 0.97 on press (motion.instant), haptic light impact on mobile press, loading state disables re-entry            |
 
 Secondary Button
@@ -405,7 +405,7 @@ Shown when a list/section has zero content (no transactions, no offers matching 
 
 Loading Skeleton
 
-Placeholder shown while async data loads (balance, marketplace listings, transaction detail).
+Placeholder shown while async data loads (account readiness, marketplace listings, transaction detail). *Corrected 2026-08-24: the former "balance" example is withdrawn — no balance surface exists to skeleton.*
 
 |                      |                                                                                             |
 |----------------------|---------------------------------------------------------------------------------------------|

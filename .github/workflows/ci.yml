@@ -27,6 +27,10 @@ jobs:
         with:
           enable-cache: true
 
+      # `requires-python = ">=3.12"` admits 3.13+, so a runner already carrying a newer
+      # interpreter could satisfy the range without using the one installed here.
+      # `--python 3.12` on the sync below removes that choice: the audited environment is
+      # the intended one, not whatever the image happened to ship.
       - name: Set up Python
         run: uv python install 3.12
 
@@ -38,7 +42,7 @@ jobs:
       # is not the one uv.lock describes. A dependency audit against an unlocked
       # environment is not evidence about what ships.
       - name: Install project and dev dependencies
-        run: uv sync --all-groups --locked
+        run: uv sync --all-groups --locked --python 3.12
 
       - name: Ruff
         run: uv run --no-sync ruff check .
@@ -158,6 +162,59 @@ jobs:
           install -m 0755 gitleaks /usr/local/bin/gitleaks
           gitleaks version
 
+      # The scan below proves gitleaks RAN. It cannot prove the pinned artifact still
+      # DETECTS anything: a broken download, a stripped rule set or a future packaging change
+      # would each produce "no leaks found" and a green job, and the repository would look
+      # clean because nothing was looking. This canary closes that gap by requiring the exact
+      # binary just installed to find a secret it has been planted with.
+      #
+      # The synthetic value is assembled at runtime from fragments. Committing the assembled
+      # form would make the real scan below flag its own canary, so no fragment stored here
+      # matches a gitleaks rule on its own.
+      #
+      # Rule exercised: `private-key` from the gitleaks default rule set - a pure pattern match
+      # with no entropy threshold and no known allowlist, so a failure means the binary is not
+      # detecting rather than that the canary was too weak. The body is a SHA-256 digest of a
+      # fixed string: deterministic and reproducible, and not a real or placeholder credential.
+      - name: Gitleaks artifact canary (the binary must actually detect a secret)
+        run: |
+          set -euo pipefail
+          CANARY_DIR="$(mktemp -d)"
+          trap 'rm -rf "$CANARY_DIR"' EXIT
+
+          DASHES='-----'
+          KIND='PRIVATE KEY'
+          BODY="$(printf %s xspeeria-gitleaks-canary-v1 | sha256sum | cut -d" " -f1)"
+          {
+            echo "${DASHES}BEGIN ${KIND}${DASHES}"
+            echo "$BODY"
+            echo "${DASHES}END ${KIND}${DASHES}"
+          } > "$CANARY_DIR/canary.key"
+
+          git init -q "$CANARY_DIR"
+          git -C "$CANARY_DIR" add -A
+          git -C "$CANARY_DIR" -c user.email=canary@xspeeria.invalid -c user.name=canary commit -qm "gitleaks canary"
+
+          set +e
+          gitleaks git "$CANARY_DIR" --log-opts="--all" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
+          RC=$?
+          set -e
+
+          if [ "$RC" -eq 0 ]; then
+            echo "::error::Gitleaks canary NOT detected: the pinned binary reported no leaks on a planted secret, so the repository scan below proves nothing."
+            exit 1
+          fi
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::Gitleaks canary returned unexpected exit status $RC (expected 1 = finding). Treating the scanner as broken."
+            exit 1
+          fi
+
+          RULES="$(grep -o '"RuleID": *"[^"]*"' "$CANARY_DIR/canary-report.json" | sed 's/.*"RuleID": *"//; s/"$//' | sort -u | paste -sd, -)"
+          echo "Canary detected. Rule(s) fired: $RULES"
+          case ",$RULES," in
+            *,private-key,*) ;;
+            *) echo "::error::Canary fired on [$RULES] but not on the expected private-key rule."; exit 1 ;;
+          esac
       # `gitleaks git` scans commit history. Exit code 1 on any finding fails the job:
       # there is no continue-on-error, no baseline and no allowlist file.
       #

@@ -517,7 +517,12 @@ Whether a corrected beneficiary resumes the original deadline or starts a new on
 
 A `SettlementLeg` may have `PayoutExecution 0..n` child records where a payout is distributed
 across multiple eligible validated beneficiary destinations. Split amounts must sum **exactly** to
-the amount due for that leg, in integer minor units.
+the amount due for that leg, in integer minor units. **Clarified 2026-08-24:** that sum is only
+well defined at a common scale, so every child of a leg carries **that leg's currency and that
+currency's minor-unit scale**; no cross-currency addition occurs within a leg, and any
+conversion happens before the leg amount is established, never inside child aggregation. This
+clarifies the representation of the existing invariant; it redefines no state, adds no field,
+and does not touch the OPEN aggregate-derivation item below.
 
 > **`PayoutExecution` children are NOT additional `SettlementLeg` rows.** The exactly-two-leg rule
 > and `UNIQUE(settlement_id, party_role)` are unchanged. Children hang beneath a leg and are never

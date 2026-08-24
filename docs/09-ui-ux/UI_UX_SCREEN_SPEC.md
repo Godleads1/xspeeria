@@ -28,7 +28,8 @@ position reads as a balance regardless of its label.)*
 - No currency amount of any kind
 
 Primary Action:
-New FX Request / Browse Marketplace
+Create or browse an offer — exactly one action, routing to the Marketplace.
+*HISTORICAL: this line previously read “New FX Request / Browse Marketplace”; that wording is **SUPERSEDED** (reconciled 2026-08-24).*
 
 Active Activity:
 Open Offers, MatchAllocations requiring attention, in-flight settlement
