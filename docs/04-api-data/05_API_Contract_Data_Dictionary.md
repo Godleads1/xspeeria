@@ -507,8 +507,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}                                                                     |
 | Request JSON     | desired_rate (optional) — when supplied it must satisfy the same rate-validity rule as publication: **`> 0` AND ≤ the applicable approved reference ceiling** (§3.3 rate-validity note), rejected with **`VAL_422_RATE_NOT_POSITIVE`** or `VAL_422_RATE_ABOVE_CEILING` respectively. **`settlement_window_hours` is withdrawn**; window durations are configurable policy, not user input (ADR-001 §14.4) |
 | Success Response | 200 OK — updated Offer                                                                                   |
-| Error Responses  | RES_409_OFFER_ALREADY_MATCHED, AUTH_403_NOT_OWNER                                                        |
-| Validation Rules | Same rate-band validation as creation                                                                    |
+| Error Responses  | RES_409_OFFER_ALREADY_MATCHED, AUTH_403_NOT_OWNER, **VAL_422_RATE_NOT_POSITIVE** *(edited rate ≤ 0)*, **VAL_422_RATE_ABOVE_CEILING** *(edited rate > 0 but above the applicable approved reference ceiling; proposed identifier)* — **added 2026-08-25** so this row agrees with the Validation Rules below |
+| Validation Rules | **Same rate validity as creation — restated 2026-08-25.** A supplied `desired_rate` must be **`> 0`** (`VAL_422_RATE_NOT_POSITIVE` otherwise) **AND ≤ the applicable approved reference ceiling** (`VAL_422_RATE_ABOVE_CEILING` otherwise). *The former wording "same rate-band validation" is withdrawn: there is **no band** — no reference-rate floor and no ±15% symmetric band. Positivity is a domain validity invariant, not a pricing floor (§3.3 rate-validity note).* Ownership and already-matched constraints are unchanged |
 | Business Rules   | Editing an offer that has pending match interest invalidates that interest and notifies the counterparty |
 
 **DELETE /v1/offers/{offer_id}**
@@ -537,9 +537,38 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                             |
 | Request JSON     | **`accepted_amount` (exact Decimal string, REQUIRED)** — **HUMAN APPROVED, 2026-08-24.** Partial acceptance is supported, and the amount is always **explicit**. The client **must** supply it; omission is a request-validation failure and **never** means "accept the full remaining amount". **There is no server-side implicit take-remaining default**, ratified or otherwise — the previously **PROPOSED, not ratified** default is **WITHDRAWN**. The value is an exact decimal string on the wire, converted once to integer minor units at the boundary under the approved monetary representation rules (`docs/adr/002-financial-event-ledger-architecture.md`); binary floating point is never accepted. *Rationale: the allocated amount must record explicit user intent, missing or truncated client input must fail closed rather than escalate to a maximum allocation, a concurrent change to the Offer must not silently alter the amount the user intended, and an audit or dispute record must carry an explicit accepted amount.* |
 | Success Response | 201 Created — Match object carrying `allocated_amount` and the server-set `accepted_at` |
-| Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, **VAL_422_RATE_NOT_POSITIVE**, VAL_422_RATE_ABOVE_CEILING *(proposed)*, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
+| Error Responses  | **RES_409_OFFER_UNAVAILABLE** — *including the case where the Offer's **stored** rate no longer satisfies current policy/rate eligibility; corrected 2026-08-25*, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
 | Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and still *proposed*). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
 | Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount**. **Acceptance transaction boundary — clarified 2026-08-24: `offer_id` is the mandatory serialization key.** One transaction, serialized on the authoritative Offer capacity row, must: identify the Offer; lock/serialize that capacity; read the authoritative `remaining_amount`; validate the **required** `accepted_amount`; **reject** if it exceeds authoritative remaining capacity; assign `accepted_at`; assign the `server_order_key`; establish the `Match`; update the authoritative Offer allocation state; and **commit atomically**. An `FXRequest` may supply demand-side context where already approved, but is **never an alternative capacity-serialization authority** for accepting a seller Offer, and acceptance must not depend on its presence. *A database row lock is not the withdrawn product concept of locking the whole Offer lifecycle after its first Match: the Offer stays open for later partial acceptances.* Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` — human decision 2026-08-24.** It is server-generated, unique within the acceptance ordering scope, assigned inside the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation audit contract. **Durable persistence of this value is REQUIRED of the future persistence implementation** — it is not optional and not aspirational; the exact storage mechanism remains implementation-dependent. Phase 1 does not yet implement that persistence, so this is recorded as a **required dependency of the later domain-model/persistence milestone**. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
+
+> **Rate-error mapping at acceptance — one deterministic code. Corrected 2026-08-25.** A previous
+> revision listed `VAL_422_RATE_NOT_POSITIVE` and `VAL_422_RATE_ABOVE_CEILING` among this
+> endpoint's errors. That was wrong: **the acceptance request supplies only `accepted_amount` — it
+> supplies no rate at all**, so no client-supplied rate exists here to fail validation. Listing
+> client-rate-validation codes on an endpoint that accepts no rate left two codes competing for one
+> condition with no precedence.
+>
+> **Deterministic precedence:**
+>
+> | Where the rate comes from | Condition | Code |
+> |---|---|---|
+> | **Client-supplied** (offer create / offer edit) | `rate ≤ 0` | `VAL_422_RATE_NOT_POSITIVE` |
+> | **Client-supplied** (offer create / offer edit) | `rate > 0` but above the applicable approved ceiling | `VAL_422_RATE_ABOVE_CEILING` |
+> | **Stored on the Offer** (acceptance) | the Offer's existing rate fails current policy/rate eligibility | **`RES_409_OFFER_UNAVAILABLE`** |
+>
+> The `VAL_422_RATE_*` codes are **reserved for client-supplied rate validation during Offer
+> creation or editing** and are not returned by acceptance. At acceptance the rate policy re-check
+> is an **eligibility** question about an existing Offer, which `RES_409_OFFER_UNAVAILABLE` already
+> covers (§4.4, cause (b)).
+>
+> **Preserved, unchanged:** the seller's stored rate is **never silently changed**; existing `Match`
+> rates are **never re-priced**; an ineligible acceptance is **rejected**, never silently adjusted;
+> and lifecycle status stays **separate** from policy eligibility (§3.2 eligibility note).
+>
+> *No API semantic is invented for an impossible persisted non-positive rate. Such a value could
+> only arise from data corruption or a server defect, and no public identifier is defined for it
+> here; it would surface through the existing `SYS_500_INTERNAL_ERROR` path like any other
+> server-side invariant violation.*
 
 > **Atomic idempotency boundary for acceptance — cross-reference added 2026-08-25.** The Business
 > Rules row above defines the acceptance transaction as **one atomic commit** covering capacity
@@ -637,7 +666,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Request JSON     | leg_id (UUID, required), proof_reference (string, optional bank reference number)                                      |
 | Success Response | 200 OK — { leg_id, leg_state, user_claim_recorded_at }                                                                 |
 | Error Responses  | **RES_404_NOT_FOUND** *(existing §4.4 entry — `leg_id` does not belong to `{settlement_id}`; added 2026-08-25, no new identifier)*, AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
-| Validation Rules | **Ordered, server-side, fail-closed — corrected 2026-08-25.** (1) **Parent-child binding:** the `SettlementLeg` identified by `leg_id` MUST satisfy `SettlementLeg.id = leg_id` **AND** `SettlementLeg.settlement_id = {settlement_id}`. A leg that exists but belongs to another Settlement is rejected as `RES_404_NOT_FOUND` **before** any authorization, idempotency binding or claim creation. (2) Caller must be the funding party for that leg. See the binding note below |
+| Validation Rules | **Ordered, server-side, fail-closed — HUMAN-APPROVED 2026-08-25.** (1) **Parse** syntactically valid path/request identifiers. (2) **Resolve and validate the addressed resource relationship:** `SettlementLeg.leg_id = ` supplied `leg_id` **AND** `SettlementLeg.settlement_id = {settlement_id}`. (3) If that relationship does **not** hold, return `RES_404_NOT_FOUND` and **STOP** — no idempotency lookup, no idempotency record write, no funding-party authorization, no advisory claim. (4) If it holds, proceed to funding-party authorization and canonical idempotency processing. (5) Only then does a reused `Idempotency-Key` with a materially different canonical binding return `SYS_409_IDEMPOTENCY_KEY_REUSED`. See the binding and precedence notes below |
 | Business Rules   | **RECONCILED — ADR-001 (DEC-003).** This endpoint does not change `SettlementLeg.state` and does not advance `Settlement.phase`. Only a signature-verified partner webhook may set the `FUNDED` money fact (ADR-001 F-6, F-7). The claim is recorded for support and dispute evidence, and may drive UI messaging, but carries no financial authority. It previously returned a settlement status of `funds_pending_verification`, which implied a client-asserted state change |
 
 > **`leg_id` MUST be bound to `{settlement_id}` — added 2026-08-25.** The prior validation rule
@@ -647,8 +676,14 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > input and is never trusted on its own**; the parent-child relationship must be verified
 > server-side.
 >
-> **Required invariant:** `SettlementLeg.id = leg_id` **AND**
+> **Required invariant:** `SettlementLeg.leg_id = ` supplied `leg_id` **AND**
 > `SettlementLeg.settlement_id = {settlement_id}`. Both must hold.
+>
+> *Field-name correction 2026-08-25: an earlier revision of this invariant wrote
+> `SettlementLeg.id`. The canonical `SettlementLeg` primary key is **`leg_id`** (`SettlementLeg`
+> entity, "Primary key; immutable"), and every foreign key in this document references
+> `SettlementLeg.leg_id`. `SettlementLeg.id` does not exist. The canonical field is **not** renamed
+> — only the references to it are corrected.*
 >
 > **Ordering is normative, and fail-closed:** the binding check runs **first** — before the
 > funding-party authorization check, before the idempotency binding or lookup, and before any
@@ -670,6 +705,44 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > Idempotency binding is **unchanged** and remains scoped to `(authenticated principal,
 > settlement_id, leg_id, the logical confirm-funds operation, the materially relevant request
 > parameters)` — this correction adds a precondition, it does not alter that tuple.
+
+> **Precedence: resource address BEFORE idempotency. HUMAN-APPROVED 2026-08-25.** Two rules could
+> previously claim the same request: the binding check above returns `RES_404_NOT_FOUND` for a leg
+> outside the addressed Settlement, while the materially-different-binding rule below returns
+> `SYS_409_IDEMPOTENCY_KEY_REUSED` when a reused key carries a different `settlement_id` or
+> `leg_id`. A key first bound to Settlement A and replayed on Settlement B's route satisfied both,
+> with different outcomes. **This defines one deterministic precedence.**
+>
+> **Resource-address validation always wins, because it runs first:**
+>
+> | Condition | Result |
+> |---|---|
+> | **Invalid resource relationship** — `leg_id` does not belong to `{settlement_id}` | **`RES_404_NOT_FOUND`**, and STOP |
+> | **Valid resource relationship** + reused key with a materially different canonical binding | **`SYS_409_IDEMPOTENCY_KEY_REUSED`** |
+>
+> **Worked cases, both normative:**
+>
+> - **CASE A** — route `settlement B`, `leg_id` belongs to `settlement A` → **`RES_404_NOT_FOUND`**.
+>   **No idempotency evaluation occurs at all:** no key lookup, no record created or updated, no
+>   funding-party authorization, no advisory claim.
+> - **CASE B** — route `settlement B`, `leg_id` is a valid leg of `settlement B`, but the supplied
+>   key is already bound to a different valid logical request → **`SYS_409_IDEMPOTENCY_KEY_REUSED`**.
+>
+> **Security rationale.** Idempotency applies **only after** the request has addressed a valid
+> resource combination for this endpoint. Were the order reversed, the choice between a `404` and a
+> `409` would itself disclose whether a given `leg_id` exists under some *other* Settlement —
+> letting a client use idempotency behaviour as an existence oracle across a trust boundary. The
+> `404` is therefore not merely a tidier code; it is the boundary that keeps cross-settlement
+> existence unobservable.
+>
+> **Scope of this precedence — it weakens nothing.** The materially-different-binding rule is
+> **unchanged in substance**; it is only *qualified* to apply after canonical parent-child
+> validation has passed. For valid requests, **same-key replay behaviour is unchanged**: the same
+> principal replaying the same bound logical request inside the window still receives the original
+> response with the original `user_claim_recorded_at`, and creates no second advisory claim. The
+> canonical idempotency tuple is **unchanged** — `(authenticated principal, settlement_id, leg_id,
+> the logical confirm-funds operation, the materially relevant request parameters)`. **No further
+> error identifier is introduced.**
 
 > **Idempotency-Key scope and binding — added 2026-08-24.** §1.4 already requires the header,
 > retains the key-to-response mapping for **24 hours**, and returns the original response
@@ -712,14 +785,22 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > contains no runtime idempotency or persistence implementation, so there is nothing to exercise.
 > A test written against no implementation would assert nothing while appearing to cover this.
 >
-> **Same key, materially different request** — a different `settlement_id`, a different
-> `leg_id`, a different authenticated principal, or a materially different payload or logical
-> operation — **must be rejected deterministically** with `SYS_409_IDEMPOTENCY_KEY_REUSED`, the
-> **existing** §4.4 entry, whose canonical meaning is a **bound-key conflict**: a material
-> difference in any bound component, not only in the request body. **No new error identifier is
-> introduced and the catalogue total remains 44.** Silently serving the
-> first response to a materially different request would let one confirmed leg's claim
-> masquerade as another's.
+> **Same key, materially different request — applies only AFTER resource-address validation
+> passes. Qualified 2026-08-25.** This rule is evaluated **only once** the request has satisfied
+> the canonical parent-child check (`SettlementLeg.leg_id = ` supplied `leg_id` **AND**
+> `SettlementLeg.settlement_id = {settlement_id}`). A request that fails that check returns
+> `RES_404_NOT_FOUND` and **never reaches idempotency evaluation at all** — see the precedence note
+> under this endpoint's Validation Rules. So a `leg_id` belonging to a *different* Settlement is a
+> **`404`, not** a bound-key conflict.
+>
+> For a request that **has** addressed a valid leg under `{settlement_id}`: a reused key carrying a
+> different `settlement_id`, a different `leg_id`, a different authenticated principal, or a
+> materially different payload or logical operation — **must be rejected deterministically** with
+> `SYS_409_IDEMPOTENCY_KEY_REUSED`, the **existing** §4.4 entry, whose canonical meaning is a
+> **bound-key conflict**: a material difference in any bound component, not only in the request
+> body. **No new error identifier is introduced; catalogue totals are recounted in §4.4 (45
+> enumerated / 43 active / 2 superseded).** Silently serving the first response to a materially
+> different request would let one confirmed leg's claim masquerade as another's.
 >
 > This restates the boundary already stated for `POST /v1/offers/{offer_id}/accept`
 > (`02_Technical_Design_Specification.md` §9.4) and **changes nothing about what this endpoint
@@ -962,9 +1043,9 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | SYS_500_INTERNAL_ERROR         | 500             | Unhandled server error                                 |
 | SYS_503_SERVICE_UNAVAILABLE    | 503             | Dependency (DB, Redis, Celery) temporarily unavailable |
 | SYS_504_UPSTREAM_TIMEOUT       | 504             | A downstream/banking dependency timed out              |
-| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | **Bound-key conflict — meaning broadened 2026-08-24.** An `Idempotency-Key` was presented with a request that does not match the logical request the key was first bound to. The previous wording, *"reused with a different request body"*, was narrower than the binding the contracts actually define: an authenticated principal comes from the bearer token and a `settlement_id` is a path parameter, so neither is a request body, yet a mismatch in either is exactly the conflict this code exists to reject. The canonical meaning is a material difference in **any bound component** — authenticated principal, resource identifier, `settlement_id`, `leg_id`, the logical operation, or materially relevant request parameters/payload. Each endpoint's contract states its own binding (§4.3). Rejection is **deterministic**; the first request's response is **never** served to a conflicting one. **One identifier covers every bound-key conflict — no new code is introduced and the catalogue total remains 44** |
+| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | **Bound-key conflict — meaning broadened 2026-08-24.** An `Idempotency-Key` was presented with a request that does not match the logical request the key was first bound to. The previous wording, *"reused with a different request body"*, was narrower than the binding the contracts actually define: an authenticated principal comes from the bearer token and a `settlement_id` is a path parameter, so neither is a request body, yet a mismatch in either is exactly the conflict this code exists to reject. The canonical meaning is a material difference in **any bound component** — authenticated principal, resource identifier, `settlement_id`, `leg_id`, the logical operation, or materially relevant request parameters/payload. Each endpoint's contract states its own binding (§4.3). Rejection is **deterministic**; the first request's response is **never** served to a conflicting one. **One identifier covers every bound-key conflict — no new code is introduced and the catalogue totals are recounted in the note below this table: **45 enumerated / 43 active / 2 superseded** (2026-08-25)** |
 
-> **ASSUMPTION:** *The catalogue above totals **44** explicitly enumerated codes across five namespaces (recounted 2026-08-24; the earlier figure of 39 predates several additions). Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
+> **ASSUMPTION:** *The catalogue above totals **45** explicitly enumerated codes across five namespaces — **43 active, 2 superseded** (recounted 2026-08-25 after `VAL_422_RATE_NOT_POSITIVE` was ratified; the earlier figure of 39 predates several additions). Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
 
 5\. Data Dictionary
 
@@ -1363,7 +1444,7 @@ PayoutExecution
 > §4.4 applies and **none is invented**. A violation is a construction-time invariant breach that
 > must **fail closed** server-side before any row is written or dispatched; if it ever surfaces to
 > a caller it does so as the existing catalogued `SYS_500_INTERNAL_ERROR`. The §4.4 catalogue is
-> **unchanged** and its total remains **44**.
+> **unchanged** by this note, and its recounted totals are **45 enumerated / 43 active / 2 superseded** (2026-08-25).
 >
 > **One currency and one scale per leg — clarified 2026-08-24.** The invariant above adds
 > `amount_minor` integers, and that addition is only well defined when every addend shares one
@@ -1631,7 +1712,7 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 | UserRegistered      | Auth service            | Notification worker, Analytics                                | user_id, email, created_at                            | Exponential backoff, 5 attempts                                                                     | Keyed on user_id; consumer upserts         |
 | KYCApproved         | Admin/KYC service       | Notification worker, Marketplace access-control cache         | user_id, kyc_case_id, approved_at                     | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
 | KYCRejected         | Admin/KYC service       | Notification worker                                           | user_id, kyc_case_id, reason                          | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
-| OfferCreated        | Marketplace service     | Matching engine (rate-band index), Analytics                  | offer_id, currency_pair, rate, amount                 | 3 attempts, dead-letter to DLQ on exhaustion                                                        | Keyed on offer_id                          |
+| OfferCreated        | Marketplace service     | Marketplace discovery/listing projection, Analytics *(corrected 2026-08-25: the former "Matching engine (rate-band index)" consumer belongs to the **withdrawn** automated-matching model — there is no rate band and no background matcher; discovery is never allocation priority)* | offer_id, currency_pair, rate, amount                 | 3 attempts, dead-letter to DLQ on exhaustion                                                        | Keyed on offer_id                          |
 | MatchConfirmed *(**compatibility alias — acceptance semantics**, clarified 2026-08-24)* | Marketplace/acceptance path | Settlement service *(**record only** — must not provision or dispatch before `ALLOCATION_FUNDING_READY`)*, Notification worker, Analytics | match_id, offer_id, counterparty_user_id, agreed_rate | Exponential backoff, 5 attempts, DLQ + PagerDuty alert on exhaustion (money-movement critical path) | Keyed on match_id                          |
 | ReleaseAuthorized   | Settlement service      | Banking abstraction layer (Document 07) via transactional outbox, Notification worker | settlement_id, leg_id (x2), release_authorized_at | Exponential backoff, 5 attempts, DLQ + alert on exhaustion. Dispatch is per-leg and at-least-once; a successful dispatch on one leg is never rolled back because the other failed | Keyed on settlement_id + leg_id + operation. Emitted only after both legs are FUNDED |
 | EscrowFunded        | Banking webhook handler | Settlement service                                            | settlement_id, leg_id, amount, currency, funded_at    | Exponential backoff, 5 attempts                                                                     | Keyed on settlement_id + leg_id + event_type + provider_event_id |

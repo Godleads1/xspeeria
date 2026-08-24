@@ -1061,7 +1061,11 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   key for acceptance.** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id` whose
   capacity is being consumed. The former `offer_id`/`fx_request_id` alternative is **withdrawn**:
   it belonged to the automated-matching model, and an acceptance must never serialize on the
-  demand side. Locks scoped to preventing two concurrent matching runs from double-allocating the same liquidity.
+  demand side. **Reworded 2026-08-25:** the lock exists to prevent **two concurrent acceptances of
+  the same Offer** from double-allocating the same capacity. The former phrasing — *"two concurrent
+  matching runs"* — carried the withdrawn background-matcher framing into a bullet that is still
+  normative; there are no matching runs under publish-and-accept, only client-initiated
+  acceptances. The mechanism and its scope (`offer_id`) are unchanged.
 - **Database-level guard:** `matched_amount` updates on `offers` use `SELECT ... FOR UPDATE` row
   locking within a single DB transaction as a second line of defense against race conditions.
   **The `fx_requests` capacity-update path is withdrawn as an acceptance authority** (2026-08-24):
@@ -1073,8 +1077,31 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 ## 9.4 Idempotency
 
-- Every matching run is triggered by a domain event carrying a unique `event_id`.
-- The Matching Engine records processed `event_id`s in a short-TTL idempotency table/cache; duplicate event delivery (e.g., from at-least-once queue semantics) is a no-op.
+> **SUPERSEDED — obsolete automated-matcher language, marked 2026-08-25.** The two bullets that
+> opened this section are retained for historical context only and are **no longer normative**:
+>
+> - ~~Every matching run is triggered by a domain event carrying a unique `event_id`.~~
+> - ~~The Matching Engine records processed `event_id`s in a short-TTL idempotency table/cache;
+>   duplicate event delivery (e.g., from at-least-once queue semantics) is a no-op.~~
+>
+> They belong to the **withdrawn automated-matching model** (§5.5, *SUPERSEDED — HUMAN DECISION,
+> 2026-08-22*). The canonical matching model is **publish-and-accept**: matching is driven by the
+> buyer's **explicit Offer acceptance request**, not by a background run over a candidate index.
+> Within an Offer, priority is **first eligible acceptance by trusted server ordering**
+> `(accepted_at ASC, server_order_key ASC)`.
+>
+> **The short-TTL cache is NOT the acceptance idempotency boundary and must never be presented as
+> one.** Acceptance idempotency is the **atomic logical persistence boundary** defined in the
+> bullets below, which commits the idempotency record together with `Match` creation and the Offer
+> capacity mutation. A TTL cache satisfies none of that.
+>
+> **Not reintroduced:** automated candidate matching, price-time priority, CLOB semantics, or
+> background matching runs. Where a generic event consumer still needs de-duplication (for
+> at-least-once queue delivery), that is ordinary **event-consumer deduplication** and carries no
+> money-path authority.
+>
+> *Whether `FXRequest` creation remains an active MVP flow is a **separate OPEN human decision**
+> (R5-9) and is not resolved here.*
 - **Corrected 2026-08-24 — idempotency belongs to Offer acceptance.** The former wording keyed
   idempotency to *"match confirmation endpoints"*, a step withdrawn with bilateral confirmation
   (`CORRECTIONS_v3.md` §11.11); that wording is **SUPERSEDED**. The money-sensitive idempotent
@@ -1194,7 +1221,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   parameters/payload. Each endpoint's contract states its own binding. Rejection is
   **deterministic**, and the first request's response is **never** served to a conflicting one.
   **One identifier covers every bound-key conflict on every idempotent endpoint; no new error
-  code is introduced and the §4.4 catalogue total remains 44.**
+  code is introduced. **Catalogue totals recounted 2026-08-25: 45 enumerated / 43 active / 2 superseded** (`05_API_Contract_Data_Dictionary.md` §4.4).**
 
 ## 9.5 Matching Rules Table
 
