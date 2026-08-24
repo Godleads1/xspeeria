@@ -356,7 +356,15 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > It is a **query projection over canonical statuses**, evaluated per entity type. **No new
 > persisted status literal is introduced, and no existing enum is altered.**
 >
-> | Entity | Included (marketplace-active) | Excluded |
+> **`marketplace-active` requires BOTH conditions — corrected 2026-08-25:**
+>
+> 1. **Lifecycle status is eligible** (the table below), **AND**
+> 2. **Current policy/rate eligibility is satisfied** (the eligibility note that follows).
+>
+> Condition 1 alone is **not** sufficient. An Offer can hold an eligible lifecycle status and still
+> be excluded because it currently fails condition 2.
+>
+> | Entity | Lifecycle-eligible (condition 1) | Lifecycle-excluded |
 > |---|---|---|
 > | **`Offer`** | `open`, `partially_matched` | `fully_matched`, `withdrawn`, `cancelled`, `expired` |
 > | **`FXRequest`** | `active` | `matched`, `cancelled`, `expired` |
@@ -366,6 +374,33 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > `remaining_amount` shown in any listing is **advisory and may be stale**; only the value read
 > inside the acceptance serialization boundary is authoritative, and discovery/ranking is **never**
 > allocation priority.
+>
+> **Condition 2 — acceptance eligibility is a separate, reversible, derived condition. Added
+> 2026-08-25.** Lifecycle status answers *where the Offer sits in its own life*; eligibility answers
+> *may it be accepted right now under current policy*. They are **different questions** and must not
+> be collapsed. The motivating case: a change to the applicable approved reference ceiling can leave
+> an existing unmatched Offer's locked seller rate **above** the new ceiling. That Offer is not
+> cancelled, not expired, not withdrawn and not fully matched — it is simply **not acceptable right
+> now**.
+>
+> Such an Offer **keeps its lifecycle status** (`open` or `partially_matched`) and becomes
+> **temporarily INELIGIBLE**, so it is **excluded from `marketplace-active`** and **must not be
+> accepted** while ineligible. The rate re-check already required at acceptance (§3.5) is the
+> authoritative evaluation; a listing is advisory.
+>
+> **`paused` is NOT a persisted Offer status and is not introduced.** The canonical enum is
+> unchanged. **The seller-selected rate is never silently modified**, existing Matches are **never
+> re-priced**, and **no automatic repricing exists**. Ineligibility is **reversible**: when the
+> applicable policy permits the Offer again, eligibility is re-evaluated per the documented policy.
+> That is exactly why it must not be mapped onto a terminal lifecycle status.
+>
+> **Persistence mechanism NOT chosen.** A future implementation must be able to evaluate and expose
+> acceptance eligibility as a first-class condition distinct from lifecycle status; whether that is
+> a derived projection, a cached evaluation or an explicit persisted eligibility field belongs to
+> the domain-model milestone. The reference-rate **source, cadence, staleness and
+> provider-unavailable policy** that determine when a ceiling changes remain **OPEN** (Decision 3),
+> so the *trigger* for re-evaluation is not fixed here — only the **representation rule** is. See
+> `CORRECTIONS_v3.md` §11.10b.
 >
 > **RESOLVED — HUMAN-APPROVED 2026-08-25: `withdrawn` is a canonical Offer status.** A prior
 > revision of this note recorded an OPEN status-model gap here, because the enum had no literal
@@ -391,9 +426,41 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                                      |
 | Request JSON     | source_currency, target_currency, source_amount (Decimal string), desired_rate (Decimal string). **`settlement_window_hours` is withdrawn** — window durations are configurable policy, not user input (ADR-001 §14.4) |
 | Success Response | 201 Created — Offer object. **Conceptual status is `open` — annotated 2026-08-25** (the canonical Offer lifecycle is `open, partially_matched, fully_matched, withdrawn, cancelled, expired`; `active` is **not** a member). The literal `"active"` shown in earlier revisions is permitted **only** as a retained persisted/wire name that **maps to `open`**, per the compatibility allowance on `Offer.status`; it asserts no separate state. **No enum is changed here** |
-| Error Responses  | VAL_422_RATE_ABOVE_CEILING *(proposed; supersedes `VAL_422_RATE_OUT_OF_BAND`)*, VAL_422_AMOUNT_BELOW_MINIMUM, AUTH_403_KYC_REQUIRED |
-| Validation Rules | **HUMAN-APPROVED:** `desired_rate` must be **≤ the applicable approved reference ceiling** — above the ceiling is a **hard block**. **There is no approved floor**; the superseded ±15% symmetric band is withdrawn. Reference-rate source, update cadence, staleness and provider-unavailable policy remain **OPEN / configurable**. `source_amount` ≥ corridor minimum                          |
-| Business Rules   | **Ceiling check** protects counterparties from mispriced or manipulative offers. `seller_rate ≤ applicable approved reference ceiling`; above it is a hard block; **no floor applies**. Re-checked at acceptance; locked on the resulting Match |
+| Error Responses  | **VAL_422_RATE_NOT_POSITIVE** *(rate ≤ 0; HUMAN-APPROVED 2026-08-25)*, VAL_422_RATE_ABOVE_CEILING *(proposed; supersedes `VAL_422_RATE_OUT_OF_BAND`)*, VAL_422_AMOUNT_BELOW_MINIMUM, AUTH_403_KYC_REQUIRED |
+| Validation Rules | **HUMAN-APPROVED:** `desired_rate` must be **`> 0` AND ≤ the applicable approved reference ceiling** — `rate ≤ 0` returns **`VAL_422_RATE_NOT_POSITIVE`**; above the ceiling is a **hard block** returning `VAL_422_RATE_ABOVE_CEILING`. **Positivity added 2026-08-25** — see the rate-validity note below. **There is no approved reference-rate floor**; the superseded ±15% symmetric band is withdrawn and is **not** restored. Reference-rate source, update cadence, staleness and provider-unavailable policy remain **OPEN / configurable**. `source_amount` ≥ corridor minimum                          |
+| Business Rules   | **Ceiling check** protects counterparties from mispriced or manipulative offers. `0 < seller_rate ≤ applicable approved reference ceiling`; above the ceiling is a hard block; **no reference-rate floor applies**. Re-checked at acceptance; locked on the resulting Match |
+
+> **Rate validity — positivity is an invariant, not a floor. Corrected 2026-08-25.** The approved
+> rule was written as *"≤ the applicable approved reference ceiling"* with *"no approved floor"*.
+> Read literally that bounds the rate only from above, so `0` and **negative** values satisfied it.
+> An exchange rate of zero or below is not a cheap rate — it is **not a rate at all**, and it would
+> corrupt every downstream monetary computation that consumes it.
+>
+> **Two independent constraints, and they must not be confused:**
+>
+> | Constraint | Kind | Status |
+> |---|---|---|
+> | `rate > 0` | **Domain validity invariant** — what makes the value a rate | **REQUIRED, always** |
+> | `rate ≤ applicable approved reference ceiling` | **Pricing policy** — protects counterparties | **REQUIRED, human-approved** |
+>
+> **`0` is invalid. Negative is invalid.** Both fail validation as malformed input, not as pricing
+> decisions. Positivity is a **domain validity invariant**, **not** a pricing floor: it says nothing
+> about how far below the reference rate a seller may price, and it grants no minimum spread.
+>
+> **What is NOT reintroduced by this correction:** there is still **no approved reference-rate
+> floor**; the **±15% symmetric band remains withdrawn** and is not restored; and **no** minimum
+> commercial spread, minimum percentage below reference, or numeric lower reference bound is
+> introduced, proposed or implied. A seller may still price arbitrarily far below the ceiling.
+>
+> **Scope and error mapping.** Applies to every canonical rate definition — `Offer.desired_rate`,
+> `FXRequest.desired_rate`, the rate supplied on offer edit, and the `Match.agreed_rate` locked at
+> acceptance. **Evaluation is ordered: positivity first, then the ceiling.** `rate ≤ 0` returns
+> **`VAL_422_RATE_NOT_POSITIVE`** (HUMAN-APPROVED 2026-08-25, §4.2); a positive rate above the
+> ceiling returns `VAL_422_RATE_ABOVE_CEILING`. The two are **disjoint** and must never be
+> conflated. *A persisted historical `Match` is never revalidated or re-priced by this rule:
+> `agreed_rate` is validated at the moment of acceptance and is **immutable once established**.* Reference-rate **source, cadence, staleness and provider-unavailable policy** remain
+> **OPEN** (Decision 3) and are unaffected. Existing Match rates are **locked** and are never
+> re-priced by this or any other rule.
 
 **POST /v1/fx-requests**
 
@@ -426,8 +493,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid} |
 | Request JSON     | Identical shape to POST /v1/offers                            |
 | Success Response | 201 Created — Request object, status: "active"                |
-| Error Responses  | Identical to POST /v1/offers                                  |
-| Validation Rules | Identical to POST /v1/offers                                  |
+| Error Responses  | Identical to POST /v1/offers — including **`VAL_422_RATE_NOT_POSITIVE`** and `VAL_422_RATE_ABOVE_CEILING` |
+| Validation Rules | Identical to POST /v1/offers — `desired_rate` must be **`> 0` AND ≤ the applicable approved reference ceiling** (§3.3 rate-validity note) |
 | Business Rules   | Identical to POST /v1/offers                                  |
 
 **PATCH /v1/offers/{offer_id}**
@@ -438,7 +505,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Purpose          | Edit an active, unmatched offer.                                                                         |
 | Permissions      | Authenticated (owner)                                                                                    |
 | Required Headers | Authorization: Bearer {access_token}                                                                     |
-| Request JSON     | desired_rate (optional) — **`settlement_window_hours` is withdrawn**; window durations are configurable policy, not user input (ADR-001 §14.4) |
+| Request JSON     | desired_rate (optional) — when supplied it must satisfy the same rate-validity rule as publication: **`> 0` AND ≤ the applicable approved reference ceiling** (§3.3 rate-validity note), rejected with **`VAL_422_RATE_NOT_POSITIVE`** or `VAL_422_RATE_ABOVE_CEILING` respectively. **`settlement_window_hours` is withdrawn**; window durations are configurable policy, not user input (ADR-001 §14.4) |
 | Success Response | 200 OK — updated Offer                                                                                   |
 | Error Responses  | RES_409_OFFER_ALREADY_MATCHED, AUTH_403_NOT_OWNER                                                        |
 | Validation Rules | Same rate-band validation as creation                                                                    |
@@ -470,7 +537,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                             |
 | Request JSON     | **`accepted_amount` (exact Decimal string, REQUIRED)** — **HUMAN APPROVED, 2026-08-24.** Partial acceptance is supported, and the amount is always **explicit**. The client **must** supply it; omission is a request-validation failure and **never** means "accept the full remaining amount". **There is no server-side implicit take-remaining default**, ratified or otherwise — the previously **PROPOSED, not ratified** default is **WITHDRAWN**. The value is an exact decimal string on the wire, converted once to integer minor units at the boundary under the approved monetary representation rules (`docs/adr/002-financial-event-ledger-architecture.md`); binary floating point is never accepted. *Rationale: the allocated amount must record explicit user intent, missing or truncated client input must fail closed rather than escalate to a maximum allocation, a concurrent change to the Offer must not silently alter the amount the user intended, and an audit or dispute record must carry an explicit accepted amount.* |
 | Success Response | 201 Created — Match object carrying `allocated_amount` and the server-set `accepted_at` |
-| Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_RATE_ABOVE_CEILING *(proposed)*, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
+| Error Responses  | RES_409_OFFER_UNAVAILABLE, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, **VAL_422_RATE_NOT_POSITIVE**, VAL_422_RATE_ABOVE_CEILING *(proposed)*, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
 | Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and still *proposed*). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
 | Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount**. **Acceptance transaction boundary — clarified 2026-08-24: `offer_id` is the mandatory serialization key.** One transaction, serialized on the authoritative Offer capacity row, must: identify the Offer; lock/serialize that capacity; read the authoritative `remaining_amount`; validate the **required** `accepted_amount`; **reject** if it exceeds authoritative remaining capacity; assign `accepted_at`; assign the `server_order_key`; establish the `Match`; update the authoritative Offer allocation state; and **commit atomically**. An `FXRequest` may supply demand-side context where already approved, but is **never an alternative capacity-serialization authority** for accepting a seller Offer, and acceptance must not depend on its presence. *A database row lock is not the withdrawn product concept of locking the whole Offer lifecycle after its first Match: the Offer stays open for later partial acceptances.* Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` — human decision 2026-08-24.** It is server-generated, unique within the acceptance ordering scope, assigned inside the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation audit contract. **Durable persistence of this value is REQUIRED of the future persistence implementation** — it is not optional and not aspirational; the exact storage mechanism remains implementation-dependent. Phase 1 does not yet implement that persistence, so this is recorded as a **required dependency of the later domain-model/persistence milestone**. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
 
@@ -569,9 +636,40 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                          |
 | Request JSON     | leg_id (UUID, required), proof_reference (string, optional bank reference number)                                      |
 | Success Response | 200 OK — { leg_id, leg_state, user_claim_recorded_at }                                                                 |
-| Error Responses  | AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
-| Validation Rules | Caller must be the funding party for the supplied leg_id                                                               |
+| Error Responses  | **RES_404_NOT_FOUND** *(existing §4.4 entry — `leg_id` does not belong to `{settlement_id}`; added 2026-08-25, no new identifier)*, AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
+| Validation Rules | **Ordered, server-side, fail-closed — corrected 2026-08-25.** (1) **Parent-child binding:** the `SettlementLeg` identified by `leg_id` MUST satisfy `SettlementLeg.id = leg_id` **AND** `SettlementLeg.settlement_id = {settlement_id}`. A leg that exists but belongs to another Settlement is rejected as `RES_404_NOT_FOUND` **before** any authorization, idempotency binding or claim creation. (2) Caller must be the funding party for that leg. See the binding note below |
 | Business Rules   | **RECONCILED — ADR-001 (DEC-003).** This endpoint does not change `SettlementLeg.state` and does not advance `Settlement.phase`. Only a signature-verified partner webhook may set the `FUNDED` money fact (ADR-001 F-6, F-7). The claim is recorded for support and dispute evidence, and may drive UI messaging, but carries no financial authority. It previously returned a settlement status of `funds_pending_verification`, which implied a client-asserted state change |
+
+> **`leg_id` MUST be bound to `{settlement_id}` — added 2026-08-25.** The prior validation rule
+> checked only that the caller funds the supplied leg. That check passes for a leg the caller
+> legitimately funds **in a different Settlement**, so the contract as written allowed a leg from
+> one Settlement to be processed through another Settlement's route. `leg_id` is **client-supplied
+> input and is never trusted on its own**; the parent-child relationship must be verified
+> server-side.
+>
+> **Required invariant:** `SettlementLeg.id = leg_id` **AND**
+> `SettlementLeg.settlement_id = {settlement_id}`. Both must hold.
+>
+> **Ordering is normative, and fail-closed:** the binding check runs **first** — before the
+> funding-party authorization check, before the idempotency binding or lookup, and before any
+> advisory claim is created or replayed. A mismatch must never reach idempotency, because a
+> mis-bound key would otherwise be recorded against the wrong Settlement.
+>
+> **Error semantics — existing identifier, no new code.** A leg that exists but belongs to another
+> Settlement is rejected with **`RES_404_NOT_FOUND`** (§4.4, existing generic entry): within the
+> scope of `{settlement_id}`, that leg does not exist. This is deliberately chosen over
+> `AUTH_403_NOT_PARTY` or `RES_409_INVALID_SETTLEMENT_STATE`, both of which would **confirm the
+> existence** of a resource outside the addressed Settlement. **No new error identifier is
+> introduced and the catalogue total is unchanged.**
+>
+> **Nothing else about this endpoint changes.** The caller must still be the funding party for that
+> leg. The claim remains **advisory only** — it never establishes authoritative `FUNDED`, never
+> mutates `SettlementLeg.state`, never advances `Settlement.phase`, and never starts, satisfies or
+> bypasses `ALLOCATION_FUNDING_READY`. **Authoritative `FUNDED` remains established only by
+> authenticated, signature-verified regulated-partner webhook evidence** (ADR-001 F-6, F-7).
+> Idempotency binding is **unchanged** and remains scoped to `(authenticated principal,
+> settlement_id, leg_id, the logical confirm-funds operation, the materially relevant request
+> parameters)` — this correction adds a precondition, it does not alter that tuple.
 
 > **Idempotency-Key scope and binding — added 2026-08-24.** §1.4 already requires the header,
 > retains the key-to-response mapping for **24 hours**, and returns the original response
@@ -752,7 +850,20 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 
 4\. Error Catalogue
 
-Errors follow a consistent envelope: { error_code, message, details? }. Codes are namespaced by domain prefix for fast triage. The following **44 codes** constitute the MVP error catalogue -- recounted 2026-08-24 and verified against the tables below (AUTH 12, VAL 10, KYC 4, RES 14, SYS 4, across five namespaces). New codes require an update to this document **and to this total** before shipping; the previously stated 54 was never reconciled to the enumerated rows.
+Errors follow a consistent envelope: { error_code, message, details? }. Codes are namespaced by domain prefix for fast triage. The following **45 enumerated codes** constitute the MVP error catalogue -- recounted **2026-08-25** and verified against the tables below (**AUTH 12, VAL 11, KYC 4, RES 14, SYS 4**, across five namespaces). New codes require an update to this document **and to this total** before shipping; the previously stated 54 was never reconciled to the enumerated rows.
+
+**Recount 2026-08-25 — 45 enumerated, of which 2 are SUPERSEDED, leaving 43 ACTIVE.** Derived directly from the enumerated rows after the `VAL_422_RATE_NOT_POSITIVE` ratification, not carried forward:
+
+| Namespace | Enumerated | Superseded | Active |
+|---|---|---|---|
+| AUTH | 12 | 0 | 12 |
+| VAL | **11** | 0 | **11** |
+| KYC | 4 | 0 | 4 |
+| RES | 14 | **2** | 12 |
+| SYS | 4 | 0 | 4 |
+| **TOTAL** | **45** | **2** | **43** |
+
+**One identifier was added**: `VAL_422_RATE_NOT_POSITIVE` (**HUMAN-APPROVED 2026-08-25**), taking VAL from 10 to 11 and the enumerated total from 44 to 45. **No identifier was removed.** The two superseded codes are `RES_409_MATCH_ALREADY_CONFIRMED` and `RES_410_MATCH_EXPIRED`, which existed solely for the withdrawn bilateral second-confirmation flow; they are **retained as historical compatibility identifiers, not deleted** — governance retains superseded identifiers rather than removing them — so they are still counted among the 45 enumerated rows per the existing catalogue-count convention, while remaining outside the 43 active. Neither may be reused for current acceptance, preparation or funding semantics.
 
 4.1 Authentication & Authorization (AUTH\_\*)
 
@@ -782,11 +893,36 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | VAL_422_UNDERAGE             | 422             | Declared date of birth implies age below 18        |
 | VAL_422_FILE_TOO_LARGE       | 422             | Uploaded file exceeds 10MB                         |
 | VAL_422_UNSUPPORTED_FORMAT   | 422             | File type not in accepted list                     |
-| VAL_422_RATE_ABOVE_CEILING *(proposed name)* | 422 | **HUMAN-APPROVED semantics:** desired rate exceeds the applicable approved reference ceiling — hard block. **Supersedes `VAL_422_RATE_OUT_OF_BAND`**, which encoded a symmetric ±15% band and an unapproved floor. The identifier itself is **PROPOSED, not ratified** |
+| VAL_422_RATE_NOT_POSITIVE | 422 | **HUMAN-APPROVED 2026-08-25.** The supplied exchange rate is **zero or negative** (`rate ≤ 0`). A **domain validity failure** — the value is not a rate at all. It is **NOT** a reference-rate-floor violation, **NOT** a pricing-policy floor and **NOT** a spread rule. Applies wherever the canonical API accepts a rate whose domain validity requires `rate > 0`. Distinct from `VAL_422_RATE_ABOVE_CEILING` below, which presumes a **positive** rate |
+| VAL_422_RATE_ABOVE_CEILING *(proposed name)* | 422 | **HUMAN-APPROVED semantics:** desired rate exceeds the applicable approved reference ceiling — hard block. **Scope clarified 2026-08-25: this code covers the CEILING breach only**, and it presumes a **positive** rate; a rate `≤ 0` returns `VAL_422_RATE_NOT_POSITIVE` instead. **Supersedes `VAL_422_RATE_OUT_OF_BAND`**, which encoded a symmetric ±15% band and an unapproved floor. The identifier itself is **PROPOSED, not ratified** |
 | VAL_422_AMOUNT_BELOW_MINIMUM | 422             | Source amount below corridor minimum               |
 | VAL_422_REASON_REQUIRED      | 422             | A required justification field was omitted         |
 | VAL_422_MALFORMED_JSON       | 422             | Request body is not valid JSON                     |
 | VAL_422_MISSING_FIELD        | 422             | A required field was omitted                       |
+
+> **RESOLVED — `VAL_422_RATE_NOT_POSITIVE` ratified, HUMAN-APPROVED 2026-08-25.** This note
+> previously recorded an OPEN gap: the rate-validity rule (§3.3) requires `rate > 0`, but no
+> catalogue code fitted a present-but-non-positive rate. `VAL_422_RATE_ABOVE_CEILING` is scoped to
+> the ceiling breach; `VAL_422_MISSING_FIELD` did not apply because the field **is** supplied; and
+> `VAL_422_MALFORMED_JSON` did not apply because the body **is** valid JSON. The gap is **CLOSED**
+> by human decision.
+>
+> **The two rate errors are disjoint and must never be conflated:**
+>
+> | Code | Condition | Nature |
+> |---|---|---|
+> | `VAL_422_RATE_NOT_POSITIVE` | `rate ≤ 0` | **Domain validity** — the value is not a rate |
+> | `VAL_422_RATE_ABOVE_CEILING` | `rate > 0` **AND** `rate >` applicable approved reference ceiling | **Pricing policy** |
+>
+> A rate is valid only when **`0 < rate ≤ applicable approved reference ceiling`**. Evaluation is
+> ordered: positivity first, then the ceiling — so a rate of `≤ 0` returns
+> `VAL_422_RATE_NOT_POSITIVE`, never `VAL_422_RATE_ABOVE_CEILING`.
+>
+> **This introduces one identifier and nothing else.** There remains **no approved reference-rate
+> floor**, **no ±15% symmetric band** (withdrawn, not restored), **no minimum commercial spread**,
+> **no minimum percentage below reference** and **no invented numeric lower reference-rate bound**.
+> A seller may still price arbitrarily far below the ceiling. Catalogue totals are recounted in
+> §4.4 above.
 
 4.3 KYC (KYC\_\*)
 
@@ -809,14 +945,14 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | RES_404_MATCH_NOT_FOUND          | 404             | Match does not exist                                   |
 | RES_404_NOT_FOUND                | 404             | Generic resource-not-found                             |
 | RES_409_OFFER_ALREADY_MATCHED    | 409             | Offer can no longer be edited/cancelled                |
-| RES_409_OFFER_UNAVAILABLE        | 409             | Offer no longer active (cancelled/expired/matched)     |
+| RES_409_OFFER_UNAVAILABLE        | 409             | **Corrected 2026-08-25 — the Offer is not eligible for acceptance.** Covers **either** cause: **(a) lifecycle** — `fully_matched`, `withdrawn`, `cancelled` or `expired`; **or (b) policy/rate ineligibility** — the Offer holds an eligible lifecycle status (`open` / `partially_matched`) but currently fails the applicable approved rate-ceiling policy (§3.2 eligibility note). The stale literal *"matched"* is **withdrawn**: it is not a canonical Offer status, and it omitted `withdrawn`. **Cause (b) is a reversible, derived condition and does NOT map to any persisted lifecycle state** — no new status is introduced. Distinguish from `RES_409_INSUFFICIENT_REMAINING`, which applies when the Offer *is* eligible but lacks remaining capacity |
 | RES_409_INSUFFICIENT_REMAINING   | 409             | The request supplied an explicit `accepted_amount`, but at the authoritative acceptance serialization point the Offer no longer had enough remaining capacity. The amount is **never** silently reduced, resized or partially filled, and no allocation is created. The client may refresh Offer state and submit a new explicit amount. Identifier still *proposed* pending catalogue ratification |
-| RES_409_MATCH_ALREADY_CONFIRMED  | 409             | Caller has already confirmed this match                |
+| ~~RES_409_MATCH_ALREADY_CONFIRMED~~  | 409             | **SUPERSEDED / COMPATIBILITY-ONLY — 2026-08-25.** ~~Caller has already confirmed this match~~. Existed solely for the withdrawn bilateral second-confirmation flow (`POST /v1/matches/{match_id}/confirm`, SUPERSEDED §3.5). **Retained as a historical compatibility identifier — not deleted** — and it **must not be reused** for acceptance semantics. Duplicate acceptance is governed by the acceptance idempotency boundary (§3.5), not by this code |
 | RES_409_DISPUTE_ALREADY_OPEN     | 409             | An open dispute already exists for this transaction    |
 | RES_409_INVALID_SETTLEMENT_STATE | 409             | Action not valid for the current settlement phase or leg state. Response names the current phase and the attempted transition, and must not disclose counterparty leg detail |
 | RES_409_SETTLEMENT_ON_HOLD       | 409             | An open blocking SettlementHold prevents progression   |
 | RES_422_UNRESOLVABLE_LEG         | 422             | Partner event carried no resolvable leg_id — rejected, never defaulted |
-| RES_410_MATCH_EXPIRED            | 410             | Match confirmation window elapsed                      |
+| ~~RES_410_MATCH_EXPIRED~~            | 410             | **SUPERSEDED / COMPATIBILITY-ONLY — 2026-08-25.** ~~Match confirmation window elapsed~~. The 30-minute confirmation expiry is **withdrawn with no replacement value** (ADR-001 §14.4); allocation timing is now governed by the preparation and funding windows. **Retained as a historical compatibility identifier — not deleted** — and it **must not be reused** for preparation or funding expiry |
 
 4.5 System (SYS\_\*)
 
@@ -970,7 +1106,7 @@ A user’s request to exchange currency (inverse of Offer).
 | source_currency | CHAR(3)       | No           | ISO 4217                            | Currency being offered by requester |
 | target_currency | CHAR(3)       | No           | ISO 4217, != source_currency        | Currency desired                    |
 | source_amount   | NUMERIC(18,2) | No           | \> corridor minimum                 | Decimal precision, never float      |
-| desired_rate    | NUMERIC(12,6) | No           | **≤ applicable approved reference ceiling; no floor** | Requested exchange rate |
+| desired_rate    | NUMERIC(12,6) | No           | **`> 0` AND ≤ applicable approved reference ceiling; no reference-rate floor.** Positivity is a domain validity invariant, not a pricing floor (§3.3 rate-validity note) | Requested exchange rate |
 | status          | ENUM          | No           | active, matched, cancelled, expired | Marketplace visibility              |
 
 Offer
@@ -1035,7 +1171,7 @@ independent settlement failure domain.
 | source_amount           | NUMERIC(18,2) | No           | \> corridor minimum; exact, never float | **Original amount.** Conceptually `original_amount` |
 | matched_amount          | NUMERIC(18,2) | No           | 0 ≤ matched_amount ≤ source_amount, enforced under row lock | Sum of two disjoint sets: active-committed allocations and completed allocations. Each allocation counted exactly once |
 | *remaining_amount*      | *derived*     | —            | `source_amount − matched_amount`    | **DERIVED — not persisted** |
-| desired_rate            | NUMERIC(12,6) | No           | **≤ applicable approved reference ceiling; no floor.** Validated at publication; re-checked at acceptance; **locked** on the resulting Match | Seller-selected exchange rate |
+| desired_rate            | NUMERIC(12,6) | No           | **`> 0` AND ≤ applicable approved reference ceiling; no reference-rate floor.** Positivity is a domain validity invariant, not a pricing floor (§3.3 rate-validity note). Validated at publication; re-checked at acceptance; **locked** on the resulting Match | Seller-selected exchange rate |
 | ~~settlement_window_hours~~ | ~~SMALLINT~~ | — | **WITHDRAWN** | Superseded: window durations are configurable policy, not user input (ADR-001 §14.4) |
 | status                  | ENUM          | No           | **CANONICAL ENUM — HUMAN-APPROVED 2026-08-25: `open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`.** `withdrawn` is **added** by that decision and closes the prior status-model gap. Persisted enum literals may retain existing names for compatibility — the *conceptual* lifecycle is what is approved. The former binary `active \| matched` is **insufficient** | Marketplace visibility. **A partially matched Offer remains available for its remaining amount.** `withdrawn` = owner withdrew the still-unmatched remainder; existing allocations are untouched |
 
@@ -1061,7 +1197,7 @@ persisted/API form of the conceptual **`MatchAllocation`** — see the glossary 
 | fx_request_id        | UUID          | **Yes**      | FK -\> FXRequest.id. **Optional/nullable** — a Match is creatable without any FXRequest | Legacy/compatibility linkage only |
 | counterparty_user_id | UUID          | No           | FK -\> Users.id                                     | Accepting user |
 | allocated_amount     | NUMERIC(18,2) | No           | \> 0; Σ valid allocations ≤ Offer.source_amount, enforced under row lock. Exact minor-unit arithmetic | **Amount allocated by this acceptance.** Reconciles the TDS `matched_amount` on Match — **one amount concept, not two** |
-| agreed_rate          | NUMERIC(12,6) | No           | Locked at acceptance; never silently re-priced      | Immutable once set |
+| agreed_rate          | NUMERIC(12,6) | No           | **`> 0`** and ≤ the applicable approved reference ceiling **as evaluated at the moment of acceptance**; locked at acceptance; never silently re-priced. **A persisted Match is never revalidated or re-priced by a later rate rule or ceiling change** — the validation above is an acceptance-time gate, not an ongoing constraint | **Immutable once set** |
 | accepted_at          | TIMESTAMPTZ   | No           | **Server-set trusted timestamp.** A client-supplied value is never trusted | Establishes the allocation and its acceptance priority |
 | preparation_state    | ENUM          | No           | Preparation lifecycle for this allocation           | **Window 1.** Beneficiary selection/validation and allocation-specific requirements |
 | preparation_deadline | TIMESTAMPTZ   | **Yes**      | **Duration is OPEN / CONFIGURABLE — no value is set (ADR-001 §14.4).** **Nullable — corrected 2026-08-25**, matching `funding_deadline` below, whose window carries the identical OPEN/CONFIGURABLE status. **NULL does NOT mean unlimited preparation**; see the note below the table | End of the preparation window |
@@ -1517,7 +1653,35 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 > requirements) → **`ALLOCATION_FUNDING_READY`** → *only then* **partner provisioning** and
 > actionable **funding instructions** → the **funding window begins once instructions are
 > activated** → authoritative **`FUNDED`** arrives by regulated-partner webhook (`EscrowFunded`)
-> when that integration exists → `ReleaseAuthorized` → `PayoutConfirmed` → `SettlementCompleted`.
+> when that integration exists — **per leg** → **GATE: both legs `FUNDED`** → `ReleaseAuthorized`
+> → `PayoutConfirmed` **per leg** → **GATE: both legs `PAID_OUT`** → `SettlementCompleted`.
+>
+> **Both-leg aggregation is explicit — corrected 2026-08-25.** The arrow sequence above previously
+> ran `FUNDED → ReleaseAuthorized → PayoutConfirmed → SettlementCompleted` with no gate, which reads
+> as a single-leg progression and contradicts the event table above (`SettlementCompleted |
+> Settlement service (**both legs PAID_OUT**)`) and ADR-001. An implementer following the linear
+> narrative could authorize release on one funded leg while the other leg is unfunded.
+>
+> **A `Settlement` has exactly two `SettlementLeg`s** (`UNIQUE(settlement_id, party_role)`,
+> unchanged). `EscrowFunded` and `PayoutConfirmed` are **leg-scoped**; `ReleaseAuthorized` and
+> `SettlementCompleted` are **settlement-wide** and therefore **aggregate**:
+>
+> | Settlement-wide event | May occur only when |
+> |---|---|
+> | `ReleaseAuthorized` | the canonical release conditions are satisfied for **BOTH** required legs |
+> | `SettlementCompleted` | **BOTH** required legs satisfy the canonical `PAID_OUT`/completed requirements of ADR-001 |
+>
+> **ADR-001 is authoritative and unchanged** — this makes the existing aggregation visible in the
+> flow narrative; it defines no state, redefines no transition and relaxes nothing. `PAID_OUT`
+> remains irreversible, and no settlement may enter a terminal phase while customer funds remain
+> unresolved.
+>
+> **The still-OPEN mixed irreversible payout aggregate-state problem is NOT resolved here** (ADR-001
+> §14.7). Where some `PayoutExecution` children of a leg succeed irreversibly and others fail or
+> pause, the derivation of that **leg's** own state remains **OPEN** and remains a production
+> financial-semantics blocker. This correction gates settlement-wide events on **leg** outcomes; it
+> says nothing about how a leg's outcome is derived from its children, and **no implementation may
+> derive leg state or a phase transition from child payout records.**
 >
 > A Settlement consumer of `MatchConfirmed` is **RECORD-ONLY** at that point: it may record the
 > allocation, notify and emit analytics, and it **must not** provision partner accounts, dispatch
@@ -1557,10 +1721,14 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 <p>S-&gt;&gt;B: partner provisioning (only after ALLOCATION_FUNDING_READY)</p>
 <p>S--&gt;&gt;User: funding instructions activated</p>
 <p>Note over S: Funding window begins once instructions are activated.</p>
-<p>B-&gt;&gt;S: partner webhook: EscrowFunded (authoritative FUNDED)</p>
+<p>B-&gt;&gt;S: partner webhook: EscrowFunded (authoritative FUNDED, leg 1)</p>
+<p>B-&gt;&gt;S: partner webhook: EscrowFunded (authoritative FUNDED, leg 2)</p>
+<p>S-&gt;&gt;S: GATE: both legs FUNDED</p>
 <p>S-&gt;&gt;Q: publish ReleaseAuthorized</p>
 <p>Q-&gt;&gt;B: consume ReleaseAuthorized</p>
-<p>B-&gt;&gt;S: partner webhook: PayoutConfirmed (see Document 07)</p>
+<p>B-&gt;&gt;S: partner webhook: PayoutConfirmed (leg 1, see Document 07)</p>
+<p>B-&gt;&gt;S: partner webhook: PayoutConfirmed (leg 2, see Document 07)</p>
+<p>S-&gt;&gt;S: GATE: both legs PAID_OUT</p>
 <p>S-&gt;&gt;Q: publish SettlementCompleted</p>
 <p>Q-&gt;&gt;N: consume SettlementCompleted</p>
 <p>```</p></td>
@@ -1572,7 +1740,7 @@ Appendix A: Open Items for Backend Engineering Ratification
 
 - Confirm final corridor minimum/maximum amounts for the NGN⇄GBP launch (pilot) corridor, and separately for the NGN⇄USD Year 2 corridor (referenced but not numerically fixed above).
 
-- ~~Confirm exact rate-band tolerance (±15% placeholder).~~ **RESOLVED — HUMAN APPROVED 2026-08-22.** The rule is `seller_rate ≤ applicable approved reference ceiling`, hard block above, **no floor**. The ±15% symmetric band was a self-declared placeholder and is withdrawn. Still **OPEN / configurable**: reference-rate provider, update cadence, staleness policy, provider-unavailable behaviour. If an unmatched remaining Offer later violates a changed ceiling it is **paused/revalidated** — its seller-selected rate is never silently modified.
+- ~~Confirm exact rate-band tolerance (±15% placeholder).~~ **RESOLVED — HUMAN APPROVED 2026-08-22, amended 2026-08-25.** The rule is **`0 < seller_rate ≤ applicable approved reference ceiling`**, hard block above the ceiling, **no reference-rate floor**. Positivity is a **domain validity invariant, not a pricing floor** (§3.3 rate-validity note). The ±15% symmetric band was a self-declared placeholder, is withdrawn, and is **not** restored. Still **OPEN / configurable**: reference-rate provider, update cadence, staleness policy, provider-unavailable behaviour. If an unmatched remaining Offer later violates a changed ceiling it keeps its lifecycle status and becomes temporarily **INELIGIBLE for acceptance** — *not* a `paused` lifecycle status, which does not exist (§3.2 eligibility note; `CORRECTIONS_v3.md` §11.10b) — and its seller-selected rate is never silently modified.
 
 - Expand the Error Catalogue to the full 50+ target as each module’s edge cases are implemented and tested, rather than pre-specifying untested codes.
 

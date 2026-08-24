@@ -622,6 +622,78 @@ provider, update cadence, staleness policy and provider-unavailable behaviour re
 configurable**. `VAL_422_RATE_OUT_OF_BAND` is superseded by a ceiling-specific semantic error whose
 **identifier is proposed, not frozen**.
 
+**11.10a — Rate positivity, corrected 2026-08-25.** §11.10 bounds the rate only from above, so `0`
+and **negative** values satisfied it as written. Canonical rule is now
+**`0 < seller_rate ≤ applicable approved reference ceiling`**. Positivity is a **domain validity
+invariant** — what makes the value a rate at all — and is **not** a pricing floor: it grants no
+minimum spread, no minimum percentage below reference and no numeric lower reference bound.
+**There is still no approved reference-rate floor, and the ±15% symmetric band remains withdrawn
+and is not restored.** Applies to `Offer.desired_rate`, `FXRequest.desired_rate`, the rate supplied
+on offer edit, and `Match.agreed_rate`. Existing Match rates stay **locked** and are never
+re-priced. No numeric bound is invented. Reference-rate source, cadence, staleness and
+provider-unavailable policy remain **OPEN** (Decision 3).
+
+**11.10c — `VAL_422_RATE_NOT_POSITIVE` ratified. HUMAN-APPROVED 2026-08-25.** §11.10a made
+positivity normative but no catalogue identifier fitted a present-but-non-positive rate, so the
+rejection was normative while its identifier was open. That gap is **CLOSED**. The canonical
+identifier is **`VAL_422_RATE_NOT_POSITIVE`**, HTTP **422**, meaning *the supplied exchange rate is
+zero or negative* — canonical condition **`rate ≤ 0`**. It applies wherever the canonical API
+accepts a rate whose domain validity requires `rate > 0`: `Offer.desired_rate`,
+`FXRequest.desired_rate`, the rate supplied on offer edit, and the acceptance-time validation of
+`Match.agreed_rate`.
+
+It is a **domain validity failure**, **not** a reference-rate-floor violation, **not** a
+pricing-policy floor and **not** a spread rule. It is **separate from** `VAL_422_RATE_ABOVE_CEILING`,
+which presumes a **positive** rate that exceeds the applicable approved reference ceiling.
+Evaluation is **ordered — positivity first, then the ceiling** — so `rate ≤ 0` returns
+`VAL_422_RATE_NOT_POSITIVE` and never `VAL_422_RATE_ABOVE_CEILING`. The two conditions are disjoint.
+
+Canonical rule unchanged in substance: **`0 < rate ≤ applicable approved reference ceiling`**. There
+remains **no approved reference-rate floor**, **no ±15% symmetric band** (withdrawn, not restored),
+**no minimum commercial spread**, **no minimum percentage below reference** and **no invented
+numeric lower reference-rate bound**.
+
+**A persisted historical `Match` is never revalidated or re-priced** by this identifier or by any
+later ceiling change: `agreed_rate` is validated at the moment of acceptance and is **immutable once
+established** under the existing contract.
+
+**Catalogue effect — counted, not estimated.** One identifier added, none removed: VAL **10 → 11**,
+enumerated total **44 → 45**, superseded **2** (unchanged), active **42 → 43**. Totals recounted in
+`05_API_Contract_Data_Dictionary.md` §4.4 directly from the enumerated rows. **No new ADR or DEC
+number is issued** — this is an API/error-catalogue ratification recorded under the existing §11
+correction structure, and no ADR is amended.
+
+**11.10b — Ceiling-invalid Offer: eligibility, not a lifecycle status. Corrected 2026-08-25.**
+§11.10 says a ceiling change leaves an unmatched Offer **"paused/revalidated"**, but `paused` is
+**not** a member of the canonical Offer status enum (`open`, `partially_matched`, `fully_matched`,
+`withdrawn`, `cancelled`, `expired`), and the API contract treats every `open` and
+`partially_matched` Offer as `marketplace-active`. As written, a rate-invalid Offer either cannot
+be represented or stays listed and acceptable at an invalid rate.
+
+**`paused` is NOT added as a persisted status.** The two concerns are separated instead:
+
+| Concern | What it is | Governed by |
+|---|---|---|
+| **A. Lifecycle status** | Where the Offer sits in its own life | The canonical Offer enum — **unchanged** |
+| **B. Acceptance eligibility** | Whether the Offer may be accepted **right now** under current policy | Policy/rate evaluation at acceptance time |
+
+An Offer whose rate no longer satisfies the applicable approved ceiling **keeps** its lifecycle
+status (`open` or `partially_matched`) and becomes **temporarily INELIGIBLE** for new acceptance.
+**`marketplace-active` therefore requires BOTH** an eligible lifecycle status **AND** current
+policy/rate eligibility. The seller-selected rate is **never silently modified**, existing Matches
+are **never re-priced**, and **no automatic repricing exists**. When the applicable policy permits
+the Offer again, eligibility is re-evaluated per the documented policy — ineligibility is a
+**reversible, derived condition**, not a terminal state, which is precisely why it must not be
+mapped onto `cancelled`, `expired`, `withdrawn` or `fully_matched` (all of which are lifecycle
+outcomes, three of them terminal).
+
+**Required future representation, mechanism NOT chosen.** A persistence implementation must be able
+to evaluate and expose acceptance eligibility as a first-class condition distinct from lifecycle
+status. Whether that is a derived projection, a cached evaluation, or an explicit persisted
+eligibility field is **implementation-dependent** and belongs to the domain-model milestone; no
+database representation is selected here. **Adding `paused` — or any other persisted lifecycle
+status — would require human approval and is not done.** No ADR is amended.
+
 **11.11 — Bilateral confirmation removed.** `POST /v1/matches/{match_id}/confirm`, both-party
 confirmation and the 30-minute confirmation expiry are **superseded**, with no replacement value.
 Acceptance alone establishes the allocation, fixed by the server-set trusted `accepted_at`.

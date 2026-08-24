@@ -423,7 +423,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | `KYCRejected`              | Compliance        | Notifications, Admin              |
 | `OfferCreated`             | Marketplace       | Matching                          |
 | `FXRequestCreated`         | Marketplace       | Matching                          |
-| `MatchConfirmed`           | Matching          | Transaction, Notifications        |
+| `MatchConfirmed` *(**NAME/ROUTING compatibility alias — ACCEPTANCE semantics**; **RECORD-ONLY** for Settlement consumers. See the alias note below this table)* | Matching (emitted at acceptance) | Transaction, Notifications — **record-only**; **never** authorization to provision, dispatch or fund |
 | `EscrowFunded`             | Settlement        | Settlement (leg-scoped, carries `leg_id`) |
 | `ReleaseAuthorized`        | Settlement        | Banking Abstraction Layer via outbox, Notifications |
 | `PayoutConfirmed`          | Settlement        | Settlement (leg-scoped, carries `leg_id`) |
@@ -434,6 +434,38 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | `HoldOpened` / `HoldClosed` | Settlement       | Admin, Compliance                 |
 | `ReconciliationMismatchDetected` | Reconciliation | Admin, Compliance               |
 | `DisputeOpened`            | Disputes          | Admin, Notifications              |
+
+> **`MatchConfirmed` alias note — aligned with the API contract 2026-08-25.** This table previously
+> listed `MatchConfirmed` as an ordinary event consumed by `Transaction`, with no indication that
+> its trigger and consumer contract had changed. An implementer reading only this table would apply
+> **legacy bilateral-confirmation semantics to an acceptance event** — exactly the failure the API
+> contract's alias note exists to prevent. `05_API_Contract_Data_Dictionary.md` §6.1 is
+> **authoritative** for this event; this entry is aligned to it and adds nothing new.
+>
+> - `MatchConfirmed` is a **NAME / ROUTING compatibility alias only.** The name, topic and routing
+>   are preserved so existing subscriptions and dispatch tables still resolve. **Semantic backward
+>   compatibility is NOT claimed** — the trigger moved from bilateral confirmation to acceptance, so
+>   a consumer written against the old meaning is already wrong even though its subscription
+>   resolves.
+> - It is emitted when the `Match` is **established by acceptance**. **There is no second bilateral
+>   confirmation step**, and none may be introduced; no consumer may wait for one.
+> - It is **NOT** evidence of confirmation, **NOT** authorization for funding instructions, **NOT**
+>   authorization for partner provisioning or dispatch, and **NOT** authoritative funding evidence.
+>   A Settlement consumer is **RECORD-ONLY** at this point.
+> - **`ALLOCATION_FUNDING_READY` continues to gate partner provisioning** (ADR-001 §14.3). This
+>   event neither starts, satisfies nor bypasses that gate. Authoritative `FUNDED` remains
+>   established only by authenticated, signature-verified regulated-partner webhook evidence.
+>
+> **Naming relationship with `Appendix_D`.** `Appendix_D_Financial_Correctness_Settlement_Specification_Xspeeria_v1.1.md`
+> §"Order and match" lists **`MatchCreated`**. The two names refer to **the same acceptance-time
+> occurrence** — a `Match` coming into existence — described from different documents;
+> `MatchCreated` is the name that matches the semantics, `MatchConfirmed` is the emitted
+> compatibility alias retained for routing. **This is a naming divergence recorded, not resolved,
+> and it is emphatically not a claim of semantic backward compatibility.** **No second event exists
+> or may be created**, and the two names must never be implemented as two events.
+>
+> **The event is NOT renamed here.** Whether `MatchConfirmed` becomes `MatchCreated` remains an
+> **OPEN human decision** (`05_API_Contract_Data_Dictionary.md` §6.1, renaming note).
 
 *Updated per ADR-001 (DEC-003). `TransactionFundsReceived` and `SettlementFailed` are superseded: funding is leg-scoped, and failure is a leg fact whose settlement-level consequence depends on outstanding exposure. The canonical event catalogue is `Appendix_D` Section 7.*
 
