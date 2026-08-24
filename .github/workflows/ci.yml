@@ -163,20 +163,22 @@ jobs:
           gitleaks version
 
       # The approved config is version-controlled, so it could be edited to disable the
-      # defaults as easily as a rogue `.gitleaks.toml` could replace them. This asserts the
-      # one line that matters before either scan runs. The tracked-file guard rejects every
-      # other gitleaks config, so this file is the only configuration in play.
-      - name: Assert the approved gitleaks config extends the default rules
-        run: |
-          set -euo pipefail
-          CONFIG=".github/gitleaks.toml"
-          test -f "$CONFIG"
-          grep -Eq '^[[:space:]]*useDefault[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$CONFIG" || {
-            echo "::error::$CONFIG no longer extends the gitleaks default rules."; exit 1; }
-          if grep -Eq '^[[:space:]]*\[allowlist\]' "$CONFIG"; then
-            echo "::error::$CONFIG introduces an allowlist. Suppression is not permitted."; exit 1
-          fi
-          echo "Approved config OK: $CONFIG extends defaults, carries no allowlist."
+      # defaults as easily as a rogue `.gitleaks.toml` could replace them. This asserts its
+      # structure before either scan runs. The tracked-file guard rejects every other
+      # gitleaks config, so this file is the only configuration in play.
+      #
+      # This was two `grep` lines until 2026-08-24: one for `useDefault = true`, one for a
+      # literal `[allowlist]` header. That covered one suppression channel out of several.
+      # `[[allowlists]]` and rule-scoped `[[rules.allowlists]]` silence findings just as
+      # effectively and match neither pattern, so a suppression could land while the assert
+      # passed and the canary still fired. Widening the regex would only have been guesswork
+      # about TOML surface syntax - a header, an inline table and a dotted key all express
+      # the same thing and look nothing alike. The guard parses the file with `tomllib` and
+      # inspects the resulting structure instead, so syntax stops mattering. It also rejects
+      # `[extend].disabledRules`, `[extend].path`/`url` and any unrecognised top-level key.
+      # Regression tests: backend/tests/unit/test_gitleaks_config.py.
+      - name: Assert the approved gitleaks config suppresses nothing
+        run: python3 scripts/check_gitleaks_config.py
 
       # The scan below proves gitleaks RAN. It cannot prove the pinned artifact still
       # DETECTS anything: a broken download, a stripped rule set or a future packaging change

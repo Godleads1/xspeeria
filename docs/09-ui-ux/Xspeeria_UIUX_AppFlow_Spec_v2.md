@@ -184,9 +184,11 @@ B --\> Market\["Marketplace"\]
 
 B --\> Track\["Track"\]
 
-B --\> Notif\["Notifications — **SUPERSEDED as a bottom-navigation destination (2026-08-24)**; reached from the Home header bell, notification centre and push"\]
+B --\> Cards\["Cards (*Coming Soon*)"\]
 
 B --\> Profile\["Profile"\]
+
+Home --\> Notif\["Notifications — header bell, notification centre, push"\]
 
 ## 4.2 Onboarding & authentication flow
 

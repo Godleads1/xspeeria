@@ -673,11 +673,23 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | POST   | `/v1/fx-requests`                         | Create FX request                   | Verified user             |
 | POST   | `/v1/offers`                              | Create offer                        | Verified user             |
 | GET    | `/v1/offers`                              | List/search offers                  | Verified user             |
-| POST   | `/v1/matches/{id}/confirm`                | Confirm a proposed match            | Verified user             |
+| POST   | `/v1/offers/{offer_id}/accept`            | Accept some or all of an Offer's remaining amount, establishing a `Match` | Verified user (KYC-approved, `TRANSACTION_ELIGIBLE`, not the Offer owner) |
 | GET    | `/v1/transactions/{id}`                   | Get transaction detail              | Party to transaction      |
 | POST   | `/v1/transactions/{id}/fund-confirmation` | User confirms funds sent            | Party to transaction      |
 | POST   | `/v1/disputes`                            | Open a dispute                      | Party to transaction      |
 | POST   | `/v1/webhooks/settlement/{partner}`       | Inbound partner settlement callback | HMAC-signed, partner-only |
+
+> **`POST /v1/matches/{id}/confirm` is SUPERSEDED / HISTORICAL — corrected 2026-08-24.**
+> It was published in this table as an active operation while the rest of the document had
+> already withdrawn bilateral confirmation (`CORRECTIONS_v3.md` §11.11; §5.3.5; §7.1
+> Idempotency), leaving two incompatible API contracts. **Acceptance alone establishes the
+> `Match`**, so the canonical money-sensitive operation is `POST /v1/offers/{offer_id}/accept`
+> — the row above, and the endpoint §7.1 already names as requiring `Idempotency-Key`. **No
+> replacement confirmation endpoint exists and none may be introduced.** The `MatchConfirmed`
+> event name survives **only** as a compatibility alias emitted when the Match is established
+> by acceptance (`05_API_Contract_Data_Dictionary.md`, event catalogue); it is not a second
+> user- or API-facing confirmation action, and consuming it authorizes nothing partner-facing
+> before `ALLOCATION_FUNDING_READY`.
 
 ## 7.4 Pagination Response Shape
 

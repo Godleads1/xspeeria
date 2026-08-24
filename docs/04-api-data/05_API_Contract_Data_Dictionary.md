@@ -1003,12 +1003,39 @@ PayoutExecution
 | id | UUID | No | Primary key | Payout child identifier |
 | leg_id | UUID | No | FK -\> SettlementLeg.leg_id | Parent leg |
 | beneficiary_account_id | UUID | No | FK -\> `BENEFICIARIES.id`; must be `validated` **and `BENEFICIARIES.currency` = the parent `SettlementLeg.currency`** | Destination. *`BeneficiaryAccount` is the conceptual/domain name; `BENEFICIARIES` is the canonical persisted identifier per the `DOCUMENT_INDEX.md` §2A glossary, and no table is renamed.* |
-| amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point** | Split amount |
+| amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point.** **MUST be strictly `> 0`** — added 2026-08-24; see the positivity invariant below. Zero is invalid and negative is invalid | Split amount |
 | currency | CHAR(3) | No | ISO 4217; = leg currency | Payout currency |
 | scale | SMALLINT | No | **= the minor-unit scale of the parent leg's `currency` under the applicable currency definition (ADR-002 `currency_def_version`), and identical across every `PayoutExecution` of that leg.** Stored on the row | Minor-unit exponent |
 
 > **Exact-total invariant:** the sum of a leg's `PayoutExecution.amount_minor` values must equal
 > **exactly** the amount due for that leg. Validated in integer minor units.
+>
+> **Positivity invariant — added 2026-08-24. Each child amount must be strictly positive.**
+> The exact-total invariant is a statement about a *sum*, and a sum constrains its addends only
+> when the addends are sign-constrained. With `amount_minor` left as an unconstrained `BIGINT`, a
+> leg due `100_000` could be satisfied by children of `150_000` and `-50_000`: the aggregate
+> validates, while one destination carries an oversized payout and another represents a negative
+> payout to a validated beneficiary. Therefore **every `PayoutExecution.amount_minor` MUST be
+> `> 0`**, and this is checked **per row, before** the aggregate is evaluated -- an aggregate
+> check can never recover the constraint after the fact.
+>
+> **Zero-value rows are prohibited.** A `PayoutExecution` is a payout instruction to a specific
+> validated beneficiary; a zero-amount instruction pays nothing, adds a destination to the payout
+> set that cannot succeed or fail meaningfully, and would participate in the still-**OPEN**
+> aggregate-state derivation below. A leg that needs no child for a destination simply has no
+> child for it.
+>
+> **Negative values are invalid, and a correction or reversal is NOT a negative child row.** No
+> compensating mechanism is defined here, and none is introduced by this rule. Where a reversal
+> is required it must use a separately approved compensating mechanism under the applicable
+> lifecycle; until such a mechanism is ratified, a negative child is simply a malformed record.
+>
+> **Error semantics — no new identifier.** A `PayoutExecution` is **server-constructed** beneath a
+> `SettlementLeg`, never a client-supplied request field, so no client-facing validation code in
+> §4.4 applies and **none is invented**. A violation is a construction-time invariant breach that
+> must **fail closed** server-side before any row is written or dispatched; if it ever surfaces to
+> a caller it does so as the existing catalogued `SYS_500_INTERNAL_ERROR`. The §4.4 catalogue is
+> **unchanged** and its total remains **44**.
 >
 > **One currency and one scale per leg — clarified 2026-08-24.** The invariant above adds
 > `amount_minor` integers, and that addition is only well defined when every addend shares one
@@ -1267,6 +1294,28 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 
 6.2 Event Flow Diagram
 
+> **The diagram is gated on `ALLOCATION_FUNDING_READY` — corrected 2026-08-24.** It previously ran
+> `MatchConfirmed` straight into the Settlement service and on to `ReleaseAuthorized` and the
+> banking layer, which contradicted the `MatchConfirmed` contract in §6.1 and would have started
+> settlement before beneficiary and allocation readiness. The active flow is now:
+>
+> **Offer acceptance** (`POST /v1/offers/{offer_id}/accept`) → **`Match` established**, terms
+> frozen at acceptance → **preparation** (beneficiary selection and validation, allocation-specific
+> requirements) → **`ALLOCATION_FUNDING_READY`** → *only then* **partner provisioning** and
+> actionable **funding instructions** → the **funding window begins once instructions are
+> activated** → authoritative **`FUNDED`** arrives by regulated-partner webhook (`EscrowFunded`)
+> when that integration exists → `ReleaseAuthorized` → `PayoutConfirmed` → `SettlementCompleted`.
+>
+> A Settlement consumer of `MatchConfirmed` is **RECORD-ONLY** at that point: it may record the
+> allocation, notify and emit analytics, and it **must not** provision partner accounts, dispatch
+> settlement instructions, release funds or start any funding-window behaviour on that event
+> alone. **This introduces no second confirmation step** — acceptance still establishes the
+> allocation by itself, and `ALLOCATION_FUNDING_READY` is a *derived gate*, not an approval
+> action. **No new event is introduced**: every message in the diagram is an existing §6.1
+> catalogue entry, and `MatchConfirmed` remains the compatibility alias emitted at acceptance.
+> ADR-001 Amendment A1 §14.3 and `07_Banking_Integration_Specification_v1.1.md` §3 are normative
+> and unchanged. A client asserting "I paid" never establishes `FUNDED`.
+
 ***Figure: Match-to-Settlement event flow***
 
 <table>
@@ -1282,13 +1331,23 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 <p>participant S as Settlement Service</p>
 <p>participant B as Banking Abstraction Layer</p>
 <p>participant N as Notification Worker</p>
-<p>M-&gt;&gt;Q: publish MatchConfirmed</p>
-<p>Q-&gt;&gt;S: consume MatchConfirmed</p>
-<p>S-&gt;&gt;Q: publish ReleaseAuthorized</p>
-<p>Q-&gt;&gt;B: consume ReleaseAuthorized</p>
+<p>M-&gt;&gt;Q: publish MatchConfirmed (acceptance; compatibility alias)</p>
 <p>Q-&gt;&gt;N: consume MatchConfirmed</p>
 <p>N--&gt;&gt;User: push/email notification</p>
-<p>B-&gt;&gt;S: webhook callback (see Document 07)</p>
+<p>Q-&gt;&gt;S: consume MatchConfirmed</p>
+<p>Note over S: RECORD-ONLY. No provisioning, no instructions,</p>
+<p>Note over S: no release, no funding window on this event.</p>
+<p>S-&gt;&gt;S: preparation: beneficiary selection and validation</p>
+<p>S-&gt;&gt;S: allocation-specific requirements satisfied</p>
+<p>S-&gt;&gt;S: gate reached: ALLOCATION_FUNDING_READY</p>
+<p>Note over S,B: Nothing above this gate is partner-facing.</p>
+<p>S-&gt;&gt;B: partner provisioning (only after ALLOCATION_FUNDING_READY)</p>
+<p>S--&gt;&gt;User: funding instructions activated</p>
+<p>Note over S: Funding window begins once instructions are activated.</p>
+<p>B-&gt;&gt;S: partner webhook: EscrowFunded (authoritative FUNDED)</p>
+<p>S-&gt;&gt;Q: publish ReleaseAuthorized</p>
+<p>Q-&gt;&gt;B: consume ReleaseAuthorized</p>
+<p>B-&gt;&gt;S: partner webhook: PayoutConfirmed (see Document 07)</p>
 <p>S-&gt;&gt;Q: publish SettlementCompleted</p>
 <p>Q-&gt;&gt;N: consume SettlementCompleted</p>
 <p>```</p></td>
