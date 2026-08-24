@@ -958,13 +958,38 @@ SettlementLeg
 | party_role               | ENUM          | No           | REQUESTER, ACCEPTER; UNIQUE(settlement_id, party_role)                         | Semantic leg identity — not positional |
 | state                    | ENUM          | No           | PENDING, ESCROW_PROVISIONED, FUNDED, RELEASE_SENT, PAID_OUT, RETURN_SENT, RETURNED, PROVISION_FAILED, PAYOUT_FAILED | PAID_OUT is irreversible |
 | currency                 | CHAR(3)       | No           | ISO 4217                                                                       | Leg currency                           |
-| amount                   | NUMERIC(20,4) | No           | Decimal only; never float                                                      | Leg amount                             |
+| amount                   | NUMERIC(20,4) | No           | **REPRESENTATION INCOMPLETE — see the monetary-binding note below.** Decimal only; never float | Leg amount |
+| *currency_def_version*   | *REQUIRED, not yet in this schema* | — | **Immutably bound when the leg amount is established.** See the monetary-binding note below | Which currency definition interprets `currency` |
+| *scale*                  | *REQUIRED, not yet in this schema* | — | **Immutable minor-unit exponent captured with the leg amount** | Fixes the meaning of the integer minor-unit amount |
 | source_jurisdiction      | CHAR(2)       | No           | ISO 3166-1 alpha-2; CHECK = destination_jurisdiction                           | Domestic-only enforcement              |
 | destination_jurisdiction | CHAR(2)       | No           | ISO 3166-1 alpha-2; CHECK = source_jurisdiction                                | No leg may cross a border              |
 | partner_id               | UUID          | No           | Assigned partner; a partner may advance only its own leg                       | Adapter routing                        |
 | escrow_account_ref       | VARCHAR(255)  | Yes          | Tokenized reference; never a raw account number                                | Partner-held escrow                    |
 | beneficiary_validated_at | TIMESTAMPTZ   | Yes          | Required non-null before release authorization                                 | Account-name-inquiry gate (Doc 07 §3.3) |
 | funded_at / paid_out_at / returned_at | TIMESTAMPTZ | Yes | Set only by signature-verified partner webhook                              | Money-fact timestamps                  |
+
+> **Monetary binding on `SettlementLeg` — REQUIRED, added 2026-08-24.** A leg's amount must be
+> bound to an interpretation that is **immutable once the amount is established**, sufficient to
+> reconstruct the exact value later: the **currency**, the **`currency_def_version`** that
+> interprets it, the **scale**, and an **exact integer minor-unit amount**. Without the version
+> and scale, a later change to currency metadata makes exact-total validation and historical
+> replay ambiguous -- the same stored number would mean two different amounts.
+>
+> **The current `NUMERIC(20,4)` shape does not satisfy this and is not pretended to.** It fixes
+> four decimal places for every currency, records no definition version, and is a decimal
+> presentation type rather than the integer minor-unit representation ADR-002 makes
+> authoritative. It is marked **REPRESENTATION INCOMPLETE / SUPERSEDED** above; the required
+> persisted shape is the four elements listed here. **ADR-002 is unchanged and remains
+> authoritative: financial arithmetic uses integer minor units with an explicit scale.**
+>
+> **`PayoutExecution` children inherit that binding.** A child takes the parent's currency,
+> `currency_def_version` and scale; **no child may independently choose another scale**, and the
+> `scale` column on the child is a copy of the parent's binding, never an independent choice.
+>
+> *Phase 1 adds no column, migration, ORM model or persistence for this. It is recorded as a
+> **required dependency of the later domain-model/persistence milestone**, alongside
+> `server_order_key`. The still-open mixed-irreversible-payout aggregate-state semantics are
+> untouched.*
 
 PayoutExecution
 
@@ -977,7 +1002,7 @@ PayoutExecution
 | **Field** | **Type** | **Nullable** | **Validation** | **Business Meaning** |
 | id | UUID | No | Primary key | Payout child identifier |
 | leg_id | UUID | No | FK -\> SettlementLeg.leg_id | Parent leg |
-| beneficiary_account_id | UUID | No | FK -\> `BENEFICIARIES.id`; must be `validated` | Destination. *`BeneficiaryAccount` is the conceptual/domain name; `BENEFICIARIES` is the canonical persisted identifier per the `DOCUMENT_INDEX.md` §2A glossary, and no table is renamed.* |
+| beneficiary_account_id | UUID | No | FK -\> `BENEFICIARIES.id`; must be `validated` **and `BENEFICIARIES.currency` = the parent `SettlementLeg.currency`** | Destination. *`BeneficiaryAccount` is the conceptual/domain name; `BENEFICIARIES` is the canonical persisted identifier per the `DOCUMENT_INDEX.md` §2A glossary, and no table is renamed.* |
 | amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point** | Split amount |
 | currency | CHAR(3) | No | ISO 4217; = leg currency | Payout currency |
 | scale | SMALLINT | No | **= the minor-unit scale of the parent leg's `currency` under the applicable currency definition (ADR-002 `currency_def_version`), and identical across every `PayoutExecution` of that leg.** Stored on the row | Minor-unit exponent |
@@ -998,6 +1023,17 @@ PayoutExecution
 > one currency, and `backend/app/core/money.py` already refuses arithmetic across differing
 > currency or scale -- and introduces **no** exchange-rate behaviour, no new `SettlementLeg`
 > field, and no change to the exactly-two-leg rule.
+>
+> **Destination currency must match too — added 2026-08-24.** Pinning the child's *label* to the
+> leg currency is not enough: `BENEFICIARIES` carries its own payout `currency`, and requiring
+> only `validated` would let a beneficiary denominated in another currency receive a child
+> labelled in the leg currency. The full chain is
+> **`PayoutExecution.currency` = `SettlementLeg.currency` = `BENEFICIARIES.currency`**, and a
+> beneficiary denominated for a different currency **does not satisfy readiness** for that leg --
+> so it cannot contribute to `ALLOCATION_FUNDING_READY`. **No FX conversion happens inside a
+> payout child.** Any cross-currency conversion belonging to a regulated partner flow occurs
+> **before** the resulting payout leg and destination contract are established, never hidden
+> inside child aggregation.
 >
 > *Scope note: this fixes the **representation** of child amounts only. The aggregate derivation
 > from child outcomes to leg state remains **OPEN** below and is untouched.*
@@ -1191,6 +1227,24 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 > never on a second confirmation step, which does not exist. A downstream consumer must not
 > wait for a confirmation that will never arrive.
 >
+> **The event does NOT authorize provisioning — added 2026-08-24.** Moving emission earlier
+> preserved the name and changed the timing, so the consumer contract has to be restated or a
+> settlement consumer would provision on acceptance. Two distinct moments:
+>
+> | Moment | What it means | What it permits |
+> |---|---|---|
+> | **Acceptance event** (this event) | the `Match` exists; the accepted allocation is recorded | recording, notification, analytics. **Nothing partner-facing.** |
+> | **Readiness transition** to `ALLOCATION_FUNDING_READY` | `TRANSACTION_ELIGIBLE` + `Match` exists + required beneficiary destination(s) selected and **validated** + every allocation-specific requirement satisfied | partner provisioning may occur; funding instructions may become actionable; the funding window may begin once instructions are activated |
+>
+> The Settlement service **must not** provision accounts, dispatch instructions or start a
+> funding window on this event. ADR-001 Amendment A1 §14.3 is normative and unchanged: *partner
+> provisioning and settlement instructions must not become actionable for a leg until the
+> allocation it belongs to has reached `ALLOCATION_FUNDING_READY`*; `07_Banking_Integration_Specification_v1.1.md`
+> §3 carries the same precondition. **This adds no second confirmation step** -- acceptance still
+> establishes the allocation alone; readiness is a derived gate, not an approval action. A
+> client asserting "I paid" never establishes `FUNDED`: authoritative `FUNDED` remains
+> partner-webhook driven when that integration exists.
+>
 > **HUMAN DECISION REQUIRED — renaming.** `MatchCreated` already appears as an event name in
 > `02_Technical_Design_Specification.md` §7 (module layout) and in the governance master prompt,
 > and is the better fit for acceptance semantics. Promoting it into this canonical catalogue is a
@@ -1202,7 +1256,7 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 | KYCApproved         | Admin/KYC service       | Notification worker, Marketplace access-control cache         | user_id, kyc_case_id, approved_at                     | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
 | KYCRejected         | Admin/KYC service       | Notification worker                                           | user_id, kyc_case_id, reason                          | Exponential backoff, 5 attempts                                                                     | Keyed on kyc_case_id                       |
 | OfferCreated        | Marketplace service     | Matching engine (rate-band index), Analytics                  | offer_id, currency_pair, rate, amount                 | 3 attempts, dead-letter to DLQ on exhaustion                                                        | Keyed on offer_id                          |
-| MatchConfirmed *(**compatibility alias — acceptance semantics**, clarified 2026-08-24)* | Marketplace/acceptance path | Settlement service, Notification worker, Analytics            | match_id, offer_id, counterparty_user_id, agreed_rate | Exponential backoff, 5 attempts, DLQ + PagerDuty alert on exhaustion (money-movement critical path) | Keyed on match_id                          |
+| MatchConfirmed *(**compatibility alias — acceptance semantics**, clarified 2026-08-24)* | Marketplace/acceptance path | Settlement service *(**record only** — must not provision or dispatch before `ALLOCATION_FUNDING_READY`)*, Notification worker, Analytics | match_id, offer_id, counterparty_user_id, agreed_rate | Exponential backoff, 5 attempts, DLQ + PagerDuty alert on exhaustion (money-movement critical path) | Keyed on match_id                          |
 | ReleaseAuthorized   | Settlement service      | Banking abstraction layer (Document 07) via transactional outbox, Notification worker | settlement_id, leg_id (x2), release_authorized_at | Exponential backoff, 5 attempts, DLQ + alert on exhaustion. Dispatch is per-leg and at-least-once; a successful dispatch on one leg is never rolled back because the other failed | Keyed on settlement_id + leg_id + operation. Emitted only after both legs are FUNDED |
 | EscrowFunded        | Banking webhook handler | Settlement service                                            | settlement_id, leg_id, amount, currency, funded_at    | Exponential backoff, 5 attempts                                                                     | Keyed on settlement_id + leg_id + event_type + provider_event_id |
 | PayoutConfirmed     | Banking webhook handler | Settlement service, Notification worker                       | settlement_id, leg_id, paid_out_at                    | Exponential backoff, 5 attempts, DLQ + alert on exhaustion                                          | Keyed on settlement_id + leg_id + event_type + provider_event_id |

@@ -49,15 +49,26 @@ DENIED_PREFIXES: tuple[str, ...] = ("docs/references/",)
 
 #: Exact repo-relative paths that are allowed despite matching a denied pattern.
 #: `.env.example` is the committed template and contains only placeholders.
-ALLOWED_PATHS: frozenset[str] = frozenset({".env.example"})
+#: `.github/gitleaks.toml` is the single approved scanner configuration: it is the one both
+#: CI scans load with `--config`, CI asserts it still extends the default rules, and it sits
+#: outside the path gitleaks auto-discovers so it cannot be shadowed by a repository drop-in.
+ALLOWED_PATHS: frozenset[str] = frozenset({".env.example", ".github/gitleaks.toml"})
 
 #: Basenames that would let the repository silence its own secret scanner. These are not
 #: secrets; they are the channel through which a real finding gets quietly retired.
-#: `gitleaks git` honours `.gitleaksignore` fingerprints wherever they sit in the tree,
-#: so committing one suppresses findings without touching CI. The scan itself passes
-#: `--ignore-gitleaks-allow` to close the inline `gitleaks:allow` channel; this guard
-#: closes the file channel. Neither may be reintroduced as an allowlist or a baseline.
-DENIED_SUPPRESSION_NAMES: tuple[str, ...] = (".gitleaksignore",)
+#: Three channels, all closed here. `gitleaks git` honours `.gitleaksignore` fingerprints
+#: wherever they sit in the tree, so committing one suppresses findings without touching
+#: CI. A `.gitleaks.toml` at the root of a scanned repository *replaces* the rule set
+#: outright, which is worse than suppressing one finding: the scan keeps passing while
+#: looking for nothing. The inline `gitleaks:allow` channel is closed by the scan's own
+#: `--ignore-gitleaks-allow`. The single approved configuration is `.github/gitleaks.toml`
+#: (see ALLOWED_PATHS); every other gitleaks config is rejected here. None of these may be
+#: reintroduced as an allowlist or a baseline.
+DENIED_SUPPRESSION_NAMES: tuple[str, ...] = (
+    ".gitleaksignore",
+    ".gitleaks.toml",
+    "gitleaks.toml",
+)
 
 
 def tracked_files() -> list[str]:

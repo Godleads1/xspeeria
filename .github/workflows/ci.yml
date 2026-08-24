@@ -162,6 +162,22 @@ jobs:
           install -m 0755 gitleaks /usr/local/bin/gitleaks
           gitleaks version
 
+      # The approved config is version-controlled, so it could be edited to disable the
+      # defaults as easily as a rogue `.gitleaks.toml` could replace them. This asserts the
+      # one line that matters before either scan runs. The tracked-file guard rejects every
+      # other gitleaks config, so this file is the only configuration in play.
+      - name: Assert the approved gitleaks config extends the default rules
+        run: |
+          set -euo pipefail
+          CONFIG=".github/gitleaks.toml"
+          test -f "$CONFIG"
+          grep -Eq '^[[:space:]]*useDefault[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$CONFIG" || {
+            echo "::error::$CONFIG no longer extends the gitleaks default rules."; exit 1; }
+          if grep -Eq '^[[:space:]]*\[allowlist\]' "$CONFIG"; then
+            echo "::error::$CONFIG introduces an allowlist. Suppression is not permitted."; exit 1
+          fi
+          echo "Approved config OK: $CONFIG extends defaults, carries no allowlist."
+
       # The scan below proves gitleaks RAN. It cannot prove the pinned artifact still
       # DETECTS anything: a broken download, a stripped rule set or a future packaging change
       # would each produce "no leaks found" and a green job, and the repository would look
@@ -171,6 +187,10 @@ jobs:
       # The synthetic value is assembled at runtime from fragments. Committing the assembled
       # form would make the real scan below flag its own canary, so no fragment stored here
       # matches a gitleaks rule on its own.
+      #
+      # Both this canary and the source scan pass `--config .github/gitleaks.toml`, so the
+      # canary proves detection under the *same* configuration the repository is scanned
+      # with -- not merely under the built-in defaults.
       #
       # Rule exercised: `private-key` from the gitleaks default rule set - a pure pattern match
       # with no entropy threshold and no known allowlist, so a failure means the binary is not
@@ -196,7 +216,7 @@ jobs:
           git -C "$CANARY_DIR" -c user.email=canary@xspeeria.invalid -c user.name=canary commit -qm "gitleaks canary"
 
           set +e
-          gitleaks git "$CANARY_DIR" --log-opts="--all" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
+          gitleaks git "$CANARY_DIR" --config "$GITHUB_WORKSPACE/.github/gitleaks.toml" --log-opts="--all" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
           RC=$?
           set -e
 
@@ -233,7 +253,7 @@ jobs:
       # --redact keeps the matched value out of the public build log; the finding, its
       # file and its commit are still reported.
       - name: Secret scan (full history, all refs)
-        run: gitleaks git . --log-opts="--all" --ignore-gitleaks-allow --redact --verbose --exit-code 1
+        run: gitleaks git . --config .github/gitleaks.toml --log-opts="--all" --ignore-gitleaks-allow --redact --verbose --exit-code 1
 
       # Complements the scan above: gitleaks looks for secret-shaped *content*, this
       # looks for sensitive *paths* that are tracked at all - including a file that was

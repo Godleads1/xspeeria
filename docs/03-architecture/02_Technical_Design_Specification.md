@@ -648,7 +648,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Authentication  | Bearer JWT in `Authorization` header                                                                              |
 | Pagination      | Cursor-based: `?cursor=<opaque>&limit=<n>`, default `limit=20`, max `limit=100`                                   |
 | Filtering       | Query parameters, explicitly allow-listed per endpoint (no arbitrary filter injection)                            |
-| Idempotency     | State-changing POSTs (offer creation, match confirmation, settlement trigger) require an `Idempotency-Key` header |
+| Idempotency     | State-changing POSTs (offer creation, **Offer acceptance**, settlement trigger) require an `Idempotency-Key` header. *Corrected 2026-08-24: "match confirmation" is **SUPERSEDED** — that step no longer exists; acceptance is the idempotent money-sensitive operation (§9.4)* |
 | Error format    | RFC 7807 Problem Details JSON                                                                                     |
 
 ## 7.2 Standard Error Response
@@ -1003,7 +1003,17 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - Every matching run is triggered by a domain event carrying a unique `event_id`.
 - The Matching Engine records processed `event_id`s in a short-TTL idempotency table/cache; duplicate event delivery (e.g., from at-least-once queue semantics) is a no-op.
-- Match confirmation endpoints require an `Idempotency-Key` header; replayed requests with the same key return the original response rather than creating a duplicate `Match`.
+- **Corrected 2026-08-24 — idempotency belongs to Offer acceptance.** The former wording keyed
+  idempotency to *"match confirmation endpoints"*, a step withdrawn with bilateral confirmation
+  (`CORRECTIONS_v3.md` §11.11); that wording is **SUPERSEDED**. The money-sensitive idempotent
+  operation is **`POST /v1/offers/{offer_id}/accept`**, which already requires the header
+  (`05_API_Contract_Data_Dictionary.md`). Its semantics: an `Idempotency-Key` is **required**;
+  the same authenticated principal replaying the same logical acceptance with the same key
+  **must not create a second `Match`**, and after successful processing the replay returns or
+  references the original `Match` per the API contract; reusing a key with a materially
+  different acceptance payload **fails deterministically** (`SYS_409_IDEMPOTENCY_KEY_REUSED`);
+  and **a retry must never consume Offer capacity twice**, which the acceptance serialization
+  boundary in §9.2 already governs. No storage implementation is specified here.
 
 ## 9.5 Matching Rules Table
 

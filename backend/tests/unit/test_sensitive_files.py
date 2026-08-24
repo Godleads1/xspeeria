@@ -82,7 +82,17 @@ class TestGuardRejects:
 
     @pytest.mark.parametrize(
         "path",
-        [".gitleaksignore", "backend/.gitleaksignore", "docs/07-security/.gitleaksignore"],
+        [
+            ".gitleaksignore",
+            "backend/.gitleaksignore",
+            "docs/07-security/.gitleaksignore",
+            # A config at a scanned root *replaces* the rule set rather than suppressing one
+            # finding: the scan keeps passing while looking for nothing.
+            ".gitleaks.toml",
+            "gitleaks.toml",
+            "backend/.gitleaks.toml",
+            "packages/tokens/gitleaks.toml",
+        ],
     )
     def test_scanner_suppression_file_is_rejected_anywhere_in_the_tree(
         self, tmp_path: Path, path: str
@@ -96,6 +106,20 @@ class TestGuardRejects:
         result = _run(_repo(tmp_path, path))
         assert result.returncode == 1
         assert path in result.stderr
+        assert "suppress secret-scanner findings" in result.stderr
+
+    def test_the_one_approved_gitleaks_config_is_permitted(self, tmp_path: Path) -> None:
+        """`.github/gitleaks.toml` is the config both CI scans load with `--config`.
+
+        It is allowed by exact path only: the same basename anywhere else is still a
+        rule-set replacement waiting to happen.
+        """
+        result = _run(_repo(tmp_path, ".github/gitleaks.toml"))
+        assert result.returncode == 0
+
+    def test_the_approved_basename_elsewhere_is_still_rejected(self, tmp_path: Path) -> None:
+        result = _run(_repo(tmp_path, "docs/gitleaks.toml"))
+        assert result.returncode == 1
         assert "suppress secret-scanner findings" in result.stderr
 
     def test_suppression_file_is_not_excused_by_the_allowlist(self, tmp_path: Path) -> None:

@@ -83,7 +83,14 @@ Colors are sourced directly from DESIGN_SYSTEM.md and are treated as immutable b
 
 > **RECONCILED — Xspeeria Figma, the primary visual source of truth for application UI/UX.**
 > `color.primary.blue` was `#001B68`, `color.success.green` was `#179A43`, `color.alert.red` was
-> `#E52421`; each is now the Figma-observed value. These are **FIGMA-OBSERVED COLOURS / CANDIDATE
+> `#E52421`. **Corrected 2026-08-24:** those three are the **FIGMA-OBSERVED / LEGACY SOURCE
+> VALUES**, and the sentence that previously said each *"is now the Figma-observed value"* was
+> backwards -- it read as though the production tokens had been changed to them. They were not.
+> The **APPROVED PRODUCTION SEMANTIC TOKENS** are `#1F3A8A` primary, `#3B82F6` secondary,
+> `#10B981` success, `#F59E0B` warning, `#EF4444` error, and they are **unchanged**. The `.10`
+> tints (`#10B9811A`, `#EF44441A`) are therefore correct: they are derived from the approved
+> production tokens, not from the observed values. These observed values are **FIGMA-OBSERVED
+> COLOURS / CANDIDATE
 > APPLICATION TOKENS**, not frozen production tokens — the Figma holds painted swatches, **not** a
 > bound token/variable system, so no production token set exists and none may be claimed until
 > human approval freezes one.
@@ -598,7 +605,7 @@ Home
 |                    |                                                                                                                                                                                                                                                                                                   |
 |--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Aspect**         | **Specification**                                                                                                                                                                                                                                                                                 |
-| Layout             | **HUMAN APPROVED.** Header (gradient avatar, greeting, notification bell) \> **Account Readiness Region** \> **Primary action** (create / browse offer) \> **Active activity** \> Recent activity (up to 3 cards) \> Bottom Navigation. **No Balance Card, no balance figure, no wallet ID, no currency selector tied to a balance, and no wallet-style quick actions (Deposit, Send, Utility)** |
+| Layout             | **HUMAN APPROVED.** Header (gradient avatar, greeting, notification bell) \> **Account Readiness Region** \> **Primary action** (**Create or browse an offer** — exactly one action whose destination is the **Marketplace**; *corrected 2026-08-24: "create / browse offer" read as a choice between two destinations. Home routes to the Marketplace, which may itself offer create and browse*) \> **Active activity** \> Recent activity (up to 3 cards) \> Bottom Navigation. **No Balance Card, no balance figure, no wallet ID, no currency selector tied to a balance, and no wallet-style quick actions (Deposit, Send, Utility)** |
 | Visual Hierarchy   | Account Readiness is dominant while any requirement is outstanding; once it collapses, the primary action and Active activity lead. **No single aggregate currency figure occupies the hero region under any condition** — that visual affordance reads as a balance regardless of its label |
 | Component Tree     | SafeAreaView \> Header \> AccountReadinessRegion \> PrimaryAction \> ActiveActivitySection \> RecentActivitySection(TransactionCard×3) \> BottomNavigation |
 | Navigation         | Bell → Notification centre; readiness dimension → its completion flow (KYC, MFA enrolment); primary action → Create Offer or Marketplace; activity item → Match Details or Settlement Tracking by current stage; Bottom Nav → Home, Marketplace, Track, Cards *(Coming Soon)*, Profile |

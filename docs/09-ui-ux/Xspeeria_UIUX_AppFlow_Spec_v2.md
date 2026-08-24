@@ -172,7 +172,7 @@ Four flows cover the full MVP. Rendered versions of the first three accompany th
 
 ## 4.1 App structure map
 
-Every screen sits under one of five bottom-navigation destinations, reached only after identity verification. This is the corrected structure — no Cards, Scan, or Analytics tab.
+Every screen sits under one of five bottom-navigation destinations, reached only after identity verification. **Corrected 2026-08-24 — the approved five are Home, Marketplace, Track, Cards (*Coming Soon*), Profile.** *HISTORICAL / SUPERSEDED: this line previously read "no Cards, Scan, or Analytics tab". **Scan and Analytics remain excluded**, but **Cards is an approved destination** opening a real Coming Soon screen — never a dead or disabled tab. **Notifications is not a bottom tab**: it is reached from the Home header bell, the notification centre and push.*
 
 flowchart TD
 
@@ -184,7 +184,7 @@ B --\> Market\["Marketplace"\]
 
 B --\> Track\["Track"\]
 
-B --\> Notif\["Notifications"\]
+B --\> Notif\["Notifications — **SUPERSEDED as a bottom-navigation destination (2026-08-24)**; reached from the Home header bell, notification centre and push"\]
 
 B --\> Profile\["Profile"\]
 
