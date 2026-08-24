@@ -1054,6 +1054,24 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   different acceptance payload **fails deterministically** (`SYS_409_IDEMPOTENCY_KEY_REUSED`);
   and **a retry must never consume Offer capacity twice**, which the acceptance serialization
   boundary in §9.2 already governs. No storage implementation is specified here.
+- **`POST /v1/settlements/{settlement_id}/confirm-funds` — key scope stated, added 2026-08-24.**
+  The endpoint already requires the header, and §1.4 of `05_API_Contract_Data_Dictionary.md`
+  already retains the key-to-response mapping for **24 hours** and returns the original response
+  without reprocessing. What was missing is the **binding**: an `Idempotency-Key` with no stated
+  scope leaves each client to guess its own safe replay boundary. The key is scoped to
+  `(authenticated principal, settlement_id, leg_id, the logical confirm-funds operation, the
+  materially relevant request parameters)`, and may safely replay **only that same logical
+  request**. Inside the window, the same principal replaying that request with the same key
+  **must not create a second advisory claim record** and **must not reprocess**: the original
+  response is returned, carrying the original **`user_claim_recorded_at`** with `leg_id` and
+  `leg_state` semantics unchanged. Reusing the key with a materially different `settlement_id`,
+  `leg_id`, principal, payload or logical operation **fails deterministically**
+  (`SYS_409_IDEMPOTENCY_KEY_REUSED`, the existing §4.4 entry — **no new identifier**). This is
+  the same boundary already stated for acceptance above and **grants the endpoint nothing**: the
+  claim remains **advisory**, never establishing authoritative `FUNDED`, never mutating
+  `SettlementLeg.state` or advancing `Settlement.phase`, never authorizing release, and never
+  starting, satisfying or bypassing `ALLOCATION_FUNDING_READY`. Authoritative `FUNDED` stays
+  regulated-partner-webhook driven (§7.3). No storage implementation is specified here.
 
 ## 9.5 Matching Rules Table
 

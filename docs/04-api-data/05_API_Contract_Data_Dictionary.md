@@ -482,9 +482,41 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                          |
 | Request JSON     | leg_id (UUID, required), proof_reference (string, optional bank reference number)                                      |
 | Success Response | 200 OK — { leg_id, leg_state, user_claim_recorded_at }                                                                 |
-| Error Responses  | AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE                                                                   |
+| Error Responses  | AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
 | Validation Rules | Caller must be the funding party for the supplied leg_id                                                               |
 | Business Rules   | **RECONCILED — ADR-001 (DEC-003).** This endpoint does not change `SettlementLeg.state` and does not advance `Settlement.phase`. Only a signature-verified partner webhook may set the `FUNDED` money fact (ADR-001 F-6, F-7). The claim is recorded for support and dispute evidence, and may drive UI messaging, but carries no financial authority. It previously returned a settlement status of `funds_pending_verification`, which implied a client-asserted state change |
+
+> **Idempotency-Key scope and binding — added 2026-08-24.** §1.4 already requires the header,
+> retains the key-to-response mapping for **24 hours**, and returns the original response
+> without reprocessing on a repeated request with the same key. What it does not say is what
+> "the same request" *means* here, and for this endpoint that matters: an `Idempotency-Key` with
+> no stated binding is a key whose safe replay boundary each client gets to guess.
+>
+> **The key is scoped to the tuple** `(authenticated principal, settlement_id, leg_id, the
+> logical confirm-funds operation, the materially relevant request parameters)`. A key may
+> safely replay **only that same logical request**.
+>
+> **Same principal, same logical request, same key, inside the 24-hour window:** the server
+> **does not create another advisory claim record**, **does not reprocess** the operation, and
+> **returns the original response** — the original `user_claim_recorded_at`, with the original
+> `leg_id` and `leg_state` response semantics unchanged. A retry is a retry, not a second claim.
+>
+> **Same key, materially different request** — a different `settlement_id`, a different
+> `leg_id`, a different authenticated principal, or a materially different payload or logical
+> operation — **must be rejected deterministically** with `SYS_409_IDEMPOTENCY_KEY_REUSED`, the
+> **existing** §4.4 entry ("Idempotency key reused with a different request body"). **No new
+> error identifier is introduced and the catalogue total remains 44.** Silently serving the
+> first response to a materially different request would let one confirmed leg's claim
+> masquerade as another's.
+>
+> This restates the boundary already stated for `POST /v1/offers/{offer_id}/accept`
+> (`02_Technical_Design_Specification.md` §9.4) and **changes nothing about what this endpoint
+> can do**. The claim stays **advisory**: it does not establish authoritative `FUNDED`, does not
+> mutate `SettlementLeg.state`, does not advance `Settlement.phase`, does not authorize release,
+> and does not start, satisfy or bypass `ALLOCATION_FUNDING_READY`. Authoritative `FUNDED`
+> remains established only by the authenticated, signature-verified regulated-partner webhook
+> when that integration exists (ADR-001 F-6, F-7). **The persistence mechanism for the
+> idempotency record is implementation-dependent and is not fixed here.**
 
 **GET /v1/settlements/{settlement_id}**
 
