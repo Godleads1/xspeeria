@@ -613,7 +613,9 @@ Acceptance alone establishes the allocation, fixed by the server-set trusted `ac
 **Tie-break added 2026-08-24:** `accepted_at` remains the primary ordering key, and equal
 timestamps are resolved by a unique server-generated ordering key assigned within the same
 acceptance serialization boundary — total order `(accepted_at ASC, server_order_key ASC)`,
-server-authoritative, deterministic and replayable. This adds determinism to the existing rule;
+server-authoritative, deterministic and replayable. The contract is defined now; replay from
+persisted state becomes enforceable once `server_order_key` is persisted in the later
+domain-model implementation. This adds determinism to the existing rule;
 it does not change who wins under distinct timestamps, and it introduces no rate-based or
 ranking-based priority. The persistence mechanism for the ordering key is
 implementation-dependent and is not fixed here.

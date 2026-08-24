@@ -212,7 +212,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Auth Module         | Registration, login, MFA, session/token issuance               | Users, Sessions, Devices        |
 | KYC Module          | Identity verification workflow, document handling, risk rating | KYCProfiles, KYCDocuments       |
 | Marketplace Module  | FX request creation, offer creation, offer listing             | FXRequests, Offers              |
-| Matching Engine     | Match offers to requests per matching rules                    | Matches                         |
+| Matching Engine     | **SUPERSEDED description** — the module creates a `Match` from an **explicit acceptance** of a published Offer (publish-and-accept, §9.2), never by automatically matching offers to requests. Retains §9.3 concurrency protection over concurrent acceptances of one Offer | Matches |
 | Transaction Module  | Manages escrow-state transaction lifecycle                     | Transactions, TransactionEvents |
 | Settlement Module   | Integrates with banking partners to trigger fiat movement      | SettlementInstructions          |
 | Disputes Module     | Case management for contested transactions                     | Disputes, DisputeEvidence       |
@@ -392,7 +392,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - **Root:** `Offer`
 - **Value Objects:** `Money`, `OfferedRate`, `AvailabilityWindow`
-- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of two **disjoint** sets: allocations that are **active and committed** -- currently valid, non-expired and **not yet completed** -- and allocations that **completed successfully**. No allocation belongs to both, so every allocation is counted **exactly once**, and `remaining_amount` is **derived, not persisted**. Total allocated across all `Match` entities referencing an `Offer` can never exceed the Offer's original amount, enforced under row lock. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
+- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of two **disjoint** sets: allocations that are **active and committed** -- currently valid, non-expired and **not yet completed** -- and allocations that **completed successfully**. No allocation belongs to both, so every allocation is counted **exactly once**, and `remaining_amount` is **derived, not persisted**. The concurrency invariant is scoped to the **contributing** allocations, not to every `Match` row that has ever referenced the Offer: **the sum of allocations that currently contribute to `matched_amount` can never exceed `original_amount`**, enforced under row lock. Summing all historical `Match` records would be wrong, because terminated records are retained as audit history while their capacity has already returned to `remaining_amount` -- a replacement allocation would then push the historical total past `original_amount` while the Offer is in fact correctly allocated. **Contributing** is the predicate defined immediately above: an allocation is contributing when it is *active and committed* (valid, non-expired, not released or otherwise terminated pre-funding, and not yet completed) **or** *successfully completed*. It is stated here semantically because no persistence exists yet; its concrete persisted representation -- the status column or state enum the locking and validation query filters on -- belongs to the later domain-model milestone and is deliberately not fixed here. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
 - **Withdrawal semantics:** withdrawing an Offer's remaining availability **closes it to further matching** and **does not cascade to allocations** — existing Matches, their allocated amounts, Transactions and Settlements are untouched, other allocations are unaffected, and committed capacity is never returned. Only the uncommitted remainder becomes unavailable.
 - **Lifecycle:** must express **open, partially matched, fully matched, cancelled, expired**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**.
 - **Arithmetic:** exact **integer minor units** with explicit currency exponent/scale; never binary floating point. This is marketplace/allocation arithmetic, distinct from ADR-002 ledger posting representation, which is unchanged and remains authoritative for the ledger conversion boundary.
@@ -405,7 +405,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 - **Two-window lifecycle:** preparation (beneficiary selection and validation, allocation-specific requirements) → derived gate **`ALLOCATION_FUNDING_READY`** → funding. Both durations are **OPEN / CONFIGURABLE**. Partner provisioning must not become actionable before `ALLOCATION_FUNDING_READY`. See **ADR-001 Amendment A1 §14**.
 - **Partner provisioning state is owned by `SettlementLeg`**, not duplicated onto `Match`.
 - **Value Objects:** `MatchedAmount`, `AgreedRate`
-- **Invariants:** A `Match` is immutable once `confirmed`; corrections require a compensating `Transaction` event, never a mutation.
+- **Invariants:** **Corrected 2026-08-24.** A `Match`'s core allocation terms are immutable **from acceptance**. The superseded wording *"immutable once `confirmed`"* keyed immutability to a bilateral confirmation step that no longer exists (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is withdrawn), which left an accepted allocation nominally mutable through preparation and funding. Acceptance alone establishes the allocation, so acceptance is where the terms freeze. The immutable terms are, at minimum: the **Offer reference**, the **accepting party reference**, the **accepted amount**, the **`agreed_rate`**, **`accepted_at`**, and the **server ordering key** once it is implemented. None of these may be mutated during preparation or funding. Corrections are made through an explicit compensating, terminal or replacement record or event under the applicable lifecycle -- never by rewriting the accepted terms. *No new state enum is introduced by this correction, and its persisted representation belongs to the later domain-model milestone.*
 
 ### 5.3.6 Transaction Aggregate
 
@@ -897,7 +897,19 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 # 9. MATCHING ENGINE
 
-## 9.1 Matching Modes
+> **SECTION-WIDE SUPERSESSION — HUMAN DECISION, 2026-08-22; propagated 2026-08-24.** The
+> canonical marketplace behaviour is **PUBLISH AND ACCEPT** (§9.2). Nothing in this section
+> authorises automated Match creation, best-rate allocation priority, price-time allocation
+> priority or order-book semantics. The section name and the material below are **retained as
+> historical/superseded design**, not as implementable guidance. §9.3 concurrency protection is
+> the exception: it is **RETAINED AND APPLICABLE**, and now guards concurrent acceptances of a
+> single Offer.
+
+## 9.1 Matching Modes — **SUPERSEDED**
+
+> The modes below describe **automated** matching of an `Offer` against an `FXRequest`, which is
+> withdrawn. The **partial-overlap concept survives** as partial acceptance of an Offer's
+> remaining amount; the `MVP Status` column is historical and must not be read as current scope.
 
 | Mode              | Description                                                                      | MVP Status                               |
 |-------------------|----------------------------------------------------------------------------------|------------------------------------------|
@@ -928,7 +940,10 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 > that enforces `Σ valid allocations ≤ original_amount`, giving the total order
 > `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a
 > client-supplied value never participates. The resulting order is stable and replayable, so an
-> audit or dispute re-derives the same sequence from persisted state. The seller's rate does not
+> audit or dispute re-derives the same sequence from persisted state. **The ordering contract is
+> defined now; replay from persisted state becomes enforceable only once `server_order_key` is
+> persisted, in the later domain-model implementation** -- until then this is a specification
+> commitment, not a property the current model can demonstrate. The seller's rate does not
 > become a priority mechanism and discovery/ranking does not become allocation priority — both
 > remain excluded above. The **persistence mechanism for `server_order_key` is
 > implementation-dependent** and is not fixed here; a monotonic sequence or a time-sortable

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { color, interaction } from '@xspeeria/tokens';
 
 import {
@@ -60,7 +60,9 @@ describe('PrimaryButton', () => {
 
     // A genuine swap: the disabled surface is a different colour, not the same colour
     // at lower opacity, whose contrast would depend on whatever sits behind it.
-    await render(<PrimaryButton label="Continue" testID="btn" />);
+    // The handler is required for the enabled surface: a button with no handler is
+    // disabled regardless of the `disabled` prop.
+    await render(<PrimaryButton label="Continue" onPress={() => {}} testID="btn" />);
     expect(screen.getByTestId('btn')).toHaveStyle({
       backgroundColor: interaction.primary.default,
     });
@@ -90,6 +92,38 @@ describe('StatusChip', () => {
       : label.props.style;
     expect(flat.color).toBe(color.success.text);
     expect(flat.color).not.toBe(color.success.fill);
+  });
+});
+
+describe('PrimaryButton', () => {
+  /**
+   * `onPress` is optional, so forgetting it is silent. The control must not look
+   * available in that case: a button that appears to act and does not reads to the user
+   * as an action that was taken.
+   */
+  it('is disabled when no handler is supplied', async () => {
+    await render(<PrimaryButton label="Do it" testID="probe" />);
+    const button = screen.getByTestId('probe');
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+    fireEvent.press(button);
+  });
+
+  it('is enabled when a handler is supplied', async () => {
+    const onPress = jest.fn();
+    await render(<PrimaryButton label="Do it" onPress={onPress} testID="probe" />);
+    const button = screen.getByTestId('probe');
+    expect(button.props.accessibilityState).toEqual({ disabled: false });
+    fireEvent.press(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays disabled when explicitly disabled even with a handler', async () => {
+    const onPress = jest.fn();
+    await render(<PrimaryButton label="Do it" onPress={onPress} disabled testID="probe" />);
+    const button = screen.getByTestId('probe');
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+    fireEvent.press(button);
+    expect(onPress).not.toHaveBeenCalled();
   });
 });
 

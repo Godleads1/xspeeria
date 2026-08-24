@@ -146,16 +146,25 @@ export function PrimaryButton({
   disabled?: boolean;
   testID?: string;
 }): ReactElement {
+  /**
+   * A button with no handler is disabled whether or not the caller said so. `onPress`
+   * is optional, so an omission is silent: without this the control renders fully
+   * enabled and does nothing when pressed, which reads to the user as an action that
+   * was taken. Callers that legitimately have no action should omit the button; this
+   * is the backstop for the ones that forget.
+   */
+  const effectiveDisabled = disabled || onPress === undefined;
+
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: effectiveDisabled }}
+      disabled={effectiveDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        disabled
+        effectiveDisabled
           ? { backgroundColor: interaction.primary.disabledFill }
           : { backgroundColor: pressed ? interaction.primary.pressed : interaction.primary.default },
       ]}
@@ -165,7 +174,7 @@ export function PrimaryButton({
           typography.headline,
           brandTextStyle,
           styles.buttonLabel,
-          { color: disabled ? interaction.primary.disabledLabel : color.text.onFill },
+          { color: effectiveDisabled ? interaction.primary.disabledLabel : color.text.onFill },
         ]}
       >
         {label}
