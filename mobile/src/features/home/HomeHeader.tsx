@@ -27,6 +27,13 @@ export function HomeHeader({
   initials?: string;
   onNotifications?: () => void;
 }): ReactElement {
+  /**
+   * No notification centre exists in this milestone. The control stays in the approved
+   * header layout, but it is disabled and rendered in the disabled colour rather than
+   * left looking available and doing nothing when tapped.
+   */
+  const notificationsAvailable = onNotifications !== undefined;
+
   return (
     <View style={styles.bar}>
       <View accessible accessibilityLabel="Your account" style={styles.avatar}>
@@ -37,10 +44,16 @@ export function HomeHeader({
         testID="home-notifications"
         accessibilityRole="button"
         accessibilityLabel="Notifications"
+        accessibilityState={{ disabled: !notificationsAvailable }}
+        disabled={!notificationsAvailable}
         onPress={onNotifications}
         style={({ pressed }) => [styles.bell, pressed ? styles.bellPressed : null]}
       >
-        <Icon name="bell" color={color.text.primary} size={22} />
+        <Icon
+          name="bell"
+          color={notificationsAvailable ? color.text.primary : color.text.disabled}
+          size={22}
+        />
       </Pressable>
     </View>
   );

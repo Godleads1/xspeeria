@@ -392,7 +392,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - **Root:** `Offer`
 - **Value Objects:** `Money`, `OfferedRate`, `AvailabilityWindow`
-- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of **currently valid, non-expired allocations plus successfully completed allocations**, and `remaining_amount` is **derived, not persisted**. Total allocated across all `Match` entities referencing an `Offer` can never exceed the Offer's original amount, enforced under row lock. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
+- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of two **disjoint** sets: allocations that are **active and committed** -- currently valid, non-expired and **not yet completed** -- and allocations that **completed successfully**. No allocation belongs to both, so every allocation is counted **exactly once**, and `remaining_amount` is **derived, not persisted**. Total allocated across all `Match` entities referencing an `Offer` can never exceed the Offer's original amount, enforced under row lock. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
 - **Withdrawal semantics:** withdrawing an Offer's remaining availability **closes it to further matching** and **does not cascade to allocations** — existing Matches, their allocated amounts, Transactions and Settlements are untouched, other allocations are unaffected, and committed capacity is never returned. Only the uncommitted remainder becomes unavailable.
 - **Lifecycle:** must express **open, partially matched, fully matched, cancelled, expired**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**.
 - **Arithmetic:** exact **integer minor units** with explicit currency exponent/scale; never binary floating point. This is marketplace/allocation arithmetic, distinct from ADR-002 ledger posting representation, which is unchanged and remains authoritative for the ledger conversion boundary.
@@ -401,7 +401,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - **Root:** `Match` — **the persisted form of the conceptual `MatchAllocation`**: one accepted partial or full allocation of one Offer by one counterparty. **HUMAN APPROVED, 2026-08-22:** extended, **not renamed**; no second `MatchAllocation` entity exists. See the glossary in `DOCUMENT_INDEX.md`.
 - **Entities:** none (references `Offer` by ID; **`FXRequest` reference is optional/nullable** — a Match is creatable from Offer + accepting counterparty + accepted amount + trusted server timestamp, with no `FXRequest`)
-- **Invariants:** `allocated_amount > 0`; `agreed_rate` is **locked at acceptance** and never silently re-priced; `accepted_at` is a **server-set trusted timestamp** establishing acceptance priority; each Match is an **independent settlement failure domain** — one Match → one Transaction → one Settlement → **exactly two SettlementLegs** (ADR-001, unchanged).
+- **Invariants:** `allocated_amount > 0`; `agreed_rate` is **locked at acceptance** and never silently re-priced; `accepted_at` is a **server-set trusted timestamp** establishing acceptance priority, broken deterministically by a unique server-generated ordering key on equal timestamps (see the acceptance-priority note in the marketplace-semantics section); each Match is an **independent settlement failure domain** — one Match → one Transaction → one Settlement → **exactly two SettlementLegs** (ADR-001, unchanged).
 - **Two-window lifecycle:** preparation (beneficiary selection and validation, allocation-specific requirements) → derived gate **`ALLOCATION_FUNDING_READY`** → funding. Both durations are **OPEN / CONFIGURABLE**. Partner provisioning must not become actionable before `ALLOCATION_FUNDING_READY`. See **ADR-001 Amendment A1 §14**.
 - **Partner provisioning state is owned by `SettlementLeg`**, not duplicated onto `Match`.
 - **Value Objects:** `MatchedAmount`, `AgreedRate`
@@ -920,6 +920,19 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 >
 > Acceptance priority within one Offer is **first eligible acceptance by trusted server
 > timestamp** (`Match.accepted_at`, server-set; a client-supplied timestamp is never trusted).
+>
+> **Tie-break — deterministic, added 2026-08-24.** `accepted_at` alone is not a total order: two
+> acceptances serialized in the same instant can carry the same value at stored precision, and
+> an undefined winner is not auditable. Equal timestamps are resolved by a **unique
+> server-generated ordering key** assigned inside the same acceptance serialization boundary
+> that enforces `Σ valid allocations ≤ original_amount`, giving the total order
+> `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a
+> client-supplied value never participates. The resulting order is stable and replayable, so an
+> audit or dispute re-derives the same sequence from persisted state. The seller's rate does not
+> become a priority mechanism and discovery/ranking does not become allocation priority — both
+> remain excluded above. The **persistence mechanism for `server_order_key` is
+> implementation-dependent** and is not fixed here; a monotonic sequence or a time-sortable
+> identifier allocated under the same lock are non-normative examples.
 >
 > **Marketplace discovery and ranking remain separate and permitted** — listings may be ordered by
 > rate, amount, corridor, availability or time. Ranking a listing is not allocating it.

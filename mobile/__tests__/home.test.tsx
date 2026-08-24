@@ -141,9 +141,21 @@ describe('Home structure', () => {
   });
 
   it('names a next action when there is no activity', async () => {
-    await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={NO_ACTIVITY} />);
+    await render(
+      <HomeScreen
+        dimensions={READINESS_COMPLETE}
+        activity={NO_ACTIVITY}
+        onCreateOffer={() => {}}
+      />,
+    );
     expect(screen.getByText('No active offers')).toBeTruthy();
     expect(screen.getByText('Create your first offer')).toBeTruthy();
+  });
+
+  it('offers no empty-activity action when nothing is wired to it', async () => {
+    await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={NO_ACTIVITY} />);
+    expect(screen.getByText('No active offers')).toBeTruthy();
+    expect(screen.queryByText('Create your first offer')).toBeNull();
   });
 });
 

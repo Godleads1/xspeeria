@@ -1,11 +1,20 @@
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { render, screen, within } from '@testing-library/react';
 import { color } from '@xspeeria/tokens';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Amount, EmptyState, ErrorState, LoadingState, StatusChip } from '../components/primitives';
 import { AppShell } from '../components/shell/AppShell';
 import { DataTable, type Column } from '../components/table/DataTable';
-import { NAV_ITEMS, NO_ROWS, SETTLEMENT_ROWS, type SettlementRow } from '../fixtures';
+import {
+  NAV_ITEMS,
+  NO_ROWS,
+  PLANNED_DESTINATIONS,
+  SETTLEMENT_ROWS,
+  type SettlementRow,
+} from '../fixtures';
 
 /** jsdom serialises colours as rgb(), so compare tokens in the same form. */
 function asRgb(hex: string): string {
@@ -24,6 +33,23 @@ const columns: readonly Column<SettlementRow>[] = [
     render: (row) => <Amount minor={row.amountMinor} currency={row.currency} scale={row.scale} />,
   },
 ];
+
+/**
+ * Every route the Next app router actually serves: one per `page.tsx` under `app/`.
+ * Route groups -- `(name)` directories -- contribute no path segment.
+ */
+function existingRoutes(dir = join(__dirname, '..', 'app'), prefix = ''): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const segment = /^\(.*\)$/.test(entry.name) ? prefix : `${prefix}/${entry.name}`;
+      found.push(...existingRoutes(join(dir, entry.name), segment));
+    } else if (/^page\.(tsx|ts|jsx|js)$/.test(entry.name)) {
+      found.push(prefix === '' ? '/' : prefix);
+    }
+  }
+  return found;
+}
 
 describe('AppShell', () => {
   it('renders the shell with its content region', () => {
@@ -47,6 +73,36 @@ describe('AppShell', () => {
     render(<AppShell>{null}</AppShell>);
     for (const item of NAV_ITEMS) {
       expect(screen.getByTestId(`nav-${item.id}`)).toHaveTextContent(item.label);
+    }
+  });
+
+  /**
+   * The route set is read off the filesystem rather than restated here, so the test
+   * keeps telling the truth as pages are added. A rendered link to a route with no
+   * `page.tsx` is a 404 the operator finds instead of the test.
+   */
+  it('renders no link to a route that does not exist', () => {
+    render(<AppShell>{null}</AppShell>);
+    const routes = existingRoutes();
+    expect(routes).toContain('/');
+    for (const link of within(screen.getByRole('navigation', { name: 'Primary' })).getAllByRole(
+      'link',
+    )) {
+      expect(routes).toContain(link.getAttribute('href'));
+    }
+  });
+
+  it('does not render the destinations that have no page yet', () => {
+    render(<AppShell>{null}</AppShell>);
+    for (const planned of PLANNED_DESTINATIONS) {
+      expect(screen.queryByTestId(`nav-${planned.id}`)).toBeNull();
+    }
+  });
+
+  it('keeps every planned destination out of the rendered navigation set', () => {
+    const rendered = new Set(NAV_ITEMS.map((item) => item.href));
+    for (const planned of PLANNED_DESTINATIONS) {
+      expect(rendered.has(planned.href)).toBe(false);
     }
   });
 });
@@ -73,17 +129,27 @@ describe('DataTable', () => {
     expect(inline).not.toContain(asRgb(color.border.subtle));
   });
 
-  it('names a next action when empty', () => {
+  it('names a next action when empty and something is wired to it', () => {
     render(
       <DataTable
         caption="Settlements"
         columns={columns}
         rows={NO_ROWS}
         emptyTitle="No settlements match your filters"
+        emptyActionLabel="Clear filters"
+        onEmptyAction={() => {}}
       />,
     );
     expect(screen.getByText('No settlements match your filters')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+  });
+
+  it('renders no empty-state action when nothing is wired to it', () => {
+    render(
+      <DataTable caption="Settlements" columns={columns} rows={NO_ROWS} emptyTitle="Nothing yet" />,
+    );
+    expect(screen.getByText('Nothing yet')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('announces loading', () => {
@@ -93,12 +159,26 @@ describe('DataTable', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading settlements');
   });
 
-  it('announces errors and offers a retry', () => {
+  it('announces errors and offers a retry when one is wired', () => {
+    render(
+      <DataTable
+        caption="Settlements"
+        columns={columns}
+        rows={SETTLEMENT_ROWS}
+        status="error"
+        onRetry={() => {}}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load settlements');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  it('announces errors without a retry control when nothing can retry', () => {
     render(
       <DataTable caption="Settlements" columns={columns} rows={SETTLEMENT_ROWS} status="error" />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load settlements');
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
 
@@ -141,9 +221,35 @@ describe('admin primitives', () => {
     const { unmount } = render(<LoadingState />);
     expect(screen.getByRole('status')).toBeInTheDocument();
     unmount();
-    render(<EmptyState title="Nothing here" actionLabel="Do something" />);
+    render(<EmptyState title="Nothing here" actionLabel="Do something" onAction={() => {}} />);
     expect(screen.getByRole('button', { name: 'Do something' })).toBeInTheDocument();
     render(<ErrorState title="Broken" />);
     expect(screen.getByRole('alert')).toHaveTextContent('Broken');
+  });
+
+  /**
+   * The admin console is an operator surface: a control that looks available and does
+   * nothing is read as having acted. No enabled control may exist without a handler.
+   */
+  it('renders no action control anywhere without a handler behind it', () => {
+    const { unmount } = render(<EmptyState title="Nothing here" actionLabel="Do something" />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    unmount();
+    render(<ErrorState title="Broken" />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('fires the handlers it is given', async () => {
+    const onAction = vi.fn();
+    const onRetry = vi.fn();
+    const { unmount } = render(
+      <EmptyState title="Nothing here" actionLabel="Do something" onAction={onAction} />,
+    );
+    (await screen.findByRole('button', { name: 'Do something' })).click();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<ErrorState title="Broken" onRetry={onRetry} />);
+    (await screen.findByRole('button', { name: 'Try again' })).click();
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });

@@ -26,19 +26,28 @@ export function DataTable<Row extends { id: string }>({
   rows,
   status = 'ready',
   emptyTitle = 'Nothing to show',
-  emptyActionLabel = 'Clear filters',
+  emptyActionLabel,
+  onEmptyAction,
+  onRetry,
 }: {
   caption: string;
   columns: readonly Column<Row>[];
   rows: readonly Row[];
   status?: TableStatus;
   emptyTitle?: string;
+  /** Rendered only alongside `onEmptyAction`; no filtering is implied or provided here. */
   emptyActionLabel?: string;
+  onEmptyAction?: () => void;
+  onRetry?: () => void;
 }): ReactElement {
   if (status === 'loading') return <LoadingState label={`Loading ${caption.toLowerCase()}`} />;
-  if (status === 'error') return <ErrorState title={`Could not load ${caption.toLowerCase()}`} />;
+  if (status === 'error') {
+    return <ErrorState title={`Could not load ${caption.toLowerCase()}`} onRetry={onRetry} />;
+  }
   if (rows.length === 0) {
-    return <EmptyState title={emptyTitle} actionLabel={emptyActionLabel} />;
+    return (
+      <EmptyState title={emptyTitle} actionLabel={emptyActionLabel} onAction={onEmptyAction} />
+    );
   }
 
   return (

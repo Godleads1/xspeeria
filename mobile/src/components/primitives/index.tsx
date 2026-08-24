@@ -240,7 +240,11 @@ export function LoadingState({ label = 'Loading' }: { label?: string }): ReactEl
 }
 
 /**
- * Every empty state names a next action — no dead ends.
+ * An empty state names a next action wherever one exists — no dead ends.
+ *
+ * The action renders only when a label **and** a working handler are both supplied. A
+ * labelled button wired to nothing is worse than no button: it reads as available and
+ * then does nothing, which is the dead end this component exists to avoid.
  *
  * `bg.sunken` carries only 1.05:1, so it is paired with a hairline and never used as the
  * sole separator. An empty state is one of its approved uses.
@@ -251,15 +255,17 @@ export function EmptyState({
   onAction,
 }: {
   title: string;
-  actionLabel: string;
+  actionLabel?: string;
   onAction?: () => void;
 }): ReactElement {
   return (
     <View style={styles.emptyState}>
       <Headline>{title}</Headline>
-      <View style={styles.emptyStateAction}>
-        <PrimaryButton label={actionLabel} onPress={onAction} />
-      </View>
+      {actionLabel && onAction ? (
+        <View style={styles.emptyStateAction}>
+          <PrimaryButton label={actionLabel} onPress={onAction} />
+        </View>
+      ) : null}
     </View>
   );
 }

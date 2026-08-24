@@ -520,7 +520,10 @@ ignored, moved, deleted or LFS-tracked.
 Applied 2026-08-22. **HUMAN APPROVED.** Documentation only — no application code, no database
 migration, no new ADR or DEC number. ADR-001 is amended in place as **Amendment A1** under the
 existing DEC-003 governance record. ADR-002 is **unchanged**. Decisions 2, 3 and 4 remain open and
-untouched, and the implementation NO-GO standing instruction in `PROGRESS.md` is **unchanged**.
+untouched. *HISTORICAL: this pass also recorded that the implementation NO-GO standing
+instruction in `PROGRESS.md` was unchanged. That blanket prohibition is **SUPERSEDED** by the
+Phase 1 controlled-implementation GO of 2026-08-22; the standing constraints are now the
+Milestone 1 boundary in `PROGRESS.md`. Nothing else in this section changes.*
 
 **11.1 — Authority ranking applied.** ADR-001/ADR-002 are human-ratified. The human-approved
 product substance in this pass ranks above `02_Technical_Design_Specification.md`
@@ -560,9 +563,12 @@ allocation model. Whether the demand-side capability remains user-facing in MVP 
 BRS as an **open product decision**.
 
 **11.7 — Offer model.** `original_amount = matched_amount + remaining_amount`, where
-`matched_amount` is the sum of currently valid, non-expired allocations plus successfully completed
-allocations. Expired or pre-funding-released allocations cease contributing and their amount
-returns to remaining capacity; terminated allocation records remain immutable audit history.
+`matched_amount` is the sum of two **disjoint** sets: allocations that are **active and
+committed** (currently valid, non-expired and not yet completed) and allocations that
+**completed successfully**. No allocation belongs to both, so every allocation is counted
+**exactly once**. Expired or pre-funding-released allocations belong to neither set: they
+cease contributing and their amount returns to remaining capacity; terminated allocation
+records remain immutable audit history.
 **`remaining_amount` is DERIVED**, not persisted as an independently mutable source of truth.
 Lifecycle must express **open, partially matched, fully matched, cancelled, expired** — the former
 binary `active → matched` is insufficient; persisted enum literals may keep existing names for
@@ -572,6 +578,8 @@ compatibility. A partially matched Offer **remains available for its remaining a
 rule *"acceptance locks the offer (status → matched)"* is **withdrawn** — whole-Offer locking is
 replaced by row-level locking on the Offer's amount fields, enforcing that the **sum of valid
 allocations never exceeds the original amount**. *"Cannot cancel an offer once matched"* is revised.
+
+**11.8b — `accepted_amount` is required, human decision 2026-08-24.** The accepting client **must** supply `accepted_amount`. Omission is a request-validation failure (`VAL_422_MISSING_FIELD`, existing catalogue entry) and **never** means "accept the full remaining amount": the previously **PROPOSED, not ratified** take-remaining default is **WITHDRAWN**, and no server-side implicit default replaces it. The value must be **> 0** and **≤ the authoritative `remaining_amount` read inside the acceptance serialization boundary**; a value the client displayed earlier is advisory and may be stale. Where the authoritative remaining amount is insufficient at processing time the acceptance is **rejected** — the server never silently reduces, resizes, clamps or partially fills the requested amount. Rationale: the allocated amount must record explicit user intent; missing or truncated client input must fail closed rather than escalate to a maximum allocation; a concurrent change to the Offer must not silently alter the amount the user intended; and audit or dispute records must carry an explicit accepted amount. Monetary representation is unchanged and continues to follow §11.9. **No new error identifier was introduced and no persisted enum was added.**
 
 **11.8a — Withdrawal semantics, clarified by human decision 2026-08-22.** A seller **withdraws the
 Offer's remaining availability**, **closing the Offer to further matching**. This is **not** a
@@ -602,6 +610,13 @@ configurable**. `VAL_422_RATE_OUT_OF_BAND` is superseded by a ceiling-specific s
 **11.11 — Bilateral confirmation removed.** `POST /v1/matches/{match_id}/confirm`, both-party
 confirmation and the 30-minute confirmation expiry are **superseded**, with no replacement value.
 Acceptance alone establishes the allocation, fixed by the server-set trusted `accepted_at`.
+**Tie-break added 2026-08-24:** `accepted_at` remains the primary ordering key, and equal
+timestamps are resolved by a unique server-generated ordering key assigned within the same
+acceptance serialization boundary — total order `(accepted_at ASC, server_order_key ASC)`,
+server-authoritative, deterministic and replayable. This adds determinism to the existing rule;
+it does not change who wins under distinct timestamps, and it introduces no rate-based or
+ranking-based priority. The persistence mechanism for the ordering key is
+implementation-dependent and is not fixed here.
 
 **11.12 — Two-window lifecycle and ADR-001 Amendment A1.** Preparation window → derived
 `ALLOCATION_FUNDING_READY` → funding window. Partner provisioning must not become actionable before

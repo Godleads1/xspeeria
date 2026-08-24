@@ -12,8 +12,22 @@ export interface NavItem {
   readonly href: string;
 }
 
-export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'overview', label: 'Overview', href: '/' },
+/**
+ * Navigation the shell actually renders. Every entry must resolve to a route that
+ * exists under `admin/app`; `__tests__/shell.test.tsx` derives the route set from the
+ * filesystem and fails if a rendered link would 404.
+ */
+export const NAV_ITEMS: readonly NavItem[] = [{ id: 'overview', label: 'Overview', href: '/' }];
+
+/**
+ * Destinations the operator console is expected to grow, kept here so the intent stays
+ * recorded rather than rediscovered. **Not rendered.** Each one requires its own review
+ * of operator authorization before it becomes a route: an admin surface reaching KYC
+ * cases, allocations, settlements, reconciliation or the audit log is privileged, and
+ * Phase 1 grants no privileged operator workflow. Move an entry into `NAV_ITEMS` in the
+ * same change that adds its page.
+ */
+export const PLANNED_DESTINATIONS: readonly NavItem[] = [
   { id: 'kyc', label: 'KYC review', href: '/kyc' },
   { id: 'allocations', label: 'Allocations', href: '/allocations' },
   { id: 'settlements', label: 'Settlements', href: '/settlements' },

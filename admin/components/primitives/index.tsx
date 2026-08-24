@@ -84,24 +84,40 @@ export function LoadingState({ label = 'Loading' }: { label?: string }): ReactEl
 }
 
 /** Every empty state names a next action. */
+/**
+ * The action renders only when a label **and** a working handler are both supplied. An
+ * operator console must never show a control that looks available and does nothing:
+ * on an operational surface a button that appears to act is read as having acted.
+ */
 export function EmptyState({
   title,
   actionLabel,
+  onAction,
 }: {
   title: string;
-  actionLabel: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }): ReactElement {
   return (
     <div style={panel}>
       <p style={{ margin: 0, color: color.text.primary }}>{title}</p>
-      <button type="button" style={buttonStyle}>
-        {actionLabel}
-      </button>
+      {actionLabel && onAction ? (
+        <button type="button" style={buttonStyle} onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
 
-export function ErrorState({ title }: { title: string }): ReactElement {
+/** The retry control renders only when something can actually retry. */
+export function ErrorState({
+  title,
+  onRetry,
+}: {
+  title: string;
+  onRetry?: () => void;
+}): ReactElement {
   return (
     <div
       role="alert"
@@ -113,9 +129,11 @@ export function ErrorState({ title }: { title: string }): ReactElement {
       }}
     >
       <p style={{ margin: 0 }}>{title}</p>
-      <button type="button" style={buttonStyle}>
-        Try again
-      </button>
+      {onRetry ? (
+        <button type="button" style={buttonStyle} onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
     </div>
   );
 }

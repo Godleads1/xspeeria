@@ -61,8 +61,19 @@ Error: #EF4444
 
 # Semantic token architecture — **HUMAN APPROVED**
 
-**IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
-code exists and no code consumes these tokens. This section is normative design documentation only.
+**Status, by axis — updated 2026-08-24.** Implementation, adoption and production freeze are
+three separate questions and are recorded separately; earlier revisions of this banner collapsed
+them into a single **NOT IMPLEMENTED**, which stopped being true once Milestone 1 landed.
+
+| Axis | State |
+|---|---|
+| Architecture (this section) | **HUMAN APPROVED** — normative design documentation |
+| Package implementation | **IMPLEMENTED** — `packages/tokens` exports the semantic tiers |
+| Package test evidence | **VERIFIED** — `packages/tokens/src/__tests__/tokens.test.ts` |
+| Adoption | **IMPLEMENTED** in the Milestone 1 surfaces (`mobile/src/theme`, `admin/theme`); broader production adoption **NOT ESTABLISHED** |
+| Production token freeze | **OPEN — NOT FROZEN.** Values remain candidate production tokens |
+| Figma-bound variables | **DO NOT EXIST** — the Figma holds painted swatches |
+| Production readiness | **NOT ESTABLISHED** |
 
 ## Tiers
 
@@ -380,8 +391,9 @@ Luxury minimal fintech aesthetic inspired by Apple HIG.
 | Application colour direction | **HUMAN APPROVED** |
 | Semantic token architecture | **HUMAN APPROVED** in principle; values are candidate production tokens |
 | Figma production tokens | **DO NOT EXIST** — the Figma holds painted swatches, not bound variables |
-| Application code using these tokens | **NONE** — IMPLEMENTATION STATUS: NOT IMPLEMENTED |
-| Home / navigation changes | Documented only — **NOT IMPLEMENTED** |
+| Application code using these tokens | **IMPLEMENTED** — `packages/tokens` consumed by `mobile/src/theme` and `admin/theme`. Broader production adoption **NOT ESTABLISHED** |
+| Home / navigation changes | **IMPLEMENTED** — Home region, bottom navigation and admin shell exist; **VERIFIED** by the mobile and admin test suites. Production readiness **NOT ESTABLISHED** |
+| Mobile Android development build | **CONFIGURED** — `mobile/eas.json` development profile. Whether a build has been run and installed is human-attested; the repository holds no build artefact, so that step is `UNKNOWN — NOT VERIFIED` from the repository alone |
 | Typography — financial/numeric (Inter) | **HUMAN APPROVED** |
 | Typography — brand/UI (Satoshi) | **OPEN — NOT FROZEN, not production-approved** |
 | Typography — Nunito Sans | **Not selected as a production standard** |

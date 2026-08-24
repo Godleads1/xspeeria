@@ -69,7 +69,11 @@ Python + FastAPI
       (`CORRECTIONS_v3.md` §10). Documentation only; no font files added.
 - [x] Canonical domain model reconciliation — documentation only (`CORRECTIONS_v3.md` §11,
       ADR-001 Amendment A1). Glossary at `DOCUMENT_INDEX.md` §2A. **No code, no migration, no new
-      ADR/DEC number. The implementation NO-GO standing instruction below is unchanged.**
+      ADR/DEC number.**
+      *HISTORICAL: this entry predates the Phase 1 controlled-implementation GO of 2026-08-22.
+      The blanket implementation prohibition it originally referenced is **SUPERSEDED** — see
+      **Current Phase** above and **Milestone 1 boundary — approved scope** below, which now
+      carry the standing constraints.*
 - [ ] Design-system freeze Phase 2 — **NOT COMPLETE.** Open: **Satoshi** brand/UI typography, blocked
       on primary licence verification, mobile-app embedding, redistribution/bundling rights, the
       licence covering the Figma-used files, web self-hosting vs CDN, specimen review and React Native

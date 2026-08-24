@@ -99,9 +99,20 @@ describe('states', () => {
     expect(screen.getByLabelText('Loading offers')).toBeTruthy();
   });
 
-  it('gives every empty state a next action', async () => {
-    await render(<EmptyState title="Nothing here" actionLabel="Create one" />);
+  it('gives every empty state a next action when one is wired', async () => {
+    await render(<EmptyState title="Nothing here" actionLabel="Create one" onAction={() => {}} />);
     expect(screen.getByText('Create one')).toBeTruthy();
+  });
+
+  it('renders no action button when the label has no handler behind it', async () => {
+    await render(<EmptyState title="Nothing here" actionLabel="Create one" />);
+    expect(screen.queryByText('Create one')).toBeNull();
+  });
+
+  it('renders no action button when no action is offered at all', async () => {
+    await render(<EmptyState title="Nothing here" />);
+    expect(screen.getByText('Nothing here')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('announces errors and offers a retry', async () => {
