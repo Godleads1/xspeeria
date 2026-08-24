@@ -673,7 +673,7 @@ Offer Details
 | Error State        | Full-screen error state if offer was withdrawn/expired since navigation, with "Back to Marketplace" CTA                                               |
 | Loading State      | Full-card skeleton on load                                                                                                                            |
 | Micro-interactions | Accept CTA shows a brief confirming pulse before transitioning to Match Details                                                                       |
-| Accessibility      | Counterparty verification badge has explicit text alternative ("KYC Verified"), not gold-icon-only                                                    |
+| Accessibility      | Counterparty verification badge renders in the **brand-primary family with an explicit text label ("KYC Verified")** — never gold. Gold is decorative/rating-only and must not represent KYC approval or verified identity (`docs/09-ui-ux/DESIGN_SYSTEM.md`, *Accent / gold*); the earlier "not gold-icon-only" wording understated that rule and is superseded |
 
 Match Details
 

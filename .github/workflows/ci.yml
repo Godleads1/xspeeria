@@ -30,24 +30,31 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # --locked, not --frozen: --frozen installs from uv.lock without checking that the
+      # lock still matches pyproject.toml, so a dependency edit committed without a
+      # relock would pass silently. --locked fails the job instead. Every `uv run` below
+      # then uses --no-sync, because `uv run` re-resolves and re-syncs by default - which
+      # would let ruff, mypy, pytest and above all pip-audit inspect an environment that
+      # is not the one uv.lock describes. A dependency audit against an unlocked
+      # environment is not evidence about what ships.
       - name: Install project and dev dependencies
-        run: uv sync --all-groups --frozen
+        run: uv sync --all-groups --locked
 
       - name: Ruff
-        run: uv run ruff check .
+        run: uv run --no-sync ruff check .
 
       - name: MyPy (strict)
-        run: uv run mypy backend scripts
+        run: uv run --no-sync mypy backend scripts
 
       - name: Bandit
-        run: uv run bandit -r backend -x backend/tests -q
+        run: uv run --no-sync bandit -r backend -x backend/tests -q
 
       - name: Pytest
-        run: uv run pytest
+        run: uv run --no-sync pytest
 
       # The dependency audit must never pass by finding nothing to audit.
       # uv.lock is the single source of dependency truth. The audit runs against the
-      # installed environment, which `uv sync --frozen` built from that lock: no
+      # installed environment, which `uv sync --locked` built from that lock: no
       # re-resolution, no download step, nothing that can silently audit an empty set.
       - name: Assert a dependency source exists
         run: |
@@ -63,7 +70,7 @@ jobs:
           fi
 
       - name: Dependency audit (installed environment, incl. dev tooling)
-        run: uv run pip-audit --strict --progress-spinner off
+        run: uv run --no-sync pip-audit --strict --progress-spinner off
 
   node-quality:
     name: Node & TypeScript Quality
@@ -152,14 +159,28 @@ jobs:
           gitleaks version
 
       # `gitleaks git` scans commit history. Exit code 1 on any finding fails the job:
-      # there is no continue-on-error and no baseline/allowlist file, so a finding
-      # cannot be silently suppressed. --redact keeps the matched value out of the
-      # public build log; the finding, its file and its commit are still reported.
-      - name: Secret scan (full history)
-        run: gitleaks git . --redact --verbose --exit-code 1
+      # there is no continue-on-error, no baseline and no allowlist file.
+      #
+      # Suppression is refused rather than merely absent. An earlier revision of this
+      # comment claimed a finding "cannot be silently suppressed" because no allowlist
+      # existed; that was an overclaim. gitleaks honours two repository-controlled
+      # suppression channels by default - `.gitleaksignore` fingerprints and inline
+      # `gitleaks:allow` comments - so a later commit could have silenced a real finding
+      # without touching this workflow. `--ignore-gitleaks-allow` disables the inline
+      # channel, and the tracked-file guard below rejects a committed `.gitleaksignore`.
+      #
+      # `--log-opts=--all` is required for `fetch-depth: 0` to mean anything: without it
+      # gitleaks walks only the checked-out ref, so a secret reachable solely from
+      # another branch or a tag would be fetched and then not scanned.
+      #
+      # --redact keeps the matched value out of the public build log; the finding, its
+      # file and its commit are still reported.
+      - name: Secret scan (full history, all refs)
+        run: gitleaks git . --log-opts="--all" --ignore-gitleaks-allow --redact --verbose --exit-code 1
 
       # Complements the scan above: gitleaks looks for secret-shaped *content*, this
       # looks for sensitive *paths* that are tracked at all - including a file that was
-      # force-added past .gitignore, which an ignore rule cannot protect against.
+      # force-added past .gitignore, which an ignore rule cannot protect against. It also
+      # rejects a tracked `.gitleaksignore`, closing the second suppression channel.
       - name: Tracked sensitive-file guard
         run: python3 scripts/check_sensitive_files.py

@@ -80,20 +80,38 @@ def install_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def _unexpected_error(request: Request, _: Exception) -> JSONResponse:
+    async def _unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         """Last resort: anything the handlers above did not claim.
 
-        The response carries a fixed message and nothing else. Exception text, the
-        traceback, stack frames and local variables stay server-side, because any of
-        them can contain the request data that caused the failure -- a credential, a
-        token, a KYC field or an account number.
+        The response carries a fixed message and nothing else. Nothing derived from the
+        exception reaches the client.
 
-        The log record deliberately names only the route. The request body is never
-        read here: it is the most likely place for a secret to be sitting.
+        **The log record carries no exception content either.** Not the message, not the
+        traceback: an exception's ``str()`` is whatever the raising code interpolated into
+        it, which in a payments system is exactly where a token, an account number, a KYC
+        field or a DSN ends up. ``logger.exception`` and ``exc_info=True`` would serialize
+        both through ``JsonFormatter`` onto stdout. Reproduced before this was changed: a
+        synthetic token embedded in an exception message appeared in the emitted record.
+
+        What is logged is bounded and non-sensitive by construction -- the route, the
+        method, and the exception **class name**. The class name is a fixed identifier
+        chosen by the developer who defined the type; it carries no request data. The
+        request body, headers and query string are never read here.
+
+        This is a deliberate Phase 1 trade: losing the stack trace costs diagnostic
+        depth. Richer production diagnostics -- traceback capture, structured error
+        reporting, sampled payloads -- require the **F-16 logging / redaction /
+        observability policy** to exist first, and that policy is **OPEN** under
+        Decision 2. It must land before any route accepts a credential, a KYC field or a
+        monetary amount. Until then, no exception content leaves this handler.
         """
-        _logger.exception(
+        _logger.error(
             "unhandled_exception",
-            extra={"path": request.url.path, "method": request.method},
+            extra={
+                "path": request.url.path,
+                "method": request.method,
+                "exception_type": type(exc).__name__,
+            },
         )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

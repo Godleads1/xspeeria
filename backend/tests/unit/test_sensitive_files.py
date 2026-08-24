@@ -80,6 +80,31 @@ class TestGuardRejects:
         assert result.returncode == 1
         assert path in result.stderr
 
+    @pytest.mark.parametrize(
+        "path",
+        [".gitleaksignore", "backend/.gitleaksignore", "docs/07-security/.gitleaksignore"],
+    )
+    def test_scanner_suppression_file_is_rejected_anywhere_in_the_tree(
+        self, tmp_path: Path, path: str
+    ) -> None:
+        """A repository able to silence its own secret scanner is not scanned.
+
+        `gitleaks git` honours `.gitleaksignore` fingerprints wherever the file sits, so
+        committing one retires a real finding without touching CI. The scan closes the
+        inline `gitleaks:allow` channel with a flag; this guard closes the file channel.
+        """
+        result = _run(_repo(tmp_path, path))
+        assert result.returncode == 1
+        assert path in result.stderr
+        assert "suppress secret-scanner findings" in result.stderr
+
+    def test_suppression_file_is_not_excused_by_the_allowlist(self, tmp_path: Path) -> None:
+        """`.env.example` is the only allowed path; nothing else inherits that exemption."""
+        result = _run(_repo(tmp_path, ".env.example", ".gitleaksignore"))
+        assert result.returncode == 1
+        assert ".gitleaksignore" in result.stderr
+        assert ".env.example" not in result.stderr
+
     def test_reports_every_violation_not_just_the_first(self, tmp_path: Path) -> None:
         repo = _repo(tmp_path, ".env", "certs/server.key", "docs/references/a.fig")
         result = _run(repo)

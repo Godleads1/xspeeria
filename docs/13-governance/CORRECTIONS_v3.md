@@ -233,7 +233,7 @@ Xspeeria Figma (§8); only the **logo artwork** colours still await vector confi
 stated that a `User` "cannot transition to `verified` status" without an approved
 KYC profile. `verified` is not a value of `Users.status`, whose enumeration in
 `05_API_Contract_Data_Dictionary.md` is `pending_verification, active, suspended,
-closed`. The invariant now names the authoritative field (`KycCases.status =
+closed`. The invariant now names the authoritative field (`KYCCases.status =
 approved`) and flags "verified" as descriptive vocabulary only. No behavioural change.
 
 ## 8. Application UI palette reconciled to the Xspeeria Figma

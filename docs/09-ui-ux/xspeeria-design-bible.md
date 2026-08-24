@@ -224,7 +224,7 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Create Offer** — Multi-step form: amount + currency pair → desired rate → settlement window → review. Step indicator fills over `motion.fast` on advance. Rate outside market band triggers a warning, not a hard block. Step indicator announces "Step 2 of 4: Desired rate" on each transition. **Create Request** mirrors this structure exactly with inverted currency-direction framing.
 
-**Offer Details** — Offer summary card, counterparty preview (rating, verification badge), rate breakdown, action buttons (Accept / Edit / Cancel depending on ownership). Accept → Match Details; Cancel → confirmation Modal → Marketplace. Full-screen error state if the offer was withdrawn/expired since navigation. Counterparty verification badge has an explicit text alternative ("KYC Verified") — never gold-icon-only.
+**Offer Details** — Offer summary card, counterparty preview (rating, verification badge), rate breakdown, action buttons (Accept / Edit / Cancel depending on ownership). Accept → Match Details; Cancel → confirmation Modal → Marketplace. Full-screen error state if the offer was withdrawn/expired since navigation. Counterparty verification badge renders in the **brand-primary family with an explicit text label ("KYC Verified")** — never gold. Gold is decorative/rating-only and must not represent KYC approval or verified identity (`DESIGN_SYSTEM.md`, *Accent / gold*); the earlier "never gold-icon-only" wording understated that rule and is superseded.
 
 ---
 

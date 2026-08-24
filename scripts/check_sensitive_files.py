@@ -6,6 +6,9 @@ already tracked, and `--force` bypasses it entirely. This guard closes that gap 
 inspecting what git actually tracks, so the check cannot be satisfied by an ignore rule
 that was added after the fact.
 
+It also rejects files that would suppress the secret scanner itself -- see
+`DENIED_SUPPRESSION_NAMES`. A repository able to silence its own scanner is not scanned.
+
 It reads `git ls-files` only. It never opens a tracked file, so a matched path is
 reported by name and its contents are never printed, logged, or sent anywhere. There is
 no network call and no third-party dependency.
@@ -48,6 +51,14 @@ DENIED_PREFIXES: tuple[str, ...] = ("docs/references/",)
 #: `.env.example` is the committed template and contains only placeholders.
 ALLOWED_PATHS: frozenset[str] = frozenset({".env.example"})
 
+#: Basenames that would let the repository silence its own secret scanner. These are not
+#: secrets; they are the channel through which a real finding gets quietly retired.
+#: `gitleaks git` honours `.gitleaksignore` fingerprints wherever they sit in the tree,
+#: so committing one suppresses findings without touching CI. The scan itself passes
+#: `--ignore-gitleaks-allow` to close the inline `gitleaks:allow` channel; this guard
+#: closes the file channel. Neither may be reintroduced as an allowlist or a baseline.
+DENIED_SUPPRESSION_NAMES: tuple[str, ...] = (".gitleaksignore",)
+
 
 def tracked_files() -> list[str]:
     """Return every tracked path, repo-relative, with forward slashes."""
@@ -66,12 +77,15 @@ def violations(paths: list[str]) -> list[tuple[str, str]]:
     for path in paths:
         if path in ALLOWED_PATHS:
             continue
+        name = path.rsplit("/", 1)[-1]
+        if name in DENIED_SUPPRESSION_NAMES:
+            found.append((path, f"{name} would suppress secret-scanner findings"))
+            continue
         for prefix in DENIED_PREFIXES:
             if path.startswith(prefix):
                 found.append((path, f"inside {prefix}"))
                 break
         else:
-            name = path.rsplit("/", 1)[-1]
             for pattern in DENIED_NAMES:
                 if fnmatch(name, pattern):
                     found.append((path, f"matches {pattern}"))
@@ -100,7 +114,8 @@ def main() -> int:
     print(
         "\nRemove each file from the index (`git rm --cached <path>`), confirm it is "
         "ignored, and rotate anything that was a real credential: removing it from the "
-        "index does not remove it from history.",
+        "index does not remove it from history. A scanner-suppression file is not fixed "
+        "by rotating anything: delete it and resolve the finding it was hiding.",
         file=sys.stderr,
     )
     return 1

@@ -376,7 +376,9 @@ is owned by `docs/adr/001-transaction-state-machine.md`.
 Components:
 - Account Readiness region (Home) — identity/KYC, security/MFA, eligibility only; never a balance
 - Activity items (open Offers, allocations requiring attention, in-flight settlements)
-- Quick Actions
+- Primary Action (Home) — **exactly one**. *Historical: the inventory previously listed a
+  plural "Quick Actions" row; that is **SUPERSEDED**. The approved Home hierarchy is
+  header → Account Readiness → a single primary action → activity.*
 - Transaction Card
 - Floating Navigation — Home, Marketplace, Track, Cards *(Coming Soon)*, Profile
 

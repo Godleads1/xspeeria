@@ -10,16 +10,31 @@ import pytest
 
 from app.core.config import Settings, get_settings
 
+#: Every environment key `Settings` reads. `_env_file=None` blocks the `.env` file but
+#: not the process environment, so without this a developer exporting `JWT_SECRET_KEY`
+#: would fail `test_future_security_keys_are_optional` on their machine and nowhere else.
+SETTINGS_ENV_KEYS = (
+    "APP_NAME", "APP_ENV", "API_V", "LOG_LEVEL", "ENABLE_DOCS", "ENABLE_REDOC",
+    "DATABASE_URL", "REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND",
+    "JWT_SECRET_KEY", "JWT_ALGORITHM", "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+    "WEBHOOK_SHARED_SECRET", "CORS_ALLOWED_ORIGINS",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolate_settings_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Settings tests must assert on defaults, not on whoever ran them.
+
+    `Settings` is case-insensitive, so both cases are cleared: on Linux a lowercase
+    export is a distinct variable and would otherwise survive.
+    """
+    for key in SETTINGS_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
+        monkeypatch.delenv(key.lower(), raising=False)
+
 
 class TestDefaults:
-    def test_boots_with_no_environment_at_all(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        for key in (
-            "APP_NAME", "APP_ENV", "DEBUG", "API_V", "LOG_LEVEL",
-            "DATABASE_URL", "REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND",
-            "JWT_SECRET_KEY", "JWT_ALGORITHM", "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
-            "WEBHOOK_SHARED_SECRET", "CORS_ALLOWED_ORIGINS",
-        ):
-            monkeypatch.delenv(key, raising=False)
+    def test_boots_with_no_environment_at_all(self) -> None:
         settings = Settings(_env_file=None)  # type: ignore[call-arg]
         assert settings.app_name == "Xspeeria"
         assert settings.app_env == "local"

@@ -8,6 +8,13 @@ Nothing here invents a value that Decision 2 owns: there are no MFA rules, passw
 parameters, lockout thresholds, session expiries, rate limits or recovery rules. The
 JWT expiry below is a transport-level default carried over from `.env.example` and is
 **not** a security-policy decision.
+
+There is deliberately **no `debug` setting**. It existed here, was read by nothing, and
+the obvious way to use it -- passing it to ``FastAPI(debug=...)`` -- makes Starlette
+return full tracebacks in HTTP responses, so one stray environment value would disclose
+internals from production. Reintroducing it needs an explicit, approved
+environment/security policy, not a default. Dead configuration that is one line away
+from being dangerous is worse than no configuration.
 """
 
 from __future__ import annotations
@@ -39,7 +46,6 @@ class Settings(BaseSettings):
 
     app_name: str = "Xspeeria"
     app_env: Environment = "local"
-    debug: bool = False
     api_v: str = "v1"
     log_level: str = "INFO"
     enable_docs: bool = True
