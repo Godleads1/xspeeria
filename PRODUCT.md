@@ -61,6 +61,7 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 - **Transaction eligibility is gated.** Approved KYC is required before transaction participation, and qualifying MFA is also required before a customer becomes `TRANSACTION_ELIGIBLE`.
 - The UI must distinguish account creation, identity verification, security/MFA readiness, and transaction eligibility rather than collapsing them into a single “verified” state.
 - **Per-leg funding visibility is deliberately asymmetric.** A user sees their own leg's state precisely and the counterparty's only coarsely (*awaiting counterparty* vs *counterparty funded*) — enough to convey safety without leaking a signal that could be used to game rematching.
+- **Canonical domain model — HUMAN APPROVED, 2026-08-22.** The marketplace is **Offer-centred, publish-and-accept**: a seller publishes an Offer and eligible counterparties accept some or all of the currently available remainder. One Offer carries **0..n** allocations (conceptual `MatchAllocation`, persisted as `Match`), each an independent settlement failure domain. Acceptance priority within one Offer is **first eligible acceptance by trusted server timestamp** — marketplace ranking is discovery only and never allocation priority. **No central-limit-order-book semantics.** Seller rate must be **≤ the applicable approved reference ceiling** — above it is a hard block; **there is no approved floor**. Each allocation runs a **preparation window** then, once `ALLOCATION_FUNDING_READY`, a **funding window**; both durations are configurable and unset. `FXRequest` is retained for compatibility and as an optional demand-side concept, but is **not** required to create an allocation. Terminology mapping is in `DOCUMENT_INDEX.md` §2A; settlement semantics remain ADR-001.
 - **MVP scope is 22 screens** across four journeys: Onboarding & Authentication (6), Core Application (7), Account & Support (5), Business & Admin (2 + Support). Specified in `docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md` §5.
 - Settlement is asynchronous and multi-step; users return to check state, and notifications carry deep links back into a transaction.
 
@@ -70,8 +71,10 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 **Hard constraints:**
 
-- Never display a stored balance, wallet ID, or account-number figure anywhere in the product.
-- Bottom navigation is Home, Marketplace, Track, Notifications, Profile. "Cards" is deferred to Phase 12; no Scan flow exists; Analytics is out of MVP scope.
+- Never display a stored balance, wallet ID, or account-number figure anywhere in the product. **This extends to any aggregate currency figure in a hero position** — a large single amount reads as a balance regardless of its label. Amounts stay attached to the individual Offer or allocation they belong to. **HUMAN APPROVED, 2026-08-22.**
+- **Home has no balance region.** The former balance region is **Account Readiness**, carrying exactly three dimensions: Identity / KYC, Security / qualifying MFA, Eligible to transact. It collapses to a compact confirmation once all three are satisfied. Beneficiary, payout and funding readiness are **allocation-specific** and must never become Home account-readiness dimensions. **HUMAN APPROVED, 2026-08-22.**
+- Bottom navigation is **Home, Marketplace, Track, Cards, Profile** — **HUMAN APPROVED, 2026-08-22**, superseding the earlier *Home, Marketplace, Track, Notifications, Profile*. **Cards is COMING SOON**: it opens a real destination, never a dead or disabled tab, and exposes no card functionality, no card balances, and nothing implying stored-value wallet or card functionality. Notifications live behind the bell, notification centre and push. No Scan flow exists; Analytics is out of MVP scope.
+- **Gold is not a status colour.** It must never represent KYC approval, verified identity, success, funding confirmation, settlement completion or warning. A narrowly scoped decorative role for rating indicators is permitted. Identity verification uses the brand-primary family — verification is an identity fact, not a financial success state. **HUMAN APPROVED, 2026-08-22.**
 - Financial state must be exact — never binary floating point (`CLAUDE.md`).
 - Frontend restrictions are not security controls; authorization is verified server-side.
 - Canonical transaction and settlement state semantics are owned by ADR-001 / DEC-003. UI design may present approved states but must not create, rename, merge, remove, or reinterpret canonical financial states.
@@ -92,21 +95,54 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 - **Official logo/wordmark:** the approved Xspeeria logo is stored at `assets/brand/xspeeria-logo.png` and is the canonical brand mark. Do not redesign, redraw, substitute, recolor, distort, or materially alter it without explicit design approval.
 
-- **Official brand palette:** Xspeeria's core brand colors are derived from the official logo supplied by the user: navy blue, green, red, and gold/yellow. The official logo is the visual source of truth for brand identity.
+- **Two distinct colour questions — do not conflate them.** **(A) Logo / brand-asset colours** are
+  governed by the official logo and remain open pending vector confirmation. **(B) Application UI
+  colours** are governed by the **Xspeeria Figma**, which is the **primary visual source of truth
+  for application UI/UX** (human authority, 2026-08-22). The logo values below are **not** the
+  authority for the application palette.
 
-- **Current digital color references:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. Exact production tokens should be confirmed from the original vector/brand asset before being frozen.
+- **(A) Official brand palette — logo artwork:** Xspeeria's core brand colors are derived from the official logo supplied by the user: navy blue, green, red, and gold/yellow. The official logo is the visual source of truth for brand identity.
+
+- **(A) Logo colour references — still unconfirmed:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. These are **logo/brand-asset** values and must still be confirmed against the original vector/brand asset before being frozen. They are **not** application UI tokens and must not be used as such.
+
+- **(B) Application UI palette — HUMAN APPROVED, 2026-08-22:** Primary `#1F3A8A`, Secondary
+  `#3B82F6`, canvas `#FFFFFF`, supporting soft surface `#F8F9FD`, border/divider `#E5E7EB`,
+  headline text `#111827`, body text `#4B5563`, disabled text `#9CA3AF`, success `#10B981`,
+  warning `#F59E0B`, error `#EF4444`. `#1F3A8A` is **deliberately retained** and must not be
+  normalised to `#1E3A8A` merely because that is a framework default. The resemblance of this
+  palette to Tailwind defaults does not invalidate it.
+
+  The **semantic architecture** built on these values is also approved: status families split
+  into `.fill` / `.surface` / `.border` / `.text` so that one colour never performs every role;
+  `#E5E7EB` is a decorative boundary only, with `#6B7280` as the strong boundary for controls;
+  primary interaction states are `#1F3A8A` / `#1E40AF` / `#172554` with a `#1D4ED8` focus ring.
+  Full normative detail, measured WCAG contrast, and the legacy-name mapping are in
+  `docs/09-ui-ux/DESIGN_SYSTEM.md`.
+
+  These remain **candidate production tokens**, **not frozen** — the Figma contains painted
+  swatches, **not** a bound token/variable system, so Xspeeria has **no production design-token
+  system** and none may be claimed. **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION
+  STATUS: NOT VERIFIED** — no application code exists or consumes them. The Figma Success-swatch
+  label defect (fill `#10B981`, label text `#FFFFFF`) is recorded in `DESIGN_SYSTEM.md`.
+
+- **RESOLVED — HUMAN APPROVED, 2026-08-22:** the observed Figma palette contains **no accent/gold
+  role**, and `#F4C21F` is not Figma-confirmed. Gold is retained for **decorative rating
+  indicators only** and is never a status colour. The glyph treatment remains `UNKNOWN — NOT
+  VERIFIED` — at 1.67:1 on canvas the mark needs an outline or a darker fill.
 
 - **Primary interface background:** `#FFFFFF` pure white is the required default background across Xspeeria mobile and web interfaces.
 
-- **Supporting neutral surface:** `#F8FAFC` may be used only for secondary surfaces such as subtle panels, grouped sections, inactive areas, or low-emphasis containers where visual separation from the white canvas is required.
+- **Supporting neutral surface:** `#F8F9FD` (Figma-observed; supersedes the earlier `#F8FAFC`) may be used only for secondary surfaces such as subtle panels, grouped sections, inactive areas, or low-emphasis containers where visual separation from the white canvas is required. At 1.05:1 against the canvas it provides almost no separation on its own — pair it with border, elevation or spacing.
 
-- **Primary text:** `#111827` is the current primary interface text color.
+- **Text roles — HUMAN APPROVED, 2026-08-22:** `#111827` for headings, high-emphasis labels and primary content; `#4B5563` for **body copy**, descriptions, supporting text and metadata; `#9CA3AF` for genuinely disabled/inactive text only. `#6B7280` is the strong boundary value for controls, **not** a body-text token — its use as a disabled-control label stays scoped to that interaction state.
 
 - White is the dominant canvas. Xspeeria must not use tinted, dark, gradient, or brand-colored page backgrounds as the default product surface unless a specific design state has been explicitly approved.
 
 - Supporting semantic tokens such as borders, muted text, surfaces, hover states, focus rings, disabled states, success backgrounds, warning backgrounds, and destructive backgrounds may be derived from the official brand palette, but must preserve accessibility and require design-system approval.
 
-- **Typefaces are undecided.** SF Pro / Inter is documented intent, not a licensed decision. Record the choice when it is made.
+- **Typography — PARTIAL FREEZE, 2026-08-22.** **Inter is HUMAN APPROVED as the Xspeeria financial/numeric typeface** across applicable surfaces: currency amounts, rates, fees, percentages, totals, transaction/settlement/allocation amounts, numeric table columns, admin operational data and right-aligned monetary values. The normative requirement is the **rendering outcome** — financial numerics must support tabular/lining figures wherever alignment requires it — and **not** any particular font build or preprocessing method, which stays an implementation decision.
+
+- **Brand and UI typefaces remain OPEN.** **Satoshi** is the leading mobile/brand candidate and **must not** be declared production-standard pending primary licence verification, mobile-app embedding rights, redistribution/bundling rights, the licence applicable to the Satoshi files used in the Figma, the web self-hosting-versus-CDN decision, a production specimen review, and a React Native delivery strategy. **No font files may be downloaded, added or embedded.** **Nunito Sans is not selected as an Xspeeria production standard** — its admin usage appears inherited from imported/adapted design material whose provenance and licence are `UNKNOWN — NOT VERIFIED`, and its numeric suitability is not established. That is not a mandate to redesign the admin: its structure and operational UI architecture are preserved. System faces are fallback guidance only, never brand authority.
 
 - **8pt spacing system.** Currency and numeric values render in tabular figures, right-aligned in lists, never truncated.
 - **Visual references only:** aspects of Apple Wallet's polish, Revolut's financial information clarity, Stripe's precision, and Linear's interaction discipline may inform visual craft.
@@ -115,7 +151,7 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 ## Evidence on Hand
 
-**Exists:** the official logo/wordmark at `assets/brand/xspeeria-logo.png`; the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
+**Exists:** the **Xspeeria Figma** at `docs/references/figma/Xspeeria.fig` — human-provided design source, ~70.1 MB, **UNTRACKED PENDING A VERSIONING DECISION** (not staged, not committed, not gitignored, not in Git LFS; how it is versioned is a human decision that has not been taken). It is the primary visual source of truth for application UI/UX, and it carries **painted swatches, not bound variables** — there is no production token system. The official logo/wordmark at `assets/brand/xspeeria-logo.png`; the full 22-screen UI/UX spec (`docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md`, `xspeeria-design-bible.md`); the Product Design Specification (`docs/02-product/04_Product_Design_Specification.md`, status *Draft — Pre-Development Blueprint*); business requirements and personas; the 5-Year Business Plan.
 
 **Does not exist — never fabricate:**
 

@@ -212,7 +212,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Auth Module         | Registration, login, MFA, session/token issuance               | Users, Sessions, Devices        |
 | KYC Module          | Identity verification workflow, document handling, risk rating | KYCProfiles, KYCDocuments       |
 | Marketplace Module  | FX request creation, offer creation, offer listing             | FXRequests, Offers              |
-| Matching Engine     | Match offers to requests per matching rules                    | Matches                         |
+| Matching Engine     | **SUPERSEDED description** — the module creates a `Match` from an **explicit acceptance** of a published Offer (publish-and-accept, §9.2), never by automatically matching offers to requests. Retains §9.3 concurrency protection over concurrent acceptances of one Offer | Matches |
 | Transaction Module  | Manages escrow-state transaction lifecycle                     | Transactions, TransactionEvents |
 | Settlement Module   | Integrates with banking partners to trigger fiat movement      | SettlementInstructions          |
 | Disputes Module     | Case management for contested transactions                     | Disputes, DisputeEvidence       |
@@ -373,7 +373,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 - **Root:** `User`
 - **Entities:** `Profile`, `Device`, `Session`
 - **Value Objects:** `Email`, `PhoneNumber`, `Password Hash`
-- **Invariants:** A `User` cannot transition to `verified` status without an associated `KYCProfile` in `approved` state.
+- **Invariants:** A `User` cannot be treated as identity-verified for KYC-gated actions without an associated KYC case in `approved` state. The authoritative KYC state is `KYCCases.status = approved` (`05_API_Contract_Data_Dictionary.md`, KYCCases entity — `KYCCases` is the canonical persisted identifier per `DOCUMENT_INDEX.md` §2A; the conceptual name is `KycCase`). *Vocabulary note: "verified" is used descriptively here and elsewhere in this document for the same condition; it is not a value of `Users.status`, whose enumeration is `pending_verification, active, suspended, closed`.*
 
 ### 5.3.2 KYCProfile Aggregate
 
@@ -392,14 +392,20 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 - **Root:** `Offer`
 - **Value Objects:** `Money`, `OfferedRate`, `AvailabilityWindow`
-- **Invariants:** Total `matched_amount` across all `Match` entities referencing an `Offer` cannot exceed `Offer.amount`.
+- **Invariants:** **HUMAN APPROVED, 2026-08-22.** `original_amount = matched_amount + remaining_amount`, where `matched_amount` is the sum of two **disjoint** sets: allocations that are **active and committed** -- currently valid, non-expired and **not yet completed** -- and allocations that **completed successfully**. No allocation belongs to both, so every allocation is counted **exactly once**, and `remaining_amount` is **derived, not persisted**. The concurrency invariant is scoped to the **contributing** allocations, not to every `Match` row that has ever referenced the Offer: **the sum of allocations that currently contribute to `matched_amount` can never exceed `original_amount`**, enforced under row lock. Summing all historical `Match` records would be wrong, because terminated records are retained as audit history while their capacity has already returned to `remaining_amount` -- a replacement allocation would then push the historical total past `original_amount` while the Offer is in fact correctly allocated. **Contributing** is the predicate defined immediately above: an allocation is contributing when it is *active and committed* (valid, non-expired, not released or otherwise terminated pre-funding, and not yet completed) **or** *successfully completed*. It is stated here semantically because no persistence exists yet; its concrete persisted representation -- the status column or state enum the locking and validation query filters on -- belongs to the later domain-model milestone and is deliberately not fixed here. An expired or pre-funding-released allocation **ceases to contribute** to `matched_amount` and its amount returns to remaining capacity; the terminated allocation record remains immutable audit history.
+- **Withdrawal semantics:** withdrawing an Offer's remaining availability **closes it to further matching** and **does not cascade to allocations** — existing Matches, their allocated amounts, Transactions and Settlements are untouched, other allocations are unaffected, and committed capacity is never returned. Only the uncommitted remainder becomes unavailable.
+- **Lifecycle:** **CANONICAL ENUM — HUMAN-APPROVED 2026-08-25:** **`open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`**. The former binary `active → matched` model is insufficient. A partially matched Offer **remains available for its remaining amount**. **`withdrawn`** — added by that decision — means the owner **intentionally withdrew the still-unmatched remainder**: the Offer is closed to further acceptance and no new `Match` may consume that remainder, while existing `Match`, `Transaction` and `Settlement` records remain valid and untouched. It is **not** `cancelled`, **not** `expired` and **not** `fully_matched`; any previously matched amount **remains part of `matched_amount`** under the contributing/completed allocation rules above. A `withdrawn` Offer is **excluded from `marketplace-active`** listing (`05_API_Contract_Data_Dictionary.md` § marketplace listing). This closes the previously OPEN withdrawal status-model gap. The concrete persisted representation still belongs to the later domain-model milestone.
+- **Arithmetic:** exact **integer minor units** with explicit currency exponent/scale; never binary floating point. This is marketplace/allocation arithmetic, distinct from ADR-002 ledger posting representation, which is unchanged and remains authoritative for the ledger conversion boundary.
 
 ### 5.3.5 Match Aggregate
 
-- **Root:** `Match`
-- **Entities:** none (references `FXRequest` and `Offer` by ID)
+- **Root:** `Match` — **the persisted form of the conceptual `MatchAllocation`**: one accepted partial or full allocation of one Offer by one counterparty. **HUMAN APPROVED, 2026-08-22:** extended, **not renamed**; no second `MatchAllocation` entity exists. See the glossary in `DOCUMENT_INDEX.md`.
+- **Entities:** none (references `Offer` by ID; **`FXRequest` reference is optional/nullable** — a Match is creatable from Offer + accepting counterparty + accepted amount + trusted server timestamp, with no `FXRequest`)
+- **Invariants:** `allocated_amount > 0`; `agreed_rate` is **locked at acceptance** and never silently re-priced; `accepted_at` is a **server-set trusted timestamp** establishing acceptance priority, broken deterministically by a unique server-generated ordering key on equal timestamps (see the acceptance-priority note in the marketplace-semantics section); each Match is an **independent settlement failure domain** — one Match → one Transaction → one Settlement → **exactly two SettlementLegs** (ADR-001, unchanged).
+- **Two-window lifecycle:** preparation (beneficiary selection and validation, allocation-specific requirements) → derived gate **`ALLOCATION_FUNDING_READY`** → funding. Both durations are **OPEN / CONFIGURABLE**. Partner provisioning must not become actionable before `ALLOCATION_FUNDING_READY`. See **ADR-001 Amendment A1 §14**.
+- **Partner provisioning state is owned by `SettlementLeg`**, not duplicated onto `Match`.
 - **Value Objects:** `MatchedAmount`, `AgreedRate`
-- **Invariants:** A `Match` is immutable once `confirmed`; corrections require a compensating `Transaction` event, never a mutation.
+- **Invariants:** **Corrected 2026-08-24.** A `Match`'s core allocation terms are immutable **from acceptance**. The superseded wording *"immutable once `confirmed`"* keyed immutability to a bilateral confirmation step that no longer exists (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is withdrawn), which left an accepted allocation nominally mutable through preparation and funding. Acceptance alone establishes the allocation, so acceptance is where the terms freeze. The immutable terms are, at minimum: the **Offer reference**, the **accepting party reference**, the **accepted amount**, the **`agreed_rate`**, **`accepted_at`**, and the **server ordering key** once it is implemented. None of these may be mutated during preparation or funding. Corrections are made through an explicit compensating, terminal or replacement record or event under the applicable lifecycle -- never by rewriting the accepted terms. *No new state enum is introduced by this correction, and its persisted representation belongs to the later domain-model milestone.*
 
 ### 5.3.6 Transaction Aggregate
 
@@ -417,7 +423,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | `KYCRejected`              | Compliance        | Notifications, Admin              |
 | `OfferCreated`             | Marketplace       | Matching                          |
 | `FXRequestCreated`         | Marketplace       | Matching                          |
-| `MatchConfirmed`           | Matching          | Transaction, Notifications        |
+| `MatchConfirmed` *(**NAME/ROUTING compatibility alias — ACCEPTANCE semantics**; **RECORD-ONLY** for Settlement consumers. See the alias note below this table)* | Matching (emitted at acceptance) | Transaction, Notifications — **record-only**; **never** authorization to provision, dispatch or fund |
 | `EscrowFunded`             | Settlement        | Settlement (leg-scoped, carries `leg_id`) |
 | `ReleaseAuthorized`        | Settlement        | Banking Abstraction Layer via outbox, Notifications |
 | `PayoutConfirmed`          | Settlement        | Settlement (leg-scoped, carries `leg_id`) |
@@ -429,6 +435,38 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | `ReconciliationMismatchDetected` | Reconciliation | Admin, Compliance               |
 | `DisputeOpened`            | Disputes          | Admin, Notifications              |
 
+> **`MatchConfirmed` alias note — aligned with the API contract 2026-08-25.** This table previously
+> listed `MatchConfirmed` as an ordinary event consumed by `Transaction`, with no indication that
+> its trigger and consumer contract had changed. An implementer reading only this table would apply
+> **legacy bilateral-confirmation semantics to an acceptance event** — exactly the failure the API
+> contract's alias note exists to prevent. `05_API_Contract_Data_Dictionary.md` §6.1 is
+> **authoritative** for this event; this entry is aligned to it and adds nothing new.
+>
+> - `MatchConfirmed` is a **NAME / ROUTING compatibility alias only.** The name, topic and routing
+>   are preserved so existing subscriptions and dispatch tables still resolve. **Semantic backward
+>   compatibility is NOT claimed** — the trigger moved from bilateral confirmation to acceptance, so
+>   a consumer written against the old meaning is already wrong even though its subscription
+>   resolves.
+> - It is emitted when the `Match` is **established by acceptance**. **There is no second bilateral
+>   confirmation step**, and none may be introduced; no consumer may wait for one.
+> - It is **NOT** evidence of confirmation, **NOT** authorization for funding instructions, **NOT**
+>   authorization for partner provisioning or dispatch, and **NOT** authoritative funding evidence.
+>   A Settlement consumer is **RECORD-ONLY** at this point.
+> - **`ALLOCATION_FUNDING_READY` continues to gate partner provisioning** (ADR-001 §14.3). This
+>   event neither starts, satisfies nor bypasses that gate. Authoritative `FUNDED` remains
+>   established only by authenticated, signature-verified regulated-partner webhook evidence.
+>
+> **Naming relationship with `Appendix_D`.** `Appendix_D_Financial_Correctness_Settlement_Specification_Xspeeria_v1.1.md`
+> §"Order and match" lists **`MatchCreated`**. The two names refer to **the same acceptance-time
+> occurrence** — a `Match` coming into existence — described from different documents;
+> `MatchCreated` is the name that matches the semantics, `MatchConfirmed` is the emitted
+> compatibility alias retained for routing. **This is a naming divergence recorded, not resolved,
+> and it is emphatically not a claim of semantic backward compatibility.** **No second event exists
+> or may be created**, and the two names must never be implemented as two events.
+>
+> **The event is NOT renamed here.** Whether `MatchConfirmed` becomes `MatchCreated` remains an
+> **OPEN human decision** (`05_API_Contract_Data_Dictionary.md` §6.1, renaming note).
+
 *Updated per ADR-001 (DEC-003). `TransactionFundsReceived` and `SettlementFailed` are superseded: funding is leg-scoped, and failure is a leg fact whose settlement-level consequence depends on outstanding exposure. The canonical event catalogue is `Appendix_D` Section 7.*
 
 # 6. DATABASE DESIGN
@@ -439,12 +477,13 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         USERS ||--o| PROFILES : has
         USERS ||--o| KYC_PROFILES : has
         USERS ||--o{ BENEFICIARIES : owns
+        MATCHES }o--o{ BENEFICIARIES : "selects per allocation"
         USERS ||--o{ FX_REQUESTS : creates
         USERS ||--o{ OFFERS : creates
         KYC_PROFILES ||--o{ KYC_DOCUMENTS : contains
         KYC_PROFILES ||--o{ SCREENING_RESULTS : contains
-        FX_REQUESTS ||--o{ MATCHES : "matched via"
-        OFFERS ||--o{ MATCHES : "matched via"
+        FX_REQUESTS ||--o{ MATCHES : "optional legacy linkage"
+        OFFERS ||--o{ MATCHES : "allocated via (0..n)"
         MATCHES ||--|| TRANSACTIONS : produces
         TRANSACTIONS ||--o{ TRANSACTION_EVENTS : logs
         TRANSACTIONS ||--o| SETTLEMENTS : "settled via"
@@ -641,7 +680,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Authentication  | Bearer JWT in `Authorization` header                                                                              |
 | Pagination      | Cursor-based: `?cursor=<opaque>&limit=<n>`, default `limit=20`, max `limit=100`                                   |
 | Filtering       | Query parameters, explicitly allow-listed per endpoint (no arbitrary filter injection)                            |
-| Idempotency     | State-changing POSTs (offer creation, match confirmation, settlement trigger) require an `Idempotency-Key` header |
+| Idempotency     | State-changing POSTs (offer creation, **Offer acceptance**, settlement trigger) require an `Idempotency-Key` header. *Corrected 2026-08-24: "match confirmation" is **SUPERSEDED** — that step no longer exists; acceptance is the idempotent money-sensitive operation (§9.4)* |
 | Error format    | RFC 7807 Problem Details JSON                                                                                     |
 
 ## 7.2 Standard Error Response
@@ -666,11 +705,51 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | POST   | `/v1/fx-requests`                         | Create FX request                   | Verified user             |
 | POST   | `/v1/offers`                              | Create offer                        | Verified user             |
 | GET    | `/v1/offers`                              | List/search offers                  | Verified user             |
-| POST   | `/v1/matches/{id}/confirm`                | Confirm a proposed match            | Verified user             |
+| POST   | `/v1/offers/{offer_id}/accept`            | Accept some or all of an Offer's remaining amount, establishing a `Match` | Verified user (KYC-approved, `TRANSACTION_ELIGIBLE`, not the Offer owner) |
 | GET    | `/v1/transactions/{id}`                   | Get transaction detail              | Party to transaction      |
-| POST   | `/v1/transactions/{id}/fund-confirmation` | User confirms funds sent            | Party to transaction      |
+| POST   | `/v1/settlements/{settlement_id}/confirm-funds` | User's **advisory** claim that they have sent funds for one `SettlementLeg` (`leg_id` **required**) | Funding party for that leg |
 | POST   | `/v1/disputes`                            | Open a dispute                      | Party to transaction      |
 | POST   | `/v1/webhooks/settlement/{partner}`       | Inbound partner settlement callback | HMAC-signed, partner-only |
+
+> **`POST /v1/matches/{id}/confirm` is SUPERSEDED / HISTORICAL — corrected 2026-08-24.**
+> It was published in this table as an active operation while the rest of the document had
+> already withdrawn bilateral confirmation (`CORRECTIONS_v3.md` §11.11; §5.3.5; §7.1
+> Idempotency), leaving two incompatible API contracts. **Acceptance alone establishes the
+> `Match`**, so the canonical money-sensitive operation is `POST /v1/offers/{offer_id}/accept`
+> — the row above, and the endpoint §7.1 already names as requiring `Idempotency-Key`. **No
+> replacement confirmation endpoint exists and none may be introduced.** The `MatchConfirmed`
+> event name survives **only** as a compatibility alias emitted when the Match is established
+> by acceptance (`05_API_Contract_Data_Dictionary.md`, event catalogue); it is not a second
+> user- or API-facing confirmation action, and consuming it authorizes nothing partner-facing
+> before `ALLOCATION_FUNDING_READY`.
+>
+> **`POST /v1/transactions/{id}/fund-confirmation` is SUPERSEDED / HISTORICAL — HUMAN
+> ARCHITECTURE DECISION, 2026-08-24.** This table published it as an active operation while
+> `05_API_Contract_Data_Dictionary.md` §4.3 defined the *same* user action as
+> `POST /v1/settlements/{settlement_id}/confirm-funds` with a **required `leg_id`**, a
+> different parent resource and a different response shape — two active contracts for one
+> action, which is what a client would have had to choose between.
+>
+> **The settlement contract is canonical.** A funding claim is made against one
+> `SettlementLeg` inside a `Settlement`, not against the `Transaction` as a whole: a
+> Transaction spans **both** legs, so a Transaction-parented endpoint cannot say *which* side
+> the claim is about without smuggling `leg_id` in anyway. `Transaction.status` is a
+> read-only presentation projection under ADR-001 (DEC-003) and owns no settlement state, so
+> parenting a settlement-affecting claim on it would invert the ownership the ADR
+> establishes. The ratified response semantics are unchanged: `leg_id`, `leg_state`,
+> `user_claim_recorded_at`.
+>
+> **Customer confirmation is an advisory claim and nothing more.** It records that a user
+> *says* they sent funds. It does **not** establish authoritative `FUNDED`, does **not**
+> authorize settlement release, does **not** start, satisfy or bypass
+> `ALLOCATION_FUNDING_READY`, and does **not** substitute for regulated-partner verification.
+> It does not mutate `SettlementLeg.state` and does not advance `Settlement.phase`.
+>
+> **Authoritative `FUNDED` is established only by the authenticated, signature-verified
+> regulated-partner webhook**, when that integration exists (ADR-001 F-6, F-7;
+> `07_Banking_Integration_Specification_v1.1.md`). A client asserting "I paid" never
+> establishes a money fact. The claim is retained for support and dispute evidence and may
+> drive UI messaging; it carries no financial authority.
 
 ## 7.4 Pagination Response Shape
 
@@ -890,7 +969,19 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 # 9. MATCHING ENGINE
 
-## 9.1 Matching Modes
+> **SECTION-WIDE SUPERSESSION — HUMAN DECISION, 2026-08-22; propagated 2026-08-24.** The
+> canonical marketplace behaviour is **PUBLISH AND ACCEPT** (§9.2). Nothing in this section
+> authorises automated Match creation, best-rate allocation priority, price-time allocation
+> priority or order-book semantics. The section name and the material below are **retained as
+> historical/superseded design**, not as implementable guidance. §9.3 concurrency protection is
+> the exception: it is **RETAINED AND APPLICABLE**, and now guards concurrent acceptances of a
+> single Offer.
+
+## 9.1 Matching Modes — **SUPERSEDED**
+
+> The modes below describe **automated** matching of an `Offer` against an `FXRequest`, which is
+> withdrawn. The **partial-overlap concept survives** as partial acceptance of an Offer's
+> remaining amount; the `MVP Status` column is historical and must not be read as current scope.
 
 | Mode              | Description                                                                      | MVP Status                               |
 |-------------------|----------------------------------------------------------------------------------|------------------------------------------|
@@ -899,6 +990,48 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Multi-Offer Match | An `FXRequest` is fulfilled by aggregating multiple smaller `Offers`             | Phase 2 (flagged as future scope in BRS) |
 
 ## 9.2 Matching Algorithm (Exact/Partial)
+
+> **SUPERSEDED — HUMAN DECISION, 2026-08-22. The canonical marketplace behaviour is PUBLISH AND
+> ACCEPT.** A seller publishes an Offer; an eligible counterparty accepts some or all of the
+> currently available remainder, creating one `Match` (conceptual `MatchAllocation`).
+>
+> The following are **withdrawn** and must not be implemented:
+>
+> - **automated Match creation** from Offer + FXRequest events;
+> - **price-time allocation priority** — the "Oldest first (price-time priority)" sort below;
+> - **best-rate allocation priority** among several users accepting the same Offer;
+> - **central-limit-order-book semantics** of any kind.
+>
+> Acceptance priority within one Offer is **first eligible acceptance by trusted server
+> timestamp** (`Match.accepted_at`, server-set; a client-supplied timestamp is never trusted).
+>
+> **Tie-break — deterministic, added 2026-08-24.** `accepted_at` alone is not a total order: two
+> acceptances serialized in the same instant can carry the same value at stored precision, and
+> an undefined winner is not auditable. Equal timestamps are resolved by a **unique
+> server-generated ordering key** assigned inside the same acceptance serialization boundary
+> that enforces `Σ valid allocations ≤ original_amount`, giving the total order
+> `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a
+> client-supplied value never participates. The resulting order is stable and replayable, so an
+> audit or dispute re-derives the same sequence from persisted state. **The ordering contract is
+> **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` -- human decision
+> 2026-08-24.** Server-generated, unique within the acceptance ordering scope, assigned inside
+> the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation
+> audit contract. **Durable persistence of it is REQUIRED of the future persistence
+> implementation** -- not optional and not aspirational -- while the exact storage mechanism
+> stays implementation-dependent. Phase 1 does not implement that persistence yet, so it is a
+> **required dependency of the later domain-model/persistence milestone**. The seller's rate does not
+> become a priority mechanism and discovery/ranking does not become allocation priority — both
+> remain excluded above. The **persistence mechanism for `server_order_key` is
+> implementation-dependent** and is not fixed here; a monotonic sequence or a time-sortable
+> identifier allocated under the same lock are non-normative examples.
+>
+> **Marketplace discovery and ranking remain separate and permitted** — listings may be ordered by
+> rate, amount, corridor, availability or time. Ranking a listing is not allocating it.
+>
+> **What survives from the flow below:** the partial-overlap concept, and all of §9.3 concurrency
+> protection, which applies unchanged to concurrent acceptances of one Offer. The diagram is
+> retained as superseded history.
+
 
     flowchart TD
         Start["New Offer or FXRequest event"] --> Lock["Acquire Redis lock on candidate ID"]
@@ -917,15 +1050,231 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 ## 9.3 Concurrency Protection
 
-- **Distributed locking:** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id`/`fx_request_id` being evaluated, preventing two concurrent matching runs from double-allocating the same liquidity.
-- **Database-level guard:** `matched_amount` updates on `offers`/`fx_requests` use `SELECT ... FOR UPDATE` row locking within a single DB transaction as a second line of defense against race conditions, independent of the Redis lock.
+> **RETAINED AND APPLICABLE — HUMAN APPROVED.** These controls now guard **concurrent acceptances
+> of a single Offer**. The invariant they must enforce is that the **sum of valid allocation
+> amounts never exceeds the Offer's original amount**. Locking is scoped to the Offer's amount
+> fields; **whole-Offer "lock after first Match" semantics are withdrawn**, because a partially
+> matched Offer remains available for its remaining amount.
+
+
+- **Distributed locking:** **Corrected 2026-08-24 — `offer_id` is the mandatory serialization
+  key for acceptance.** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id` whose
+  capacity is being consumed. The former `offer_id`/`fx_request_id` alternative is **withdrawn**:
+  it belonged to the automated-matching model, and an acceptance must never serialize on the
+  demand side. **Reworded 2026-08-25:** the lock exists to prevent **two concurrent acceptances of
+  the same Offer** from double-allocating the same capacity. The former phrasing — *"two concurrent
+  matching runs"* — carried the withdrawn background-matcher framing into a bullet that is still
+  normative; there are no matching runs under publish-and-accept, only client-initiated
+  acceptances. The mechanism and its scope (`offer_id`) are unchanged.
+- **Database-level guard:** `matched_amount` updates on `offers` use `SELECT ... FOR UPDATE` row
+  locking within a single DB transaction as a second line of defense against race conditions.
+  **The `fx_requests` capacity-update path is withdrawn as an acceptance authority** (2026-08-24):
+  the authoritative capacity being consumed is the Offer's, and an acceptance without an
+  `FXRequest` must satisfy the same Offer-level invariant. *A row lock here is not the withdrawn
+  product concept of locking the whole Offer lifecycle after its first Match — the Offer remains
+  open for later partial acceptances*, independent of the Redis lock.
 - **Optimistic concurrency:** Each `offers`/`fx_requests` row carries a `version` column; updates include a `WHERE version = :expected_version` clause, rejecting stale writes.
 
 ## 9.4 Idempotency
 
-- Every matching run is triggered by a domain event carrying a unique `event_id`.
-- The Matching Engine records processed `event_id`s in a short-TTL idempotency table/cache; duplicate event delivery (e.g., from at-least-once queue semantics) is a no-op.
-- Match confirmation endpoints require an `Idempotency-Key` header; replayed requests with the same key return the original response rather than creating a duplicate `Match`.
+> **SUPERSEDED — obsolete automated-matcher language, marked 2026-08-25.** The two bullets that
+> opened this section are retained for historical context only and are **no longer normative**:
+>
+> - ~~Every matching run is triggered by a domain event carrying a unique `event_id`.~~
+> - ~~The Matching Engine records processed `event_id`s in a short-TTL idempotency table/cache;
+>   duplicate event delivery (e.g., from at-least-once queue semantics) is a no-op.~~
+>
+> They belong to the **withdrawn automated-matching model** (§5.5, *SUPERSEDED — HUMAN DECISION,
+> 2026-08-22*). The canonical matching model is **publish-and-accept**: matching is driven by the
+> buyer's **explicit Offer acceptance request**, not by a background run over a candidate index.
+> Within an Offer, priority is **first eligible acceptance by trusted server ordering**
+> `(accepted_at ASC, server_order_key ASC)`.
+>
+> **The short-TTL cache is NOT the acceptance idempotency boundary and must never be presented as
+> one.** Acceptance idempotency is the **atomic logical persistence boundary** defined in the
+> bullets below, which commits the idempotency record together with `Match` creation and the Offer
+> capacity mutation. A TTL cache satisfies none of that.
+>
+> **Not reintroduced:** automated candidate matching, price-time priority, CLOB semantics, or
+> background matching runs. Where a generic event consumer still needs de-duplication (for
+> at-least-once queue delivery), that is ordinary **event-consumer deduplication** and carries no
+> money-path authority.
+>
+> *Whether `FXRequest` creation remains an active MVP flow is a **separate OPEN human decision**
+> (R5-9) and is not resolved here.*
+- **Corrected 2026-08-24 — idempotency belongs to Offer acceptance.** The former wording keyed
+  idempotency to *"match confirmation endpoints"*, a step withdrawn with bilateral confirmation
+  (`CORRECTIONS_v3.md` §11.11); that wording is **SUPERSEDED**. The money-sensitive idempotent
+  operation is **`POST /v1/offers/{offer_id}/accept`**, which already requires the header
+  (`05_API_Contract_Data_Dictionary.md`). Its semantics: an `Idempotency-Key` is **required**;
+  the same authenticated principal replaying the same logical acceptance with the same key
+  **must not create a second `Match`**, and after successful processing the replay returns or
+  references the original `Match` per the API contract; reusing a key with a materially
+  different acceptance payload **fails deterministically** (`SYS_409_IDEMPOTENCY_KEY_REUSED`,
+  whose canonical meaning is a **bound-key conflict** — see the shared note below);
+  and **a retry must never consume Offer capacity twice**, which the acceptance serialization
+  boundary in §9.2 already governs. No storage implementation is specified here.
+- **Atomic idempotency boundary for Offer acceptance — added 2026-08-25.** The bullet above
+  states *outcomes*; it does not say what holds under **simultaneous** retries, and §9.2 does not
+  close that gap. **Offer-row serialization orders concurrent requests; it does not deduplicate
+  them by key.** Two concurrent requests carrying the same `Idempotency-Key` and the same bound
+  logical acceptance can each be serialized correctly on the Offer capacity row, each observe no
+  prior idempotency record, and each create a `Match` — satisfying every sentence written above
+  and in §9.2 while producing exactly the duplicate they forbid, and consuming capacity twice.
+  Deduplication that commits **separately** from the Match insert does not prevent this; it only
+  narrows the window. The `confirm-funds` boundary below already states this invariant for the
+  *advisory* endpoint, and the *authoritative, money-sensitive* one must not be weaker.
+
+  **The invariant.** For `POST /v1/offers/{offer_id}/accept`, all of the following MUST occur
+  inside **one atomic logical persistence boundary**, committing as a unit or not at all:
+
+  1. authoritative Offer-capacity serialization;
+  2. `Idempotency-Key` **binding resolution and lookup**;
+  3. **replay / conflict decision** — see the ordering rule below. A hit on the same bound logical
+     request **replays the original result and stops here**; a hit with a materially different
+     binding **fails with `SYS_409_IDEMPOTENCY_KEY_REUSED` and stops here**; a miss continues as a
+     **new** request;
+  4. authoritative `remaining_amount` read *(new requests only)*;
+  5. `accepted_amount` validation *(new requests only)* — **required**, `> 0`, `≤` authoritative
+     remaining capacity, else `RES_409_INSUFFICIENT_REMAINING`;
+  6. establishment of the original idempotency record;
+  7. `accepted_at` assignment (**server-set trusted timestamp**);
+  8. `server_order_key` assignment;
+  9. `Match` establishment;
+  10. Offer capacity / allocation-state update;
+  11. binding of the response to the idempotency result;
+  12. commit.
+
+  **Ordering rule — key resolution precedes capacity validation. Corrected 2026-08-25.** An
+  earlier revision of this list validated `accepted_amount` against authoritative remaining
+  capacity **before** resolving the `Idempotency-Key`, which contradicted the replay guarantee
+  stated below in this same section. The failure was concrete: once the first acceptance has
+  consumed capacity, a **legitimate retry of that already-completed request** would be measured
+  against the *now-reduced* remaining amount and rejected with `RES_409_INSUFFICIENT_REMAINING`,
+  instead of replaying the original `Match` — the request's **own** allocation making its retry
+  look impossible. A conflicting reuse could likewise be misclassified as a capacity failure
+  before `SYS_409_IDEMPOTENCY_KEY_REUSED` was ever reached.
+
+  **Serialization still comes first (step 1).** Resolving the key inside the Offer-capacity
+  serialization boundary is what makes the replay/conflict decision race-free; moving the lookup
+  earlier in the *step order* does not move it outside the boundary.
+
+  **Capacity is validated only for a new request.** Steps 4-5 run **only** when step 3 found no
+  prior record. This is not a relaxation:
+
+  | Case | Behaviour |
+  |---|---|
+  | **Retry of a completed same bound request** | **Replays** the original `Match`, response, `accepted_at` and `server_order_key`. Capacity is **not** re-validated — it was already validated and consumed once, by this very request |
+  | **New request / new key** | Validated against the **authoritative current** `remaining_amount` read inside the boundary. A client-displayed value is advisory and may be stale |
+  | **Same key, materially different binding** | `SYS_409_IDEMPOTENCY_KEY_REUSED` — never served the first request's response |
+
+  **The invariants are unchanged: no duplicate `Match`, and no duplicate capacity consumption.**
+  A replay creates nothing and consumes nothing; a new request consumes capacity exactly once
+  under serialization. Rejection of a genuinely oversized new request is **unchanged** —
+  `RES_409_INSUFFICIENT_REMAINING`, **never** silently reduced, resized, clamped or partially
+  filled.
+
+  **Key binding.** The key is scoped to `(authenticated principal, offer_id, the logical
+  acceptance operation, accepted_amount, the materially relevant request parameters)`. A
+  client-supplied ordering value never participates.
+
+  **Same key, same bound request — concurrent or retried.** Of two or more such requests,
+  **exactly one** logical acceptance wins: **exactly one `Match`** is established, Offer capacity
+  is consumed **exactly once**, and the original idempotency record is written once. Every other
+  concurrent request and every later retry **observes or replays that original result** — the
+  original `Match`, the original response, the original `accepted_at` and `server_order_key`.
+  **No second `Match`. No second capacity consumption.**
+
+  **Same key, materially different binding.** Rejected deterministically with
+  `SYS_409_IDEMPOTENCY_KEY_REUSED` — the existing §4.4 catalogue entry, whose canonical meaning is
+  a **bound-key conflict** — concurrently or otherwise. **No new error identifier is introduced.**
+
+  **Different keys racing for the same Offer capacity.** Out of scope for idempotency: the
+  existing acceptance serialization and authoritative `remaining_amount` rules (§9.2) decide the
+  outcome unchanged, `Σ valid allocations ≤ original_amount` holds, and a losing request is
+  **rejected** with `RES_409_INSUFFICIENT_REMAINING` — **never** silently reduced, resized,
+  clamped or partially filled. Priority remains `(accepted_at ASC, server_order_key ASC)`.
+
+  **No mechanism is chosen here** — no lock strategy, uniqueness constraint, isolation level,
+  advisory lock, storage engine, cache technology or ORM. Any mechanism meeting the invariant is
+  conformant, and the choice belongs to the persistence milestone. `server_order_key` durable
+  persistence remains a **REQUIRED** dependency of that milestone.
+
+  **Concurrency regression tests are REQUIRED at the persistence milestone** — three cases:
+  (a) **same-key concurrent acceptance** — N simultaneous same-key requests yield exactly one
+  `Match`, exactly one capacity consumption and N identical responses; (b) **different-key race**
+  — concurrent acceptances under different keys preserve the capacity invariant, with losers
+  rejected rather than clamped; (c) **same key, conflicting binding** — deterministic
+  `SYS_409_IDEMPOTENCY_KEY_REUSED`. These are **not** written now: this PR carries no domain,
+  persistence or runtime idempotency implementation, so such tests would assert nothing while
+  appearing to cover the case.
+- **`POST /v1/settlements/{settlement_id}/confirm-funds` — key scope stated, added 2026-08-24.**
+  The endpoint already requires the header, and §1.4 of `05_API_Contract_Data_Dictionary.md`
+  already retains the key-to-response mapping for **24 hours** and returns the original response
+  without reprocessing. What was missing is the **binding**: an `Idempotency-Key` with no stated
+  scope leaves each client to guess its own safe replay boundary. The key is scoped to
+  `(authenticated principal, settlement_id, leg_id, the logical confirm-funds operation, the
+  materially relevant request parameters)`, and may safely replay **only that same logical
+  request**. Inside the window, the same principal replaying that request with the same key
+  **must not create a second advisory claim record** and **must not reprocess**: the original
+  response is returned, carrying the original **`user_claim_recorded_at`** with `leg_id` and
+  `leg_state` semantics unchanged. Reusing the key with a materially different `settlement_id`,
+  `leg_id`, principal, payload or logical operation **fails deterministically**
+  (`SYS_409_IDEMPOTENCY_KEY_REUSED`, the existing §4.4 entry — **no new identifier**). This is
+  the same boundary already stated for acceptance above and **grants the endpoint nothing**: the
+  claim remains **advisory**, never establishing authoritative `FUNDED`, never mutating
+  `SettlementLeg.state` or advancing `Settlement.phase`, never authorizing release, and never
+  starting, satisfying or bypassing `ALLOCATION_FUNDING_READY`. Authoritative `FUNDED` stays
+  regulated-partner-webhook driven (§7.3). No storage implementation is specified here.
+- **`confirm-funds` processing order — mirrored from the API contract 2026-08-25.** The canonical
+  order for `POST /v1/settlements/{settlement_id}/confirm-funds` is **resource binding validation
+  → authorization → idempotency evaluation → advisory claim operation**, and each stage is
+  fail-closed:
+  1. **Resource binding** — `SettlementLeg.leg_id` equals the supplied `leg_id` **AND**
+     `SettlementLeg.settlement_id` equals `{settlement_id}`. If not, `RES_404_NOT_FOUND` and
+     **STOP** — no idempotency lookup, no idempotency record write, no authorization, no claim.
+  2. **Authorization** — the caller must be the funding party for that leg, else
+     `AUTH_403_FORBIDDEN`. This runs **before** any idempotency evaluation, so an unauthorized
+     caller never learns from a `409` whether a key exists or what it is bound to.
+  3. **Idempotency evaluation** — a reused key with a materially different canonical binding
+     returns `SYS_409_IDEMPOTENCY_KEY_REUSED`; the same bound logical request replays the original
+     response and `user_claim_recorded_at`.
+  4. **Advisory claim operation** — inside the atomic boundary described below.
+
+  This states an **order**, not a new rule: no identifier is introduced, the canonical idempotency
+  tuple `(authenticated principal, settlement_id, leg_id, the logical confirm-funds operation, the
+  materially relevant request parameters)` is unchanged, and the claim remains **advisory only**.
+  `05_API_Contract_Data_Dictionary.md` §3.6 is authoritative and carries the same order.
+- **Atomic idempotency boundary for `confirm-funds` — added 2026-08-24.** The bullet above
+  states an *outcome*; it does not by itself say what holds under simultaneous retries. Two
+  concurrent same-key requests could each observe no prior record and each create an advisory
+  claim, satisfying every sentence written there while producing the duplicate it forbids. The
+  invariant: **recording the scoped idempotency record and establishing or recognising the
+  advisory claim MUST occur inside one atomic logical persistence boundary.** Of two or more
+  concurrent requests carrying the same key and the same bound logical request, **exactly one**
+  establishes the original idempotency record and advisory claim; every other concurrent request
+  and every later retry **observes or replays that original result** — no duplicate advisory
+  claim, the original response, the original `user_claim_recorded_at`. A conflicting binding on
+  the same key is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED`, concurrently
+  or otherwise. **No mechanism is chosen here** -- no lock strategy, uniqueness constraint,
+  storage engine, cache technology or isolation level; any mechanism meeting the invariant is
+  conformant, and the choice belongs to the persistence milestone. **A concurrent same-key
+  regression test is REQUIRED at that milestone** (N simultaneous same-key requests, exactly one
+  claim record, N identical responses). It is **not** written now: this PR carries no runtime
+  idempotency or persistence implementation, so a test here would assert nothing while appearing
+  to cover the case.
+- **`SYS_409_IDEMPOTENCY_KEY_REUSED` means a bound-key conflict — one meaning, both documents,
+  added 2026-08-24.** The §4.4 catalogue previously defined it as a key *"reused with a different
+  request body"*, which is narrower than the bindings the two bullets above actually declare: an
+  authenticated principal arrives in the bearer token and a `settlement_id` is a path parameter,
+  so neither is a request body, yet a mismatch in either is precisely the conflict this code
+  exists to reject. Its canonical meaning across both authority documents is therefore a material
+  difference in **any bound component** — authenticated principal, resource identifier,
+  `settlement_id`, `leg_id`, the logical operation, or materially relevant request
+  parameters/payload. Each endpoint's contract states its own binding. Rejection is
+  **deterministic**, and the first request's response is **never** served to a conflicting one.
+  **One identifier covers every bound-key conflict on every idempotent endpoint; no new error
+  code is introduced. **Catalogue totals recounted 2026-08-25: 45 enumerated / 43 active / 2 superseded** (`05_API_Contract_Data_Dictionary.md` §4.4).**
 
 ## 9.5 Matching Rules Table
 

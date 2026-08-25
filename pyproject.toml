@@ -3,6 +3,23 @@ name = "xspeeria"
 version = "0.0.0"
 description = "Xspeeria application"
 requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "hypothesis>=6.112",
+    "httpx>=0.27",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+]
 
 [tool.ruff]
 line-length = 100
@@ -12,10 +29,17 @@ exclude = [
     ".claude",
     ".impeccable",
     ".backup-before-repair",
+    "node_modules",
+    "mobile",
+    "admin",
+    "packages",
 ]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -25,11 +49,18 @@ exclude = [
     "^\\.claude/",
     "^\\.impeccable/",
     "^\\.backup-before-repair/",
+    "^node_modules/",
+    "^mobile/",
+    "^admin/",
+    "^packages/",
 ]
+# `scripts` is on the path so the repo-hygiene guard is strict-checked like app code.
+mypy_path = "backend:scripts"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 addopts = "-ra"
+pythonpath = ["backend"]
 
 [tool.bandit]
 exclude_dirs = [
@@ -37,4 +68,8 @@ exclude_dirs = [
     ".impeccable",
     ".backup-before-repair",
     "tests",
+    "backend/tests",
+    "node_modules",
+    "mobile",
+    "admin",
 ]

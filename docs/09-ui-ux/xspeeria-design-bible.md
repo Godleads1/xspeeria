@@ -9,6 +9,8 @@ Xspeeria is a wallet-less, non-custodial peer-to-peer fiat exchange marketplace.
 
 > **Source of truth:** this edition is built directly from `Xspeeria_UIUX_AppFlow_Spec_v2.docx` (Doc Version 2.0, August 2026, Internal — Confidential — Pre-Development Blueprint), the authoritative, sign-off-ready UI/UX specification covering all 22 MVP screens. Every token, flow, and screen spec below is reproduced faithfully from that source — nothing here contradicts it. This replaces an earlier internal draft that used an unsourced dark-theme palette; that draft has been fully discarded.
 
+> **`UNKNOWN — NOT VERIFIED` — dangling normative reference.** This document previously grounded rate-limiting, lockout and RBAC behaviour in a repository document named `SECURITY.md`. **No such document exists.** Those citations now read "the applicable approved security policy", which is **not yet determined** and is the subject of the open security-baseline decision (Decision 2). Frontend behaviour is never an authoritative security control in any case — authorization is enforced server-side.
+
 ---
 
 # Page 2 — What This Version Corrects
@@ -16,9 +18,15 @@ Xspeeria is a wallet-less, non-custodial peer-to-peer fiat exchange marketplace.
 The source spec itself documents a resolved contradiction worth surfacing here, because it's a case study in the discipline this product demands: an earlier internal spec described a Home screen "Balance Card" showing a stored balance and wallet ID, and a five-tab navigation including "Cards" and "Scan." Both directly contradicted Xspeeria's wallet-less, non-custodial architecture — Xspeeria never holds customer funds, so a balance figure has no meaning.
 
 **Resolved:**
-- "Balance Card" → **Status Overview Card** — shows active FX request count, pending settlement count, and a preferred currency-pair shortcut. No balance figure, no wallet ID, anywhere, ever.
+- "Balance Card" → **Status Overview Card** — shows active FX request count, pending settlement count, and a preferred currency-pair shortcut. No balance figure, no wallet ID, anywhere, ever. *(Superseded by the **Account Readiness Region** — see the note above and Page 12.)*
 - Bottom navigation → **Home, Marketplace, Track, Notifications, Profile.** Cards is a deferred Phase 12 feature; no Scan flow exists in the product; Analytics isn't in MVP scope.
-- Home quick actions → **New FX Request, Browse Marketplace, Track Transaction, Support** — marketplace-native language, not wallet-native.
+
+  > **SUPERSEDED — HUMAN APPROVED, design-system freeze Phase 1.** Navigation is now **Home,
+  > Marketplace, Track, Cards, Profile**, with **Cards = COMING SOON** opening a real destination.
+  > Notifications move to the bell, notification centre and push. Scan and Analytics remain absent.
+  > The Balance Card correction below is **strengthened, not reversed**: the replacement region is
+  > now **Account Readiness**, and no aggregate currency figure may occupy the hero position either.
+- Home quick actions → **New FX Request, Browse Marketplace, Track Transaction, Support** — marketplace-native language, not wallet-native. *HISTORICAL / SUPERSEDED (2026-08-24): that correction replaced wallet-native actions and is preserved for traceability, but the approved Home now carries **exactly one** primary action, **Create or browse an offer**, routing to the Marketplace. The four-item quick-actions row is withdrawn.*
 - Typography and elevation token usage notes updated to remove every balance reference.
 
 This is a template for how every future design decision should be checked: does this visual choice, even implicitly, suggest Xspeeria custodies funds? If yes, it's wrong regardless of how clean it looks.
@@ -43,14 +51,54 @@ Design language: **Apple Wallet × Revolut Ultra × Stripe × Linear** — restr
 
 | Token | Hex | Usage |
 |---|---|---|
-| `color.primary.blue` | `#001B68` | Brand identity, primary buttons, headers, active nav, links |
-| `color.success.green` | `#179A43` | Completed settlement, positive outcome, success toast |
-| `color.alert.red` | `#E52421` | Errors, failed transactions, destructive actions, disputes |
-| `color.accent.gold` | `#F4C21F` | Premium accents, badges, KYC-verified marker, rare emphasis |
-| `color.bg.base` | `#F8FAFC` | App background |
+| `color.primary.blue` | `#1F3A8A` | Brand identity, primary buttons, headers, active nav, links |
+| `color.success.green` | `#10B981` | Completed settlement, positive outcome, success toast |
+| `color.alert.red` | `#EF4444` | Errors, failed transactions, destructive actions, disputes |
+| `color.accent.gold` | `#F4C21F` | **Decorative rating indicators only.** Not a status colour. Must not represent KYC approval, verified identity, success, funding confirmation, settlement completion or warning |
+| `color.bg.base` | `#FFFFFF` | Application canvas — default screen background |
 | `color.text.primary` | `#111827` | Body copy, headings |
 
-This is the complete confirmed palette — six tokens, no more. Any additional token (secondary text tint, hairline border color, a distinct warning hue) is an implementation detail engineering will need to derive and route through design sign-off before locking; none is specified in the source and none should be treated as final without that review.
+> **RECONCILED — Xspeeria Figma, the primary visual source of truth for application UI/UX.**
+> `color.primary.blue` was `#001B68`, `color.success.green` was `#179A43`, `color.alert.red` was
+> `#E52421`; each is now the Figma-observed value. These are **FIGMA-OBSERVED COLOURS / CANDIDATE
+> APPLICATION TOKENS**, not frozen production tokens — the Figma holds painted swatches, **not** a
+> bound token/variable system, so no production token set exists and none may be claimed until
+> human approval freezes one.
+>
+> `color.bg.base` = `#FFFFFF` was corrected earlier against the human decision in `PRODUCT.md`
+> “Brand Commitments”, 2026-08-20, and is **unchanged** — the Figma agrees. The pre-Figma
+> supporting neutral `#F8FAFC` is superseded by the Figma supporting soft surface `#F8F9FD`.
+>
+> **RESOLVED — HUMAN APPROVED, 2026-08-22.** `color.accent.gold` `#F4C21F` has **no counterpart in
+> the observed Figma palette** and is **not** Figma-confirmed. It is retained for **decorative
+> rating indicators only**, always accompanied by the numeric rating. It must never represent KYC
+> approval, verified identity, success, funding confirmation, settlement completion or warning.
+> Identity verification uses the brand-primary family. The glyph treatment itself remains
+> `UNKNOWN — NOT VERIFIED` — at 1.67:1 on canvas the mark needs an outline or a darker fill.
+>
+> **Observed in the Figma and since named** — Secondary `#3B82F6`, Body text `#4B5563`, Warning
+> `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`
+> now carry semantic tokens in `DESIGN_SYSTEM.md`. **HUMAN APPROVED**, 2026-08-22.
+>
+> **Logo/brand-asset colours are a separate question** and are not settled by the Figma — see
+> `PRODUCT.md` “Brand Commitments”. Full observed palette, the Figma Success-swatch label defect,
+> and measured WCAG contrast findings: `DESIGN_SYSTEM.md`.
+>
+> **Consequence (unchanged):** `surface.card` `#FFFFFF` is the same value as the canvas and must be
+> separated by border, elevation or spacing, never by fill.
+>
+> **DESIGN SYSTEM FREEZE — PHASE 1, HUMAN APPROVED.** The application colour direction above is
+> approved. The normative semantic-token architecture — surfaces, text, borders, brand, the
+> success/warning/error `.fill`/`.surface`/`.border`/`.text` families, primary interaction states,
+> the gold restriction and the legacy-name mapping — lives in `DESIGN_SYSTEM.md` and governs.
+> **IMPLEMENTATION STATUS: NOT IMPLEMENTED. VERIFICATION STATUS: NOT VERIFIED.** No application
+> code exists. Typography is a **PARTIAL FREEZE**: **Inter is HUMAN APPROVED as the financial/
+> numeric face**; brand/UI typography remains **OPEN** with Satoshi the leading candidate and
+> **not** production-approved; Nunito Sans is **not** an Xspeeria production standard. See
+> `DESIGN_SYSTEM.md`.
+
+
+**Superseded.** This was previously described as the complete confirmed palette — six tokens, no more. The Xspeeria Figma is now the primary visual source of truth for application UI/UX and observes further roles that this six-token set does not cover: Secondary `#3B82F6`, Body text `#4B5563`, Warning `#F59E0B`, Supporting soft surface `#F8F9FD`, Border/divider `#E5E7EB`, Disabled text `#9CA3AF`. Those are **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** — the Figma holds painted swatches, not a bound token/variable system, so no production token set exists yet. Assigning token names to the observed roles, and freezing any of them, requires design-system sign-off and is **not** done by this pass. The full observed palette is recorded in `DESIGN_SYSTEM.md`.
 
 ---
 
@@ -63,9 +111,11 @@ This is the complete confirmed palette — six tokens, no more. Any additional t
 | Title 2 (Semibold) | 22 / 28 | Section headers, modal titles |
 | Headline (Semibold) | 17 / 22 | Card titles, list item primary text |
 | Body (Regular) | 15 / 20 | Default body copy |
-| Numeral — Tabular (Semibold) | 17–34 | All currency and numeric values, tabular-figure variant |
+| Numeral — Tabular (Semibold) | 17–34 | All currency and numeric values — **Inter, tabular/lining figures required** |
 
-**Note on "Display":** this was explicitly corrected from an earlier "balance amount on Home" usage — it never renders a money figure on Home; it renders the Status Overview Card's activity counts instead.
+**Note on "Display":** this was explicitly corrected from an earlier "balance amount on Home" usage — it never renders a money figure on Home; it renders the Account Readiness Region's activity counts instead.
+
+**Typeface — PARTIAL FREEZE, `DESIGN_SYSTEM.md` governs.** **Inter is HUMAN APPROVED (2026-08-22) as the financial/numeric face**; the normative requirement is that financial numerics support tabular/lining figures wherever alignment requires it, with the preprocessing method left to implementation. Brand and UI typography remains **OPEN** — Satoshi is the leading candidate and is **not production-approved**. Inter is not required on non-numeric text.
 
 ---
 
@@ -77,9 +127,9 @@ This is the complete confirmed palette — six tokens, no more. Any additional t
 | `space.6` | 32px | Screen-edge margins |
 | `radius.md` | 16px | Standard cards, inputs |
 | `radius.lg` | 24px | Buttons, bottom sheets |
-| `radius.xl` | 32px | Status Overview Card — reserved exclusively for this component |
+| `radius.xl` | 32px | Account Readiness Region — reserved exclusively for this component (was "Status Overview Card") |
 | `elevation.1` | `0 1px 2px rgba(17,24,39,0.06)` | Resting cards |
-| `elevation.2` | `0 4px 12px rgba(0,27,104,0.12)` | Status Overview Card, floating transaction cards |
+| `elevation.2` | `0 4px 12px rgba(0,27,104,0.12)` | Account Readiness Region, floating transaction cards |
 | `elevation.3` | `0 8px 24px rgba(0,27,104,0.18)` | Modals, bottom sheets, FAB |
 
 ---
@@ -98,7 +148,7 @@ This is the complete confirmed palette — six tokens, no more. Any additional t
 
 # Page 8 — App Structure & Flows
 
-**Structure:** every screen sits under one of five bottom-navigation destinations — **Home, Marketplace, Track, Notifications, Profile** — reached only after identity verification. No Cards, Scan, or Analytics tab.
+**Structure:** every screen sits under one of five bottom-navigation destinations — **Home, Marketplace, Track, Cards, Profile** — reached only after identity verification. **HUMAN APPROVED.** **Cards is COMING SOON**: it opens a real destination explaining the future feature, never a dead or disabled tab, and exposes no card functionality, no card balance and nothing implying stored-value wallet or card functionality. Notifications are reached through the bell, the notification centre and push notifications for time-sensitive events. No Scan or Analytics tab.
 
 **Onboarding & authentication:**
 ```
@@ -142,7 +192,7 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Register** — Scrollable form: header, full name, email, phone, password (with strength meter), terms checkbox, primary CTA, login link. Submit → OTP; inline per-field validation + banner for server errors (e.g. email already registered). Password field has visible show/hide toggle with `accessibilityLabel "Show password"`; strength meter has a text equivalent, not color-only.
 
-**Login** — Centered form: logo, email, password, "Forgot password?" link, primary CTA, "Create account" link, biometric quick-login if enrolled. Submit → MFA (if enabled) or Home. Rate-limited after 5 attempts per `SECURITY.md` posture; lockout message states retry time via a live region.
+**Login** — Centered form: logo, email, password, "Forgot password?" link, primary CTA, "Create account" link, biometric quick-login if enrolled. Submit → MFA (if enabled) or Home. Rate-limited after 5 attempts per the applicable approved security policy; lockout message states retry time via a live region.
 
 ---
 
@@ -150,13 +200,21 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Forgot Password** — Single email field, explanatory copy, submit CTA, back link. Submit → confirmation screen ("check your email") → back to Login. Confirmation cross-fades in place of the form over `motion.base` and is announced via a live region.
 
-**MFA** — OTP input, countdown resend timer, channel indicator (SMS/Email/Authenticator). Auto-submits on 6th digit → Home. Error state shakes the OTP row on incorrect code; lockout after configured max attempts per `SECURITY.md`. Success flashes a green border before navigating. Resend button's disabled state shows a remaining-seconds label, not just gray-out.
+**MFA** — OTP input, countdown resend timer, channel indicator (SMS/Email/Authenticator). Auto-submits on 6th digit → Home. Error state shakes the OTP row on incorrect code; lockout after configured max attempts per the applicable approved security policy. Success flashes a green border before navigating. Resend button's disabled state shows a remaining-seconds label, not just gray-out.
 
 ---
 
 # Page 12 — Core Application: Home & Marketplace
 
-**Home** — Header (avatar, greeting, notification bell) → **Status Overview Card** (`radius.xl` 32px, solid Xspeeria Blue, active FX requests count, pending settlements count, preferred currency-pair shortcut — no balance, no wallet ID, ever) → Quick Actions (New FX Request, Browse Marketplace, Track Transaction, Support) → Recent Transactions (up to 3 cards: pair, stage chip, next action) → Bottom Navigation. Bell → Notifications; pair chip on Status Card → Marketplace pre-filtered to that pair; Transaction Card → Match Details or Settlement Tracking depending on current stage. Empty: "No transactions yet — create your first offer." Status counts increment on load; pull-to-refresh triggers a brief flat-fill pulse. **No balance or account-number figures ever appear on this screen** — this removes the shoulder-surfing concern flagged against the earlier v1 spec entirely, rather than hiding it behind a show/hide toggle.
+**Home** — **HUMAN APPROVED structure.** Header (avatar, greeting, notification bell) → **Account Readiness Region** (`radius.xl` 32px; exactly three dimensions — Identity/KYC, Security/qualifying MFA, Eligible to transact; collapses to a compact confirmation line once all three are satisfied so it does not permanently dominate Home) → **Primary action** (New FX Request / Browse Marketplace) → **Active activity** (open Offers, MatchAllocations requiring attention, in-flight settlements; the most time-critical item first) → Recent activity (up to 3 cards: pair, stage chip, next action) → Bottom Navigation. Bell → Notification centre; readiness dimension → its completion flow; activity item → Match Details or Settlement Tracking depending on current stage. Empty: "No active offers — create your first offer." Pull-to-refresh triggers a brief flat-fill pulse.
+
+**Beneficiary, payout and funding readiness are allocation-specific and must never appear as Home account-readiness dimensions.** Amounts stay attached to the individual Offer or allocation they belong to and are **never summed into one figure**: **no balance, no wallet ID, no account-number figure, and no aggregate currency hero, ever.** A large single currency figure in the hero position reads as a balance regardless of its label, which is why the region carries readiness rather than money. This removes the shoulder-surfing concern at source rather than hiding it behind a show/hide toggle.
+
+> **Terminology note.** **`MatchAllocation`** is canonical **product language** for one accepted
+> partial or full allocation of an Offer. It maps to the existing persisted/API entity **`Match`**
+> — there is **no separate `MatchAllocation` table or entity**. See the canonical glossary in
+> `DOCUMENT_INDEX.md` §2A.
+
 
 **Marketplace** — Segmented control (Offers / Requests), filter bar (currency, amount range, rate), scrollable list of listing cards (rate-sorted), FAB "Create." Tap listing → Offer/Match Details; FAB → Create Offer or Create Request. Empty: "No offers match your filters" + "Clear filters" CTA. New listings matching active filters slide in from top with a brief highlight pulse. Filter bar fully screen-reader operable with an explicit "N filters active" summary.
 
@@ -166,7 +224,7 @@ All 22 MVP screens are specified below, grouped into the four journeys shown in 
 
 **Create Offer** — Multi-step form: amount + currency pair → desired rate → settlement window → review. Step indicator fills over `motion.fast` on advance. Rate outside market band triggers a warning, not a hard block. Step indicator announces "Step 2 of 4: Desired rate" on each transition. **Create Request** mirrors this structure exactly with inverted currency-direction framing.
 
-**Offer Details** — Offer summary card, counterparty preview (rating, verification badge), rate breakdown, action buttons (Accept / Edit / Cancel depending on ownership). Accept → Match Details; Cancel → confirmation Modal → Marketplace. Full-screen error state if the offer was withdrawn/expired since navigation. Counterparty verification badge has an explicit text alternative ("KYC Verified") — never gold-icon-only.
+**Offer Details** — Offer summary card, counterparty preview (rating, verification badge), rate breakdown, action buttons (Accept / Edit / Cancel depending on ownership). Accept → Match Details; Cancel → confirmation Modal → Marketplace. Full-screen error state if the offer was withdrawn/expired since navigation. Counterparty verification badge renders in the **brand-primary family with an explicit text label ("KYC Verified")** — never gold. Gold is decorative/rating-only and must not represent KYC approval or verified identity (`DESIGN_SYSTEM.md`, *Accent / gold*); the earlier "never gold-icon-only" wording understated that rule and is superseded.
 
 ---
 
@@ -208,7 +266,7 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 
 **Business Dashboard** — SME/importer-oriented summary: aggregate FX volume, active offers/requests, settlement calendar, downloadable statements. KPI cards top, activity/calendar below. KPI cards → filtered Transaction Timeline; Export → async statement generation with a ready-notification. Empty: "No business activity yet — verify your business account" if business KYC is incomplete. Each KPI card fetches and retries independently. KPI numbers count up on load. Each KPI card exposes value + label + trend direction as a single accessible string, not three fragments.
 
-**Admin Mobile** — Condensed console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot as a persistent top strip. Queue item → approve/reject KYC or resolve dispute, RBAC-gated per `SECURITY.md`. Empty: "Queue clear" (positive). This is an operational tool — a full-screen retry state on load failure is required; silent partial failure is not acceptable. Approved/resolved items animate out of the queue (slide + fade) rather than vanishing instantly. **Destructive/high-consequence actions (reject KYC, force-resolve dispute) require an explicit confirmation Modal, never a single tap.**
+**Admin Mobile** — Condensed console for on-call operations staff: pending KYC queue, dispute queue, system health snapshot as a persistent top strip. Queue item → approve/reject KYC or resolve dispute, RBAC-gated per the applicable approved security policy. Empty: "Queue clear" (positive). This is an operational tool — a full-screen retry state on load failure is required; silent partial failure is not acceptable. Approved/resolved items animate out of the queue (slide + fade) rather than vanishing instantly. **Destructive/high-consequence actions (reject KYC, force-resolve dispute) require an explicit confirmation Modal, never a single tap.**
 
 ---
 
@@ -216,8 +274,8 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 
 | Component | Specification |
 |---|---|
-| **Status Overview Card** | Primary trust surface on Home. Displays FX marketplace/transaction activity — active request count, pending settlement count, preferred currency-pair shortcut. **Never displays a stored balance or wallet ID:** Xspeeria is wallet-less and non-custodial, and this card must not imply otherwise. |
-| **Bottom Navigation** | Persistent across top-level screens: Home, Marketplace, Track, Notifications, Profile. No Cards, Scan, or Analytics tab in MVP. |
+| **Account Readiness Region** | Primary trust surface on Home. **SUPERSEDES the Status Overview Card — HUMAN APPROVED.** Exactly three dimensions: Identity/KYC, Security/qualifying MFA, Eligible to transact. Collapses to a compact confirmation once all three are satisfied. Beneficiary, payout and funding readiness are allocation-specific and never appear here. **Never displays a stored balance, wallet ID or any currency amount:** Xspeeria is wallet-less and non-custodial, and this region must not imply otherwise. |
+| **Bottom Navigation** | Persistent across top-level screens: **Home, Marketplace, Track, Cards, Profile** — **HUMAN APPROVED**. Cards is **COMING SOON**, opening a real destination rather than a dead tab, with no card functionality and no card balance. Notifications live behind the bell, notification centre and push. No Scan or Analytics tab. |
 | **Transaction Card** | Represents a single transaction/settlement in lists and the Home "Recent Transactions" rail. Shows currency pair, current state-machine stage, and next available action — never a balance figure. |
 | **Primary Button** | Single highest-emphasis action per screen. Height 52px, `radius.lg` (24px), scale to 0.97 on press, light haptic. |
 
@@ -231,16 +289,16 @@ Chronological, reverse-order activity feed of all transaction events (created, m
 - Final icon set licensing (Phosphor vs. SF Symbols-derived custom set) for cross-platform parity.
 - Whether Admin (Next.js) requires a distinct component library instance or directly consumes the mobile token set via a shared package.
 - Exact copy for empty/error states across all 22 screens — this spec defines structure and intent; final microcopy needs a content-design pass.
-- *Resolved, no longer open:* balance visibility on Home (removed entirely, not hidden-by-default) and whether Cards/Analytics are in MVP scope (they are not).
+- *Resolved, no longer open:* balance visibility on Home (removed entirely, not hidden-by-default) and whether Analytics is in MVP scope (it is not). **Updated — HUMAN APPROVED:** **Cards** now occupies a bottom-navigation destination as **COMING SOON**, opening a real destination with no card functionality and no card balance.
 
 **Developer Handoff Tokens (Tailwind-ready):**
 ```js
 colors: {
-  primary: { blue: '#001B68' },
-  success: '#179A43',
-  alert: '#E52421',
-  accent: { gold: '#F4C21F' },
-  bg: { base: '#F8FAFC' },
+  primary: { blue: '#1F3A8A' },
+  success: '#10B981',
+  alert: '#EF4444',
+  accent: { gold: '#F4C21F' },   // decorative rating indicators only — never a status colour
+  bg: { base: '#FFFFFF' },
   text: { primary: '#111827' },
 }
 borderRadius: { md: '16px', lg: '24px', xl: '32px' }
@@ -249,4 +307,4 @@ spacing: { 2: '8px', 3: '16px', 4: '24px', 6: '32px' }
 
 ---
 
-**THIS DOCUMENT IS THE SINGLE VISUAL SOURCE OF TRUTH FOR XSPEERIA, REPRODUCED FROM XSPEERIA_UIUX_APPFLOW_SPEC_V2.DOCX.**
+**SUPERSEDED CLAIM.** This document previously declared itself *"the single visual source of truth for Xspeeria"*. For **application UI/UX** the **Xspeeria Figma** is now the primary visual source of truth (human authority, 2026-08-22). This document remains the reproduction of `XSPEERIA_UIUX_APPFLOW_SPEC_V2.DOCX` and stays authoritative for screen behaviour, flows, states and interaction detail that the Figma does not settle; where it disagrees with the Figma on **visual** matters, the Figma governs. Logo/brand-asset colours are settled by neither — see `PRODUCT.md` “Brand Commitments”.

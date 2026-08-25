@@ -373,7 +373,60 @@ Where required, use:
 
 ---
 
+# 2A. CANONICAL DOMAIN GLOSSARY
+
+**HUMAN APPROVED, 2026-08-22.** Authoritative mapping between canonical **conceptual** terminology
+and existing **persisted/API** terminology. Product and UI documentation may use the conceptual
+term freely; it never implies a separate table, route or entity.
+
+**No table, route, endpoint or entity is renamed by this mapping.**
+
+| Conceptual term | Persisted / API term | Meaning |
+|---|---|---|
+| **MatchAllocation** | **`Match`** | One accepted partial or full allocation of one Offer by one counterparty. One Offer carries **0..n**. Each is an independent settlement failure domain |
+| **KycCase** | **`KYCCases`** | The onboarding/review case lifecycle. Canonical for onboarding and review history |
+| **BeneficiaryAccount** | **`BENEFICIARIES`** | Reusable profile-level payout destination, `User → 0..n` |
+| **Offer** | `Offer` | Parent matching intent. `original_amount = matched_amount + remaining_amount`; remaining is **derived** |
+| **Settlement / SettlementLeg** | same | ADR-001, unchanged. Exactly two legs per settlement |
+| **PayoutExecution** | `PayoutExecution` | Child payout record beneath one leg. **Never an additional leg** |
+| **CorridorConfig / JurisdictionProfile** | *(configuration schemas)* | Versioned configuration and policy interfaces — **not runtime-editable persisted entities yet** |
+| **MfaFactor** | *(none yet)* | Conceptual `User → MfaFactor 0..n`. Persistence and policy **OPEN — Decision 2** |
+
+Two structural notes:
+
+- **`Match` is extended, not renamed.** There is **no** second `MatchAllocation` table or entity.
+- **`KYC_PROFILES`** in `02_Technical_Design_Specification.md` §5, if retained, is a **summary /
+  projection / current-profile representation** — **not** a competing canonical case lifecycle.
+
+Canonical relationship chain, unchanged where ADR-001 governs:
+
+```
+Offer → Match (0..n) → Transaction (1, match_id UNIQUE) → Settlement (1)
+      → SettlementLeg (exactly 2) → PayoutExecution (0..n)
+```
+
+---
+
 # 11. UI / UX
+
+## Primary visual source of truth — application UI/UX
+
+The **Xspeeria Figma** (`docs/references/figma/Xspeeria.fig` — human-provided design source,
+**untracked pending a versioning decision**). Human authority, 2026-08-22. Where a document in this
+section disagrees with the Figma on a **visual** matter (colour, surface, spacing, visual
+hierarchy), the Figma governs. The documents below remain authoritative for screen behaviour,
+flows, states, interaction detail and accessibility requirements that the Figma does not settle.
+
+Two limits on that authority:
+
+- The Figma contains **painted swatches, not a bound token/variable system**. Xspeeria therefore has
+  **no production design-token system**, and none may be claimed. Observed values are recorded as
+  **FIGMA-OBSERVED COLOURS / CANDIDATE APPLICATION TOKENS** until human approval freezes them.
+- The Figma is **not** the authority for **logo/brand-asset colours**, which remain open pending
+  confirmation against the original vector — see `PRODUCT.md` “Brand Commitments”.
+
+Observed palette, the Figma Success-swatch label defect, and measured WCAG contrast findings are
+recorded in `docs/09-ui-ux/DESIGN_SYSTEM.md`.
 
 ## Application flow
 
@@ -383,9 +436,19 @@ Where required, use:
 
 `docs/09-ui-ux/UI_UX_SCREEN_SPEC.md`
 
-## Design system
+## Design system — normative token authority
 
 `docs/09-ui-ux/DESIGN_SYSTEM.md`
+
+Authoritative for the application colour direction, the semantic token architecture
+(PRIMITIVE → SEMANTIC → COMPONENT), status-family roles, border roles, primary interaction
+states, the gold restriction, and the legacy-name mapping. **HUMAN APPROVED, 2026-08-22.**
+Where another UI/UX document states a colour value or token role that conflicts with it, this
+document governs. Values are **candidate production tokens, not frozen**, and no application
+code exists — **IMPLEMENTATION STATUS: NOT IMPLEMENTED**. Typography is a **PARTIAL FREEZE**:
+**Inter is HUMAN APPROVED as the financial/numeric face**; brand/UI typography remains **OPEN**
+with Satoshi the leading candidate and **not** production-approved; Nunito Sans is **not** an
+Xspeeria production standard.
 
 ## Design bible
 

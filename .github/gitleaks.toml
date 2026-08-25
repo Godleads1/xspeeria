@@ -1,0 +1,26 @@
+# Workflow-owned Gitleaks configuration.
+#
+# WHY THIS FILE EXISTS AND WHY IT LIVES HERE
+#
+# `gitleaks` loads `.gitleaks.toml` from the root of whatever it scans, so a future
+# commit could drop one in and REPLACE the default rule set for the source scan. The
+# canary scans a throwaway repository that has no such file, so it would keep passing
+# on the defaults while the real scan ran a hollowed-out rule set: green job, nothing
+# looking. Passing this file explicitly with `--config` to BOTH scans removes that
+# asymmetry - one configuration, demonstrably the same for canary and source.
+#
+# It sits under `.github/` rather than the repository root precisely so it is NOT the
+# file gitleaks would auto-discover. `scripts/check_sensitive_files.py` rejects every
+# other tracked gitleaks config, and CI asserts the line below is still present, so
+# this cannot be quietly swapped for one that disables the defaults.
+#
+# RULES
+#
+# The built-in rule set is extended, never replaced. There is deliberately no
+# `[allowlist]`, no baseline and no path exclusion here: this file exists to guarantee
+# coverage, and anything that narrows coverage does not belong in it.
+
+title = "Xspeeria workflow-owned gitleaks configuration"
+
+[extend]
+useDefault = true

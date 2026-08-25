@@ -18,90 +18,248 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          python-version: "3.12"
+          persist-credentials: false
 
-      - name: Install CI tools
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ruff mypy pytest bandit pip-audit
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          enable-cache: true
+
+      # `requires-python = ">=3.12"` admits 3.13+, so a runner already carrying a newer
+      # interpreter could satisfy the range without using the one installed here.
+      # `--python 3.12` on the sync below removes that choice: the audited environment is
+      # the intended one, not whatever the image happened to ship.
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # --locked, not --frozen: --frozen installs from uv.lock without checking that the
+      # lock still matches pyproject.toml, so a dependency edit committed without a
+      # relock would pass silently. --locked fails the job instead. Every `uv run` below
+      # then uses --no-sync, because `uv run` re-resolves and re-syncs by default - which
+      # would let ruff, mypy, pytest and above all pip-audit inspect an environment that
+      # is not the one uv.lock describes. A dependency audit against an unlocked
+      # environment is not evidence about what ships.
+      - name: Install project and dev dependencies
+        run: uv sync --all-groups --locked --python 3.12
 
       - name: Ruff
-        run: ruff check .
+        run: uv run --no-sync ruff check .
 
-      - name: Detect Python source files
-        id: python_files
-        shell: bash
-        run: |
-          FILES=$(find . -type f -name "*.py" \
-            -not -path "./.git/*" \
-            -not -path "./.claude/*" \
-            -not -path "./.impeccable/*" \
-            -not -path "./.backup-before-repair/*")
-
-          if [ -n "$FILES" ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No Python source files exist yet."
-          fi
-
-      - name: MyPy
-        if: steps.python_files.outputs.found == 'true'
-        run: |
-          FILES=$(find . -type f -name "*.py" \
-            -not -path "./.git/*" \
-            -not -path "./.claude/*" \
-            -not -path "./.impeccable/*" \
-            -not -path "./.backup-before-repair/*")
-          mypy $FILES
+      - name: MyPy (strict)
+        run: uv run --no-sync mypy backend scripts
 
       - name: Bandit
-        if: steps.python_files.outputs.found == 'true'
-        run: |
-          bandit -r . \
-            -x ./.claude,./.impeccable,./.backup-before-repair,./tests
-
-      - name: Detect tests
-        id: tests
-        shell: bash
-        run: |
-          if find tests -type f \( -name "test_*.py" -o -name "*_test.py" \) | grep -q .; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No pytest tests exist yet."
-          fi
+        run: uv run --no-sync bandit -r backend -x backend/tests -q
 
       - name: Pytest
-        if: steps.tests.outputs.found == 'true'
-        run: pytest
+        run: uv run --no-sync pytest
 
-      - name: Detect dependency files
-        id: dependencies
-        shell: bash
+      # The dependency audit must never pass by finding nothing to audit.
+      # uv.lock is the single source of dependency truth. The audit runs against the
+      # installed environment, which `uv sync --locked` built from that lock: no
+      # re-resolution, no download step, nothing that can silently audit an empty set.
+      - name: Assert a dependency source exists
         run: |
-          if [ -f requirements.txt ] || \
-             [ -f requirements-dev.txt ] || \
-             [ -f poetry.lock ] || \
-             [ -f uv.lock ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No application dependency file exists yet."
+          test -f uv.lock || { echo "uv.lock is missing: dependency audit cannot run"; exit 1; }
+
+      - name: Assert the locked environment is populated
+        run: |
+          COUNT=$(uv pip list --format=json | python -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "Installed distributions: $COUNT"
+          if [ "$COUNT" -lt 5 ]; then
+            echo "Environment has almost nothing installed: refusing a false-green audit"
+            exit 1
           fi
 
-      - name: Dependency audit
-        if: steps.dependencies.outputs.found == 'true'
+      - name: Dependency audit (installed environment, incl. dev tooling)
+        run: uv run --no-sync pip-audit --strict --progress-spinner off
+
+  node-quality:
+    name: Node & TypeScript Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install workspace from lockfile
+        run: npm ci
+
+      - name: Type-check all workspaces
+        run: npm run typecheck --workspaces --if-present
+
+      - name: Lint all workspaces
+        run: npm run lint --workspaces --if-present
+
+      - name: Design token tests
+        run: npm run test --workspace @xspeeria/tokens
+
+      - name: Mobile tests
+        run: npm run test --workspace @xspeeria/mobile
+
+      - name: Admin tests
+        run: npm run test --workspace @xspeeria/admin
+
+      # GREEN as of the Milestone 1 dependency remediation (verified 2026-08-23).
+      # Measured: 0 critical, 0 high, 10 moderate, 0 low across 787 production
+      # dependencies. The Expo SDK 52 -> 57 and Next 14 -> 16.3.2 upgrades cleared the
+      # previous high-severity findings: postcss now 8.5.23 (was 8.4.31, vulnerable at
+      # <=8.5.22) and sharp now 0.35.3 (was 0.34.5, vulnerable at <0.35.0).
+      #
+      # The 10 remaining moderates are ACCEPTED, not suppressed. All ten trace to one
+      # root advisory - GHSA-w5hq-g745-h8pq, uuid <11.1.1 missing buffer bounds check -
+      # reached only via expo -> @expo/config-plugins -> xcode@3.0.1 -> uuid@7.0.3.
+      # That path is iOS prebuild tooling that edits .pbxproj files at build time; it is
+      # a runtime dependency of `expo` but is not part of the shipped app bundle. npm's
+      # only proposed fix is expo@46.0.21, a major DOWNGRADE from the approved SDK 57,
+      # so no fix is applied. Re-evaluate when Expo ships config-plugins on uuid >=11.1.1.
+      #
+      # The threshold stays at high. Do not lower it to hide a real finding.
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+
+  repo-hygiene:
+    name: Secret Scanning & Tracked-File Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth: 0 so gitleaks scans the whole history, not just the tip commit.
+      # A secret that was committed and later deleted is still in history and still
+      # compromised.
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The gitleaks CLI from its official release, pinned by version AND verified
+      # against the SHA-256 published in that release, rather than the gitleaks Action.
+      # Rationale: the Action is a third-party wrapper that would itself need pinning
+      # and, for organisation-owned repositories, requires a GITLEAKS_LICENSE secret.
+      # This step needs no secret and no license, and the checksum makes the download
+      # immutable in the same way an action SHA does.
+      - name: Install gitleaks (pinned + checksum-verified)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
         run: |
-          if [ -f requirements.txt ]; then
-            pip-audit -r requirements.txt
-          elif [ -f requirements-dev.txt ]; then
-            pip-audit -r requirements-dev.txt
-          else
-            echo "Dependency lock file detected; project-specific audit will be configured with dependency management."
+          set -euo pipefail
+          ARCHIVE="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download"
+          curl -fsSL --retry 3 -o "$ARCHIVE" "${BASE}/v${GITLEAKS_VERSION}/${ARCHIVE}"
+          echo "${GITLEAKS_SHA256}  ${ARCHIVE}" | sha256sum --check --status
+          tar -xzf "$ARCHIVE" gitleaks
+          install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      # The approved config is version-controlled, so it could be edited to disable the
+      # defaults as easily as a rogue `.gitleaks.toml` could replace them. This asserts its
+      # structure before either scan runs. The tracked-file guard rejects every other
+      # gitleaks config, so this file is the only configuration in play.
+      #
+      # This was two `grep` lines until 2026-08-24: one for `useDefault = true`, one for a
+      # literal `[allowlist]` header. That covered one suppression channel out of several.
+      # `[[allowlists]]` and rule-scoped `[[rules.allowlists]]` silence findings just as
+      # effectively and match neither pattern, so a suppression could land while the assert
+      # passed and the canary still fired. Widening the regex would only have been guesswork
+      # about TOML surface syntax - a header, an inline table and a dotted key all express
+      # the same thing and look nothing alike. The guard parses the file with `tomllib` and
+      # inspects the resulting structure instead, so syntax stops mattering. It also rejects
+      # `[extend].disabledRules`, `[extend].path`/`url` and any unrecognised top-level key.
+      # Regression tests: backend/tests/unit/test_gitleaks_config.py.
+      - name: Assert the approved gitleaks config suppresses nothing
+        run: python3 scripts/check_gitleaks_config.py
+
+      # The scan below proves gitleaks RAN. It cannot prove the pinned artifact still
+      # DETECTS anything: a broken download, a stripped rule set or a future packaging change
+      # would each produce "no leaks found" and a green job, and the repository would look
+      # clean because nothing was looking. This canary closes that gap by requiring the exact
+      # binary just installed to find a secret it has been planted with.
+      #
+      # The synthetic value is assembled at runtime from fragments. Committing the assembled
+      # form would make the real scan below flag its own canary, so no fragment stored here
+      # matches a gitleaks rule on its own.
+      #
+      # Both this canary and the source scan pass `--config .github/gitleaks.toml`, so the
+      # canary proves detection under the *same* configuration the repository is scanned
+      # with -- not merely under the built-in defaults.
+      #
+      # Rule exercised: `private-key` from the gitleaks default rule set - a pure pattern match
+      # with no entropy threshold and no known allowlist, so a failure means the binary is not
+      # detecting rather than that the canary was too weak. The body is a SHA-256 digest of a
+      # fixed string: deterministic and reproducible, and not a real or placeholder credential.
+      - name: Gitleaks artifact canary (the binary must actually detect a secret)
+        run: |
+          set -euo pipefail
+          CANARY_DIR="$(mktemp -d)"
+          trap 'rm -rf "$CANARY_DIR"' EXIT
+
+          DASHES='-----'
+          KIND='PRIVATE KEY'
+          BODY="$(printf %s xspeeria-gitleaks-canary-v1 | sha256sum | cut -d" " -f1)"
+          {
+            echo "${DASHES}BEGIN ${KIND}${DASHES}"
+            echo "$BODY"
+            echo "${DASHES}END ${KIND}${DASHES}"
+          } > "$CANARY_DIR/canary.key"
+
+          git init -q "$CANARY_DIR"
+          git -C "$CANARY_DIR" add -A
+          git -C "$CANARY_DIR" -c user.email=canary@xspeeria.invalid -c user.name=canary commit -qm "gitleaks canary"
+
+          set +e
+          gitleaks git "$CANARY_DIR" --config "$GITHUB_WORKSPACE/.github/gitleaks.toml" --log-opts="--all" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
+          RC=$?
+          set -e
+
+          if [ "$RC" -eq 0 ]; then
+            echo "::error::Gitleaks canary NOT detected: the pinned binary reported no leaks on a planted secret, so the repository scan below proves nothing."
+            exit 1
           fi
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::Gitleaks canary returned unexpected exit status $RC (expected 1 = finding). Treating the scanner as broken."
+            exit 1
+          fi
+
+          RULES="$(grep -o '"RuleID": *"[^"]*"' "$CANARY_DIR/canary-report.json" | sed 's/.*"RuleID": *"//; s/"$//' | sort -u | paste -sd, -)"
+          echo "Canary detected. Rule(s) fired: $RULES"
+          case ",$RULES," in
+            *,private-key,*) ;;
+            *) echo "::error::Canary fired on [$RULES] but not on the expected private-key rule."; exit 1 ;;
+          esac
+      # `gitleaks git` scans commit history. Exit code 1 on any finding fails the job:
+      # there is no continue-on-error, no baseline and no allowlist file.
+      #
+      # Suppression is refused rather than merely absent. An earlier revision of this
+      # comment claimed a finding "cannot be silently suppressed" because no allowlist
+      # existed; that was an overclaim. gitleaks honours two repository-controlled
+      # suppression channels by default - `.gitleaksignore` fingerprints and inline
+      # `gitleaks:allow` comments - so a later commit could have silenced a real finding
+      # without touching this workflow. `--ignore-gitleaks-allow` disables the inline
+      # channel, and the tracked-file guard below rejects a committed `.gitleaksignore`.
+      #
+      # `--log-opts=--all` is required for `fetch-depth: 0` to mean anything: without it
+      # gitleaks walks only the checked-out ref, so a secret reachable solely from
+      # another branch or a tag would be fetched and then not scanned.
+      #
+      # --redact keeps the matched value out of the public build log; the finding, its
+      # file and its commit are still reported.
+      - name: Secret scan (full history, all refs)
+        run: gitleaks git . --config .github/gitleaks.toml --log-opts="--all" --ignore-gitleaks-allow --redact --verbose --exit-code 1
+
+      # Complements the scan above: gitleaks looks for secret-shaped *content*, this
+      # looks for sensitive *paths* that are tracked at all - including a file that was
+      # force-added past .gitignore, which an ignore rule cannot protect against. It also
+      # rejects a tracked `.gitleaksignore`, closing the second suppression channel.
+      - name: Tracked sensitive-file guard
+        run: python3 scripts/check_sensitive_files.py

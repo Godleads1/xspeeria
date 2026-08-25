@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Xspeeria",
+    "slug": "xspeeria",
+    "owner": "xspeeria-01",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "xspeeria",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "package": "com.xspeeria.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9cc8df68-2c8e-40af-9055-872188b8eeff"
+      }
+    }
+  }
+}
