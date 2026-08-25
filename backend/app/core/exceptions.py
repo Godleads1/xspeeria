@@ -4,10 +4,21 @@ One response shape for every failure, so clients never have to branch on error f
 
     {"error": {"code": "...", "message": "...", "details": {...}}}
 
-Error *codes* are deliberately not enumerated here. The catalogue in
-`docs/04-api-data/05_API_Contract_Data_Dictionary.md` is a **derived, not ratified**
-draft, and freezing identifiers in code would give that draft an authority it does not
-have.
+Error *codes* are deliberately not enumerated here **yet**. The catalogue in
+`docs/04-api-data/05_API_Contract_Data_Dictionary.md` §4 is now partly ratified: it
+totals **45 enumerated / 43 active / 2 superseded** (recount 2026-08-25), and several
+identifiers carry explicit human approval -- among them `RES_409_INSUFFICIENT_REMAINING`
+(RATIFIED -- HUMAN-APPROVED 2026-08-25), `VAL_422_RATE_NOT_POSITIVE`,
+`VAL_422_RATE_ABOVE_CEILING` and `SYS_409_IDEMPOTENCY_KEY_REUSED`. The earlier note here
+called the whole catalogue a *"derived, not ratified"* draft; that is **stale** and
+understated the authority of the ratified identifiers.
+
+What has not changed is the reason nothing is frozen in this module: no route yet raises
+a catalogue code, so an enumeration here would be unused surface. **Ratified identifiers
+must be introduced verbatim, alongside the code path that raises them** -- Stage 4
+Milestone 4.1E is the first such point (`RES_409_INSUFFICIENT_REMAINING`,
+`SYS_409_IDEMPOTENCY_KEY_REUSED`). Identifiers that remain unratified must not be
+implemented as though they were.
 """
 
 from __future__ import annotations

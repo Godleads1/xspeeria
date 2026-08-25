@@ -38,7 +38,11 @@ This document is the binding contract between Xspeeria’s FastAPI backend and a
 
 > **ASSUMPTION:** *API_DATA_DICTIONARY.md names eight entities and one absolute rule (Decimal for money). ARCHITECTURE.md names the module list and technology stack. Every endpoint path, request/response schema, field-level validation rule, error code, and event payload below is a derived specification consistent with those two documents and with the security controls assumed at the time of writing (Argon2, JWT + rotating refresh, MFA, RBAC, AES-256, audit logging, webhook verification) — whose normative source is unresolved, see the note below. None of this has been confirmed against an actual implementation and must be ratified by backend engineering before being treated as frozen.*
 
+<!-- -->
+
 > **`UNKNOWN — NOT VERIFIED` — missing normative security baseline.** Statements below previously cited a repository document named `SECURITY.md` as their normative source. **No such document exists.** No normative Security Baseline Specification currently exists in this repository, and the security-baseline decision (Decision 2, `AUDIT_PHASE0_2026-08-18.md` §14) remains **OPEN**. Those citations now read "the applicable approved security policy", which is **not yet determined** — the controls described therefore lack their expected normative grounding. Documented requirements are not evidence of implementation or verification.
+
+<!-- -->
 
 > **CANONICAL DOMAIN RECONCILIATION — 2026-08-22.** The schemas and endpoints below have been
 > reconciled to **HUMAN-APPROVED PRODUCT SEMANTICS**. Two things must be read separately:
@@ -97,13 +101,13 @@ List endpoints accept a filter\[field\]=value query convention (e.g., filter\[st
 
 **Corrected 2026-08-24.** State-mutating POST endpoints that initiate money movement or matching require an `Idempotency-Key` header (client-generated UUIDv4). The server persists the key-to-response mapping for **24 hours**; a repeated request with the same key returns the original response **without reprocessing**. That retention and replay behaviour is **unchanged** by this correction.
 
-What changed is the list of operations. The previous wording named *"match confirmation"* and *"settlement initiation"* as its examples, and **both are stale**. Bilateral match confirmation is **withdrawn** (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is SUPERSEDED, §4.3), so the policy cited an operation that no longer exists. Client-triggered settlement initiation is likewise **not** an operation in the active model: no client-facing settlement-initiation endpoint exists, the *"initiation once `both_confirmed = true`"* rule is superseded (§4.3), and partner provisioning becomes actionable only when the allocation reaches `ALLOCATION_FUNDING_READY` (ADR-001 §14.3) — a server-derived gate, not a client POST.
+What changed is the list of operations. The previous wording named *"match confirmation"* and *"settlement initiation"* as its examples, and **both are stale**. Bilateral match confirmation is **withdrawn** (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is SUPERSEDED, §3.5), so the policy cited an operation that no longer exists. Client-triggered settlement initiation is likewise **not** an operation in the active model: no client-facing settlement-initiation endpoint exists, the *"initiation once `both_confirmed = true`"* rule is superseded (§3.6), and partner provisioning becomes actionable only when the allocation reaches `ALLOCATION_FUNDING_READY` (ADR-001 §14.3) — a server-derived gate, not a client POST.
 
-**The endpoint contracts in §4.3 are authoritative for which endpoints carry the header:** an endpoint requires an `Idempotency-Key` when its **Required Headers** row names one. The money-sensitive operations under the active model are **`POST /v1/offers/{offer_id}/accept`** — the canonical acceptance operation that establishes a `Match` — and **`POST /v1/settlements/{settlement_id}/confirm-funds`**, the advisory customer funding claim, **which this policy explicitly covers**, alongside offer creation. **This correction adds the header requirement to no endpoint that did not already declare it**, and removes it from none.
+**The endpoint contracts in §3 (§3.1-§3.9) are authoritative for which endpoints carry the header:** an endpoint requires an `Idempotency-Key` when its **Required Headers** row names one. The money-sensitive operations under the active model are **`POST /v1/offers/{offer_id}/accept`** — the canonical acceptance operation that establishes a `Match` — and **`POST /v1/settlements/{settlement_id}/confirm-funds`**, the advisory customer funding claim, **which this policy explicitly covers**, alongside offer creation. **This correction adds the header requirement to no endpoint that did not already declare it**, and removes it from none.
 
-**The routes named above are illustrative canonical examples, NOT an exhaustive enumeration — clarified 2026-08-25.** This section states the *policy*; it is not a route registry, and it must not be read as one. An endpoint requires an `Idempotency-Key` **if and only if** its own §4.3 **Required Headers** row names one, and that declaration is authoritative on its own. Two consequences, both binding: an endpoint is **never exempt** from the header merely because this section does not name it — the FXRequest creation endpoint (§3.3) declares the header in its own contract and requires it — and naming an endpoint here **grants it nothing** its §4.3 contract does not already state. Where this section and an endpoint contract disagree, **the endpoint contract wins** and this section is the defect. *Scope note: this is an enumeration/authority clarification only. Whether FXRequest creation is an active MVP user flow or a compatibility-only surface is a **separate OPEN human product decision** and is neither settled nor implied here.*
+**The routes named above are illustrative canonical examples, NOT an exhaustive enumeration — clarified 2026-08-25.** This section states the *policy*; it is not a route registry, and it must not be read as one. An endpoint requires an `Idempotency-Key` **if and only if** its own §3 **Required Headers** row names one, and that declaration is authoritative on its own. Two consequences, both binding: an endpoint is **never exempt** from the header merely because this section does not name it — the FXRequest creation endpoint (§3.3) declares the header in its own contract and requires it — and naming an endpoint here **grants it nothing** its §3 contract does not already state. Where this section and an endpoint contract disagree, **the endpoint contract wins** and this section is the defect. *Scope note: this is an enumeration/authority clarification only. Whether FXRequest creation is an active MVP user flow or a compatibility-only surface is a **separate OPEN human product decision** and is neither settled nor implied here.*
 
-**"The same key" means the same *bound* request.** A key is bound to the logical request it was first used for; the binding for each endpoint is stated in that endpoint's contract (see the idempotency-scope note for `confirm-funds` in §4.3, and §9.4 of `02_Technical_Design_Specification.md` for acceptance). Presenting a bound key with a materially different request is a **bound-key conflict** and is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4) — never served the first request's response.
+**"The same key" means the same *bound* request.** A key is bound to the logical request it was first used for; the binding for each endpoint is stated in that endpoint's contract (see the idempotency-scope note for `confirm-funds` in §3.6, and §9.4 of `02_Technical_Design_Specification.md` for acceptance). Presenting a bound key with a materially different request is a **bound-key conflict** and is rejected deterministically with `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.5) — never served the first request's response.
 
 2\. Authentication
 
@@ -570,6 +574,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > here; it would surface through the existing `SYS_500_INTERNAL_ERROR` path like any other
 > server-side invariant violation.*
 
+<!-- -->
+
 > **Atomic idempotency boundary for acceptance — cross-reference added 2026-08-25.** The Business
 > Rules row above defines the acceptance transaction as **one atomic commit** covering capacity
 > serialization, the authoritative `remaining_amount` read, `accepted_amount` validation,
@@ -586,7 +592,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > of concurrent same-key requests with the same bound logical request **exactly one** wins —
 > **one `Match`, capacity consumed once**, all others replaying the original `Match` and original
 > response; a conflicting binding on the same key is rejected deterministically with
-> `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4, **no new identifier**); and different keys racing for
+> `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.5, **no new identifier**); and different keys racing for
 > capacity are decided unchanged by the serialization rules, with losers **rejected** via
 > `RES_409_INSUFFICIENT_REMAINING` — **never clamped or partially filled**.
 >
@@ -716,6 +722,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > settlement_id, leg_id, the logical confirm-funds operation, the materially relevant request
 > parameters)` — this correction adds a precondition, it does not alter that tuple.
 
+<!-- -->
+
 > **Authorization precedes idempotency. Added 2026-08-25.** The precedence note below settles
 > *resource address vs idempotency*; this settles the step between them. After binding validation
 > passes, **funding-party authorization runs before any idempotency evaluation.** Without a stated
@@ -740,6 +748,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > *The canonical idempotency tuple already includes the authenticated principal, so this states an
 > order — it changes no binding, no identifier and no replay behaviour for valid authorized
 > requests.*
+
+<!-- -->
 
 > **Precedence: resource address BEFORE idempotency. HUMAN-APPROVED 2026-08-25.** Two rules could
 > previously claim the same request: the binding check above returns `RES_404_NOT_FOUND` for a leg
@@ -778,6 +788,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > canonical idempotency tuple is **unchanged** — `(authenticated principal, settlement_id, leg_id,
 > the logical confirm-funds operation, the materially relevant request parameters)`. **No further
 > error identifier is introduced.**
+
+<!-- -->
 
 > **Idempotency-Key scope and binding — added 2026-08-24.** §1.4 already requires the header,
 > retains the key-to-response mapping for **24 hours**, and returns the original response
@@ -1078,13 +1090,42 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | SYS_500_INTERNAL_ERROR         | 500             | Unhandled server error                                 |
 | SYS_503_SERVICE_UNAVAILABLE    | 503             | Dependency (DB, Redis, Celery) temporarily unavailable |
 | SYS_504_UPSTREAM_TIMEOUT       | 504             | A downstream/banking dependency timed out              |
-| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | **Bound-key conflict — meaning broadened 2026-08-24.** An `Idempotency-Key` was presented with a request that does not match the logical request the key was first bound to. The previous wording, *"reused with a different request body"*, was narrower than the binding the contracts actually define: an authenticated principal comes from the bearer token and a `settlement_id` is a path parameter, so neither is a request body, yet a mismatch in either is exactly the conflict this code exists to reject. The canonical meaning is a material difference in **any bound component** — authenticated principal, resource identifier, `settlement_id`, `leg_id`, the logical operation, or materially relevant request parameters/payload. Each endpoint's contract states its own binding (§4.3). Rejection is **deterministic**; the first request's response is **never** served to a conflicting one. **One identifier covers every bound-key conflict — no new code is introduced and the catalogue totals are recounted in the note below this table: **45 enumerated / 43 active / 2 superseded** (2026-08-25)** |
+| SYS_409_IDEMPOTENCY_KEY_REUSED | 409             | **Bound-key conflict — meaning broadened 2026-08-24.** An `Idempotency-Key` was presented with a request that does not match the logical request the key was first bound to. The previous wording, *"reused with a different request body"*, was narrower than the binding the contracts actually define: an authenticated principal comes from the bearer token and a `settlement_id` is a path parameter, so neither is a request body, yet a mismatch in either is exactly the conflict this code exists to reject. The canonical meaning is a material difference in **any bound component** — authenticated principal, resource identifier, `settlement_id`, `leg_id`, the logical operation, or materially relevant request parameters/payload. Each endpoint's contract states its own binding (§3.1-§3.9). **Endpoint precedence applies before this code is reachable — pointer added 2026-08-25, editorial.** Where an endpoint contract states an ordering, **resource-binding validation and authorization run BEFORE idempotency evaluation**, and a request failing either never reaches idempotency state or this code. For `POST /v1/settlements/{settlement_id}/confirm-funds` (§3.6) the canonical order is **resource binding validation → authorization → idempotency evaluation → advisory claim**: an unbound `leg_id` returns `RES_404_NOT_FOUND` and a non-funding-party caller returns `AUTH_403_FORBIDDEN`, so an unauthorized caller **never learns from a `409` that a key exists or what it is bound to**. Consequently the *authenticated principal* component of the binding below is, at such endpoints, caught by authorization first. **This states existing precedence and introduces no rule, identifier or binding change.** Rejection is **deterministic**; the first request's response is **never** served to a conflicting one. **One identifier covers every bound-key conflict — no new code is introduced and the catalogue totals are recounted in the note below this table: **45 enumerated / 43 active / 2 superseded** (2026-08-25)** |
 
 > **ASSUMPTION:** *The catalogue above totals **45** explicitly enumerated codes across five namespaces — **43 active, 2 superseded** (recounted 2026-08-25 after `VAL_422_RATE_NOT_POSITIVE` was ratified; the earlier figure of 39 predates several additions). Reaching the requested minimum of 50 requires additional module-specific codes (e.g., Admin-suspension edge cases, Notification delivery failures) that should be authored incrementally as each module is implemented, rather than pre-invented without an implementation to validate them against — inventing precise numeric coverage here would reduce document accuracy for the sake of a count.*
 
 5\. Data Dictionary
 
-Schema definitions for every persisted entity. All monetary fields use PostgreSQL NUMERIC (mapped to Python Decimal via SQLAlchemy) per AGENTS.md and ARCHITECTURE.md; float is never used for money anywhere in the schema.
+Schema definitions for every persisted entity.
+
+> **AUTHORITATIVE MONETARY REPRESENTATION — DECISION S4-1, HUMAN-APPROVED 2026-08-25.** Every
+> **persisted authoritative transactional monetary amount** is stored as **exact integer minor
+> units**, with its interpretation **immutably bound** at the moment the amount is established:
+>
+> | Column | Type | Meaning |
+> |---|---|---|
+> | `amount_minor` | `BIGINT NOT NULL` | Exact integer minor units. Never binary floating point |
+> | `currency` | `CHAR(3) NOT NULL` | ISO 4217 |
+> | `scale` | `SMALLINT NOT NULL` | Minor-unit exponent, captured with the amount |
+> | `currency_def_version` | `VARCHAR(32) NOT NULL` | Which currency definition interprets `currency` (ADR-002; type matches the existing `LedgerLine.currency_def_version` authority in this document — **no new version encoding is invented**) |
+>
+> This **supersedes** the former blanket statement that *"All monetary fields use PostgreSQL
+> NUMERIC (mapped to Python Decimal via SQLAlchemy)"*. That rule contradicted ADR-002, TDS §6.4
+> and this document's own `PayoutExecution` and `LedgerLine` schemas, which already specify
+> `amount_minor BIGINT`. Three different types — `NUMERIC(18,2)`, `NUMERIC(20,4)` and `BIGINT` —
+> were in force for the same conceptual money. **One representation now governs all of them.**
+>
+> **`NUMERIC`/`DECIMAL` may appear only as an explicitly DERIVED, NON-AUTHORITATIVE
+> presentation/reporting value** where a justified need is recorded. It is never the source of
+> truth, is never read back as truth, and derived decimal columns must not be added for
+> convenience alone. **Float is never used for money anywhere in the schema.**
+>
+> **Exchange rates are NOT monetary amounts.** `desired_rate` and `agreed_rate` remain
+> `NUMERIC(12,6)` and are unaffected by this decision.
+>
+> The domain arithmetic primitive remains `Money(minor, currency, scale)`
+> (`backend/app/core/money.py`), **unchanged** — `currency_def_version` is carried *alongside* it
+> in persistence, not added to the value object.
 
 Users
 
@@ -1221,7 +1262,9 @@ A user’s request to exchange currency (inverse of Offer).
 | user_id         | UUID          | No           | FK -\> Users.id                     | Requester                           |
 | source_currency | CHAR(3)       | No           | ISO 4217                            | Currency being offered by requester |
 | target_currency | CHAR(3)       | No           | ISO 4217, != source_currency        | Currency desired                    |
-| source_amount   | NUMERIC(18,2) | No           | \> corridor minimum                 | Decimal precision, never float      |
+| source_amount_minor | BIGINT    | No           | \> corridor minimum; **exact integer minor units, never float or decimal** (S4-1). Bound to `currency` + `scale` + `currency_def_version`. *Type corrected 2026-08-25 from `NUMERIC(18,2)`* | Exact minor-unit amount |
+| scale           | SMALLINT      | No           | Minor-unit exponent for `source_currency`; immutable once set | Fixes the meaning of `source_amount_minor` |
+| currency_def_version | VARCHAR(32) | No        | Immutably bound when the amount is established (S4-1) | Which currency definition interprets `source_currency` |
 | desired_rate    | NUMERIC(12,6) | No           | **`> 0` AND ≤ applicable approved reference ceiling; no reference-rate floor.** Positivity is a domain validity invariant, not a pricing floor (§3.3 rate-validity note) | Requested exchange rate |
 | status          | ENUM          | No           | active, matched, cancelled, expired | Marketplace visibility              |
 
@@ -1273,9 +1316,13 @@ independent settlement failure domain.
 > never binary floating point. This is **marketplace/allocation arithmetic** and is distinct from
 > **ledger posting representation**, which remains governed by ADR-002 (`amount_minor` BIGINT +
 > `scale` + `currency_def_version`, with `ROUND_HALF_EVEN` applied at exactly one conversion
-> point). ADR-002 is unchanged and remains authoritative for the ledger boundary. The
-> `NUMERIC(18,2)` column type below is a **PROPOSED shape**, not ratified; the approved semantics
-> are exactness and minor-unit arithmetic.
+> point). **RESOLVED 2026-08-25 by DECISION S4-1 (HUMAN-APPROVED):** the former `NUMERIC(18,2)`
+> column type below was a *PROPOSED shape, not ratified*, and the approved semantics were already
+> exactness and minor-unit arithmetic. Those semantics now have a ratified column shape —
+> `amount_minor BIGINT` + `currency` + `scale` + `currency_def_version` — so **marketplace/allocation
+> arithmetic and ledger posting representation no longer use two different types**, and no
+> decimal↔minor-unit conversion sits inside the acceptance transaction. ADR-002 remains
+> authoritative for the ledger boundary and is aligned, not overridden.
 
 |                         |               |              |                                     |                                            |
 |-------------------------|---------------|--------------|-------------------------------------|--------------------------------------------|
@@ -1284,9 +1331,11 @@ independent settlement failure domain.
 | user_id                 | UUID          | No           | FK -\> Users.id                     | Offering user                              |
 | source_currency         | CHAR(3)       | No           | ISO 4217                            | Currency offered                           |
 | target_currency         | CHAR(3)       | No           | ISO 4217                            | Currency desired in exchange               |
-| source_amount           | NUMERIC(18,2) | No           | \> corridor minimum; exact, never float | **Original amount.** Conceptually `original_amount` |
-| matched_amount          | NUMERIC(18,2) | No           | 0 ≤ matched_amount ≤ source_amount, enforced under row lock | Sum of two disjoint sets: active-committed allocations and completed allocations. Each allocation counted exactly once |
-| *remaining_amount*      | *derived*     | —            | `source_amount − matched_amount`    | **DERIVED — not persisted** |
+| source_amount_minor     | BIGINT        | No           | \> corridor minimum; **exact integer minor units, never float or decimal**. Bound to `currency` + `scale` + `currency_def_version` (S4-1). *Type corrected 2026-08-25 from `NUMERIC(18,2)`* | **Original amount.** Conceptually `original_amount` |
+| matched_amount_minor    | BIGINT        | No           | 0 ≤ matched_amount_minor ≤ source_amount_minor, enforced under row lock **and by DB CHECK**. **Exact integer minor units.** *Type corrected 2026-08-25 from `NUMERIC(18,2)*` | Sum of two disjoint sets: active-committed allocations and completed allocations. Each allocation counted exactly once. **Maintained under the acceptance row lock — never recomputed as `SUM(all historical Match rows)`** |
+| scale                   | SMALLINT      | No           | Minor-unit exponent for `source_currency`; immutable once set | Fixes the meaning of the integer minor-unit amounts |
+| currency_def_version    | VARCHAR(32)   | No           | Immutably bound when the Offer amount is established (S4-1) | Which currency definition interprets `source_currency` |
+| *remaining_amount_minor* | *derived*    | —            | `source_amount_minor − matched_amount_minor` | **DERIVED — not persisted** |
 | desired_rate            | NUMERIC(12,6) | No           | **`> 0` AND ≤ applicable approved reference ceiling; no reference-rate floor.** Positivity is a domain validity invariant, not a pricing floor (§3.3 rate-validity note). Validated at publication; re-checked at acceptance; **locked** on the resulting Match | Seller-selected exchange rate |
 | ~~settlement_window_hours~~ | ~~SMALLINT~~ | — | **WITHDRAWN** | Superseded: window durations are configurable policy, not user input (ADR-001 §14.4) |
 | status                  | ENUM          | No           | **CANONICAL ENUM — HUMAN-APPROVED 2026-08-25: `open`, `partially_matched`, `fully_matched`, `withdrawn`, `cancelled`, `expired`.** `withdrawn` is **added** by that decision and closes the prior status-model gap. Persisted enum literals may retain existing names for compatibility — the *conceptual* lifecycle is what is approved. The former binary `active \| matched` is **insufficient** | Marketplace visibility. **A partially matched Offer remains available for its remaining amount.** `withdrawn` = owner withdrew the still-unmatched remainder; existing allocations are untouched |
@@ -1312,7 +1361,11 @@ persisted/API form of the conceptual **`MatchAllocation`** — see the glossary 
 | offer_id             | UUID          | No           | FK -\> Offer.id                                     | Parent Offer |
 | fx_request_id        | UUID          | **Yes**      | FK -\> FXRequest.id. **Optional/nullable** — a Match is creatable without any FXRequest | Legacy/compatibility linkage only |
 | counterparty_user_id | UUID          | No           | FK -\> Users.id                                     | Accepting user |
-| allocated_amount     | NUMERIC(18,2) | No           | \> 0; Σ valid allocations ≤ Offer.source_amount, enforced under row lock. Exact minor-unit arithmetic | **Amount allocated by this acceptance.** Reconciles the TDS `matched_amount` on Match — **one amount concept, not two** |
+| allocated_amount_minor | BIGINT      | No           | **\> 0**, enforced by DB CHECK; Σ valid allocations ≤ `Offer.source_amount_minor`, enforced under the Offer row lock. **Exact integer minor units** — *type corrected 2026-08-25 from `NUMERIC(18,2)` per S4-1* | **Amount allocated by this acceptance.** Reconciles the TDS `matched_amount` on Match — **one amount concept, not two** |
+| currency             | CHAR(3)       | No           | ISO 4217; = `Offer.source_currency`                 | Allocation currency |
+| scale                | SMALLINT      | No           | = the Offer's `scale`; immutable once set           | Minor-unit exponent for `allocated_amount_minor` |
+| currency_def_version | VARCHAR(32)   | No           | Immutably bound at acceptance (S4-1)                | Which currency definition interprets `currency` |
+| server_order_key     | BIGINT        | No           | **REQUIRED, UNIQUE, IMMUTABLE — DECISION S4-2, HUMAN-APPROVED 2026-08-25.** Server-generated inside the acceptance serialization boundary; **never client-supplied**; durable and orderable. A PostgreSQL sequence/identity is an acceptable generator. **The value need not be gapless** — rollback and sequence gaps are acceptable and carry no meaning. *Added to this schema 2026-08-25: the contract already required durable persistence (§ Offer acceptance Business Rules) but no column existed* | **Deterministic tie-break for acceptance priority.** Total order is `accepted_at ASC, server_order_key ASC` — `accepted_at` remains the **primary** criterion and is not replaced |
 | agreed_rate          | NUMERIC(12,6) | No           | **`> 0`** and ≤ the applicable approved reference ceiling **as evaluated at the moment of acceptance**; locked at acceptance; never silently re-priced. **A persisted Match is never revalidated or re-priced by a later rate rule or ceiling change** — the validation above is an acceptance-time gate, not an ongoing constraint | **Immutable once set** |
 | accepted_at          | TIMESTAMPTZ   | No           | **Server-set trusted timestamp.** A client-supplied value is never trusted | Establishes the allocation and its acceptance priority |
 | preparation_state    | ENUM          | No           | Preparation lifecycle for this allocation           | **Window 1.** Beneficiary selection/validation and allocation-specific requirements |
@@ -1388,7 +1441,7 @@ The settlement aggregate linked to a Transaction. Records **workflow decisions o
 | closure_reason         | ENUM         | Yes          | TIMEOUT, REMATCH, PARTY_CANCELLED, PROVISION_FAILED, RECOVERED, LOSS_RECOGNIZED | Required on terminal phases            |
 | rematched_to           | UUID         | Yes          | FK -\> Settlement.id                                                           | Set only from CLOSED_UNWOUND           |
 | compensates_settlement_id | UUID      | Yes          | FK -\> Settlement.id                                                           | Set on compensating settlements only   |
-| outstanding_exposure_amount | NUMERIC(20,4) | Yes     | Non-null iff phase = RECOVERY_REQUIRED                                         | Unresolved customer exposure           |
+| outstanding_exposure_amount_minor | BIGINT | Yes    | Non-null iff phase = RECOVERY_REQUIRED. **Exact integer minor units** (S4-1); carries `currency`, `scale` and `currency_def_version` with it. *Type corrected 2026-08-25 from `NUMERIC(20,4)`.* **This is a representation correction only — the mixed irreversible payout aggregate-state semantics that populate this field remain OPEN and are not resolved here** | Unresolved customer exposure           |
 
 SettlementLeg
 
@@ -1402,9 +1455,9 @@ SettlementLeg
 | party_role               | ENUM          | No           | REQUESTER, ACCEPTER; UNIQUE(settlement_id, party_role)                         | Semantic leg identity — not positional |
 | state                    | ENUM          | No           | PENDING, ESCROW_PROVISIONED, FUNDED, RELEASE_SENT, PAID_OUT, RETURN_SENT, RETURNED, PROVISION_FAILED, PAYOUT_FAILED | PAID_OUT is irreversible |
 | currency                 | CHAR(3)       | No           | ISO 4217                                                                       | Leg currency                           |
-| amount                   | NUMERIC(20,4) | No           | **REPRESENTATION INCOMPLETE — see the monetary-binding note below.** Decimal only; never float | Leg amount |
-| *currency_def_version*   | *REQUIRED, not yet in this schema* | — | **Immutably bound when the leg amount is established.** See the monetary-binding note below | Which currency definition interprets `currency` |
-| *scale*                  | *REQUIRED, not yet in this schema* | — | **Immutable minor-unit exponent captured with the leg amount** | Fixes the meaning of the integer minor-unit amount |
+| amount_minor             | BIGINT        | No           | **Exact integer minor units. Never binary floating point.** **REPRESENTATION COMPLETED 2026-08-25 by DECISION S4-1** — supersedes the former `NUMERIC(20,4)` column marked *"REPRESENTATION INCOMPLETE"*. Must equal `Σ` of this leg's `PayoutExecution.amount_minor` where payouts exist | Leg amount |
+| currency_def_version     | VARCHAR(32)   | No           | **Immutably bound when the leg amount is established** (S4-1). *Was "REQUIRED, not yet in this schema" — now in the schema.* Type matches the `LedgerLine` authority in this document | Which currency definition interprets `currency` |
+| scale                    | SMALLINT      | No           | **Immutable minor-unit exponent captured with the leg amount** (S4-1). *Was "REQUIRED, not yet in this schema" — now in the schema.* Inherited unchanged by every `PayoutExecution` of this leg | Fixes the meaning of the integer minor-unit amount |
 | source_jurisdiction      | CHAR(2)       | No           | ISO 3166-1 alpha-2; CHECK = destination_jurisdiction                           | Domestic-only enforcement              |
 | destination_jurisdiction | CHAR(2)       | No           | ISO 3166-1 alpha-2; CHECK = source_jurisdiction                                | No leg may cross a border              |
 | partner_id               | UUID          | No           | Assigned partner; a partner may advance only its own leg                       | Adapter routing                        |
@@ -1419,12 +1472,14 @@ SettlementLeg
 > and scale, a later change to currency metadata makes exact-total validation and historical
 > replay ambiguous -- the same stored number would mean two different amounts.
 >
-> **The current `NUMERIC(20,4)` shape does not satisfy this and is not pretended to.** It fixes
-> four decimal places for every currency, records no definition version, and is a decimal
-> presentation type rather than the integer minor-unit representation ADR-002 makes
-> authoritative. It is marked **REPRESENTATION INCOMPLETE / SUPERSEDED** above; the required
-> persisted shape is the four elements listed here. **ADR-002 is unchanged and remains
-> authoritative: financial arithmetic uses integer minor units with an explicit scale.**
+> **CLOSED 2026-08-25 by DECISION S4-1 (HUMAN-APPROVED).** The former `NUMERIC(20,4)` shape did
+> not satisfy this and was never pretended to: it fixed four decimal places for every currency,
+> recorded no definition version, and was a decimal presentation type rather than the integer
+> minor-unit representation ADR-002 makes authoritative. It is now **replaced in the schema
+> above** by exactly the four elements required here — `amount_minor BIGINT`, `currency CHAR(3)`,
+> `scale SMALLINT`, `currency_def_version VARCHAR(32)` — so the leg carries its own complete,
+> immutable monetary interpretation. **ADR-002 remains authoritative and is now consistent with
+> this schema: financial arithmetic uses integer minor units with an explicit scale.**
 >
 > **`PayoutExecution` children inherit that binding.** A child takes the parent's currency,
 > `currency_def_version` and scale; **no child may independently choose another scale**, and the
@@ -1636,8 +1691,8 @@ Records a mismatch between Xspeeria records and a partner report. **Never mutate
 | settlement_id     | UUID          | No           | FK -\> Settlement.id — may be terminal              | Affected settlement                |
 | leg_id            | UUID          | Yes          | FK -\> SettlementLeg.leg_id                         | Affected leg, where leg-specific   |
 | type              | ENUM          | No           | MISSING_IN_PARTNER, MISSING_IN_XSPEERIA, AMOUNT_MISMATCH, STATE_MISMATCH | Mismatch category |
-| expected_amount   | NUMERIC(20,4) | Yes          | Decimal only                                        | Xspeeria's record                  |
-| observed_amount   | NUMERIC(20,4) | Yes          | Decimal only                                        | Partner's record                   |
+| expected_amount_minor | BIGINT    | Yes          | **Exact integer minor units** (S4-1); interpreted with the related leg's `currency`/`scale`/`currency_def_version`. *Type corrected 2026-08-25 from `NUMERIC(20,4)`* | Xspeeria's record                  |
+| observed_amount_minor | BIGINT    | Yes          | **Exact integer minor units** (S4-1); same interpretation as `expected_amount_minor`, so the two are comparable without rounding. *Type corrected 2026-08-25 from `NUMERIC(20,4)`* | Partner's record                   |
 | status            | ENUM          | No           | OPEN, UNDER_REVIEW, RESOLVED                        | Exception lifecycle                |
 | resolution        | TEXT          | Yes          | Required on RESOLVED                                | Where money is genuinely wrong, remedy is a compensating settlement |
 
