@@ -1129,16 +1129,50 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   inside **one atomic logical persistence boundary**, committing as a unit or not at all:
 
   1. authoritative Offer-capacity serialization;
-  2. authoritative `remaining_amount` read;
-  3. `accepted_amount` validation (**required**, `> 0`, `≤` authoritative remaining capacity);
-  4. `Idempotency-Key` binding and lookup;
-  5. establishment of the original idempotency record;
-  6. `accepted_at` assignment (**server-set trusted timestamp**);
-  7. `server_order_key` assignment;
-  8. `Match` establishment;
-  9. Offer capacity / allocation-state update;
-  10. binding of the response to the idempotency result;
-  11. commit.
+  2. `Idempotency-Key` **binding resolution and lookup**;
+  3. **replay / conflict decision** — see the ordering rule below. A hit on the same bound logical
+     request **replays the original result and stops here**; a hit with a materially different
+     binding **fails with `SYS_409_IDEMPOTENCY_KEY_REUSED` and stops here**; a miss continues as a
+     **new** request;
+  4. authoritative `remaining_amount` read *(new requests only)*;
+  5. `accepted_amount` validation *(new requests only)* — **required**, `> 0`, `≤` authoritative
+     remaining capacity, else `RES_409_INSUFFICIENT_REMAINING`;
+  6. establishment of the original idempotency record;
+  7. `accepted_at` assignment (**server-set trusted timestamp**);
+  8. `server_order_key` assignment;
+  9. `Match` establishment;
+  10. Offer capacity / allocation-state update;
+  11. binding of the response to the idempotency result;
+  12. commit.
+
+  **Ordering rule — key resolution precedes capacity validation. Corrected 2026-08-25.** An
+  earlier revision of this list validated `accepted_amount` against authoritative remaining
+  capacity **before** resolving the `Idempotency-Key`, which contradicted the replay guarantee
+  stated below in this same section. The failure was concrete: once the first acceptance has
+  consumed capacity, a **legitimate retry of that already-completed request** would be measured
+  against the *now-reduced* remaining amount and rejected with `RES_409_INSUFFICIENT_REMAINING`,
+  instead of replaying the original `Match` — the request's **own** allocation making its retry
+  look impossible. A conflicting reuse could likewise be misclassified as a capacity failure
+  before `SYS_409_IDEMPOTENCY_KEY_REUSED` was ever reached.
+
+  **Serialization still comes first (step 1).** Resolving the key inside the Offer-capacity
+  serialization boundary is what makes the replay/conflict decision race-free; moving the lookup
+  earlier in the *step order* does not move it outside the boundary.
+
+  **Capacity is validated only for a new request.** Steps 4-5 run **only** when step 3 found no
+  prior record. This is not a relaxation:
+
+  | Case | Behaviour |
+  |---|---|
+  | **Retry of a completed same bound request** | **Replays** the original `Match`, response, `accepted_at` and `server_order_key`. Capacity is **not** re-validated — it was already validated and consumed once, by this very request |
+  | **New request / new key** | Validated against the **authoritative current** `remaining_amount` read inside the boundary. A client-displayed value is advisory and may be stale |
+  | **Same key, materially different binding** | `SYS_409_IDEMPOTENCY_KEY_REUSED` — never served the first request's response |
+
+  **The invariants are unchanged: no duplicate `Match`, and no duplicate capacity consumption.**
+  A replay creates nothing and consumes nothing; a new request consumes capacity exactly once
+  under serialization. Rejection of a genuinely oversized new request is **unchanged** —
+  `RES_409_INSUFFICIENT_REMAINING`, **never** silently reduced, resized, clamped or partially
+  filled.
 
   **Key binding.** The key is scoped to `(authenticated principal, offer_id, the logical
   acceptance operation, accepted_amount, the materially relevant request parameters)`. A
@@ -1192,6 +1226,25 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   `SettlementLeg.state` or advancing `Settlement.phase`, never authorizing release, and never
   starting, satisfying or bypassing `ALLOCATION_FUNDING_READY`. Authoritative `FUNDED` stays
   regulated-partner-webhook driven (§7.3). No storage implementation is specified here.
+- **`confirm-funds` processing order — mirrored from the API contract 2026-08-25.** The canonical
+  order for `POST /v1/settlements/{settlement_id}/confirm-funds` is **resource binding validation
+  → authorization → idempotency evaluation → advisory claim operation**, and each stage is
+  fail-closed:
+  1. **Resource binding** — `SettlementLeg.leg_id` equals the supplied `leg_id` **AND**
+     `SettlementLeg.settlement_id` equals `{settlement_id}`. If not, `RES_404_NOT_FOUND` and
+     **STOP** — no idempotency lookup, no idempotency record write, no authorization, no claim.
+  2. **Authorization** — the caller must be the funding party for that leg, else
+     `AUTH_403_FORBIDDEN`. This runs **before** any idempotency evaluation, so an unauthorized
+     caller never learns from a `409` whether a key exists or what it is bound to.
+  3. **Idempotency evaluation** — a reused key with a materially different canonical binding
+     returns `SYS_409_IDEMPOTENCY_KEY_REUSED`; the same bound logical request replays the original
+     response and `user_claim_recorded_at`.
+  4. **Advisory claim operation** — inside the atomic boundary described below.
+
+  This states an **order**, not a new rule: no identifier is introduced, the canonical idempotency
+  tuple `(authenticated principal, settlement_id, leg_id, the logical confirm-funds operation, the
+  materially relevant request parameters)` is unchanged, and the claim remains **advisory only**.
+  `05_API_Contract_Data_Dictionary.md` §3.6 is authoritative and carries the same order.
 - **Atomic idempotency boundary for `confirm-funds` — added 2026-08-24.** The bullet above
   states an *outcome*; it does not by itself say what holds under simultaneous retries. Two
   concurrent same-key requests could each observe no prior record and each create an advisory

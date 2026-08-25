@@ -537,8 +537,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                             |
 | Request JSON     | **`accepted_amount` (exact Decimal string, REQUIRED)** — **HUMAN APPROVED, 2026-08-24.** Partial acceptance is supported, and the amount is always **explicit**. The client **must** supply it; omission is a request-validation failure and **never** means "accept the full remaining amount". **There is no server-side implicit take-remaining default**, ratified or otherwise — the previously **PROPOSED, not ratified** default is **WITHDRAWN**. The value is an exact decimal string on the wire, converted once to integer minor units at the boundary under the approved monetary representation rules (`docs/adr/002-financial-event-ledger-architecture.md`); binary floating point is never accepted. *Rationale: the allocated amount must record explicit user intent, missing or truncated client input must fail closed rather than escalate to a maximum allocation, a concurrent change to the Offer must not silently alter the amount the user intended, and an audit or dispute record must carry an explicit accepted amount.* |
 | Success Response | 201 Created — Match object carrying `allocated_amount` and the server-set `accepted_at` |
-| Error Responses  | **RES_409_OFFER_UNAVAILABLE** — *including the case where the Offer's **stored** rate no longer satisfies current policy/rate eligibility; corrected 2026-08-25*, RES_409_INSUFFICIENT_REMAINING *(proposed)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
-| Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and still *proposed*). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
+| Error Responses  | **RES_409_OFFER_UNAVAILABLE** — *including the case where the Offer's **stored** rate no longer satisfies current policy/rate eligibility; corrected 2026-08-25*, **RES_409_INSUFFICIENT_REMAINING** *(**RATIFIED — HUMAN-APPROVED 2026-08-25**)*, AUTH_403_SELF_MATCH_FORBIDDEN, VAL_422_MISSING_FIELD *(omitted `accepted_amount`)* |
+| Validation Rules | A user cannot match against their own offer. `accepted_amount` is **required**, **> 0**, and **≤ the authoritative `remaining_amount` evaluated inside the acceptance serialization boundary** — the same boundary that enforces `Σ valid allocations ≤ original_amount` and assigns `server_order_key`. A `remaining_amount` the client previously read or displayed is **advisory and may be stale**; only the value read under that boundary is authoritative. If the authoritative remaining amount is insufficient when the request is processed, the acceptance is **rejected** — the server **never silently reduces, resizes, clamps or partially fills** `accepted_amount` (`RES_409_INSUFFICIENT_REMAINING`, already listed above and **RATIFIED — HUMAN-APPROVED 2026-08-25**). A missing `accepted_amount` is `VAL_422_MISSING_FIELD`, the existing catalogue entry for an omitted required field (§4.2). **No new error identifier is introduced here.** Corridor allocation constraints apply. Rate policy is **re-checked at acceptance** |
 | Business Rules   | **HUMAN-APPROVED — supersedes the previous "acceptance locks the offer" rule.** Acceptance does **not** lock or close the Offer. A partially matched Offer **remains available for its remaining amount**, and one Offer may carry **0..n** Matches. Concurrency control must guarantee that the **sum of valid allocations never exceeds the Offer's original amount**. **Acceptance transaction boundary — clarified 2026-08-24: `offer_id` is the mandatory serialization key.** One transaction, serialized on the authoritative Offer capacity row, must: identify the Offer; lock/serialize that capacity; read the authoritative `remaining_amount`; validate the **required** `accepted_amount`; **reject** if it exceeds authoritative remaining capacity; assign `accepted_at`; assign the `server_order_key`; establish the `Match`; update the authoritative Offer allocation state; and **commit atomically**. An `FXRequest` may supply demand-side context where already approved, but is **never an alternative capacity-serialization authority** for accepting a seller Offer, and acceptance must not depend on its presence. *A database row lock is not the withdrawn product concept of locking the whole Offer lifecycle after its first Match: the Offer stays open for later partial acceptances.* Priority among competing acceptances of the same Offer is **first eligible acceptance by trusted server timestamp**; `accepted_at` is server-set and a client-supplied timestamp is never trusted. Acceptance **alone** establishes the allocation — no second bilateral confirmation. The agreed rate is **locked** on the resulting Match. **Tie-break — deterministic, added 2026-08-24.** `accepted_at` remains the **primary** ordering key. Two eligible acceptances of the same Offer can carry the **same** `accepted_at` at stored precision; priority is then resolved by a **unique server-generated ordering key** assigned inside the same acceptance serialization boundary that enforces the amount invariant, giving the total order `(accepted_at ASC, server_order_key ASC)`. The key is server-authoritative and unique; a client-supplied value never participates, the seller's rate is never a priority mechanism, and marketplace discovery/ranking is never allocation priority. The order is stable and replayable, so an audit or dispute re-derives the same sequence from persisted state. **`server_order_key` is a REQUIRED, immutable property of an accepted `Match` — human decision 2026-08-24.** It is server-generated, unique within the acceptance ordering scope, assigned inside the acceptance serialization boundary, never client-supplied, and part of the accepted-allocation audit contract. **Durable persistence of this value is REQUIRED of the future persistence implementation** — it is not optional and not aspirational; the exact storage mechanism remains implementation-dependent. Phase 1 does not yet implement that persistence, so this is recorded as a **required dependency of the later domain-model/persistence milestone**. The **persistence mechanism for `server_order_key` is implementation-dependent** and is not fixed here — a monotonic sequence or a time-sortable identifier allocated under the same lock are non-normative examples. |
 
 > **Rate-error mapping at acceptance — one deterministic code. Corrected 2026-08-25.** A previous
@@ -588,7 +588,17 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > response; a conflicting binding on the same key is rejected deterministically with
 > `SYS_409_IDEMPOTENCY_KEY_REUSED` (§4.4, **no new identifier**); and different keys racing for
 > capacity are decided unchanged by the serialization rules, with losers **rejected** via
-> `RES_409_INSUFFICIENT_REMAINING` — **never clamped or partially filled**. **No persistence
+> `RES_409_INSUFFICIENT_REMAINING` — **never clamped or partially filled**.
+>
+> **Step order — key resolution precedes capacity validation. Added 2026-08-25.** Inside that
+> boundary the order is normative: **serialize on Offer capacity → resolve and look up the
+> `Idempotency-Key` → decide replay/conflict → only for a *new* request, read authoritative
+> `remaining_amount` and validate `accepted_amount`**. A **retry of an already-completed same
+> bound request replays** the original `Match` and response and is **not** re-validated against
+> capacity — otherwise the request's own committed allocation would make its retry fail with
+> `RES_409_INSUFFICIENT_REMAINING`. A **new** request is still validated against the authoritative
+> current remaining amount. No duplicate `Match`; no duplicate capacity consumption. See
+> `02_Technical_Design_Specification.md` §9.4 for the full enumerated order. **No persistence
 > mechanism is chosen**, and concurrency regression tests are **REQUIRED at the persistence
 > milestone**, not now.
 
@@ -666,7 +676,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Request JSON     | leg_id (UUID, required), proof_reference (string, optional bank reference number)                                      |
 | Success Response | 200 OK — { leg_id, leg_state, user_claim_recorded_at }                                                                 |
 | Error Responses  | **RES_404_NOT_FOUND** *(existing §4.4 entry — `leg_id` does not belong to `{settlement_id}`; added 2026-08-25, no new identifier)*, AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
-| Validation Rules | **Ordered, server-side, fail-closed — HUMAN-APPROVED 2026-08-25.** (1) **Parse** syntactically valid path/request identifiers. (2) **Resolve and validate the addressed resource relationship:** `SettlementLeg.leg_id = ` supplied `leg_id` **AND** `SettlementLeg.settlement_id = {settlement_id}`. (3) If that relationship does **not** hold, return `RES_404_NOT_FOUND` and **STOP** — no idempotency lookup, no idempotency record write, no funding-party authorization, no advisory claim. (4) If it holds, proceed to funding-party authorization and canonical idempotency processing. (5) Only then does a reused `Idempotency-Key` with a materially different canonical binding return `SYS_409_IDEMPOTENCY_KEY_REUSED`. See the binding and precedence notes below |
+| Validation Rules | **Ordered, server-side, fail-closed — HUMAN-APPROVED 2026-08-25.** (1) **Parse** syntactically valid path/request identifiers. (2) **Resolve and validate the addressed resource relationship:** `SettlementLeg.leg_id` equals the supplied `leg_id` **AND** `SettlementLeg.settlement_id` equals `{settlement_id}`. (3) If that relationship does **not** hold, return `RES_404_NOT_FOUND` and **STOP** — no idempotency lookup, no idempotency record write, no funding-party authorization, no advisory claim. (4) **Authorization:** the caller must be the funding party for that leg, else `AUTH_403_FORBIDDEN` — **before** any idempotency evaluation. (5) **Idempotency evaluation:** a reused `Idempotency-Key` with a materially different canonical binding returns `SYS_409_IDEMPOTENCY_KEY_REUSED`; the same bound logical request replays the original response. (6) **Advisory claim operation.** The full order is therefore **resource binding validation → authorization → idempotency evaluation → advisory claim**. See the binding, precedence and ordering notes below |
 | Business Rules   | **RECONCILED — ADR-001 (DEC-003).** This endpoint does not change `SettlementLeg.state` and does not advance `Settlement.phase`. Only a signature-verified partner webhook may set the `FUNDED` money fact (ADR-001 F-6, F-7). The claim is recorded for support and dispute evidence, and may drive UI messaging, but carries no financial authority. It previously returned a settlement status of `funds_pending_verification`, which implied a client-asserted state change |
 
 > **`leg_id` MUST be bound to `{settlement_id}` — added 2026-08-25.** The prior validation rule
@@ -676,8 +686,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > input and is never trusted on its own**; the parent-child relationship must be verified
 > server-side.
 >
-> **Required invariant:** `SettlementLeg.leg_id = ` supplied `leg_id` **AND**
-> `SettlementLeg.settlement_id = {settlement_id}`. Both must hold.
+> **Required invariant:** `SettlementLeg.leg_id` equals the supplied `leg_id` **AND**
+> `SettlementLeg.settlement_id` equals `{settlement_id}`. Both must hold.
 >
 > *Field-name correction 2026-08-25: an earlier revision of this invariant wrote
 > `SettlementLeg.id`. The canonical `SettlementLeg` primary key is **`leg_id`** (`SettlementLeg`
@@ -705,6 +715,31 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > Idempotency binding is **unchanged** and remains scoped to `(authenticated principal,
 > settlement_id, leg_id, the logical confirm-funds operation, the materially relevant request
 > parameters)` — this correction adds a precondition, it does not alter that tuple.
+
+> **Authorization precedes idempotency. Added 2026-08-25.** The precedence note below settles
+> *resource address vs idempotency*; this settles the step between them. After binding validation
+> passes, **funding-party authorization runs before any idempotency evaluation.** Without a stated
+> order, an unauthorized caller presenting a key bound to a **different principal** could match
+> both `AUTH_403_FORBIDDEN` and `SYS_409_IDEMPOTENCY_KEY_REUSED`, and the response would depend on
+> implementation accident.
+>
+> **Canonical order:** **resource binding validation → authorization → idempotency evaluation →
+> advisory claim operation.**
+>
+> | Failure | Response |
+> |---|---|
+> | `leg_id` not under `{settlement_id}` | `RES_404_NOT_FOUND` |
+> | Caller is not the funding party for that leg | `AUTH_403_FORBIDDEN` |
+> | Valid, authorized, key reused with a materially different binding | `SYS_409_IDEMPOTENCY_KEY_REUSED` |
+>
+> **Security rationale — the same principle as the `404` precedence.** Idempotency state is
+> information about *other* requests. An unauthorized caller must never learn, from a `409`, that
+> a key exists or what it is bound to; they get `AUTH_403_FORBIDDEN` and learn nothing about
+> idempotency state. Authorization is the boundary; idempotency is bookkeeping **behind** it.
+>
+> *The canonical idempotency tuple already includes the authenticated principal, so this states an
+> order — it changes no binding, no identifier and no replay behaviour for valid authorized
+> requests.*
 
 > **Precedence: resource address BEFORE idempotency. HUMAN-APPROVED 2026-08-25.** Two rules could
 > previously claim the same request: the binding check above returns `RES_404_NOT_FOUND` for a leg
@@ -787,8 +822,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 >
 > **Same key, materially different request — applies only AFTER resource-address validation
 > passes. Qualified 2026-08-25.** This rule is evaluated **only once** the request has satisfied
-> the canonical parent-child check (`SettlementLeg.leg_id = ` supplied `leg_id` **AND**
-> `SettlementLeg.settlement_id = {settlement_id}`). A request that fails that check returns
+> the canonical parent-child check (`SettlementLeg.leg_id` equals the supplied `leg_id` **AND**
+> `SettlementLeg.settlement_id` equals `{settlement_id}`). A request that fails that check returns
 > `RES_404_NOT_FOUND` and **never reaches idempotency evaluation at all** — see the precedence note
 > under this endpoint's Validation Rules. So a `leg_id` belonging to a *different* Settlement is a
 > **`404`, not** a bound-key conflict.
@@ -1027,7 +1062,7 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 | RES_404_NOT_FOUND                | 404             | Generic resource-not-found                             |
 | RES_409_OFFER_ALREADY_MATCHED    | 409             | Offer can no longer be edited/cancelled                |
 | RES_409_OFFER_UNAVAILABLE        | 409             | **Corrected 2026-08-25 — the Offer is not eligible for acceptance.** Covers **either** cause: **(a) lifecycle** — `fully_matched`, `withdrawn`, `cancelled` or `expired`; **or (b) policy/rate ineligibility** — the Offer holds an eligible lifecycle status (`open` / `partially_matched`) but currently fails the applicable approved rate-ceiling policy (§3.2 eligibility note). The stale literal *"matched"* is **withdrawn**: it is not a canonical Offer status, and it omitted `withdrawn`. **Cause (b) is a reversible, derived condition and does NOT map to any persisted lifecycle state** — no new status is introduced. Distinguish from `RES_409_INSUFFICIENT_REMAINING`, which applies when the Offer *is* eligible but lacks remaining capacity |
-| RES_409_INSUFFICIENT_REMAINING   | 409             | The request supplied an explicit `accepted_amount`, but at the authoritative acceptance serialization point the Offer no longer had enough remaining capacity. The amount is **never** silently reduced, resized or partially filled, and no allocation is created. The client may refresh Offer state and submit a new explicit amount. Identifier still *proposed* pending catalogue ratification |
+| RES_409_INSUFFICIENT_REMAINING   | 409             | **RATIFIED — HUMAN-APPROVED 2026-08-25.** **Offer-capacity conflict.** Canonical condition: during Offer acceptance, after authoritative Offer state has been obtained **inside the acceptance serialization boundary**, `accepted_amount > authoritative remaining_amount`. `accepted_amount` remains **REQUIRED** and **> 0**; the authoritative `remaining_amount` is determined **server-side** and a client-displayed value **may be stale**. The request is **rejected**: the amount is **never** silently reduced, resized, clamped or partially filled, **never** substituted with "take whatever remains", and no allocation is created. The client may refresh Offer state and submit a new explicit amount. **Distinct from** `RES_409_OFFER_UNAVAILABLE` (Offer not acceptable at all — lifecycle or policy/rate eligibility), `SYS_409_IDEMPOTENCY_KEY_REUSED` (bound-key conflict on a validly addressed operation), rate-validation errors, and authentication/authorization errors |
 | ~~RES_409_MATCH_ALREADY_CONFIRMED~~  | 409             | **SUPERSEDED / COMPATIBILITY-ONLY — 2026-08-25.** ~~Caller has already confirmed this match~~. Existed solely for the withdrawn bilateral second-confirmation flow (`POST /v1/matches/{match_id}/confirm`, SUPERSEDED §3.5). **Retained as a historical compatibility identifier — not deleted** — and it **must not be reused** for acceptance semantics. Duplicate acceptance is governed by the acceptance idempotency boundary (§3.5), not by this code |
 | RES_409_DISPUTE_ALREADY_OPEN     | 409             | An open dispute already exists for this transaction    |
 | RES_409_INVALID_SETTLEMENT_STATE | 409             | Action not valid for the current settlement phase or leg state. Response names the current phase and the attempted transition, and must not disclose counterparty leg detail |
