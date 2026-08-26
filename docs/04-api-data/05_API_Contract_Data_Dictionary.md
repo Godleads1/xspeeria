@@ -1865,9 +1865,35 @@ Domain events drive Xspeeria’s asynchronous processing via Celery workers and 
 | EscrowFunded        | Banking webhook handler | Settlement service                                            | settlement_id, leg_id, amount, currency, funded_at    | Exponential backoff, 5 attempts                                                                     | Keyed on settlement_id + leg_id + event_type + provider_event_id |
 | PayoutConfirmed     | Banking webhook handler | Settlement service, Notification worker                       | settlement_id, leg_id, paid_out_at                    | Exponential backoff, 5 attempts, DLQ + alert on exhaustion                                          | Keyed on settlement_id + leg_id + event_type + provider_event_id |
 | SettlementCompleted | Settlement service (both legs PAID_OUT) | Transaction service, Notification worker, Analytics | settlement_id, transaction_id, completed_at           | Exponential backoff, 5 attempts                                                                     | Keyed on settlement_id. **Derived by Xspeeria, never emitted directly by a partner** |
-| RecoveryRequired    | Settlement service      | Admin queue, Compliance queue, Notification worker, Analytics | settlement_id, leg_id, outstanding_exposure_amount    | Exponential backoff, 5 attempts, DLQ + PagerDuty alert (unresolved customer exposure)                | Keyed on settlement_id                     |
+| RecoveryRequired    | Settlement service      | Admin queue, Compliance queue, Notification worker, Analytics | settlement_id, leg_id *(`outstanding_exposure_amount` **REMOVED 2026-08-26 by DECISION 4.1A-F5** — see the note below)* | Exponential backoff, 5 attempts, DLQ + PagerDuty alert (unresolved customer exposure)                | Keyed on settlement_id                     |
 | DisputeOpened       | Dispute service         | Settlement service (freeze), Notification worker, Admin queue | dispute_id, transaction_id, initiator_user_id         | 3 attempts, DLQ on exhaustion                                                                       | Keyed on dispute_id                        |
 | NotificationSent    | Notification worker     | Analytics (delivery tracking)                                 | notification_id, user_id, channel, sent_at            | Best-effort, no retry (analytics-only)                                                              | Keyed on notification_id                   |
+
+> **`RecoveryRequired` payload — exposure amount REMOVED, DECISION 4.1A-F5 (HUMAN-APPROVED
+> 2026-08-26).** The required payload field `outstanding_exposure_amount` is **withdrawn**. It
+> had no approved source: the `Settlement` column that would have produced it
+> (`outstanding_exposure_amount_minor`) is itself **DEFERRED — NOT IMPLEMENTABLE** under
+> DECISION 4.1A-F3 while the mixed irreversible payout aggregate-state semantics remain **OPEN**.
+> An event contract that requires a value no approved rule can compute is a contract no producer
+> can satisfy honestly, and the field was additionally non-conformant on its own terms: named as
+> a major-unit `amount`, carrying no `currency`, no `scale` and no `currency_def_version`.
+>
+> **The exposure amount is intentionally omitted, not forgotten.** Nothing here invents an
+> exposure calculation, a denominating currency, a leg-selection rule, a netting rule, a
+> conversion rule, or any mixed-payout aggregate semantics. Those remain **OPEN** and require a
+> separate human decision.
+>
+> **`RECOVERY_REQUIRED` is unchanged and is NOT removed.** It remains an operationally visible
+> `Settlement.phase` (ADR-001 §5) and this event still fires, still reaches the Admin and
+> Compliance queues, and still carries its DLQ + PagerDuty escalation. What it no longer does is
+> assert a monetary figure. `settlement_id` and `leg_id` are approved, unambiguous source data
+> and are sufficient for an operator to open the case; the amount was never the routing key.
+>
+> **If a future revision adds money to this payload** it must first have human-approved exposure
+> semantics, and it must then carry the full S4-1 binding — `amount_minor` + `currency` + `scale`
+> + `currency_def_version` — established immutably at the moment the amount is determined. It
+> must not be reintroduced as a bare `amount`, and it must not be reintroduced as
+> `outstanding_exposure_amount_minor` in the absence of that decision.
 
 6.2 Event Flow Diagram
 
