@@ -51,15 +51,36 @@ def require_supported_database_url(value: str) -> str:
     message that echoed the URL would put a credential in a log line, which is the
     failure this project audits for elsewhere.
 
+    **The `://` separator must be present, and that requirement is doing two jobs.**
+    The first implementation used ``value.split("://", 1)[0]``, which returns the *whole
+    input* when the separator is absent -- so both the check and the error message
+    operated on the entire value. That produced two defects from one line:
+
+    * **Disclosure.** A delimiter-free value was echoed verbatim into the message.
+      ``hide_input_in_errors`` suppresses pydantic's own ``input_value=`` rendering but
+      cannot reach a custom message, so the value reached stdout, the log sink and any
+      pasted traceback. This is not a theoretical input: a libpq keyword string
+      (``host=... password=...``) and a pasted ``DATABASE_URL=...`` line both lack
+      ``://`` and both carry a password.
+    * **Acceptance.** The bare string ``postgresql+asyncpg`` -- no separator, not a URL
+      at all -- compared equal to the approved scheme and **passed the policy**.
+
+    ``partition`` separates "there was no scheme" from "the scheme was wrong", so the
+    first case is reported without naming the value and the second is rejected on the
+    scheme alone. Credentials in a URL always follow ``://``, so a named scheme can
+    never contain one.
+
     Empty and unset values pass through untouched: the application must still boot,
     serve ``/health`` and run its unit suite with no database, and a missing URL is
     reported by ``app.db.session`` as ``DatabaseNotConfiguredError`` at the point of use.
     """
-    scheme = value.split("://", 1)[0]
-    if scheme != SUPPORTED_DATABASE_SCHEME:
+    scheme, separator, _ = value.partition("://")
+    if not separator or scheme != SUPPORTED_DATABASE_SCHEME:
+        # Never interpolate `scheme` unless the separator proved it *is* a scheme.
+        detail = f"scheme {scheme!r}" if separator else "a value with no '://' separator"
         raise ValueError(
             f"database_url must use {SUPPORTED_DATABASE_SCHEME}:// "
-            f"(DECISION S4-3 / 4.1A-F1); got scheme {scheme!r}"
+            f"(DECISION S4-3 / 4.1A-F1); got {detail}"
         )
     return value
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.config import Settings, get_settings
+from app.core.config import SUPPORTED_DATABASE_SCHEME, Settings, get_settings
 
 #: Every environment key `Settings` reads. `_env_file=None` blocks the `.env` file but
 #: not the process environment, so without this a developer exporting `JWT_SECRET_KEY`
@@ -166,6 +166,70 @@ class TestDatabaseUrlPolicy:
         """``postgresql://`` must not pass by being a prefix of the approved scheme."""
         with pytest.raises(ValueError, match="database_url"):
             Settings(_env_file=None, database_url="postgresql://user@host/db")  # type: ignore[call-arg]
+
+
+class TestDatabaseUrlWithoutASchemeSeparator:
+    """Values containing no ``://`` at all -- the case that produced two defects.
+
+    ``value.split("://", 1)[0]`` returns the **entire input** when the separator is
+    missing, so the original implementation both compared against and reported the whole
+    value. Reviewer finding on 89db86b, verified by execution before this fix.
+    """
+
+    #: Each lacks `://`, and each is a realistic operator mistake rather than a contrived
+    #: string. The libpq keyword form and the pasted-assignment form both carry a secret.
+    NO_SEPARATOR = (
+        "password=secret",
+        "host=db.internal password=hunter2 dbname=xspeeria",
+        "DATABASE_URL",
+        "postgresql+asyncpg",
+        "postgresql",
+        "",  # handled earlier as "unconfigured", asserted here so that stays true
+    )
+
+    @pytest.mark.parametrize("value", [v for v in NO_SEPARATOR if v])
+    def test_rejected(self, value: str) -> None:
+        with pytest.raises(ValueError, match="database_url"):
+            Settings(_env_file=None, database_url=value)  # type: ignore[call-arg]
+
+    @pytest.mark.parametrize("value", [v for v in NO_SEPARATOR if v])
+    def test_the_value_never_appears_in_the_error(self, value: str) -> None:
+        """The regression this class exists for: no fragment of the input may be echoed.
+
+        ``hide_input_in_errors`` cannot redact a custom message, so the validator itself
+        must not interpolate a value it has not proven to be a scheme.
+        """
+        with pytest.raises(ValueError) as caught:
+            Settings(_env_file=None, database_url=value)  # type: ignore[call-arg]
+
+        # The message always names the approved scheme as a fixed literal ("must use
+        # postgresql+asyncpg://"). That constant is removed before asserting, because
+        # `postgresql` and `postgresql+asyncpg` are substrings of it -- without this the
+        # assertion would fail on the constant while proving nothing about echoing.
+        residue = str(caught.value).replace(f"{SUPPORTED_DATABASE_SCHEME}://", "")
+        assert value not in residue
+        for secret in ("secret", "hunter2", "db.internal", "xspeeria"):
+            assert secret not in residue
+
+    def test_the_bare_approved_scheme_is_not_a_url(self) -> None:
+        """``postgresql+asyncpg`` with no separator previously PASSED the policy.
+
+        It compared equal to the approved scheme, so a value that is not a URL at all was
+        accepted by the control whose entire job is deciding which databases are allowed.
+        """
+        with pytest.raises(ValueError, match="database_url"):
+            Settings(_env_file=None, database_url="postgresql+asyncpg")  # type: ignore[call-arg]
+
+    def test_empty_string_is_still_unconfigured_not_rejected(self) -> None:
+        """The boot-without-a-database path must survive this hardening."""
+        assert not Settings(_env_file=None, database_url="").database_url  # type: ignore[call-arg]
+
+    def test_alembic_path_rejects_it_too(self) -> None:
+        """Shared authority: the migration runtime must not accept what Settings refuses."""
+        from app.core.config import require_supported_database_url
+
+        with pytest.raises(ValueError, match="database_url"):
+            require_supported_database_url("host=db.internal password=hunter2")
 
 
 class TestMigrationRuntimeSharesTheDatabasePolicy:
