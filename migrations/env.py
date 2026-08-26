@@ -28,8 +28,20 @@ from app.db.session import build_engine
 
 config = context.config
 
+# `disable_existing_loggers=False` is load-bearing, not tidiness. `fileConfig` defaults it
+# to True, which sets `disabled = True` on every logger that already exists and is not named
+# in `alembic.ini` -- `app.core.exceptions` and `app.main` among them, both created at import
+# time. Alembic runs in-process in two places that matter: the integration suite drives
+# `alembic.command` directly, and a deployment that migrates on startup imports the
+# application first. In both, the default silently switches the application's logging off for
+# the rest of the process, so the unhandled-exception record the security tests exist to
+# prove is emitted would never be written at all -- a logging outage with no log line
+# announcing it. Reproduced 2026-08-26: CI ran the integration suite before
+# backend/tests/unit/test_logging.py and turned 7 passing tests into 7 errors, "expected
+# exactly one record, got 0". Regression test:
+# backend/tests/unit/test_logging.py::TestLoggingSurvivesAlembicConfiguration.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Autogenerate and the drift guard compare against this. MILESTONE 4.1A: it is
 # intentionally EMPTY -- no domain model subclasses `Base` yet. Models become visible
