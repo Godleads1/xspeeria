@@ -25,9 +25,43 @@ from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-__all__ = ["Settings", "get_settings"]
+__all__ = ["Settings", "get_settings", "require_supported_database_url"]
 
 Environment = Literal["local", "development", "staging", "production"]
+
+#: The only database scheme the Stage 4 authoritative persistence runtime accepts
+#: (DECISION S4-3, reaffirmed by DECISION 4.1A-F1 -- HUMAN-APPROVED 2026-08-26).
+SUPPORTED_DATABASE_SCHEME = "postgresql+asyncpg"
+
+
+def require_supported_database_url(value: str) -> str:
+    """Reject any database URL that is not ``postgresql+asyncpg://``.
+
+    **This is a policy control, not a convenience check.** Before DECISION 4.1A-F1 the
+    approved stack was enforced only by which driver packages happened to be installed:
+    `sqlite+aiosqlite://` or `postgresql+psycopg://` were accepted by configuration and
+    failed later with `ModuleNotFoundError`. That is enforcement by accident. The day
+    `aiosqlite` arrives as a transitive dependency, the money path silently accepts a
+    database that cannot express ``SELECT ... FOR UPDATE``, partial unique indexes or the
+    CHECK constraints the acceptance boundary depends on -- and nothing would say so.
+
+    **Only the scheme is inspected, and only the scheme may appear in the error.** Host,
+    port, database name, username, password, SSL mode, pool sizing and provider are
+    deployment facts this function has no authority over and never reads. A validation
+    message that echoed the URL would put a credential in a log line, which is the
+    failure this project audits for elsewhere.
+
+    Empty and unset values pass through untouched: the application must still boot,
+    serve ``/health`` and run its unit suite with no database, and a missing URL is
+    reported by ``app.db.session`` as ``DatabaseNotConfiguredError`` at the point of use.
+    """
+    scheme = value.split("://", 1)[0]
+    if scheme != SUPPORTED_DATABASE_SCHEME:
+        raise ValueError(
+            f"database_url must use {SUPPORTED_DATABASE_SCHEME}:// "
+            f"(DECISION S4-3 / 4.1A-F1); got scheme {scheme!r}"
+        )
+    return value
 
 
 class Settings(BaseSettings):
@@ -42,6 +76,17 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        # Pydantic renders the offending input into `ValidationError` by default
+        # (`input_value=...`). Every field on this model that can fail validation holds
+        # exactly the kind of value that must never be echoed: a database URL with an
+        # inline password, a JWT signing key, a webhook shared secret. A startup
+        # traceback is written to stdout, shipped to the log sink and pasted into CI
+        # transcripts and issue reports, so echoing the input turns a configuration
+        # typo into credential disclosure. Verified by
+        # TestDatabaseUrlPolicy::test_rejection_names_the_scheme_only, which failed
+        # before this line: the full `mysql+aiomysql://user@host/db` appeared in the
+        # message even though the validator itself names only the scheme.
+        hide_input_in_errors=True,
     )
 
     app_name: str = "Xspeeria"
@@ -64,6 +109,16 @@ class Settings(BaseSettings):
     webhook_shared_secret: str | None = None
 
     cors_allowed_origins: str = ""
+
+    @field_validator("database_url")
+    @classmethod
+    def _supported_database_url(cls, value: str | None) -> str | None:
+        """Apply the 4.1A-F1 driver policy at configuration time, not at first query.
+
+        Shares one implementation with ``migrations/env.py`` so the application runtime
+        and the migration runtime cannot drift apart on what a valid database is.
+        """
+        return value if not value else require_supported_database_url(value)
 
     @field_validator("log_level")
     @classmethod

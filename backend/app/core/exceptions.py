@@ -6,12 +6,32 @@ One response shape for every failure, so clients never have to branch on error f
 
 Error *codes* are deliberately not enumerated here **yet**. The catalogue in
 `docs/04-api-data/05_API_Contract_Data_Dictionary.md` §4 is now partly ratified: it
-totals **45 enumerated / 43 active / 2 superseded** (recount 2026-08-25), and several
-identifiers carry explicit human approval -- among them `RES_409_INSUFFICIENT_REMAINING`
-(RATIFIED -- HUMAN-APPROVED 2026-08-25), `VAL_422_RATE_NOT_POSITIVE`,
-`VAL_422_RATE_ABOVE_CEILING` and `SYS_409_IDEMPOTENCY_KEY_REUSED`. The earlier note here
-called the whole catalogue a *"derived, not ratified"* draft; that is **stale** and
-understated the authority of the ratified identifiers.
+totals **45 enumerated / 43 active / 2 superseded** (recount 2026-08-25). The earlier
+note here called the whole catalogue a *"derived, not ratified"* draft; that is **stale**
+and understated the authority of the ratified identifiers.
+
+**Ratified semantics and a ratified identifier are two different approvals, and this
+module must not blur them** (MINOR-B, corrected 2026-08-26). An earlier revision listed
+four codes together as identifiers that "carry explicit human approval". That was true of
+three and wrong about one, and the distinction is not pedantry: the rule below says
+ratified identifiers are introduced **verbatim**, so a name recorded here as ratified is a
+name that ships in a public API response.
+
+* `RES_409_INSUFFICIENT_REMAINING` -- **identifier RATIFIED, HUMAN-APPROVED 2026-08-25**
+  (§4.4).
+* `VAL_422_RATE_NOT_POSITIVE` -- **identifier RATIFIED, HUMAN-APPROVED 2026-08-25** (§4.2).
+* `SYS_409_IDEMPOTENCY_KEY_REUSED` -- existing catalogue entry, meaning broadened
+  2026-08-24; no new identifier introduced.
+* `VAL_422_RATE_ABOVE_CEILING` -- **semantics HUMAN-APPROVED; the identifier itself is
+  PROPOSED, NOT ratified** (§4.2 records it as *"proposed name"*). It supersedes
+  `VAL_422_RATE_OUT_OF_BAND`. The name must not be treated as final, must not be renamed
+  here, and must not be raised by any route until it is ratified.
+
+The **runtime rule these codes express is settled and unchanged**: a rate `<= 0` is a
+domain-validity failure returning `VAL_422_RATE_NOT_POSITIVE`; a **positive** rate above
+the applicable approved reference ceiling is a pricing-policy hard block returning
+`VAL_422_RATE_ABOVE_CEILING`. The two are disjoint. There is no approved reference-rate
+floor and no symmetric band.
 
 What has not changed is the reason nothing is frozen in this module: no route yet raises
 a catalogue code, so an enumeration here would be unused surface. **Ratified identifiers

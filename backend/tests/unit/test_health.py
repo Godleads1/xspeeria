@@ -27,7 +27,7 @@ class TestHealth:
     def test_leaks_no_secret_or_infrastructure_detail(self) -> None:
         response = _client(
             jwt_secret_key="super-secret",
-            database_url="postgresql://user:pw@host/db",
+            database_url="postgresql+asyncpg://user:pw@host/db",
             webhook_shared_secret="whsec",
         ).get("/health")
         text = response.text

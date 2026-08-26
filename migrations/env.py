@@ -2,7 +2,10 @@
 
 The database URL comes from `Settings.database_url` (the same `pydantic-settings` object
 the application uses), never from `alembic.ini`. That keeps one configuration authority
-and guarantees no connection string is committed.
+and guarantees no connection string is committed. Every route into this module -- the
+environment, `-x database_url=...` and the programmatic config attribute -- passes through
+`require_supported_database_url`, so the migration runtime and the application runtime
+cannot disagree about what a valid database is (DECISION 4.1A-F1).
 
 Online migrations run through the async engine and `connection.run_sync`, because the
 project's engine is `asyncpg` and Alembic's migration API is synchronous.
@@ -22,7 +25,7 @@ from alembic import context
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.core.config import Settings
+from app.core.config import Settings, require_supported_database_url
 from app.db.base import Base
 from app.db.session import build_engine
 
@@ -57,13 +60,18 @@ def _database_url() -> str:
     environment.
     """
     override = context.get_x_argument(as_dictionary=True).get("database_url")
-    if override:
-        return str(override)
     # Programmatic callers (the integration tests drive `alembic.command` directly) pass
     # the URL through config attributes rather than argv.
     attribute = config.attributes.get("database_url")
-    if attribute:
-        return str(attribute)
+    candidate = override or attribute
+    if candidate:
+        # DECISION 4.1A-F1: `-x database_url=...` and the config attribute must obey the
+        # same driver policy as `DATABASE_URL`. Without this they are two doors into the
+        # money database with one lock between them -- a migration could be applied over
+        # psycopg or aiosqlite while the application refused the identical URL, and the
+        # schema the tests verified would not be the schema the application talks to.
+        return require_supported_database_url(str(candidate))
+    # No override: `Settings` resolves DATABASE_URL and applies the same policy itself.
     url = Settings().database_url
     if not url:
         raise RuntimeError(

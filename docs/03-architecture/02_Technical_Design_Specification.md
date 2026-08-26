@@ -473,15 +473,47 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 
 ## 6.1 Entity Relationship Diagram
 
+> **RECONCILED 2026-08-26 (MINOR-C) with DECISIONS S4-1, S4-2 and S4-4.** This diagram had
+> drifted from the normative rules stated later in this same document, which is the most
+> dangerous kind of stale diagram: it is the artefact an implementer reads first.
+>
+> - **Monetary amounts are integer minor units** (S4-1) — `*_amount_minor BIGINT` bound to
+>   `currency` + `scale` + `currency_def_version`. The former `numeric amount`,
+>   `numeric matched_amount` and `numeric fee_amount` are **withdrawn**; §6.2 and §6.4 already
+>   said so. **`NUMERIC`/`DECIMAL` is not authoritative money anywhere.**
+> - **Rates are not monetary amounts** and deliberately remain `NUMERIC(12,6)` —
+>   `requested_rate`, `offered_rate`, `agreed_rate` are unchanged and must not be "corrected".
+> - **`KYC_CASES` (`KycCase` = `KYCCases`) is authoritative** for KYC state and owns
+>   `KYC_DOCUMENTS` and `SCREENING_RESULTS` (S4-4). **`kyc_profiles` is a summary/projection
+>   only** and owns nothing; it is retained, not deleted.
+> - **`server_order_key` is present on `MATCHES`**, REQUIRED, UNIQUE and immutable (S4-2),
+>   giving `(accepted_at ASC, server_order_key ASC)` a column to order by.
+> - **`MatchAllocation` is `Match`** — one entity, not two (`DOCUMENT_INDEX.md`). No separate
+>   allocation entity is introduced here.
+>
+> **Field names here are a summary.** `05_API_Contract_Data_Dictionary.md` §5 remains canonical
+> where the two differ in spelling (`currency_from` here vs `source_currency` there); that
+> divergence predates this reconciliation and is **not** resolved by it.
+>
+> **Unchanged and still OPEN:** whether FXRequest is an active MVP flow (**R5-9**), the
+> `MatchConfirmed` rename, and the mixed irreversible payout aggregate-state semantics. This
+> reconciliation corrects representation only and decides none of them.
+>
+> **XSPEERIA HOLDS NO CUSTOMER CASH.** No wallet, balance, stored-value, custodial-account or
+> internal customer-funds entity appears in this diagram, and none may be added. Settlement runs
+> through regulated banking/payment partners, subject to licensing and regulatory approval.
+
+
     erDiagram
         USERS ||--o| PROFILES : has
-        USERS ||--o| KYC_PROFILES : has
+        USERS ||--o{ KYC_CASES : "has (authoritative)"
+        USERS ||--o| KYC_PROFILES : "has (summary projection)"
         USERS ||--o{ BENEFICIARIES : owns
         MATCHES }o--o{ BENEFICIARIES : "selects per allocation"
         USERS ||--o{ FX_REQUESTS : creates
         USERS ||--o{ OFFERS : creates
-        KYC_PROFILES ||--o{ KYC_DOCUMENTS : contains
-        KYC_PROFILES ||--o{ SCREENING_RESULTS : contains
+        KYC_CASES ||--o{ KYC_DOCUMENTS : contains
+        KYC_CASES ||--o{ SCREENING_RESULTS : contains
         FX_REQUESTS ||--o{ MATCHES : "optional legacy linkage"
         OFFERS ||--o{ MATCHES : "allocated via (0..n)"
         MATCHES ||--|| TRANSACTIONS : produces
@@ -506,6 +538,16 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
             string country
             jsonb metadata
         }
+        KYC_CASES {
+            uuid id PK
+            uuid user_id FK
+            string legal_name
+            date date_of_birth
+            string id_type
+            string status
+            uuid reviewed_by FK
+            string decision_reason
+        }
         KYC_PROFILES {
             uuid id PK
             uuid user_id FK
@@ -516,14 +558,14 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         }
         KYC_DOCUMENTS {
             uuid id PK
-            uuid kyc_profile_id FK
+            uuid kyc_case_id FK
             string doc_type
             string storage_ref
             string status
         }
         SCREENING_RESULTS {
             uuid id PK
-            uuid kyc_profile_id FK
+            uuid kyc_case_id FK
             string screening_type
             boolean is_hit
             jsonb raw_result
@@ -539,7 +581,9 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
             uuid id PK
             uuid user_id FK
             string direction
-            numeric amount
+            bigint source_amount_minor
+            smallint scale
+            string currency_def_version
             string currency_from
             string currency_to
             numeric requested_rate
@@ -549,8 +593,10 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         OFFERS {
             uuid id PK
             uuid user_id FK
-            numeric amount
-            numeric matched_amount
+            bigint source_amount_minor
+            bigint matched_amount_minor
+            smallint scale
+            string currency_def_version
             string currency_from
             string currency_to
             numeric offered_rate
@@ -561,7 +607,11 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
             uuid id PK
             uuid fx_request_id FK
             uuid offer_id FK
-            numeric matched_amount
+            bigint allocated_amount_minor
+            string currency
+            smallint scale
+            string currency_def_version
+            bigint server_order_key UK
             numeric agreed_rate
             string status
             timestamp confirmed_at
@@ -570,8 +620,10 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
             uuid id PK
             uuid match_id FK
             string state
-            numeric amount
-            numeric fee_amount
+            bigint amount_minor
+            bigint fee_amount_minor
+            smallint scale
+            string currency_def_version
             string currency
             timestamp created_at
             timestamp updated_at
@@ -1213,8 +1265,10 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
   appearing to cover the case.
 - **`POST /v1/settlements/{settlement_id}/confirm-funds` — key scope stated, added 2026-08-24.**
   The endpoint already requires the header, and §1.4 of `05_API_Contract_Data_Dictionary.md`
-  already retains the key-to-response mapping for **24 hours** and returns the original response
-  without reprocessing. What was missing is the **binding**: an `Idempotency-Key` with no stated
+  already retains the key-to-response mapping and returns the original response
+  without reprocessing. **Retention duration is NOT DECIDED — DECISION 4.1A-F2,
+  HUMAN-APPROVED 2026-08-26; the former "24 hours" is withdrawn. No `expires_at` and no
+  automatic expiry semantics are approved.** What was missing is the **binding**: an `Idempotency-Key` with no stated
   scope leaves each client to guess its own safe replay boundary. The key is scoped to
   `(authenticated principal, settlement_id, leg_id, the logical confirm-funds operation, the
   materially relevant request parameters)`, and may safely replay **only that same logical

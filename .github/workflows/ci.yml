@@ -88,6 +88,27 @@ jobs:
         # is unchanged -- this only widens the scanned surface.
         run: uv run --no-sync bandit -r backend migrations -x backend/tests -q
 
+      # MUST run BEFORE pytest -- MINOR-A, corrected 2026-08-26. This step exists to prove
+      # the real migration entry point works against a genuinely empty database, exactly as
+      # an operator would run it on a first deploy: the `alembic` CLI, `alembic.ini`
+      # resolution, `prepend_sys_path` and the `Settings`-derived URL, none of which the
+      # in-process `alembic.command` tests exercise.
+      #
+      # It previously sat after the test suite. By that point the integration tests had
+      # already migrated the shared service database to head, so `alembic upgrade head` was
+      # a no-op and this step's own "(clean PostgreSQL 16)" label was false -- it passed in
+      # 1 second having applied nothing. Green was not evidence of a clean upgrade.
+      # Relabelling it would have preserved the gap; moving it makes the claim true.
+      #
+      # Ordering stays deterministic: the migration tests own their own state
+      # (`test_upgrade_from_empty_database` and `test_baseline_creates_no_table` both begin
+      # by downgrading to base), so they neither depend on nor are disturbed by the schema
+      # this step leaves at head.
+      - name: Alembic upgrade head (clean PostgreSQL 16)
+        run: |
+          uv run --no-sync alembic upgrade head
+          uv run --no-sync alembic current
+
       # XSPEERIA_REQUIRE_DB turns the integration fixtures' "skip when no database" into a
       # hard failure. Locally a developer without Postgres gets skips; in CI a skip would
       # be a false green -- the concurrency and migration guards would report success
@@ -109,13 +130,6 @@ jobs:
           echo "$OUT" | grep -qE '[1-9][0-9]* skipped' && {
             echo "Integration tests were skipped in CI: the database gate did not engage"; exit 1; }
           exit 0
-
-      # Independent of the test suite: prove the real migration entry point works against a
-      # clean database, exactly as an operator would run it.
-      - name: Alembic upgrade head (clean PostgreSQL 16)
-        run: |
-          uv run --no-sync alembic upgrade head
-          uv run --no-sync alembic current
 
       # The dependency audit must never pass by finding nothing to audit.
       # uv.lock is the single source of dependency truth. The audit runs against the

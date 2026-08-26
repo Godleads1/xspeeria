@@ -99,7 +99,9 @@ List endpoints accept a filter\[field\]=value query convention (e.g., filter\[st
 
 1.4 Idempotency
 
-**Corrected 2026-08-24.** State-mutating POST endpoints that initiate money movement or matching require an `Idempotency-Key` header (client-generated UUIDv4). The server persists the key-to-response mapping for **24 hours**; a repeated request with the same key returns the original response **without reprocessing**. That retention and replay behaviour is **unchanged** by this correction.
+**Corrected 2026-08-24. Retention corrected 2026-08-26 by DECISION 4.1A-F2 (HUMAN-APPROVED).** State-mutating POST endpoints that initiate money movement or matching require an `Idempotency-Key` header (client-generated UUIDv4). The server persists the key-to-response mapping; a repeated request with the same key returns the original response **without reprocessing**. **Replay behaviour is required and unchanged.**
+
+> **RETENTION DURATION IS NOT DECIDED — DECISION 4.1A-F2, HUMAN-APPROVED 2026-08-26.** The former wording *"persists the key-to-response mapping for **24 hours**"* is **withdrawn**. It stated an approved expiry duration where none exists, and contradicted the human decision recorded in `PROGRESS.md` (*Idempotency retention/TTL — NOT DECIDED*). A retention window is not a formatting detail on a money path: once a key expires, a retry that would have replayed a stored response instead reprocesses a financial action. **No `expires_at` is approved. No automatic expiry semantics are approved.** Milestone 4.1 persists `created_at` only. A retention duration requires a separate human decision and, once persistence exists, an explicit migration if one is needed.
 
 What changed is the list of operations. The previous wording named *"match confirmation"* and *"settlement initiation"* as its examples, and **both are stale**. Bilateral match confirmation is **withdrawn** (`CORRECTIONS_v3.md` §11.11; `POST /v1/matches/{match_id}/confirm` is SUPERSEDED, §3.5), so the policy cited an operation that no longer exists. Client-triggered settlement initiation is likewise **not** an operation in the active model: no client-facing settlement-initiation endpoint exists, the *"initiation once `both_confirmed = true`"* rule is superseded (§3.6), and partner provisioning becomes actionable only when the allocation reaches `ALLOCATION_FUNDING_READY` (ADR-001 §14.3) — a server-derived gate, not a client POST.
 
@@ -792,8 +794,9 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 <!-- -->
 
 > **Idempotency-Key scope and binding — added 2026-08-24.** §1.4 already requires the header,
-> retains the key-to-response mapping for **24 hours**, and returns the original response
-> without reprocessing on a repeated request with the same key. What it does not say is what
+> retains the key-to-response mapping, and returns the original response
+> without reprocessing on a repeated request with the same key. **Retention duration is
+> NOT DECIDED (§1.4, DECISION 4.1A-F2).** What it does not say is what
 > "the same request" *means* here, and for this endpoint that matters: an `Idempotency-Key` with
 > no stated binding is a key whose safe replay boundary each client gets to guess.
 >
@@ -801,7 +804,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > logical confirm-funds operation, the materially relevant request parameters)`. A key may
 > safely replay **only that same logical request**.
 >
-> **Same principal, same logical request, same key, inside the 24-hour window:** the server
+> **Same principal, same logical request, same key, while the mapping is retained:** the server
 > **does not create another advisory claim record**, **does not reprocess** the operation, and
 > **returns the original response** — the original `user_claim_recorded_at`, with the original
 > `leg_id` and `leg_state` response semantics unchanged. A retry is a retry, not a second claim.
@@ -1441,7 +1444,33 @@ The settlement aggregate linked to a Transaction. Records **workflow decisions o
 | closure_reason         | ENUM         | Yes          | TIMEOUT, REMATCH, PARTY_CANCELLED, PROVISION_FAILED, RECOVERED, LOSS_RECOGNIZED | Required on terminal phases            |
 | rematched_to           | UUID         | Yes          | FK -\> Settlement.id                                                           | Set only from CLOSED_UNWOUND           |
 | compensates_settlement_id | UUID      | Yes          | FK -\> Settlement.id                                                           | Set on compensating settlements only   |
-| outstanding_exposure_amount_minor | BIGINT | Yes    | Non-null iff phase = RECOVERY_REQUIRED. **Exact integer minor units** (S4-1); carries `currency`, `scale` and `currency_def_version` with it. *Type corrected 2026-08-25 from `NUMERIC(20,4)`.* **This is a representation correction only — the mixed irreversible payout aggregate-state semantics that populate this field remain OPEN and are not resolved here** | Unresolved customer exposure           |
+| ~~outstanding_exposure_amount_minor~~ | — | — | **DEFERRED — NOT IMPLEMENTABLE UNTIL THE MIXED IRREVERSIBLE PAYOUT AGGREGATE-STATE DECISION IS RESOLVED. DECISION 4.1A-F3, HUMAN-APPROVED 2026-08-26.** Removed from the implementation-ready schema; see the note below. No migration may create this column | *(deferred concept — see note)* |
+
+> **`outstanding_exposure_amount_minor` — DEFERRED, DECISION 4.1A-F3 (HUMAN-APPROVED 2026-08-26).**
+> The concept is retained and the field is not: it is withdrawn from the implementation-ready
+> `Settlement` schema until the mixed irreversible payout aggregate-state decision is resolved.
+>
+> **Why it could not stay as written.** The row declared a bare `BIGINT` and asserted that it
+> *"carries `currency`, `scale` and `currency_def_version` with it"* — three columns that
+> `Settlement` does not define and, per DECISION 4.1A-F3, **must not gain merely to keep this
+> field alive**. A monetary amount with no currency, no scale and no currency-definition version
+> is not interpretable at all, let alone historically; and the claim sat directly beneath this
+> table's own statement that `Settlement` *"records **workflow decisions only** — it holds no
+> monetary facts and therefore cannot contradict its legs."* Either the amount was unbound or the
+> table was no longer workflow-only. Both readings are wrong, so the field is deferred rather
+> than repaired.
+>
+> **What is NOT decided here.** The mixed irreversible payout aggregate-state semantics that
+> would populate this value — how exposure is derived when one leg has reached the irreversible
+> `PAID_OUT` state and the other has not, and in which currency an exposure spanning two legs is
+> even denominated — remain **OPEN**. This entry deliberately does not invent that calculation,
+> does not choose a denominating leg, and does not pre-commit a column shape for it.
+> `RECOVERY_REQUIRED` remains an operationally visible phase (ADR-001 §5); what is deferred is
+> the persisted monetary field, not the phase.
+>
+> **Reinstating it** requires the aggregate-state decision, then an S4-1-conformant shape —
+> `amount_minor` + `currency` + `scale` + `currency_def_version`, immutably bound — on whichever
+> record the resolved semantics say owns it, behind its own reviewed migration.
 
 SettlementLeg
 
@@ -1691,10 +1720,38 @@ Records a mismatch between Xspeeria records and a partner report. **Never mutate
 | settlement_id     | UUID          | No           | FK -\> Settlement.id — may be terminal              | Affected settlement                |
 | leg_id            | UUID          | Yes          | FK -\> SettlementLeg.leg_id                         | Affected leg, where leg-specific   |
 | type              | ENUM          | No           | MISSING_IN_PARTNER, MISSING_IN_XSPEERIA, AMOUNT_MISMATCH, STATE_MISMATCH | Mismatch category |
-| expected_amount_minor | BIGINT    | Yes          | **Exact integer minor units** (S4-1); interpreted with the related leg's `currency`/`scale`/`currency_def_version`. *Type corrected 2026-08-25 from `NUMERIC(20,4)`* | Xspeeria's record                  |
+| expected_amount_minor | BIGINT    | Yes          | **Exact integer minor units** (S4-1). **Binding corrected 2026-08-26 by DECISION 4.1A-F4 (HUMAN-APPROVED):** interpreted with **this row's own** `currency`/`scale`/`currency_def_version`, never via `leg_id`. *Type corrected 2026-08-25 from `NUMERIC(20,4)`* | Xspeeria's record                  |
 | observed_amount_minor | BIGINT    | Yes          | **Exact integer minor units** (S4-1); same interpretation as `expected_amount_minor`, so the two are comparable without rounding. *Type corrected 2026-08-25 from `NUMERIC(20,4)`* | Partner's record                   |
+| currency              | CHAR(3)   | Yes          | ISO 4217. **Added 2026-08-26 by DECISION 4.1A-F4.** Non-null **iff** either monetary amount is non-null (see the binding rule below) | Currency of the exception amounts |
+| scale                 | SMALLINT  | Yes          | Minor-unit exponent captured with the amounts (S4-1). **Added 2026-08-26 by DECISION 4.1A-F4.** Non-null **iff** either monetary amount is non-null | Fixes the meaning of the integer minor-unit amounts |
+| currency_def_version  | VARCHAR(32) | Yes        | Which currency definition interprets `currency` (S4-1; type matches the `LedgerLine` authority in this document). **Added 2026-08-26 by DECISION 4.1A-F4.** Non-null **iff** either monetary amount is non-null | Keeps the exception interpretable after a definition change |
 | status            | ENUM          | No           | OPEN, UNDER_REVIEW, RESOLVED                        | Exception lifecycle                |
 | resolution        | TEXT          | Yes          | Required on RESOLVED                                | Where money is genuinely wrong, remedy is a compensating settlement |
+
+> **ReconciliationException monetary binding — DECISION 4.1A-F4, HUMAN-APPROVED 2026-08-26.**
+>
+> **Consistency rule (to be enforced by a DB CHECK when this table is implemented):**
+>
+> - If **either** `expected_amount_minor` **or** `observed_amount_minor` is non-null, then
+>   `currency`, `scale` and `currency_def_version` **must all be non-null**.
+> - If **both** monetary amounts are null, the three binding fields **may** be null.
+>
+> **Why the binding is on this row and not inherited through `leg_id`.** The previous wording
+> interpreted both amounts *"with the related leg's `currency`/`scale`/`currency_def_version`"*,
+> but `leg_id` is **nullable** — deliberately so, because a settlement-level reconciliation
+> exception (`MISSING_IN_PARTNER`, `MISSING_IN_XSPEERIA`, or an aggregate `AMOUNT_MISMATCH`) may
+> legitimately not be leg-specific. With `leg_id IS NULL` and an amount present, the amount had
+> no currency, no scale and no definition version: an uninterpretable integer sitting in the one
+> table whose entire purpose is to record that Xspeeria's money records and a partner's disagree.
+>
+> **`leg_id` is deliberately NOT made `NOT NULL`.** Forcing a leg merely to recover currency
+> context would falsify the data — it would require inventing a leg attribution for exceptions
+> that genuinely have none, which is worse than the gap it closes. The binding travels with the
+> amounts instead, exactly as S4-1 requires of every authoritative persisted monetary value.
+>
+> This changes no monetary representation: `amount_minor` stays `BIGINT` exact integer minor
+> units, and `NUMERIC`/`DECIMAL` is not reintroduced. **No `ReconciliationException` table is
+> implemented in Milestone 4.1A**; this is the schema that the batch implementing it must build.
 
 Notification
 
