@@ -229,7 +229,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 | Backend Framework        | FastAPI (Python)        | Async-native, strong typing via Pydantic, automatic OpenAPI generation, mature ecosystem for fintech-grade validation                  |
 | Primary Database         | PostgreSQL              | ACID guarantees required for financial state; native support for numeric/decimal types, row-level locking, JSONB for flexible metadata |
 | ORM                      | SQLAlchemy (2.0, async) | Explicit control over queries and transactions, critical for correctness in a money-handling system                                    |
-| Caching / Locks / Queues | Redis                   | Distributed locking for matching engine concurrency, caching of read-heavy marketplace queries, Celery broker                          |
+| Caching / Queues         | Redis                   | **Non-authoritative only (2026-08-27).** Caching of read-heavy marketplace queries, Celery broker, rate limiting. **Not the money-path serialization authority** — see §9.3 and TDS ADR-004 |
 | Background Processing    | Celery + Celery Beat    | Asynchronous settlement polling, scheduled compliance jobs, notification dispatch, retry-safe task execution                           |
 | Containerization         | Docker                  | Environment parity across dev/staging/production                                                                                       |
 | API Documentation        | OpenAPI (via FastAPI)   | Auto-generated, versioned API contract for internal and partner consumption                                                            |
@@ -326,7 +326,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
     │   └── expire_stale_matches.py
     ├── infrastructure/
     │   ├── repository.py       # SQLAlchemy implementation
-    │   ├── lock_manager.py     # Redis distributed lock adapter
+    │   ├── lock_manager.py     # PostgreSQL row-lock adapter (SELECT ... FOR UPDATE); corrected 2026-08-27 — not Redis
     ├── api/
     │   ├── router.py
     │   └── schemas.py
@@ -490,10 +490,24 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 >   giving `(accepted_at ASC, server_order_key ASC)` a column to order by.
 > - **`MatchAllocation` is `Match`** — one entity, not two (`DOCUMENT_INDEX.md`). No separate
 >   allocation entity is introduced here.
+> - **`TRANSACTIONS` owns no authoritative monetary facts — HUMAN-APPROVED 2026-08-27**
+>   (`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §9 B). The canonical `Transaction` shape is
+>   `id`, `match_id`, `status`, `created_at`. `amount_minor`, `fee_amount_minor`, `currency`,
+>   `scale` and `currency_def_version` are **removed from this ERD** and must not be added back:
+>   authoritative money lives on `SETTLEMENT_LEGS` and `PAYOUT_EXECUTIONS`, and
+>   `05_API_Contract_Data_Dictionary.md` §5 `Transaction` is canonical. `state` is corrected to
+>   `status` to match it. **Fee ownership and fee semantics are NOT decided by this correction**
+>   and remain a separate future human decision.
 >
 > **Field names here are a summary.** `05_API_Contract_Data_Dictionary.md` §5 remains canonical
 > where the two differ in spelling (`currency_from` here vs `source_currency` there); that
 > divergence predates this reconciliation and is **not** resolved by it.
+>
+> **`KYC_DOCUMENTS` naming aligned — HUMAN-APPROVED 2026-08-27**
+> (`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §9 E). `doc_type` → **`document_type`** and
+> `storage_ref` → **`storage_uri`**, matching the canonical dictionary. **No new KYC schema
+> semantics are introduced**, and the `currency_from`/`source_currency` divergence above is
+> untouched.
 >
 > **Unchanged and still OPEN:** whether FXRequest is an active MVP flow (**R5-9**), the
 > `MatchConfirmed` rename, and the mixed irreversible payout aggregate-state semantics. This
@@ -559,8 +573,8 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         KYC_DOCUMENTS {
             uuid id PK
             uuid kyc_case_id FK
-            string doc_type
-            string storage_ref
+            string document_type
+            string storage_uri
             string status
         }
         SCREENING_RESULTS {
@@ -619,12 +633,7 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
         TRANSACTIONS {
             uuid id PK
             uuid match_id FK
-            string state
-            bigint amount_minor
-            bigint fee_amount_minor
-            smallint scale
-            string currency_def_version
-            string currency
+            string status
             timestamp created_at
             timestamp updated_at
         }
@@ -1112,22 +1121,39 @@ Xspeeria is built as a **modular monolith at launch**, structured internally alo
 > matched Offer remains available for its remaining amount.
 
 
-- **Distributed locking:** **Corrected 2026-08-24 — `offer_id` is the mandatory serialization
-  key for acceptance.** Redis-based locks (e.g., Redlock pattern) scoped to the `offer_id` whose
-  capacity is being consumed. The former `offer_id`/`fx_request_id` alternative is **withdrawn**:
-  it belonged to the automated-matching model, and an acceptance must never serialize on the
-  demand side. **Reworded 2026-08-25:** the lock exists to prevent **two concurrent acceptances of
-  the same Offer** from double-allocating the same capacity. The former phrasing — *"two concurrent
-  matching runs"* — carried the withdrawn background-matcher framing into a bullet that is still
-  normative; there are no matching runs under publish-and-accept, only client-initiated
-  acceptances. The mechanism and its scope (`offer_id`) are unchanged.
-- **Database-level guard:** `matched_amount` updates on `offers` use `SELECT ... FOR UPDATE` row
-  locking within a single DB transaction as a second line of defense against race conditions.
+- **Serialization authority — PostgreSQL row locking.** **Corrected 2026-08-24 — `offer_id` is
+  the mandatory serialization key for acceptance. Authority reassigned to PostgreSQL 2026-08-27
+  (HUMAN-APPROVED / REAFFIRMED; `docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §6).**
+  `SELECT ... FOR UPDATE` on the authoritative `Offer` row is the serialization authority, and a
+  **single PostgreSQL transaction is the atomic acceptance boundary**. Authoritative
+  remaining/matched capacity is maintained under that row lock, and money-path idempotency is
+  persisted in PostgreSQL, where uniqueness constraints participate in correctness. The former
+  `offer_id`/`fx_request_id` alternative is **withdrawn**: it belonged to the automated-matching
+  model, and an acceptance must never serialize on the demand side. **Reworded 2026-08-25:** the
+  lock exists to prevent **two concurrent acceptances of the same Offer** from double-allocating
+  the same capacity. The former phrasing — *"two concurrent matching runs"* — carried the withdrawn
+  background-matcher framing into a bullet that is still normative; there are no matching runs
+  under publish-and-accept, only client-initiated acceptances. The scope (`offer_id`) is unchanged.
+- **Database-level guard — now the authority, not a fallback.** `matched_amount` updates on
+  `offers` use `SELECT ... FOR UPDATE` row locking within a single DB transaction. **Corrected
+  2026-08-27:** this is no longer "a second line of defense" behind a distributed lock — it *is*
+  the serialization authority described in the bullet above.
   **The `fx_requests` capacity-update path is withdrawn as an acceptance authority** (2026-08-24):
   the authoritative capacity being consumed is the Offer's, and an acceptance without an
   `FXRequest` must satisfy the same Offer-level invariant. *A row lock here is not the withdrawn
   product concept of locking the whole Offer lifecycle after its first Match — the Offer remains
-  open for later partial acceptances*, independent of the Redis lock.
+  open for later partial acceptances*. **Corrected 2026-08-27:** the former qualifier *"independent
+  of the Redis lock"* is withdrawn — there is no Redis lock in the acceptance path.
+- **SUPERSEDED 2026-08-27 — Redis/Redlock as primary concurrency guard.** ~~Redis-based locks
+  (e.g., Redlock pattern) scoped to the `offer_id` whose capacity is being consumed, with
+  database row-locking as a secondary guard.~~ **Redis is not required for financial correctness
+  and is not the primary money-path serialization mechanism.** Redis must not be the primary
+  acceptance lock, authoritative Offer-capacity state, authoritative transaction or settlement
+  state, authoritative money-path idempotency state, or an additional correctness authority. If
+  adopted later it is **non-authoritative only** — cache, rate limiting, queues/broker where
+  appropriate, performance. **Redis failure must not enable double allocation or change
+  authoritative capacity, settlement truth, transaction truth, or financial correctness.** No
+  alternative Redis architecture is introduced by this supersession. See TDS ADR-004.
 - **Optimistic concurrency:** Each `offers`/`fx_requests` row carries a `version` column; updates include a `WHERE version = :expected_version` clause, rejecting stale writes.
 
 ## 9.4 Idempotency
@@ -1577,7 +1603,7 @@ Authorization is enforced at the API layer via dependency-injected permission ch
 |-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | API layer       | Horizontal auto-scaling of stateless FastAPI instances behind a load balancer                                                                                      |
 | Database        | Vertical scaling initially; read replicas introduced for reporting/admin queries as load grows; partitioning of `transaction_events`/`audit_logs` by date at scale |
-| Matching engine | Stateless workers coordinated via Redis locks; horizontally scalable as long as lock contention is monitored                                                       |
+| Acceptance path | **Corrected 2026-08-27.** Stateless FastAPI workers serialized by PostgreSQL `SELECT ... FOR UPDATE` on the authoritative `Offer` row; horizontally scalable as long as per-Offer row-lock contention is monitored |
 | Background jobs | Celery worker pool scaled independently per queue (settlement, notifications, compliance jobs each on dedicated queues to prevent noisy-neighbor delays)           |
 | Caching         | Redis used for hot marketplace read paths (active offer listings) with short TTL invalidated on write                                                              |
 
@@ -1676,13 +1702,33 @@ This is a direct architectural consequence of keeping currency pair as data, not
 
 ## ADR-004: Distributed Locking via Redis for Matching Engine
 
-**Status:** Accepted
+**Status:** **SUPERSEDED 2026-08-27** (was: Accepted) — superseded by the HUMAN-APPROVED /
+REAFFIRMED PostgreSQL money-path authority recorded in
+`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §6.
 
-**Context:** Concurrent match attempts on the same liquidity must not result in double-allocation.
+**Context:** Concurrent acceptances of the same authoritative `Offer` must not result in
+double-allocation of the same capacity.
 
-**Decision:** Use Redis-based distributed locks (Redlock pattern) as primary concurrency guard, with database row-locking as a secondary guard (Section 9.3).
+**Decision (CURRENT):** **PostgreSQL is the sole authoritative consistency mechanism for the money
+path.** `SELECT ... FOR UPDATE` on the authoritative `Offer` row is the serialization authority; a
+single PostgreSQL transaction is the atomic acceptance boundary; authoritative remaining/matched
+capacity is maintained under that row lock; money-path idempotency is persisted in PostgreSQL, and
+uniqueness constraints participate in correctness (Section 9.3).
 
-**Consequences:** Introduces Redis as a hard dependency for matching correctness, not just performance; requires Redis high-availability configuration in production.
+**Decision (SUPERSEDED):** ~~Use Redis-based distributed locks (Redlock pattern) as primary
+concurrency guard, with database row-locking as a secondary guard (Section 9.3).~~
+
+**Consequences:** **Redlock is not required for correctness, and Redis is not a hard dependency for
+matching correctness.** Redis must not be the primary acceptance lock, authoritative Offer-capacity
+state, authoritative transaction or settlement state, authoritative money-path idempotency state, or
+an additional correctness authority. Any later Redis adoption is **non-authoritative only** — cache,
+rate limiting, queues/broker where appropriate, performance — and Redis failure must not enable
+double allocation or change authoritative capacity, settlement truth, transaction truth, or
+financial correctness. No alternative Redis architecture is introduced by this supersession.
+
+*The superseded consequence — "introduces Redis as a hard dependency for matching correctness, not
+just performance; requires Redis high-availability configuration in production" — is retained above
+as history and no longer applies.*
 
 ## ADR-005: AI Components Are Advisory-Only
 

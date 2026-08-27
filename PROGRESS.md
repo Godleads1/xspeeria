@@ -129,6 +129,42 @@ Python + FastAPI
 - [ ] **Idempotency retention/TTL — NOT DECIDED.** No expiry duration is approved. Milestone 4.1
       persists `created_at` only, with **no `expires_at` and no automatic expiry semantics**. If
       retention becomes necessary it is a separate human decision plus a future migration.
+- [x] **Milestone 4.1A — Stage 4 persistence foundation COMPLETE** — PR #6 squash-merged to `main`
+      as `f5ebc12`, 2026-08-27. Exact-head CI green (run 33052004233) on the merged head
+      `e12ef75`; all 18 review conversations resolved. **No domain tables, no ORM models and no
+      domain migration** were introduced: `Base.metadata` is empty and `0001_baseline` performs no
+      schema change. **Milestone 4.1B has NOT started.**
+- [x] **DECISION G-1 — PostgreSQL money-path authority, HUMAN-APPROVED / REAFFIRMED 2026-08-27.**
+      PostgreSQL is the **sole authoritative consistency mechanism** for the money path.
+      `SELECT ... FOR UPDATE` on the authoritative `Offer` row is the serialization authority; one
+      PostgreSQL transaction is the atomic acceptance boundary; authoritative remaining/matched
+      capacity is maintained under that row lock; money-path idempotency is persisted in
+      PostgreSQL. **Redis is not required for financial correctness** and must never be the primary
+      acceptance lock, authoritative Offer-capacity/transaction/settlement state, money-path
+      idempotency state, or an additional correctness authority. Any later Redis use is
+      **non-authoritative only** (cache, rate limiting, queues/broker, performance). TDS §9.3 and
+      **TDS ADR-004** Redis/Redlock-primary language is **SUPERSEDED** and reconciled.
+- [x] **DECISION G-2 — standing standards document ratified, HUMAN-APPROVED 2026-08-27.**
+      `docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` is the canonical standing reference for
+      product/custody truth, domain separation, the security master baseline, evidence
+      classification, money-path authority, acceptance and settlement invariants, the vendor
+      framework, and the human-approval gates. It sits at **rank 2** of the `DOCUMENT_INDEX.md`
+      authority order (explicit human-approved decisions). The **"Xspeeria 43+ Security Standard"**
+      name is preserved as the standing baseline concept; the current checklist of **112 control
+      entries** extends it and **must not be reduced to match the historical count**.
+- [x] **Governance documentation reconciliation performed, 2026-08-27.** Six human-decided
+      conflicts carried forward from PR #6 review are reconciled in documentation only — Redis vs
+      PostgreSQL authority; `Transaction` owns no authoritative monetary facts; `PayoutExecution`
+      must persist `currency_def_version`; `ReconciliationException` strict `iff`; `KYC_DOCUMENTS`
+      canonical naming; stale §4.4/§4.5 system-error references. **No runtime code, ORM model or
+      domain migration was changed.**
+- [ ] **4.1B carried-forward engineering items — OPEN, not started.**
+      (1) integration fixture cached-engine/session disposal — the `session` fixture in
+      `backend/tests/integration/conftest.py` uses the process-wide cached engine and never
+      disposes it, risking a cross-loop `RuntimeError` as integration coverage grows; test-only.
+      (2) Alembic migration-template Ruff/F401 friction — `migrations/script.py.mako` emits unused
+      `sa`/`op` imports and no `per-file-ignores` exists. **Must be addressed BEFORE the first real
+      generated migration is accepted.**
 
 ## Current Blockers
 
