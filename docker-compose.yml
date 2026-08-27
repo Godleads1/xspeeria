@@ -1,0 +1,37 @@
+# Local development database ONLY -- Stage 4 Milestone 4.1A (DECISION S4-3: PostgreSQL 16).
+#
+# This file starts a database and nothing else. No application container: the backend runs
+# on the host during development, and containerising it would pull in image, entrypoint and
+# hot-reload decisions that belong to the infrastructure milestone, not to this batch.
+# No Redis -- DECISION H-3 keeps PostgreSQL as the single consistency authority for offer
+# row locking, transactional acceptance, idempotency uniqueness and concurrency control.
+#
+# CREDENTIALS BELOW ARE DEVELOPMENT-ONLY PLACEHOLDERS on a loopback-published port. They
+# are not secrets, they are not used by CI (which injects its own), and they must never
+# appear in staging or production -- those take credentials from the approved secrets
+# manager. Every value is environment-overridable so a developer can point at a different
+# local database without editing (or dirtying) this file.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: xspeeria-postgres-dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-xspeeria_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xspeeria_dev_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-xspeeria_dev}
+    ports:
+      # Bound to loopback explicitly: the default would publish on every interface and
+      # expose a trivially-credentialled database to the local network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xspeeria_dev} -d ${POSTGRES_DB:-xspeeria_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - xspeeria_pgdata:/var/lib/postgresql/data
+
+volumes:
+  xspeeria_pgdata:

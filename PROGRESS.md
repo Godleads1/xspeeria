@@ -87,6 +87,48 @@ Python + FastAPI
 - [ ] Decision 4 — regulatory posture confirmation
 - [x] Architecture approved for controlled implementation — Phase 1 GO, 2026-08-22
 - [x] Implementation started — Milestone 1: foundation, design system, app shell
+- [x] **Milestone 1 / Phase 1 engineering foundation COMPLETE** — PR #5 squash-merged to `main`
+      as `a3eb4c0`, 2026-08-25
+- [x] **DECISION S4-1 — authoritative money persistence, HUMAN-APPROVED 2026-08-25.** Every
+      persisted authoritative transactional monetary amount is exact integer minor units:
+      `amount_minor BIGINT` + `currency CHAR(3)` + `scale SMALLINT` + `currency_def_version
+      VARCHAR(32)`, immutably bound. `NUMERIC(18,2)`, `NUMERIC(20,4)` and decimal-based money are
+      **withdrawn** as authoritative semantics; `NUMERIC`/`DECIMAL` survives only as an explicitly
+      derived, non-authoritative presentation value with justified need. **Rates are not monetary
+      amounts** and remain `NUMERIC(12,6)`. `Money(minor, currency, scale)` is unchanged;
+      `currency_def_version` is carried alongside it in persistence, not added to the value object.
+      Reconciled in ADR-002, TDS §6.2/§6.4 and API dict §5.
+- [x] **DECISION S4-2 — Match `server_order_key`, HUMAN-APPROVED 2026-08-25.** `server_order_key
+      BIGINT NOT NULL UNIQUE` — server-generated, immutable, durable, orderable, never
+      client-supplied. A PostgreSQL sequence/identity is acceptable and **the value need not be
+      gapless**. Canonical acceptance ordering remains `accepted_at ASC, server_order_key ASC`;
+      `accepted_at` is **not** replaced as the primary criterion. Added to the API dict Match
+      schema and the TDS index strategy.
+- [x] **DECISION S4-3 — Stage 4 persistence/CI engineering baseline, HUMAN-APPROVED 2026-08-25.**
+      PostgreSQL 16, SQLAlchemy 2.x async, asyncpg, Alembic. **SQLite must not be used** as the
+      authoritative integration/concurrency database for the money path — `SELECT … FOR UPDATE`,
+      uniqueness races, transactional idempotency, constraints and concurrent acceptance are tested
+      on PostgreSQL only. *This approval covers engineering baseline and CI only; it resolves no
+      regulatory, hosting, cloud-provider or production-deployment decision.*
+- [x] **DECISION S4-4 — KYC persistence authority, HUMAN-APPROVED 2026-08-25.** Canonical KYC case
+      persistence/API authority is `KYCCases` / `KycCase`. `kyc_profiles` is **summary/projection
+      only** and is never a second authoritative KYC workflow. Lifecycle remains
+      `pending_documents → under_review → approved | rejected`; jurisdiction-specific document
+      requirements stay configuration/legal-authority driven and are not invented.
+- [x] **DECISION H-2 — CI integration/concurrency environment, HUMAN-APPROVED 2026-08-25.**
+      PostgreSQL 16 runs as a **GitHub Actions service container**, and that is the primary
+      integration/concurrency test environment. **Testcontainers is not required on the primary CI
+      path.**
+- [x] **DECISION H-3 — no Redis in Milestone 4.1, HUMAN-APPROVED 2026-08-25.** PostgreSQL remains
+      the single consistency authority for **Offer row locking, transactional acceptance,
+      idempotency uniqueness and concurrency control**. **Redis locks and Redis-held idempotency
+      state must not be introduced into the money path.**
+- [x] **DECISION H-5 — Alembic migration location, HUMAN-APPROVED 2026-08-25.** Migrations live at
+      the repository root in **`migrations/`**, matching
+      `Xspeeria_Master_Prompt_Python_Backend.md` §191. **`backend/migrations/` must not be used.**
+- [ ] **Idempotency retention/TTL — NOT DECIDED.** No expiry duration is approved. Milestone 4.1
+      persists `created_at` only, with **no `expires_at` and no automatic expiry semantics**. If
+      retention becomes necessary it is a separate human decision plus a future migration.
 
 ## Current Blockers
 

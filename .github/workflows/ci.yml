@@ -16,6 +16,37 @@ jobs:
     name: Python Quality & Security
     runs-on: ubuntu-latest
 
+    # PostgreSQL 16 service container -- DECISION S4-3 / H-2. This is the approved
+    # integration and concurrency environment for the money path; Testcontainers is
+    # deliberately NOT on the primary CI path. SQLite is never used: it cannot express
+    # `SELECT ... FOR UPDATE`, partial unique indexes or the CHECK constraints that the
+    # acceptance boundary depends on, so a green SQLite run would be evidence of nothing.
+    #
+    # No password is set, and that is deliberate: `POSTGRES_HOST_AUTH_METHOD: trust`
+    # means there is **no credential to commit**. The container is created for this job,
+    # is reachable only from it, holds nothing but throwaway test data, and is destroyed
+    # with the runner. Inventing a password would put a credential-shaped string in the
+    # repository -- something the secret scanner has to be taught to ignore -- in
+    # exchange for no security at all. Staging and production credentials are unaffected
+    # and continue to come from the approved secrets manager.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: xspeeria_ci
+          POSTGRES_DB: xspeeria_ci
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U xspeeria_ci -d xspeeria_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://xspeeria_ci@localhost:5432/xspeeria_ci
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -51,10 +82,54 @@ jobs:
         run: uv run --no-sync mypy backend scripts
 
       - name: Bandit
-        run: uv run --no-sync bandit -r backend -x backend/tests -q
+        # `migrations/` added 2026-08-25 (DECISION 4.1A-H4): migration modules are Python
+        # that runs with schema-altering privileges against the money database, so they are
+        # scanned like application code. Test exclusion is unchanged, and `backend` coverage
+        # is unchanged -- this only widens the scanned surface.
+        run: uv run --no-sync bandit -r backend migrations -x backend/tests -q
 
-      - name: Pytest
+      # MUST run BEFORE pytest -- MINOR-A, corrected 2026-08-26. This step exists to prove
+      # the real migration entry point works against a genuinely empty database, exactly as
+      # an operator would run it on a first deploy: the `alembic` CLI, `alembic.ini`
+      # resolution, `prepend_sys_path` and the `Settings`-derived URL, none of which the
+      # in-process `alembic.command` tests exercise.
+      #
+      # It previously sat after the test suite. By that point the integration tests had
+      # already migrated the shared service database to head, so `alembic upgrade head` was
+      # a no-op and this step's own "(clean PostgreSQL 16)" label was false -- it passed in
+      # 1 second having applied nothing. Green was not evidence of a clean upgrade.
+      # Relabelling it would have preserved the gap; moving it makes the claim true.
+      #
+      # Ordering stays deterministic: the migration tests own their own state
+      # (`test_upgrade_from_empty_database` and `test_baseline_creates_no_table` both begin
+      # by downgrading to base), so they neither depend on nor are disturbed by the schema
+      # this step leaves at head.
+      - name: Alembic upgrade head (clean PostgreSQL 16)
+        run: |
+          uv run --no-sync alembic upgrade head
+          uv run --no-sync alembic current
+
+      # XSPEERIA_REQUIRE_DB turns the integration fixtures' "skip when no database" into a
+      # hard failure. Locally a developer without Postgres gets skips; in CI a skip would
+      # be a false green -- the concurrency and migration guards would report success
+      # having executed nothing. This is the difference between "tests passed" and "tests
+      # ran".
+      - name: Pytest (unit + integration against PostgreSQL 16)
+        env:
+          XSPEERIA_REQUIRE_DB: "1"
         run: uv run --no-sync pytest
+
+      - name: Assert integration tests actually executed
+        env:
+          XSPEERIA_REQUIRE_DB: "1"
+        run: |
+          OUT=$(uv run --no-sync pytest backend/tests/integration -q --no-header -p no:cacheprovider)
+          echo "$OUT"
+          echo "$OUT" | grep -qE '[1-9][0-9]* passed' || {
+            echo "No integration test passed: refusing a false-green integration gate"; exit 1; }
+          echo "$OUT" | grep -qE '[1-9][0-9]* skipped' && {
+            echo "Integration tests were skipped in CI: the database gate did not engage"; exit 1; }
+          exit 0
 
       # The dependency audit must never pass by finding nothing to audit.
       # uv.lock is the single source of dependency truth. The audit runs against the
