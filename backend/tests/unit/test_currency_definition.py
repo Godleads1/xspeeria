@@ -7,6 +7,10 @@ any of it is proven against a real database in a later step, not here.
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
 from typing import cast
 
 import pytest
@@ -21,6 +25,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.schema import ForeignKeyConstraint
 
+from app.db.base import Base
 from app.db.money import CURRENCY_DEF_VERSION_LENGTH, MAX_SCALE, MIN_SCALE
 from app.models.currency_definition import CurrencyDefinition
 
@@ -272,3 +277,100 @@ class TestRepr:
         assert "CurrencyDefinition" in rendered
         assert "GBP" in rendered
         assert "v1" in rendered
+
+
+class TestPackageRegistration:
+    """STEP 7. `import app.models` must register the table on `Base.metadata`.
+
+    This is the property Alembic depends on: `migrations/env.py` compares against
+    `Base.metadata`, so a model the package does not import is one autogenerate cannot
+    see -- and one it would propose dropping from a schema that already has it.
+    """
+
+    def test_currency_definition_is_exported_from_the_package(self) -> None:
+        import app.models
+
+        assert "CurrencyDefinition" in app.models.__all__
+        assert hasattr(app.models, "CurrencyDefinition")
+
+    def test_the_export_is_the_same_class_object(self) -> None:
+        """Not a re-declaration: one class, one table, one mapper."""
+        import app.models
+        import app.models.currency_definition as module
+
+        assert app.models.CurrencyDefinition is module.CurrencyDefinition
+        assert app.models.CurrencyDefinition is CurrencyDefinition
+
+    def test_metadata_contains_exactly_the_approved_tables(self) -> None:
+        import app.models  # noqa: F401  -- imported for its registration side effect
+
+        assert set(Base.metadata.tables) == {"currency_definitions"}
+
+    @pytest.mark.parametrize(
+        "future_table",
+        [
+            "offers",
+            "matches",
+            "transactions",
+            "settlements",
+            "settlement_legs",
+            "payout_executions",
+            "kyc_cases",
+            "kyc_profiles",
+            "beneficiary_accounts",
+            "idempotency_records",
+            "users",
+        ],
+    )
+    def test_no_future_batch_table_is_registered(self, future_table: str) -> None:
+        """4.1C-4.1H entities must not appear ahead of their approved batch."""
+        import app.models  # noqa: F401
+
+        assert future_table not in Base.metadata.tables
+
+    def test_importing_the_package_alone_registers_the_table(self) -> None:
+        """Proven in a *subprocess*, because this test module already imports the model
+        directly -- in-process the table would be registered either way, so the assertion
+        would pass without the package import doing anything.
+        """
+        backend_root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import app.models; from app.db.base import Base; "
+                "print(sorted(Base.metadata.tables))",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "PYTHONPATH": str(backend_root)},
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "['currency_definitions']"
+
+    def test_registration_opens_no_connection(self) -> None:
+        """Metadata registration only. If importing models built an engine, the
+        application could no longer boot without a database -- which `app.db.session`
+        exists to guarantee it can."""
+        backend_root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import app.models; import app.db.session as s; "
+                "print(s._engine is None, s._sessionmaker is None)",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "PYTHONPATH": str(backend_root)},
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "True True"
+
+    def test_registration_creates_no_migration(self) -> None:
+        """Step 7 is Python-side discovery. Generating the revision is Step 8."""
+        repo_root = Path(__file__).resolve().parents[3]
+        versions = sorted(p.name for p in (repo_root / "migrations" / "versions").glob("*.py"))
+        assert versions == ["0001_baseline.py"]
