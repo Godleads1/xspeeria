@@ -32,6 +32,12 @@ PLAN → TRACE REQUIREMENTS → IMPLEMENT → TEST → SECURITY REVIEW → CODE 
 ## Definition of Done
 Requirements mapped; authorization/security verified; server validation present; normal/failure/abuse tests present; observability adequate; docs updated; no unresolved critical/high issue introduced.
 
+## Standing standards
+For all Xspeeria work, read and follow `docs/13-governance/XSPEERIA_STANDING_STANDARDS.md`.
+It contains mandatory product, security, architecture, vendor, evidence, and human-approval
+constraints. If any repository document conflicts with a human-ratified standing standard,
+STOP and surface the conflict rather than silently choosing.
+
 ## Security baseline
 Use `docs/07-security/Xspeeria_Security_Master_Audit.md` as the mandatory security baseline.
 

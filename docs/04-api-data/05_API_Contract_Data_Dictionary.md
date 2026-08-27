@@ -683,7 +683,7 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 | Required Headers | Authorization: Bearer {access_token}, Idempotency-Key: {uuid}                                                          |
 | Request JSON     | leg_id (UUID, required), proof_reference (string, optional bank reference number)                                      |
 | Success Response | 200 OK — { leg_id, leg_state, user_claim_recorded_at }                                                                 |
-| Error Responses  | **RES_404_NOT_FOUND** *(existing §4.4 entry — `leg_id` does not belong to `{settlement_id}`; added 2026-08-25, no new identifier)*, AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.4 — see the idempotency-scope note below; no new identifier is introduced)* |
+| Error Responses  | **RES_404_NOT_FOUND** *(existing §4.4 entry — `leg_id` does not belong to `{settlement_id}`; added 2026-08-25, no new identifier)*, AUTH_403_FORBIDDEN, RES_409_INVALID_SETTLEMENT_STATE, SYS_409_IDEMPOTENCY_KEY_REUSED *(existing catalogue entry, §4.5 — see the idempotency-scope note below; no new identifier is introduced)* |
 | Validation Rules | **Ordered, server-side, fail-closed — HUMAN-APPROVED 2026-08-25.** (1) **Parse** syntactically valid path/request identifiers. (2) **Resolve and validate the addressed resource relationship:** `SettlementLeg.leg_id` equals the supplied `leg_id` **AND** `SettlementLeg.settlement_id` equals `{settlement_id}`. (3) If that relationship does **not** hold, return `RES_404_NOT_FOUND` and **STOP** — no idempotency lookup, no idempotency record write, no funding-party authorization, no advisory claim. (4) **Authorization:** the caller must be the funding party for that leg, else `AUTH_403_FORBIDDEN` — **before** any idempotency evaluation. (5) **Idempotency evaluation:** a reused `Idempotency-Key` with a materially different canonical binding returns `SYS_409_IDEMPOTENCY_KEY_REUSED`; the same bound logical request replays the original response. (6) **Advisory claim operation.** The full order is therefore **resource binding validation → authorization → idempotency evaluation → advisory claim**. See the binding, precedence and ordering notes below |
 | Business Rules   | **RECONCILED — ADR-001 (DEC-003).** This endpoint does not change `SettlementLeg.state` and does not advance `Settlement.phase`. Only a signature-verified partner webhook may set the `FUNDED` money fact (ADR-001 F-6, F-7). The claim is recorded for support and dispute evidence, and may drive UI messaging, but carries no financial authority. It previously returned a settlement status of `funds_pending_verification`, which implied a client-asserted state change |
 
@@ -846,9 +846,9 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 > For a request that **has** addressed a valid leg under `{settlement_id}`: a reused key carrying a
 > different `settlement_id`, a different `leg_id`, a different authenticated principal, or a
 > materially different payload or logical operation — **must be rejected deterministically** with
-> `SYS_409_IDEMPOTENCY_KEY_REUSED`, the **existing** §4.4 entry, whose canonical meaning is a
+> `SYS_409_IDEMPOTENCY_KEY_REUSED`, the **existing** §4.5 entry, whose canonical meaning is a
 > **bound-key conflict**: a material difference in any bound component, not only in the request
-> body. **No new error identifier is introduced; catalogue totals are recounted in §4.4 (45
+> body. **No new error identifier is introduced; catalogue totals are recounted in §4.5 (45
 > enumerated / 43 active / 2 superseded).** Silently serving the first response to a materially
 > different request would let one confirmed leg's claim masquerade as another's.
 >
@@ -1053,7 +1053,7 @@ Errors follow a consistent envelope: { error_code, message, details? }. Codes ar
 > floor**, **no ±15% symmetric band** (withdrawn, not restored), **no minimum commercial spread**,
 > **no minimum percentage below reference** and **no invented numeric lower reference-rate bound**.
 > A seller may still price arbitrarily far below the ceiling. Catalogue totals are recounted in
-> §4.4 above.
+> §4.5 below.
 
 4.3 KYC (KYC\_\*)
 
@@ -1510,9 +1510,17 @@ SettlementLeg
 > immutable monetary interpretation. **ADR-002 remains authoritative and is now consistent with
 > this schema: financial arithmetic uses integer minor units with an explicit scale.**
 >
-> **`PayoutExecution` children inherit that binding.** A child takes the parent's currency,
-> `currency_def_version` and scale; **no child may independently choose another scale**, and the
-> `scale` column on the child is a copy of the parent's binding, never an independent choice.
+> **`PayoutExecution` children inherit that binding, and the inheritance is PERSISTED.** A child
+> takes the parent's currency, `currency_def_version` and scale; **no child may independently
+> choose another scale**, and the `scale` column on the child is a copy of the parent's binding,
+> never an independent choice. **Corrected 2026-08-27 by HUMAN DECISION**
+> (`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §9 C): `PayoutExecution` is an **authoritative
+> persisted monetary child**, so its complete binding — `amount_minor`, `currency`, `scale` **and
+> `currency_def_version`** — is **explicitly persisted on the child row**, not left as prose
+> recoverable through the parent. Prose inheritance is not a binding for an authoritative persisted
+> monetary amount under S4-1. **The precise enforcement mechanism is deliberately NOT decided
+> here** — CHECK constraint, composite foreign key, or service/database enforcement is for the
+> affected persistence batch to design, consistent with this contract.
 >
 > *Phase 1 adds no column, migration, ORM model or persistence for this. It is recorded as a
 > **required dependency of the later domain-model/persistence milestone**, alongside
@@ -1534,6 +1542,7 @@ PayoutExecution
 | amount_minor | BIGINT | No | **Exact integer minor units. Never binary floating point.** **MUST be strictly `> 0`** — added 2026-08-24; see the positivity invariant below. Zero is invalid and negative is invalid | Split amount |
 | currency | CHAR(3) | No | ISO 4217; = leg currency | Payout currency |
 | scale | SMALLINT | No | **= the minor-unit scale of the parent leg's `currency` under the applicable currency definition (ADR-002 `currency_def_version`), and identical across every `PayoutExecution` of that leg.** Stored on the row | Minor-unit exponent |
+| currency_def_version | VARCHAR(32) | No | **Added 2026-08-27 by HUMAN DECISION** (`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md` §9 C). **= the parent `SettlementLeg.currency_def_version`**, and identical across every `PayoutExecution` of that leg. The child never chooses independently. Type matches the `LedgerLine`/`SettlementLeg` authority in this document — **no new version encoding is invented** | Which currency definition interprets `currency`, persisted so the payout stays interpretable after a definition change |
 
 > **Exact-total invariant:** the sum of a leg's `PayoutExecution.amount_minor` values must equal
 > **exactly** the amount due for that leg. Validated in integer minor units.
@@ -1562,7 +1571,7 @@ PayoutExecution
 > `SettlementLeg`, never a client-supplied request field, so no client-facing validation code in
 > §4.4 applies and **none is invented**. A violation is a construction-time invariant breach that
 > must **fail closed** server-side before any row is written or dispatched; if it ever surfaces to
-> a caller it does so as the existing catalogued `SYS_500_INTERNAL_ERROR`. The §4.4 catalogue is
+> a caller it does so as the existing catalogued `SYS_500_INTERNAL_ERROR`. The §4.5 catalogue is
 > **unchanged** by this note, and its recounted totals are **45 enumerated / 43 active / 2 superseded** (2026-08-25).
 >
 > **One currency and one scale per leg — clarified 2026-08-24.** The invariant above adds
@@ -1734,7 +1743,14 @@ Records a mismatch between Xspeeria records and a partner report. **Never mutate
 >
 > - If **either** `expected_amount_minor` **or** `observed_amount_minor` is non-null, then
 >   `currency`, `scale` and `currency_def_version` **must all be non-null**.
-> - If **both** monetary amounts are null, the three binding fields **may** be null.
+> - If **both** monetary amounts are null, the three binding fields **must all be null**.
+>
+> **STRICT `iff` — HUMAN-APPROVED 2026-08-27** (`docs/13-governance/XSPEERIA_STANDING_STANDARDS.md`
+> §9 D). The earlier wording — that the three binding fields *"**may** be null"* when both amounts
+> are null — is **SUPERSEDED**. It was weaker than the `iff` the field table states, and permitted
+> partial or meaningless binding metadata attached to no amount. The rule is now symmetric in both
+> directions: all three binding fields are non-null **exactly when** an amount exists, and null
+> **exactly when** neither does.
 >
 > **Why the binding is on this row and not inherited through `leg_id`.** The previous wording
 > interpreted both amounts *"with the related leg's `currency`/`scale`/`currency_def_version`"*,
