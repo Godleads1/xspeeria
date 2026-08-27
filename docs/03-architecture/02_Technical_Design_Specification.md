@@ -1611,7 +1611,7 @@ Authorization is enforced at the API layer via dependency-injected permission ch
 
 | Bottleneck                                              | Mitigation                                                                                     |
 |---------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| Matching engine lock contention under high offer volume | Partition locks by currency pair; consider sharding matching workers by pair                   |
+| Offer-row contention under high concurrent acceptance volume | **Corrected 2026-08-27.** Keep the acceptance transaction short, index acceptance lookups correctly, and measure per-Offer row-lock contention before introducing non-authoritative performance optimizations. *The former mitigation — partition locks by currency pair, shard matching workers by pair — is withdrawn with the matching-engine model (§9.3, TDS ADR-004): there are no matching runs under publish-and-accept, and PostgreSQL row locking remains the sole serialization authority* |
 | Settlement partner API latency                          | Fully asynchronous via Celery; never block user-facing requests on partner round-trips         |
 | KYC document processing backlog                         | Queue-based processing with autoscaled workers; manual review capacity planning (Ops)          |
 | Audit log write volume                                  | Append-only table with time-based partitioning; archived to cold storage past retention window |

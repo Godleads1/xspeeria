@@ -17,13 +17,28 @@ between batches.
 
 `DOCUMENT_INDEX.md` §1 defines the global authority order. A human-ratified standing
 standard recorded in this document is an **explicit human-approved architecture and
-engineering decision**, and therefore sits at **rank 2** — below `CLAUDE.md`, above
-`DOCUMENT_INDEX.md` and above every document under `docs/`.
+engineering decision**, and therefore sits at **rank 2** — below `CLAUDE.md`.
 
-This document does **not** override `CLAUDE.md`, and it does not override an approved
-repository ADR on the specific subject that ADR decides. Where this document records a
-reconciliation that supersedes older text, the superseding decision is named inline with
-its approval date.
+`CLAUDE.md` is the highest repository instruction authority. This document never
+overrides it.
+
+**Rank 2 is shared, and it is resolved by subject matter.** Human-approved standing
+standards and approved repository ADRs (`docs/adr/`) both sit at rank 2. Neither
+outranks the other as a document class; they coexist by the subject each decides:
+
+> **When this standing standard and an approved repository ADR both address the same
+> specific subject, the subject-specific approved ADR governs that subject unless a later
+> human-approved decision explicitly supersedes it.**
+
+Outside the specific subject an approved ADR governs, this document governs over
+`DOCUMENT_INDEX.md` and over ordinary architecture, planning, specification and
+implementation documentation under `docs/`.
+
+**Explicit supersession is preserved.** The rule above resolves *silence*, not
+*supersession*. Stale ADR text does **not** override a later human-ratified decision that
+names it: where this document records a reconciliation that supersedes older text, the
+superseding decision is named inline with its approval date, and that named supersession
+governs the subject it names.
 
 ## 1.2 Conflict rule
 
@@ -103,7 +118,7 @@ code, events, or documentation:
 
 ## 3.1 Canonical chain
 
-```
+```text
 Offer
   -> Match               0..n
     -> Transaction       1 per Match
@@ -305,7 +320,7 @@ The approved **Offer-only** acceptance boundary:
 
 A seller rate must satisfy:
 
-```
+```text
 rate > 0  AND  rate <= applicable approved reference ceiling
 ```
 
@@ -370,7 +385,7 @@ It:
 
 All amounts are **integer minor units**.
 
-```
+```text
 original_amount = matched_amount + remaining_amount
 ```
 
@@ -401,7 +416,7 @@ supplied**. A PostgreSQL sequence/identity is acceptable and **gaps are acceptab
 
 ## 7.7 Two-window / funding readiness
 
-```
+```text
 TRANSACTION_ELIGIBLE
   = approved KYC
   + qualifying MFA
@@ -424,7 +439,7 @@ ALLOCATION_FUNDING_READY
 
 Canonical endpoint:
 
-```
+```http
 POST /v1/settlements/{settlement_id}/confirm-funds
 ```
 
@@ -688,7 +703,7 @@ May host managed PostgreSQL. However:
 
 The desired architecture remains:
 
-```
+```text
 Client -> FastAPI -> domain/service layer -> SQLAlchemy -> PostgreSQL
 ```
 
