@@ -1,8 +1,14 @@
-"""`PersistedMoney` -- the persistence binding around the arithmetic `Money` primitive.
+"""`PersistedMoney` and the reusable money schema primitives.
 
-These tests cover the value contract only: field preservation, the two explicit
-conversions, the amount-free repr, and the deliberate absence of arithmetic. Column types
-and CHECK constraints are a later batch's concern and are not asserted here.
+Two concerns, kept apart:
+
+* the **value contract** -- field preservation, the two explicit conversions, the
+  amount-free repr, and the deliberate absence of arithmetic;
+* the **schema primitives** -- the four columns and the structural CHECK constraints that
+  every money-bearing table will share.
+
+The schema tests assert the *declarations* only. Whether PostgreSQL actually enforces them
+is proven against a real database in the integration suite, not here.
 """
 
 from __future__ import annotations
@@ -11,9 +17,19 @@ from dataclasses import FrozenInstanceError
 from typing import Any
 
 import pytest
+from sqlalchemy import CHAR, BigInteger, CheckConstraint, SmallInteger, String
 
 from app.core.money import Money, MoneyError
-from app.db.money import PersistedMoney
+from app.db.money import (
+    CURRENCY_DEF_VERSION_LENGTH,
+    MAX_SCALE,
+    MIN_SCALE,
+    PersistedMoney,
+    money_check_constraints,
+    money_columns,
+)
+
+LOGICAL_FIELDS = ("amount_minor", "currency", "scale", "currency_def_version")
 
 # Distinctive digits that appear in no other field below, so the repr assertions cannot
 # pass or fail by coincidence.
@@ -194,3 +210,165 @@ class TestNoArithmeticSurface:
             "__neg__", "__abs__", "__truediv__", "__floordiv__", "times",
         }
         assert not (arithmetic & set(vars(PersistedMoney)))
+
+
+class TestMoneyColumns:
+    """A. The four columns of one persisted money binding."""
+
+    def test_exactly_four_logical_fields(self) -> None:
+        assert len(money_columns()) == 4
+
+    def test_default_names(self) -> None:
+        assert set(money_columns()) == set(LOGICAL_FIELDS)
+
+    @pytest.mark.parametrize("prefix", ["fee_", "source_", "expected_", "x"])
+    def test_prefix_is_applied_exactly(self, prefix: str) -> None:
+        """The caller owns the separator -- no underscore is inserted or removed."""
+        assert set(money_columns(prefix)) == {f"{prefix}{f}" for f in LOGICAL_FIELDS}
+
+    def test_column_name_matches_the_key(self) -> None:
+        """The dict key is the database column name, not merely a lookup handle."""
+        for name, column in money_columns("fee_").items():
+            assert column.column.name == name
+
+    def test_sql_types(self) -> None:
+        columns = money_columns()
+        assert isinstance(columns["amount_minor"].column.type, BigInteger)
+        assert isinstance(columns["currency"].column.type, CHAR)
+        assert isinstance(columns["scale"].column.type, SmallInteger)
+        assert isinstance(columns["currency_def_version"].column.type, String)
+
+    def test_char_length_is_three(self) -> None:
+        column_type = money_columns()["currency"].column.type
+        assert isinstance(column_type, CHAR)
+        assert column_type.length == 3
+
+    def test_varchar_length_is_thirty_two(self) -> None:
+        column_type = money_columns()["currency_def_version"].column.type
+        assert isinstance(column_type, String)
+        assert column_type.length == 32
+        assert column_type.length == CURRENCY_DEF_VERSION_LENGTH
+
+    def test_amount_is_bigint_not_numeric(self) -> None:
+        """S4-1: authoritative money is exact integer minor units, never NUMERIC or float."""
+        assert str(money_columns()["amount_minor"].column.type) == "BIGINT"
+
+    def test_not_nullable_by_default(self) -> None:
+        assert all(c.column.nullable is False for c in money_columns().values())
+
+    def test_nullable_true_applies_to_all_four(self) -> None:
+        assert all(c.column.nullable is True for c in money_columns(nullable=True).values())
+
+    def test_repeated_calls_produce_distinct_objects(self) -> None:
+        """A `MappedColumn` is claimed by the first table that maps it; a shared instance
+        would silently rebind and corrupt whichever model mapped second."""
+        first, second = money_columns(), money_columns()
+        for name in LOGICAL_FIELDS:
+            assert first[name] is not second[name]
+            assert first[name].column is not second[name].column
+
+    def test_no_foreign_key_is_generated(self) -> None:
+        """The three-column reference to `currency_definitions` is declared by the owning
+        model, with an explicitly short name -- the repository `fk` convention overflows
+        PostgreSQL's identifier limit for every realistic consumer table."""
+        assert all(not c.column.foreign_keys for c in money_columns().values())
+
+    def test_no_default_or_index_is_generated(self) -> None:
+        for column in (c.column for c in money_columns().values()):
+            assert column.default is None
+            assert column.server_default is None
+            assert column.index is None
+            assert column.unique is None
+
+
+class TestMoneyCheckConstraints:
+    """B. The structural CHECK constraints for one persisted money binding."""
+
+    @staticmethod
+    def _by_name(prefix: str = "", positive: bool = False) -> dict[str, str]:
+        return {
+            str(c.name): str(c.sqltext) for c in money_check_constraints(prefix, positive)
+        }
+
+    def test_default_set_is_exactly_three(self) -> None:
+        assert len(money_check_constraints()) == 3
+
+    def test_default_names(self) -> None:
+        assert set(self._by_name()) == {
+            "currency_format",
+            "scale_range",
+            "def_version_not_empty",
+        }
+
+    def test_currency_format_expression(self) -> None:
+        assert self._by_name()["currency_format"] == "currency ~ '^[A-Z]{3}$'"
+
+    def test_scale_range_expression(self) -> None:
+        assert self._by_name()["scale_range"] == f"scale BETWEEN {MIN_SCALE} AND {MAX_SCALE}"
+
+    def test_scale_range_matches_the_money_primitive(self) -> None:
+        """A row the database accepts must always convert to a `Money`, and vice versa."""
+        assert (MIN_SCALE, MAX_SCALE) == (0, 8)
+
+    def test_version_not_empty_expression(self) -> None:
+        assert self._by_name()["def_version_not_empty"] == "currency_def_version <> ''"
+
+    def test_positive_false_adds_no_positivity_check(self) -> None:
+        """Zero and negative amounts stay structurally legal: positivity is entity policy,
+        not a property of money."""
+        joined = " ".join(self._by_name(positive=False).values())
+        assert "> 0" not in joined
+        assert "amount_minor" not in joined
+
+    def test_positive_true_adds_exactly_one_more(self) -> None:
+        assert len(money_check_constraints(positive=True)) == 4
+
+    def test_positive_true_is_strictly_greater_than_zero(self) -> None:
+        """Strict `> 0`, never `>= 0`: zero is invalid where positivity applies."""
+        expression = self._by_name(positive=True)["amount_minor_positive"]
+        assert expression == "amount_minor > 0"
+        assert ">=" not in expression
+
+    @pytest.mark.parametrize("prefix", ["fee_", "expected_"])
+    def test_prefix_is_reflected_in_names(self, prefix: str) -> None:
+        assert set(self._by_name(prefix, positive=True)) == {
+            f"{prefix}currency_format",
+            f"{prefix}scale_range",
+            f"{prefix}def_version_not_empty",
+            f"{prefix}amount_minor_positive",
+        }
+
+    @pytest.mark.parametrize("prefix", ["fee_", "expected_"])
+    def test_prefix_is_reflected_in_expressions(self, prefix: str) -> None:
+        for expression in self._by_name(prefix, positive=True).values():
+            assert expression.startswith(prefix)
+
+    def test_every_constraint_is_explicitly_named(self) -> None:
+        """Never left to SQLAlchemy: an unnamed CHECK renders as `ck_<table>_None`, and a
+        constraint nobody can name is a constraint nobody can drop or alter."""
+        assert all(c.name for c in money_check_constraints(positive=True))
+
+    def test_names_fit_postgresql_identifier_limit(self) -> None:
+        """Rendered through the `ck_%(table_name)s_%(constraint_name)s` convention, against
+        the longest expected table and prefix. PostgreSQL truncates silently at 63 bytes,
+        leaving the database holding a different name from the one migrations know."""
+        longest_table = "reconciliation_exceptions"
+        for constraint in money_check_constraints("expected_", positive=True):
+            rendered = f"ck_{longest_table}_{constraint.name}"
+            assert len(rendered) <= 63, f"{rendered} is {len(rendered)} bytes"
+
+    def test_repeated_calls_produce_distinct_objects(self) -> None:
+        first, second = money_check_constraints(), money_check_constraints()
+        for a, b in zip(first, second, strict=True):
+            assert a is not b
+
+    def test_names_are_stable_across_calls(self) -> None:
+        assert [c.name for c in money_check_constraints(positive=True)] == [
+            c.name for c in money_check_constraints(positive=True)
+        ]
+
+    def test_returns_only_check_constraints(self) -> None:
+        """No foreign key, index or other schema object is smuggled in."""
+        assert all(
+            isinstance(c, CheckConstraint) for c in money_check_constraints(positive=True)
+        )
