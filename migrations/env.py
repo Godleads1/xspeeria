@@ -25,6 +25,12 @@ from alembic import context
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+# Imported for its side effect ONLY: importing the model package is what registers every
+# approved model on `Base.metadata`. Nothing in this module references `app.models`, so
+# Ruff sees an unused import -- but removing it would leave `target_metadata` empty and
+# make autogenerate propose dropping every table it cannot see. `migrations/versions/` is
+# F401-exempt; this file is not, so the suppression is explicit and local.
+import app.models  # noqa: F401
 from app.core.config import Settings, require_supported_database_url
 from app.db.base import Base
 from app.db.session import build_engine
@@ -46,9 +52,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-# Autogenerate and the drift guard compare against this. MILESTONE 4.1A: it is
-# intentionally EMPTY -- no domain model subclasses `Base` yet. Models become visible
-# here only when 4.1B-4.1H import them into `app.models`.
+# Autogenerate and the drift guard compare against this. It is populated by the
+# `import app.models` above -- a model that the package does not import, or that this
+# module does not trigger the package for, is invisible here, and autogenerate would emit
+# a DROP for it rather than a CREATE. MILESTONE 4.1B: `currency_definitions` only;
+# 4.1C-4.1H entities appear as their batches add them to `app.models`.
 target_metadata = Base.metadata
 
 

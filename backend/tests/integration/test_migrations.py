@@ -14,6 +14,9 @@ These tests are synchronous on purpose: `env.py` owns its own event loop via
 from __future__ import annotations
 
 import asyncio
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -142,10 +145,24 @@ class TestMetadataDriftGuard:
     the migrated schema.
     """
 
-    def test_declarative_metadata_is_empty_in_4_1a(self) -> None:
-        assert Base.metadata.tables == {}, (
-            "Milestone 4.1A defines no domain persistence, but Base.metadata carries: "
-            f"{sorted(Base.metadata.tables)}"
+    def test_declarative_metadata_holds_exactly_the_approved_tables(self) -> None:
+        """Extended from the 4.1A "must be empty" form, as this module always intended.
+
+        4.1B declares `currency_definitions`; nothing else is approved yet. Asserting the
+        exact set rather than emptiness keeps the guard meaningful: it still fails the
+        moment an unapproved table is declared.
+
+        NOTE: this assertion is order-sensitive by nature. `Base.metadata` is process-wide,
+        so it is populated only once something has imported `app.models` -- which the unit
+        suite does. Running this module alone leaves the metadata empty, which is why the
+        expected set is derived from what is actually importable rather than hard-coded to
+        the in-process state.
+        """
+        import app.models  # noqa: F401  -- registration side effect, as `env.py` does it
+
+        assert set(Base.metadata.tables) == {"currency_definitions"}, (
+            "Milestone 4.1B approves only `currency_definitions`, but Base.metadata "
+            f"carries: {sorted(Base.metadata.tables)}"
         )
 
     def test_no_domain_table_is_declared_anywhere(self) -> None:
@@ -175,3 +192,85 @@ class TestMetadataDriftGuard:
         assert convention["pk"] == "pk_%(table_name)s"
         assert convention["uq"] == "uq_%(table_name)s_%(column_0_N_name)s"
         assert {"ck", "fk", "ix"} <= set(convention)
+
+
+class TestAlembicModelDiscovery:
+    """H. `env.py` must actually populate `target_metadata`.
+
+    `app/models/__init__.py` registering a model is necessary but not sufficient: Alembic
+    runs `env.py`, and if nothing on *that* import path reaches `app.models`, then
+    `target_metadata` is empty and autogenerate emits a DROP for every table it cannot
+    see instead of a CREATE. Traced 2026-08-27: `app/__init__.py` is docstring-only and
+    none of `app.core.config`, `app.db.base` or `app.db.session` imports the model
+    package, so the registration import in `env.py` is load-bearing.
+
+    **These need no database.** They are Python-import assertions about the migration
+    environment, run in a subprocess so the surrounding test session's own imports cannot
+    make an empty chain look populated.
+    """
+
+    EXPECTED_TABLES = ["currency_definitions"]
+
+    @staticmethod
+    def _app_import_lines() -> str:
+        """The `app.*` import statements taken verbatim from `env.py`.
+
+        Read from the file rather than restated, so this proof cannot drift from the
+        module it is proving.
+        """
+        source = (MIGRATIONS_DIR / "env.py").read_text(encoding="utf-8")
+        lines = [
+            line
+            for line in source.splitlines()
+            if line.startswith("import app.") or line.startswith("from app.")
+        ]
+        assert lines, "env.py imports nothing from `app`"
+        return "\n".join(lines)
+
+    def _run(self, snippet: str) -> str:
+        result = subprocess.run(
+            [sys.executable, "-c", snippet],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "backend")},
+        )
+        assert result.returncode == 0, result.stderr
+        return result.stdout.strip()
+
+    def test_env_py_imports_the_model_package(self) -> None:
+        """Guards against the import being removed as 'unused'."""
+        source = (MIGRATIONS_DIR / "env.py").read_text(encoding="utf-8")
+        assert "import app.models" in source
+
+    def test_env_py_import_chain_populates_target_metadata(self) -> None:
+        """The regression itself: env.py's own imports must yield the model tables."""
+        snippet = (
+            f"{self._app_import_lines()}\n"
+            "from app.db.base import Base\n"
+            "print(sorted(Base.metadata.tables))"
+        )
+        assert self._run(snippet) == str(self.EXPECTED_TABLES)
+
+    def test_env_py_import_chain_registers_no_future_table(self) -> None:
+        forbidden = {
+            "offers", "matches", "transactions", "settlements", "settlement_legs",
+            "payout_executions", "kyc_cases", "kyc_profiles", "beneficiary_accounts",
+            "idempotency_records", "users",
+        }
+        snippet = (
+            f"{self._app_import_lines()}\n"
+            "from app.db.base import Base\n"
+            "print(sorted(Base.metadata.tables))"
+        )
+        assert forbidden.isdisjoint(set(eval(self._run(snippet))))  # noqa: S307
+
+    def test_the_registration_import_builds_no_engine(self) -> None:
+        """Importing models must not make the migration environment connect on import.
+        `env.py` builds its engine explicitly inside `_run_async_migrations`."""
+        snippet = (
+            f"{self._app_import_lines()}\n"
+            "import app.db.session as s\n"
+            "print(s._engine is None, s._sessionmaker is None)"
+        )
+        assert self._run(snippet) == "True True"
