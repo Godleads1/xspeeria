@@ -369,8 +369,21 @@ class TestPackageRegistration:
         assert result.returncode == 0, result.stderr
         assert result.stdout.strip() == "True True"
 
-    def test_registration_creates_no_migration(self) -> None:
-        """Step 7 is Python-side discovery. Generating the revision is Step 8."""
+    def test_the_migration_chain_is_exactly_the_approved_set(self) -> None:
+        """An exact-set guard over `migrations/versions/`.
+
+        Written in Step 7 as `== ["0001_baseline.py"]`, to prove that package
+        registration alone created no migration. Step 8 then legitimately generated
+        `0002_currency_definitions.py`, so the expected set advances with the approved
+        chain -- a lifecycle-stage update, not a weakening.
+
+        It stays an **exact** equality deliberately: a subset or `in` check would let an
+        unreviewed revision appear in the directory without anything noticing, and an
+        unapproved migration is exactly what this guard exists to catch.
+        """
         repo_root = Path(__file__).resolve().parents[3]
         versions = sorted(p.name for p in (repo_root / "migrations" / "versions").glob("*.py"))
-        assert versions == ["0001_baseline.py"]
+        assert versions == [
+            "0001_baseline.py",
+            "0002_currency_definitions.py",
+        ]
