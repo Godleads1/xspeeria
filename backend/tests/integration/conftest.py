@@ -21,7 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
 
 from app.core.config import Settings
-from app.db.session import build_engine, get_sessionmaker
+from app.db.session import build_engine, dispose_engine, get_sessionmaker
 
 REQUIRE_DB_ENV = "XSPEERIA_REQUIRE_DB"
 
@@ -93,10 +93,23 @@ async def session(db_settings: Settings) -> AsyncIterator[AsyncSession]:
     Uses `get_sessionmaker` so the tests exercise the real factory configuration --
     `expire_on_commit=False` above all -- rather than a bespoke one that could drift from
     it.
+
+    **That factory is process-wide and cached, so the fixture must dispose it on
+    teardown.** `pytest-asyncio` runs each async test on its own function-scoped event
+    loop; a cached engine left in place hands the next test an asyncpg pool holding
+    connections bound to a loop that has since closed, surfacing as
+    `RuntimeError: Event loop is closed` or `Future attached to a different loop` as
+    integration coverage grows. `dispose_engine()` is the application's own sanctioned
+    reset -- it clears both the cached engine and the cached factory -- so no bespoke
+    teardown path can drift from production shutdown behaviour.
+    Regression guard: `backend/tests/integration/test_session_lifecycle.py`.
     """
     factory = get_sessionmaker(db_settings)
-    async with factory() as db_session:
-        yield db_session
+    try:
+        async with factory() as db_session:
+            yield db_session
+    finally:
+        await dispose_engine()
 
 
 @pytest_asyncio.fixture

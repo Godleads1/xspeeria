@@ -10,11 +10,16 @@ created -- because the name in the database is not the name the migration knows.
 money schema whose invariants are *enforced by constraints* (`allocated_amount_minor > 0`,
 `UNIQUE(settlement_id, party_role)`, `UNIQUE(match_id)`, the acceptance capacity CHECK),
 an un-droppable or mis-named constraint is a correctness problem, not a tidiness one. It
-is set now, before the first table exists, because retrofitting it later means renaming
+was set before the first table existed, because retrofitting it later means renaming
 every constraint in a live schema.
 
-`MILESTONE 4.1A: no model subclasses this Base yet.` `Base.metadata` is intentionally
-empty, and the drift guard in `backend/tests/integration/` asserts exactly that.
+**MILESTONE 4.1B: `CurrencyDefinition` is the only model subclassing this Base.**
+`Base.metadata` therefore holds exactly `currency_definitions`. The drift guard in
+`backend/tests/integration/test_migrations.py` asserts that **exact set** -- it was the
+4.1A "must be empty" form and advanced with the batch; it is neither a subset nor a
+contains check, so an unapproved table fails it. Offer, Match, Transaction, Settlement,
+SettlementLeg, PayoutExecution, KycCase, BeneficiaryAccount and IdempotencyRecord belong
+to 4.1C-4.1H and must not be registered ahead of their approved batch.
 """
 
 from __future__ import annotations
