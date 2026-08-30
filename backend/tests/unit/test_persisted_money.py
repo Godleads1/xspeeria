@@ -306,9 +306,41 @@ class TestMoneyCheckConstraints:
     def test_scale_range_expression(self) -> None:
         assert self._by_name()["scale_range"] == f"scale BETWEEN {MIN_SCALE} AND {MAX_SCALE}"
 
-    def test_scale_range_matches_the_money_primitive(self) -> None:
-        """A row the database accepts must always convert to a `Money`, and vice versa."""
+    def test_scale_range_is_the_approved_range(self) -> None:
+        """Pins the approved bounds themselves.
+
+        The two behavioural tests below prove `app.db.money` and `app.core.money` agree.
+        Agreement alone is not enough: widening both in lockstep would keep them passing
+        while silently changing what Xspeeria persists. This pins the range that was
+        actually approved, so that change fails here instead of passing as a
+        still-consistent pair.
+        """
         assert (MIN_SCALE, MAX_SCALE) == (0, 8)
+
+    @pytest.mark.parametrize("scale", [MIN_SCALE, MAX_SCALE])
+    def test_money_accepts_every_scale_the_database_accepts(self, scale: int) -> None:
+        """Forward direction: a row PostgreSQL admits must always convert to a `Money`.
+
+        The boundaries are read from `app.db.money` and exercised against the real
+        `app.core.money` primitive, not compared to a literal. `app.core.money`'s accepted
+        range is enforced by a private module constant that nothing outside it references,
+        so a literal comparison here asserted the parity claim through no code at all:
+        narrowing that constant left this passing, the CHECK unchanged, and PostgreSQL
+        holding rows the domain would refuse to load. Exercising the constructor is what
+        makes the two ranges actually coupled.
+        """
+        assert Money(minor=1, currency=CURRENCY, scale=scale).scale == scale
+
+    @pytest.mark.parametrize("scale", [MIN_SCALE - 1, MAX_SCALE + 1])
+    def test_money_rejects_every_scale_the_database_rejects(self, scale: int) -> None:
+        """Reverse direction -- the half no comparison of constants can express.
+
+        Widening `app.core.money` without widening the CHECK fails here: the domain would
+        admit a scale the database refuses to store, and on a money path that surfaces at
+        flush time rather than at construction.
+        """
+        with pytest.raises(MoneyError):
+            Money(minor=1, currency=CURRENCY, scale=scale)
 
     def test_version_not_empty_expression(self) -> None:
         assert self._by_name()["def_version_not_empty"] == "currency_def_version <> ''"

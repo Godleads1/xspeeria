@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from sqlalchemy import MetaData, Table, insert, inspect
-from sqlalchemy.exc import DBAPIError, IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.db.base import naming_convention
@@ -67,6 +67,13 @@ VALID_ROW: dict[str, Any] = {
     "currency_def_version": "v1",
 }
 
+#: The SQLSTATE classes a structural violation in this module can legitimately carry.
+#: `23502` not_null_violation and `23514` check_violation surface as `IntegrityError`;
+#: `22001` string_data_right_truncation -- an over-length `CHAR(3)` or `VARCHAR(32)` --
+#: surfaces as `DataError`. No violation exercised below can produce any other code, and a
+#: connection or protocol failure produces none of them.
+STRUCTURAL_REJECTION_SQLSTATES = frozenset({"22001", "23502", "23514"})
+
 
 @pytest_asyncio.fixture
 async def money_tables(connection: AsyncConnection) -> AsyncIterator[AsyncConnection]:
@@ -92,14 +99,64 @@ async def _insert(connection: AsyncConnection, table: Table, **values: Any) -> N
     await connection.commit()
 
 
+def _sqlstate(error: BaseException) -> str | None:
+    """Best-effort SQLSTATE for a refused statement, or `None` when not discoverable.
+
+    asyncpg carries the five-character code on its own exception; SQLAlchemy wraps that
+    exception and does not always re-expose the attribute on the wrapper. The chain is
+    therefore walked -- `.orig`, then `__cause__` and `__context__` -- rather than any one
+    driver shape being assumed, and the walk is cycle-safe.
+
+    `None` means *not discoverable here*, never *no violation*. The caller treats it as
+    unavailable and falls back to the exception class, which it asserts unconditionally.
+    """
+    seen: set[int] = set()
+    pending: list[BaseException | None] = [error]
+    while pending:
+        current = pending.pop()
+        if current is None or id(current) in seen:
+            continue
+        seen.add(id(current))
+        for attribute in ("sqlstate", "pgcode"):
+            code = getattr(current, attribute, None)
+            if isinstance(code, str) and len(code) == 5:
+                return code
+        pending.append(getattr(current, "orig", None))
+        pending.append(current.__cause__)
+        pending.append(current.__context__)
+    return None
+
+
 async def _rejects(connection: AsyncConnection, table: Table, **values: Any) -> None:
-    """Assert PostgreSQL refuses the row, then leave the transaction usable.
+    """Assert PostgreSQL refuses the row *for a structural reason*, then leave the
+    transaction usable.
+
+    The accepted classes are narrow deliberately. `IntegrityError` is a subclass of
+    `DBAPIError`, so the former `(IntegrityError, DBAPIError)` tuple reduced to the parent
+    alone -- and that parent also covers `OperationalError` and `InterfaceError`. A
+    dropped connection would then have satisfied a rejection assertion with no constraint
+    having fired. `IntegrityError` (`23502` not-null, `23514` check) and `DataError`
+    (`22001` over-length) are the only classes the violations in this module can raise; a
+    connection or protocol failure is neither, and now fails the test instead of passing
+    it.
+
+    SQLSTATE is additionally asserted **when the driver exposes it**, which distinguishes a
+    genuine constraint refusal from any other. It is skipped, not failed, when the code
+    cannot be recovered: the class assertion above already holds unconditionally, so
+    requiring a particular exception shape would trade one brittleness for another.
 
     Without the rollback the aborted transaction poisons every later statement with
     `InFailedSqlTransaction`, and the next test would fail for the wrong reason.
     """
-    with pytest.raises((IntegrityError, DBAPIError)):
+    with pytest.raises((IntegrityError, DataError)) as excinfo:
         await _insert(connection, table, **values)
+
+    sqlstate = _sqlstate(excinfo.value)
+    assert sqlstate is None or sqlstate in STRUCTURAL_REJECTION_SQLSTATES, (
+        f"row refused with SQLSTATE {sqlstate!r}, which is not a structural violation; "
+        f"expected one of {sorted(STRUCTURAL_REJECTION_SQLSTATES)}"
+    )
+
     await connection.rollback()
 
 

@@ -25,6 +25,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.schema import ForeignKeyConstraint
 
+from app.core.money import Money, MoneyError
 from app.db.base import Base
 from app.db.money import CURRENCY_DEF_VERSION_LENGTH, MAX_SCALE, MIN_SCALE
 from app.models.currency_definition import CurrencyDefinition
@@ -172,7 +173,34 @@ class TestCheckConstraints:
     def test_scale_range_check(self) -> None:
         expected = f"scale BETWEEN {MIN_SCALE} AND {MAX_SCALE}"
         assert str(_check("scale_range").sqltext) == expected
+
+    def test_scale_range_is_the_approved_range(self) -> None:
+        """Pins the approved bounds, which agreement between modules cannot pin.
+
+        The two behavioural tests below couple this table's CHECK to `app.core.money`.
+        Widening both in lockstep would keep them passing while silently changing the
+        scale range Xspeeria persists; that change fails here instead.
+        """
         assert (MIN_SCALE, MAX_SCALE) == (0, 8)
+
+    @pytest.mark.parametrize("scale", [MIN_SCALE, MAX_SCALE])
+    def test_money_accepts_every_scale_this_table_accepts(self, scale: int) -> None:
+        """A `scale` this table stores must always interpret an amount `Money` accepts.
+
+        `currency_definitions` exists to say what a persisted `amount_minor` means, so a
+        definition row carrying a scale the domain primitive rejects would be an
+        uninterpretable interpretation record. The bound is exercised against the real
+        constructor rather than compared to a literal, because `app.core.money`'s range
+        lives in a private constant that nothing outside that module references -- a
+        literal comparison proved the claim through no code at all.
+        """
+        assert Money(minor=1, currency="GBP", scale=scale).scale == scale
+
+    @pytest.mark.parametrize("scale", [MIN_SCALE - 1, MAX_SCALE + 1])
+    def test_money_rejects_every_scale_this_table_rejects(self, scale: int) -> None:
+        """The reverse direction: what the CHECK refuses, `Money` must refuse too."""
+        with pytest.raises(MoneyError):
+            Money(minor=1, currency="GBP", scale=scale)
 
     def test_version_not_empty_check(self) -> None:
         assert str(_check("def_version_not_empty").sqltext) == "currency_def_version <> ''"
