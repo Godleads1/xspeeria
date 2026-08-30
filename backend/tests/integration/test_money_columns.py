@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from sqlalchemy import MetaData, Table, insert, inspect
-from sqlalchemy.exc import DataError, IntegrityError
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.db.base import naming_convention
@@ -67,11 +67,13 @@ VALID_ROW: dict[str, Any] = {
     "currency_def_version": "v1",
 }
 
-#: The SQLSTATE classes a structural violation in this module can legitimately carry.
-#: `23502` not_null_violation and `23514` check_violation surface as `IntegrityError`;
-#: `22001` string_data_right_truncation -- an over-length `CHAR(3)` or `VARCHAR(32)` --
-#: surfaces as `DataError`. No violation exercised below can produce any other code, and a
-#: connection or protocol failure produces none of them.
+#: The SQLSTATE codes a structural violation in this module can legitimately carry:
+#: `22001` string_data_right_truncation (an over-length `CHAR(3)` or `VARCHAR(32)`),
+#: `23502` not_null_violation and `23514` check_violation. No violation exercised below can
+#: produce any other code, and a connection or protocol failure produces none of them --
+#: which is what makes this set, rather than an exception class, the discriminator in
+#: `_rejects`. Broadening it needs human review: each added code widens what counts as a
+#: constraint doing its job.
 STRUCTURAL_REJECTION_SQLSTATES = frozenset({"22001", "23502", "23514"})
 
 
@@ -107,8 +109,9 @@ def _sqlstate(error: BaseException) -> str | None:
     therefore walked -- `.orig`, then `__cause__` and `__context__` -- rather than any one
     driver shape being assumed, and the walk is cycle-safe.
 
-    `None` means *not discoverable here*, never *no violation*. The caller treats it as
-    unavailable and falls back to the exception class, which it asserts unconditionally.
+    Returning `None` fails the caller's assertion rather than relaxing it. That is the
+    safe direction: `_rejects` can no longer fall back to the exception class, because on
+    this project's stack the class does not distinguish the cases (see `_rejects`).
     """
     seen: set[int] = set()
     pending: list[BaseException | None] = [error]
@@ -131,30 +134,42 @@ async def _rejects(connection: AsyncConnection, table: Table, **values: Any) -> 
     """Assert PostgreSQL refuses the row *for a structural reason*, then leave the
     transaction usable.
 
-    The accepted classes are narrow deliberately. `IntegrityError` is a subclass of
-    `DBAPIError`, so the former `(IntegrityError, DBAPIError)` tuple reduced to the parent
-    alone -- and that parent also covers `OperationalError` and `InterfaceError`. A
-    dropped connection would then have satisfied a rejection assertion with no constraint
-    having fired. `IntegrityError` (`23502` not-null, `23514` check) and `DataError`
-    (`22001` over-length) are the only classes the violations in this module can raise; a
-    connection or protocol failure is neither, and now fails the test instead of passing
-    it.
+    **SQLSTATE is the discriminator, not the exception class.** The class cannot be one
+    here. `sqlalchemy.exc.DBAPIError` is the common parent of every rejection below, but
+    it is also the parent of `OperationalError` and `InterfaceError`, so catching it alone
+    would let a dropped connection satisfy a rejection assertion with no constraint having
+    fired. The obvious narrowing -- `(IntegrityError, DataError)` -- does not work on this
+    stack, and CI proved it: `AsyncAdapt_asyncpg_dbapi._asyncpg_error_translate` maps
+    `asyncpg.exceptions.IntegrityConstraintViolationError` to `IntegrityError` but has
+    **no entry for `asyncpg.exceptions.DataError`**. The dialect walks the raised
+    exception's MRO, skips the unmapped `DataError`, matches `PostgresError`, and raises
+    its generic `Error` -- which surfaces as a bare `DBAPIError`. So the `22001`
+    over-length rejections, from `CHAR(3)` and `VARCHAR(32)`, are never
+    `sqlalchemy.exc.DataError` here, and narrowing to it made two passing tests fail.
 
-    SQLSTATE is additionally asserted **when the driver exposes it**, which distinguishes a
-    genuine constraint refusal from any other. It is skipped, not failed, when the code
-    cannot be recovered: the class assertion above already holds unconditionally, so
-    requiring a particular exception shape would trade one brittleness for another.
+    The code, unlike the class, is always carried: the dialect assigns
+    `translated_error.pgcode = translated_error.sqlstate` from the asyncpg exception. So
+    the class widens back to `DBAPIError` and the SQLSTATE assertion is promoted from a
+    supplement to the requirement. A connection or protocol failure carries an `08xxx`
+    code or none at all; either fails the assertion. That is a stricter test than the
+    original, not a looser one -- it asserts *which* constraint refused the row, where the
+    original asserted only that something did.
+
+    An unrecoverable SQLSTATE (`None`) fails rather than relaxes. There is no fallback
+    left to take, and on a money path an assertion that cannot tell why a row was refused
+    should not quietly pass.
 
     Without the rollback the aborted transaction poisons every later statement with
     `InFailedSqlTransaction`, and the next test would fail for the wrong reason.
     """
-    with pytest.raises((IntegrityError, DataError)) as excinfo:
+    with pytest.raises(DBAPIError) as excinfo:
         await _insert(connection, table, **values)
 
     sqlstate = _sqlstate(excinfo.value)
-    assert sqlstate is None or sqlstate in STRUCTURAL_REJECTION_SQLSTATES, (
+    assert sqlstate in STRUCTURAL_REJECTION_SQLSTATES, (
         f"row refused with SQLSTATE {sqlstate!r}, which is not a structural violation; "
-        f"expected one of {sorted(STRUCTURAL_REJECTION_SQLSTATES)}"
+        f"expected one of {sorted(STRUCTURAL_REJECTION_SQLSTATES)}. "
+        f"Underlying error: {excinfo.value.orig!r}"
     )
 
     await connection.rollback()
