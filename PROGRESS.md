@@ -293,9 +293,9 @@ production corridor configuration; production reference-rate integration; produc
 ledger posting logic; Satoshi font files.
 
 *SCOPE NOTE — this section governs **Milestone 1 only** and is retained as the historical
-Milestone 1 boundary. It is **not** the current boundary. Milestones 4.1A and 4.1B were approved
-separately and did introduce domain persistence and a migration within their own approved scope
-(`currency_definitions` and the money column primitives). Every entity named in **Prohibited**
+Milestone 1 boundary. It is **not** the current boundary. Milestone 4.1A introduced no domain
+persistence or migration. Milestone 4.1B introduced `currency_definitions` and the reusable
+money column primitives within its approved scope. Every entity named in **Prohibited**
 above — Offer, Match, Transaction, Settlement, SettlementLeg, Beneficiary, KYC, MFA factor,
 PayoutExecution — remains **prohibited today**, now under the Milestone 4.1C gates recorded in
 **Current Blockers** rather than under this section.*
