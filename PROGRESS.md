@@ -15,10 +15,23 @@ implementation prohibition.
 
 ## Current Status
 
-Milestone 1 — Foundation, design system and app shell.
+**PHASE 1 — CONTROLLED IMPLEMENTATION GO remains in force.** Implementation is **PAUSED at
+governance gates** ahead of Milestone 4.1C.
 
-Application implementation may begin **only** inside an approved milestone. No domain
-persistence, no partner integration and no live financial behaviour is authorized.
+| Milestone | State |
+|---|---|
+| **Milestone 1** — foundation, design system, app shell | **COMPLETE** — PR #5, `a3eb4c0`, 2026-08-25 |
+| **Milestone 4.1A** — Stage 4 persistence foundation | **COMPLETE** — PR #6, `f5ebc12`, 2026-08-27 |
+| **Milestone 4.1B** — money primitives and currency definitions | **COMPLETE AND MERGED** — PR #8, `70f8f664aacf9f6dad7c2749dc3d39633a87f70a`, 2026-08-30 |
+| **Milestone 4.1C** | **NOT STARTED — NOT AUTHORIZED** |
+
+Application implementation may begin **only** inside an approved milestone. Domain persistence is
+limited to the Milestone 4.1B approved scope — the `currency_definitions` table and the reusable
+money column primitives. **No money-bearing domain table, no authoritative money-bearing foreign
+key, no partner integration and no live financial behaviour is authorized.**
+
+Three gates block Milestone 4.1C — **Step 9**, **GATE 4.1B-CD3** and **Decision 2**. See
+**Current Blockers**.
 
 ## Approved Architecture Decisions
 
@@ -158,15 +171,72 @@ Python + FastAPI
       must persist `currency_def_version`; `ReconciliationException` strict `iff`; `KYC_DOCUMENTS`
       canonical naming; stale §4.4/§4.5 system-error references. **No runtime code, ORM model or
       domain migration was changed.**
-- [ ] **4.1B carried-forward engineering items — OPEN, not started.**
-      (1) integration fixture cached-engine/session disposal — the `session` fixture in
-      `backend/tests/integration/conftest.py` uses the process-wide cached engine and never
-      disposes it, risking a cross-loop `RuntimeError` as integration coverage grows; test-only.
-      (2) Alembic migration-template Ruff/F401 friction — `migrations/script.py.mako` emits unused
-      `sa`/`op` imports and no `per-file-ignores` exists. **Must be addressed BEFORE the first real
-      generated migration is accepted.**
+- [x] **4.1B carried-forward engineering items — BOTH RESOLVED in PR #8, 2026-08-30.**
+      (1) integration fixture cached-engine/session disposal — **RESOLVED** by commit
+      `96b750919d62c0bdd9b9edba998ea5fb6d20a3d9` *(fix(tests): dispose the cached engine in the
+      integration session fixture)*, squashed into `70f8f66`. The `session` fixture in
+      `backend/tests/integration/conftest.py` now disposes the cached engine and sessionmaker on
+      teardown in a `finally`, using the application's own `dispose_engine()` rather than mutating
+      module globals; R1/R2 regression coverage added in
+      `backend/tests/integration/test_session_lifecycle.py`. Test-only — production
+      engine/session code unchanged. The commit's `UNKNOWN — NOT VERIFIED` evidence limitation
+      (no local PostgreSQL available at the time) is **discharged**: PR #8 CI executed the
+      integration suite against PostgreSQL 16 with `XSPEERIA_REQUIRE_DB=1` — **74 passed, 0
+      skipped**, behind the workflow's false-green guard.
+      (2) Alembic migration-template Ruff/F401 friction — **RESOLVED** by commit
+      `4f1518c849fadee902137597b05e21be2464b3d3` *(chore(lint): scope Ruff F401 to generated
+      Alembic revisions)*, squashed into `70f8f66`. `pyproject.toml` now carries
+      `[tool.ruff.lint.per-file-ignores]` with `"migrations/versions/*.py" = ["F401"]` — one
+      rule, one generated directory. `migrations/script.py.mako` is unchanged and
+      `migrations/env.py` remains fully linted. The precondition *"must be addressed BEFORE the
+      first real generated migration is accepted"* was satisfied **before**
+      `0002_currency_definitions` landed in the same merge.
+- [x] **Milestone 4.1B — money primitives and currency definitions COMPLETE** — PR #8
+      *feat(db): add money primitives and currency definitions*, squash-merged to `main` as
+      `70f8f664aacf9f6dad7c2749dc3d39633a87f70a`, 2026-08-30. Reviewed and merged head
+      `4ce8386c98d31009d6c23bec9606cf70ffb3fc9f`; the merge commit tree is **identical** to that
+      head. Exact-head CI green on all three required checks — *Python Quality & Security*,
+      *Node & TypeScript Quality*, *Secret Scanning & Tracked-File Guard* (run 33324328790).
+      Scope, 13 files, +2022 / −29:
+      **(a)** reusable money schema primitives (`backend/app/db/money.py`) and the `PersistedMoney`
+      persistence binding, implementing DECISION S4-1 integer minor units;
+      **(b)** the `CurrencyDefinition` ORM model (`backend/app/models/currency_definition.py`),
+      registered in `Base.metadata` and in Alembic `migrations/env.py`;
+      **(c)** migration `migrations/versions/0002_currency_definitions.py`
+      (`down_revision = "0001_baseline"`, single head);
+      **(d)** PostgreSQL-backed integration verification (`test_money_columns.py`,
+      `test_migrations.py`, `test_session_lifecycle.py`) plus unit coverage
+      (`test_persisted_money.py`, `test_currency_definition.py`) — 394 tests passed overall,
+      integration 74 passed / 0 skipped against PostgreSQL 16;
+      **(e)** the two carried-forward cleanups recorded immediately above.
+      **This is the repository's first domain table, first ORM model and first domain migration —
+      `Base.metadata` is no longer empty, which supersedes that statement in the Milestone 4.1A
+      entry above. No money-bearing foreign key was introduced. Milestone 4.1C has NOT started.**
 
 ## Current Blockers
+
+### Gates blocking Milestone 4.1C
+
+- **STEP 9 — OUTSTANDING — BLOCKS MILESTONE 4.1C.** Dedicated behavioural verification of
+  the real `currency_definitions` table in PostgreSQL is still required. **PR #8's green
+  PostgreSQL CI and its integration tests do NOT discharge Step 9.** Step 9 must establish, at
+  minimum: the expected constraints exist in PostgreSQL after `alembic upgrade head`; the
+  composite primary key `(currency, currency_def_version)` exists and is enforced; the
+  three-column `UNIQUE` `(currency, currency_def_version, scale)` exists and is enforced; all
+  approved `CHECK` constraints are enforced; and the PostgreSQL-observed schema matches the
+  approved migration contract. **Not implemented. Not authorized by the PR #8 merge.**
+- **GATE 4.1B-CD3 — AWAITING HUMAN DECISION.** Currency-definition immutability mechanism.
+  **NOT BLOCKING PR #8 MERGE** — already merged. **BLOCKING THE FIRST AUTHORITATIVE
+  MONEY-BEARING FOREIGN KEY.** No mechanism has been chosen, ranked or implemented; a trigger,
+  role-level `REVOKE` and repository-layer enforcement are candidates only, none is approved, and
+  a decision must not be inferred from existing documentation or from precedent elsewhere in the
+  repository. CD3 requires a separate explicit human decision.
+- **DECISION 2 — AWAITING HUMAN DECISION.** Security baseline authority, unresolved for the
+  **S-2** authorization enforcement approach, the **S-3** tenant/organization model, and MFA
+  scope / security-baseline parameters. See the decision table below. **No user-scoped table may
+  be created** until the governing gates are resolved. The PR #8 merge resolved nothing here.
+
+### Standing decision blockers
 
 **Decisions 2, 3 and 4 remain OPEN.** They continue to block the specific areas they
 govern — security parameters, corridor and rate configuration, and regulatory posture —
@@ -191,14 +261,18 @@ phase transition from child payout records.
 
 ## Next Action
 
-1. Complete and review **Milestone 1** — foundation, design system and app shell.
-2. Take Decision 2 (security baseline authority) — gates the admin-authorized phase
+1. **Step 9** — dedicated behavioural verification of the real `currency_definitions` table
+   in PostgreSQL. Outstanding and blocking Milestone 4.1C; requires explicit human authorization
+   before it is implemented.
+2. **GATE 4.1B-CD3** — decide the currency-definition immutability mechanism before the first
+   authoritative money-bearing foreign key is introduced.
+3. Take Decision 2 (security baseline authority) — gates the admin-authorized phase
    transitions in ADR-001 §5.1 and the database-role model in ADR-002 §8. **S-3**
    (tenant/organization model) is worth resolving first: retrofitting tenant scoping
    after tables exist is expensive.
-3. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time.
-4. Open P-1 … P-11 with Finance and Accounting — none may be assumed by implementation.
-5. Resolve the `PayoutExecution` aggregate semantics before any settlement work.
+4. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time.
+5. Open P-1 … P-11 with Finance and Accounting — none may be assumed by implementation.
+6. Resolve the `PayoutExecution` aggregate semantics before any settlement work.
 
 **Superseded instruction:** *"Do not begin implementation until Decisions 2, 3 and 4 are
 resolved."* Replaced by the human decision of 2026-08-22 recorded above. Implementation
@@ -217,6 +291,14 @@ Settlement, SettlementLeg, Beneficiary, KYC, MFA factor, PayoutExecution); produ
 partner calls; payment execution; live settlement instructions; real KYC vendor calls;
 production corridor configuration; production reference-rate integration; production
 ledger posting logic; Satoshi font files.
+
+*SCOPE NOTE — this section governs **Milestone 1 only** and is retained as the historical
+Milestone 1 boundary. It is **not** the current boundary. Milestones 4.1A and 4.1B were approved
+separately and did introduce domain persistence and a migration within their own approved scope
+(`currency_definitions` and the money column primitives). Every entity named in **Prohibited**
+above — Offer, Match, Transaction, Settlement, SettlementLeg, Beneficiary, KYC, MFA factor,
+PayoutExecution — remains **prohibited today**, now under the Milestone 4.1C gates recorded in
+**Current Blockers** rather than under this section.*
 
 ## Decision Log
 
