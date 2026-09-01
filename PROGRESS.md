@@ -249,8 +249,13 @@ Python + FastAPI
       explicitly rather than assume row-level `UPDATE`/`DELETE` protection reaches it; **H5**
       whole-row immutability, `created_at` included; **H6** staged database-role separation —
       Stage 1 trigger enforcement, Stage 2 a non-owning runtime role separated from the
-      migration/owner role; **H7** blocked mutation attempts must be logged and alertable, wider
-      privileged-session / DDL auditing left to separate infrastructure work; **H8** architecture
+      migration/owner role; **H7** blocked mutation attempts must be logged and alertable — a
+      **CD3-specific requirement** whose implementation mechanism is **not authorized by this
+      documentation decision**, with wider privileged-session / DDL logging and retention left to
+      separate infrastructure and security-governance work. **This requirement designates no
+      normative Security Baseline**: it does not promote
+      `docs/07-security/Xspeeria_Security_Master_Audit.md` or any other document to that role, and
+      **Security Baseline authority remains unresolved under Decision 2**; **H8** architecture
       **O3 — PostgreSQL trigger + privilege separation, staged** (Stage 1 trigger, Stage 2
       privileges); **H9** no routine privileged override — **no standing break-glass mutation path
       is approved**, and a future technical operation such as a required historical backfill needs
@@ -265,11 +270,18 @@ Python + FastAPI
       Infrastructure-level controls, privileged-session auditing, independent reconciliation and
       immutable logging/WAL strategies remain **outside this decision** unless already governed
       elsewhere; none is approved here.
-      **NOT AUTHORIZED by this ruling:** CD3 implementation; any migration; any trigger SQL; any
-      `GRANT`/`REVOKE`; any database role creation; Stage 2 role provisioning; CI or fixture
-      changes for role separation; verification-test implementation; **ADR-003, which must not be
-      created**; Decision 2; S-2; S-3; Milestone 4.1C; and the first authoritative money-bearing
-      foreign key. **CD3 is decided, not discharged.**
+      **NOT AUTHORIZED BY THIS CD3 HUMAN DECISION.** The following are outside what this ruling
+      grants; **this is a statement of what this decision does not authorize, not a permanent or
+      global prohibition**, and each may be authorized separately through its own governance
+      process. **This ruling does not authorize any CD3-related implementation** — no CD3
+      enforcement implementation, no CD3 migration, no trigger SQL, no `GRANT`/`REVOKE`, no
+      database role creation, no Stage 2 role provisioning, no CI or fixture change for role
+      separation, and no CD3 enforcement verification test. **It does not create ADR-003, which
+      must not be created under this ruling.** **It resolves neither Decision 2, nor S-2, nor
+      S-3**, whose statuses are unchanged and recorded under **Current Blockers** — Decision 2
+      **AWAITING HUMAN DECISION**, S-2 and S-3 **UNRESOLVED**. **It does not authorize Milestone
+      4.1C**, which remains **NOT STARTED — NOT AUTHORIZED**, or the first authoritative
+      money-bearing foreign key. **CD3 is decided, not discharged.**
 
 ## Current Blockers
 
@@ -287,10 +299,12 @@ Python + FastAPI
   target architecture are now decided — **O3, PostgreSQL trigger + privilege separation, staged**.
   Rulings CD3-H1 … CD3-H9 and the resulting contract are recorded under **Completed**.
   **CD3 is decided, NOT technically discharged.** No trigger, no privilege change, no database
-  role and no verification test exists, and **none is authorized**; implementation requires
-  separate explicit human authorization. Until Stage 1 enforcement exists, `currency_definitions`
-  immutability remains a **documented contract rather than an enforced constraint**, so this gate
-  continues to block the first authoritative money-bearing foreign key.
+  role and **no CD3 enforcement verification test** exists, and **none is authorized**;
+  implementation requires separate explicit human authorization. *(This concerns CD3 enforcement
+  only. It does not qualify the Step 9 PostgreSQL schema verification, which is **COMPLETE —
+  HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED**.)* Until Stage 1 enforcement exists,
+  `currency_definitions` immutability remains a **documented contract rather than an enforced
+  constraint**, so this gate continues to block the first authoritative money-bearing foreign key.
   *Historical, retained as accurate: CD3 stood as **AWAITING HUMAN DECISION** from 2026-08-27
   until the human ruling of 2026-09-01. The PR #8 merge resolved nothing here, and Step 9 / PR #10
   resolved nothing here.*
