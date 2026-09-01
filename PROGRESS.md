@@ -22,7 +22,8 @@ governance gates** ahead of Milestone 4.1C.
 |---|---|
 | **Milestone 1** — foundation, design system, app shell | **COMPLETE** — PR #5, `a3eb4c0`, 2026-08-25 |
 | **Milestone 4.1A** — Stage 4 persistence foundation | **COMPLETE** — PR #6, `f5ebc12`, 2026-08-27 |
-| **Milestone 4.1B** — money primitives and currency definitions | **COMPLETE AND MERGED** — PR #8, `70f8f664aacf9f6dad7c2749dc3d39633a87f70a`, 2026-08-30 |
+| **Milestone 4.1B** — money primitives and currency definitions | **COMPLETE AND MERGED** — PR #8, `70f8f664aacf9f6dad7c2749dc3d39633a87f70a`, 2026-08-30. PostgreSQL verification gate **DISCHARGED** by Step 9 |
+| **Step 9** — PostgreSQL behavioural verification of `currency_definitions` | **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** — PR #10, `5445d6155746a5e6ae65ce9a438be41784a97860`, 2026-08-31 |
 | **Milestone 4.1C** | **NOT STARTED — NOT AUTHORIZED** |
 
 Application implementation may begin **only** inside an approved milestone. Domain persistence is
@@ -30,8 +31,9 @@ limited to the Milestone 4.1B approved scope — the `currency_definitions` tabl
 money column primitives. **No money-bearing domain table, no authoritative money-bearing foreign
 key, no partner integration and no live financial behaviour is authorized.**
 
-Three gates block Milestone 4.1C — **Step 9**, **GATE 4.1B-CD3** and **Decision 2**. See
-**Current Blockers**.
+Two governance gates block Milestone 4.1C — **GATE 4.1B-CD3** and **Decision 2**. See
+**Current Blockers**. **Step 9 is COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** and no
+longer blocks; its completion is **not** an authorization to begin Milestone 4.1C.
 
 ## Approved Architecture Decisions
 
@@ -212,29 +214,54 @@ Python + FastAPI
       **This is the repository's first domain table, first ORM model and first domain migration —
       `Base.metadata` is no longer empty, which supersedes that statement in the Milestone 4.1A
       entry above. No money-bearing foreign key was introduced. Milestone 4.1C has NOT started.**
+- [x] **STEP 9 — PostgreSQL behavioural verification of `currency_definitions` COMPLETE — HUMAN
+      EVIDENCE ACCEPTED AND CI REPRODUCED**, 2026-08-31. PR #10 *test(db): verify currency
+      definitions schema on postgres*, squash-merged to `main` as
+      `5445d6155746a5e6ae65ce9a438be41784a97860`; reviewed head
+      `16668244e58fdf5f6585e75be40ca40e478a52ed`, merge-commit tree **identical** to that head.
+      PR #10 introduced **exactly one file** —
+      `backend/tests/integration/test_currency_definitions_schema.py` (+626 / −0). **No production
+      code, no ORM model, no schema, no migration, no dependency file, no CI configuration and no
+      governance document was changed.**
+      Evidence:
+      **(a)** local behavioural verification against **PostgreSQL 16.15**; dedicated Step 9 suite
+      **60 passed / 0 failed / 0 skipped**;
+      **(b)** GitHub CI independently reproduced the verification on **PostgreSQL 16** — exact-head
+      CI green on all three required checks (*Python Quality & Security*, *Node & TypeScript
+      Quality*, *Secret Scanning & Tracked-File Guard*);
+      **(c)** full PR-head CI suite **454 passed / 0 failed / 0 skipped**; integration suite
+      **134 passed / 0 failed / 0 skipped**;
+      **(d)** clean Alembic upgrade `base → 0001_baseline → 0002` (head).
+      **Scope of proof — Step 9 establishes the approved `currency_definitions` PostgreSQL schema
+      contract and its relevant constraints and behaviour as observed in PostgreSQL. It does NOT
+      establish production readiness for Milestone 4.1C, and it resolves neither GATE 4.1B-CD3 nor
+      Decision 2.** This discharges the Milestone 4.1B PostgreSQL verification gate that was
+      recorded as OUTSTANDING at the 2026-08-30 checkpoint.
 
 ## Current Blockers
 
 ### Gates blocking Milestone 4.1C
 
-- **STEP 9 — OUTSTANDING — BLOCKS MILESTONE 4.1C.** Dedicated behavioural verification of
-  the real `currency_definitions` table in PostgreSQL is still required. **PR #8's green
-  PostgreSQL CI and its integration tests do NOT discharge Step 9.** Step 9 must establish, at
-  minimum: the expected constraints exist in PostgreSQL after `alembic upgrade head`; the
-  composite primary key `(currency, currency_def_version)` exists and is enforced; the
-  three-column `UNIQUE` `(currency, currency_def_version, scale)` exists and is enforced; all
-  approved `CHECK` constraints are enforced; and the PostgreSQL-observed schema matches the
-  approved migration contract. **Not implemented. Not authorized by the PR #8 merge.**
-- **GATE 4.1B-CD3 — AWAITING HUMAN DECISION.** Currency-definition immutability mechanism.
+- **STEP 9 — DISCHARGED — NO LONGER BLOCKING.** Behavioural verification of the real
+  `currency_definitions` table in PostgreSQL is **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI
+  REPRODUCED** (PR #10, `5445d61`, 2026-08-31); evidence is recorded under **Completed**.
+  *Historical note, retained as accurate: PR #8's green PostgreSQL CI and its integration tests
+  did not by themselves discharge Step 9 — the dedicated Step 9 suite added by PR #10 does.*
+  Step 9 discharges only the PostgreSQL schema-contract verification; **it authorizes nothing
+  further and resolves neither gate below.**
+- **GATE 4.1B-CD3 — AWAITING HUMAN DECISION — BLOCKS FIRST AUTHORITATIVE MONEY-BEARING FK.**
+  Currency-definition immutability mechanism.
   **NOT BLOCKING PR #8 MERGE** — already merged. **BLOCKING THE FIRST AUTHORITATIVE
   MONEY-BEARING FOREIGN KEY.** No mechanism has been chosen, ranked or implemented; a trigger,
   role-level `REVOKE` and repository-layer enforcement are candidates only, none is approved, and
   a decision must not be inferred from existing documentation or from precedent elsewhere in the
-  repository. CD3 requires a separate explicit human decision.
+  repository. CD3 requires a separate explicit human decision. **Step 9 / PR #10 resolved nothing
+  here.**
 - **DECISION 2 — AWAITING HUMAN DECISION.** Security baseline authority, unresolved for the
   **S-2** authorization enforcement approach, the **S-3** tenant/organization model, and MFA
   scope / security-baseline parameters. See the decision table below. **No user-scoped table may
-  be created** until the governing gates are resolved. The PR #8 merge resolved nothing here.
+  be created** until the governing gates are resolved. The PR #8 merge resolved nothing here, and
+  **Step 9 / PR #10 resolved nothing here.**
 
 ### Standing decision blockers
 
@@ -261,18 +288,23 @@ phase transition from child payout records.
 
 ## Next Action
 
-1. **Step 9** — dedicated behavioural verification of the real `currency_definitions` table
-   in PostgreSQL. Outstanding and blocking Milestone 4.1C; requires explicit human authorization
-   before it is implemented.
-2. **GATE 4.1B-CD3** — decide the currency-definition immutability mechanism before the first
+**NEXT HUMAN ACTION REQUIRED:**
+Resolve the outstanding governance gates applicable before Milestone 4.1C, beginning with a
+separately authorized human decision process.
+
+Milestone 4.1C remains **NOT STARTED — NOT AUTHORIZED**. Step 9's completion is **not** an
+authorization to begin it. The items below retain their previously recorded order; that order is
+**not** a decision on precedence between GATE 4.1B-CD3 and Decision 2.
+
+1. **GATE 4.1B-CD3** — decide the currency-definition immutability mechanism before the first
    authoritative money-bearing foreign key is introduced.
-3. Take Decision 2 (security baseline authority) — gates the admin-authorized phase
+2. Take Decision 2 (security baseline authority) — gates the admin-authorized phase
    transitions in ADR-001 §5.1 and the database-role model in ADR-002 §8. **S-3**
    (tenant/organization model) is worth resolving first: retrofitting tenant scoping
    after tables exist is expensive.
-4. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time.
-5. Open P-1 … P-11 with Finance and Accounting — none may be assumed by implementation.
-6. Resolve the `PayoutExecution` aggregate semantics before any settlement work.
+3. Open Decisions 3 and 4 with Legal/Compliance in parallel — longest lead time.
+4. Open P-1 … P-11 with Finance and Accounting — none may be assumed by implementation.
+5. Resolve the `PayoutExecution` aggregate semantics before any settlement work.
 
 **Superseded instruction:** *"Do not begin implementation until Decisions 2, 3 and 4 are
 resolved."* Replaced by the human decision of 2026-08-22 recorded above. Implementation
