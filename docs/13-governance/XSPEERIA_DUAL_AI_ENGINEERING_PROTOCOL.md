@@ -63,9 +63,47 @@ This protocol was explicitly adopted by the Human Owner on 2026-09-02,
 at proposal source revision SHA-256
 533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95.
 
-Its authority is bounded by 0.2 and applies prospectively from its
-effective adoption / merge revision per 0.4. Tracking is proceeding
-under the route defined in 0.3.
+Its authority is bounded by 0.2. Its repository-enforced prospective
+obligations begin from the EFFECTIVE REPOSITORY REVISION defined in
+section 0.4. Tracking is proceeding under the route in 0.3.
+
+THREE DISTINCT REVISIONS - DO NOT CONFLATE
+
+1. ADOPTED PROPOSAL SOURCE REVISION
+
+   Identifies WHAT the Human Owner approved.
+   This is a file hash, not a git revision.
+
+   SHA-256:
+   533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95
+
+   Approved by the Human Owner on 2026-09-02.
+
+2. TRACKED PR REVISION
+
+   Identifies the exact git revision currently UNDER REVIEW in the
+   dedicated governance PR opened under 0.3.
+
+   Under review is not in force.
+
+3. EFFECTIVE REPOSITORY REVISION
+
+   Identifies the exact repository revision FROM WHICH this protocol's
+   prospective repository-enforced obligations apply. See 0.4.
+
+   STATUS: NOT YET ESTABLISHED.
+
+The effective repository revision does not exist until the dedicated
+governance PR is merged under explicit Human Owner authorization.
+
+It MUST NOT be guessed, predicted, fabricated, or recorded in advance.
+
+Until that revision exists:
+
+- adoption does not mean that unmerged PR content has become part of
+  main
+- tracking does not place the protocol into main
+- an open PR does not place the protocol into main
 
 WHAT ADOPTION DID NOT DO
 
@@ -197,8 +235,44 @@ continue to apply in full.
      HUMAN RULING RECORDED 2026-09-02 (Q8)
 ----------------------------------------------------------------------
 
-v1.1 was adopted on 2026-09-02. It applies PROSPECTIVELY from its
-effective adoption / merge revision.
+v1.1 was adopted by the Human Owner on 2026-09-02.
+
+Its repository-enforced prospective obligations begin from its
+EFFECTIVE REPOSITORY REVISION, defined below.
+
+EFFECTIVE REPOSITORY REVISION - DEFINITION
+
+The effective repository revision is the exact commit on main that
+results from the explicitly Human-Owner-authorized merge of the
+dedicated governance PR opened under 0.3.
+
+STATUS: NOT YET ESTABLISHED.
+
+The merge has not been authorized and the resulting commit does not
+yet exist.
+
+It MUST NOT be guessed, predicted, fabricated, or inserted before
+merge.
+
+Until that commit exists:
+
+- this protocol has no repository-enforced start revision
+- adoption alone does not attach repository-enforced obligations to
+  any git commit
+- tracking alone does not attach repository-enforced obligations to
+  any git commit
+- an open PR does not place unmerged content into main
+
+Once that commit exists, it becomes the EFFECTIVE REPOSITORY REVISION
+for Xspeeria Dual-AI Engineering Protocol v1.1.
+
+Recording that resulting main commit SHA is a SEPARATE governance
+change requiring SEPARATE explicit Human Owner authorization.
+
+That later recording MUST NOT rewrite historical approval evidence in
+section 0 or section 32.
+
+PROSPECTIVE EFFECT (Q8 SUBSTANCE, UNCHANGED)
 
 Previously merged work is NOT automatically reopened solely because
 this protocol is adopted.
@@ -225,8 +299,8 @@ The adoption status of v1.1 is RECORDED: adopted by the Human Owner on
 2026-09-02 at proposal source revision SHA-256
 533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95
 (section 0). Tracking is proceeding under 0.3; merge is not authorized.
-Adoption decided none of the matters listed in 32.1, which remain open.
-See section 32.
+Adoption decided none of the matters listed in 32.1; those not marked
+there as since-decided remain open. See section 32.
 
 
 ======================================================================
@@ -1752,6 +1826,37 @@ P. Recorded HUMAN ADOPTION of this protocol by the Human Owner on
    merge, Gemini operational use, CD3 implementation, staging and
    production all remain NOT AUTHORIZED.
 
+Q. Bound this protocol's prospective effect to one exact revision and
+   event, addressing the revision-bound CodeRabbit finding raised on
+   the dedicated governance PR. Section 0 now distinguishes three
+   revisions that must not be conflated - the ADOPTED PROPOSAL SOURCE
+   REVISION (a file hash identifying what was approved), the TRACKED
+   PR REVISION (the git revision under review), and the EFFECTIVE
+   REPOSITORY REVISION (the point from which repository-enforced
+   obligations apply). 0.4 defines the third as the exact commit on
+   main produced by the explicitly Human-Owner-authorized merge of
+   that PR, records its status as NOT YET ESTABLISHED, and forbids
+   guessing, predicting, fabricating or inserting it before merge.
+   Recording that commit after merge is a separate governance change
+   requiring separate explicit Human Owner authorization, and it must
+   not rewrite historical approval evidence in section 0 or section
+   32. The 32.1 preamble was corrected to state that matters decided
+   after the Q1-Q8 rulings are marked inline, and that every matter
+   not so marked remains open.
+
+   Q8 is UNCHANGED IN SUBSTANCE: prospective-only effect, no automatic
+   reopening of previously merged work, and all seven exceptions
+   (unresolved governance gate, material change, security or
+   production incident, audit finding, compliance finding, integrity
+   concern, explicit human instruction) stand exactly as ruled. The
+   section 32 Q1-Q8 historical ruling records are UNCHANGED and were
+   deliberately not normalized; their conditional wording is
+   historical decision evidence.
+
+   This entry authorizes nothing. PR merge, Gemini operational use,
+   CD3 implementation, staging and production all remain NOT
+   AUTHORIZED.
+
 No provision of v1.0 was removed or weakened, and no v1.0 section was
 renumbered.
 
@@ -2061,8 +2166,12 @@ PROTOCOL RULE
 32.1  WHAT THESE RULINGS DID NOT DECIDE
 ----------------------------------------------------------------------
 
-The following remain OPEN and require separate human decisions. Nothing
-in Q1-Q8 or in 4A.2 authorizes any of them:
+None of the following was decided by the Q1-Q8 rulings, and nothing in
+Q1-Q8 or in 4A.2 authorizes any of them.
+
+Where a matter has since been decided by a separate human decision,
+that decision is recorded inline below. Every matter not so marked
+remains OPEN and requires a separate Human Owner decision:
 
 - ADOPTION of this protocol. NOT decided by the Q1-Q8 rulings. It was
   subsequently decided by a separate, explicit Human Owner adoption on
