@@ -23,9 +23,13 @@ the file. The tracked document revision is identified by the git
 commit that introduces it, NOT by that SHA-256. The two must not be
 conflated.
 
-Adoption authorized no work under this protocol. PR merge, Gemini
-operational use, CD3 implementation, staging and production all remain
-NOT AUTHORIZED. See section 0, 0.3, 4A.1, 21A and 32.1.
+Adoption authorized no work under this protocol. The governance PR
+that tracked this document was separately authorized and merged,
+establishing the EFFECTIVE REPOSITORY REVISION recorded in 0.4.
+Nothing further was authorized: Gemini operational use, CD3
+implementation, staging and production all remain NOT AUTHORIZED, and
+any FURTHER merge requires its own explicit authorization. See section
+0, 0.3, 4A.1, 21A and 32.1.
 
 SECTION NUMBERING NOTE
 
@@ -64,8 +68,8 @@ at proposal source revision SHA-256
 533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95.
 
 Its authority is bounded by 0.2. Its repository-enforced prospective
-obligations begin from the EFFECTIVE REPOSITORY REVISION defined in
-section 0.4. Tracking is proceeding under the route in 0.3.
+obligations begin from the EFFECTIVE REPOSITORY REVISION recorded in
+section 0.4. Tracking was completed under the route in 0.3.
 
 THREE DISTINCT REVISIONS - DO NOT CONFLATE
 
@@ -79,31 +83,41 @@ THREE DISTINCT REVISIONS - DO NOT CONFLATE
 
    Approved by the Human Owner on 2026-09-02.
 
-2. TRACKED PR REVISION
+2. TRACKED / REVIEWED PR REVISION
 
-   Identifies the exact git revision currently UNDER REVIEW in the
+   Identifies the exact git revision that was reviewed in the
    dedicated governance PR opened under 0.3.
 
-   Under review is not in force.
+   PR #13 head:
+   4089d3d074339411e642a46323a6c0cc25a26b6a
+
+   A reviewed revision is not, by itself, in force.
 
 3. EFFECTIVE REPOSITORY REVISION
 
    Identifies the exact repository revision FROM WHICH this protocol's
    prospective repository-enforced obligations apply. See 0.4.
 
-   STATUS: NOT YET ESTABLISHED.
+   main:
+   8a9efb7cda85f1422966b326e1817d1718528e77
 
-The effective repository revision does not exist until the dedicated
-governance PR is merged under explicit Human Owner authorization.
+   STATUS: ESTABLISHED 2026-09-02.
 
-It MUST NOT be guessed, predicted, fabricated, or recorded in advance.
+This effective repository revision was produced by the explicitly
+Human-Owner-authorized squash merge of the dedicated governance PR
+(PR #13, reviewed head 4089d3d074339411e642a46323a6c0cc25a26b6a)
+into main.
 
-Until that revision exists:
+It was recorded only AFTER that merge occurred. It was not guessed,
+predicted, fabricated, or recorded in advance.
 
-- adoption does not mean that unmerged PR content has become part of
-  main
-- tracking does not place the protocol into main
-- an open PR does not place the protocol into main
+The three identifiers above are distinct and must never be conflated:
+a file hash of what was approved, a git revision that was reviewed,
+and the git revision from which obligations run.
+
+Establishing the effective repository revision authorized no work. In
+particular it did not authorize any further merge, Gemini operational
+use, CD3 implementation, staging, or production.
 
 WHAT ADOPTION DID NOT DO
 
@@ -229,6 +243,18 @@ Owner authorization bound to the exact reviewed PR head revision, and
 the revision-bound review, CI and CodeRabbit requirements above
 continue to apply in full.
 
+MERGE RECORD, ADDED AFTER THE FACT
+
+That merge was subsequently authorized by the Human Owner, bound to
+the exact reviewed head 4089d3d074339411e642a46323a6c0cc25a26b6a,
+and performed as a squash merge into main on 2026-09-02. It produced
+the EFFECTIVE REPOSITORY REVISION recorded in 0.4.
+
+This record is a statement of fact about one completed, separately
+authorized merge. It grants no standing merge authority. Every further
+merge requires its own explicit, exact-head Human Owner authorization
+(28).
+
 
 ----------------------------------------------------------------------
 0.4  EFFECT ON ADOPTION
@@ -240,37 +266,37 @@ v1.1 was adopted by the Human Owner on 2026-09-02.
 Its repository-enforced prospective obligations begin from its
 EFFECTIVE REPOSITORY REVISION, defined below.
 
-EFFECTIVE REPOSITORY REVISION - DEFINITION
+EFFECTIVE REPOSITORY REVISION - DEFINITION AND RECORD
 
 The effective repository revision is the exact commit on main that
 results from the explicitly Human-Owner-authorized merge of the
 dedicated governance PR opened under 0.3.
 
-STATUS: NOT YET ESTABLISHED.
+STATUS: ESTABLISHED.
 
-The merge has not been authorized and the resulting commit does not
-yet exist.
+EFFECTIVE REPOSITORY REVISION (main):
+8a9efb7cda85f1422966b326e1817d1718528e77
 
-It MUST NOT be guessed, predicted, fabricated, or inserted before
-merge.
+Established by the explicitly Human-Owner-authorized squash merge of
+PR #13, reviewed head
+4089d3d074339411e642a46323a6c0cc25a26b6a,
+into main on 2026-09-02.
 
-Until that commit exists:
+This protocol's prospective repository-enforced obligations attach
+from that revision and that merge event.
 
-- this protocol has no repository-enforced start revision
-- adoption alone does not attach repository-enforced obligations to
-  any git commit
-- tracking alone does not attach repository-enforced obligations to
-  any git commit
-- an open PR does not place unmerged content into main
+The revision was recorded only after the merge occurred, under a
+separate explicit Human Owner authorization, exactly as this section
+required before the fact.
 
-Once that commit exists, it becomes the EFFECTIVE REPOSITORY REVISION
-for Xspeeria Dual-AI Engineering Protocol v1.1.
+Recording it did not, and must not be read to, alter the historical
+approval evidence in section 0 or section 32. The adopted proposal
+source revision, the reviewed PR revision, and this effective
+repository revision remain three distinct identifiers (section 0).
 
-Recording that resulting main commit SHA is a SEPARATE governance
-change requiring SEPARATE explicit Human Owner authorization.
-
-That later recording MUST NOT rewrite historical approval evidence in
-section 0 or section 32.
+Establishing the effective repository revision authorized no work. It
+did not authorize any further merge, Gemini operational use, CD3
+implementation, staging, or production.
 
 PROSPECTIVE EFFECT (Q8 SUBSTANCE, UNCHANGED)
 
@@ -298,9 +324,10 @@ outside this protocol remain exactly as they were.
 The adoption status of v1.1 is RECORDED: adopted by the Human Owner on
 2026-09-02 at proposal source revision SHA-256
 533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95
-(section 0). Tracking is proceeding under 0.3; merge is not authorized.
-Adoption decided none of the matters listed in 32.1; those not marked
-there as since-decided remain open. See section 32.
+(section 0). Tracking was completed under 0.3, and the resulting
+EFFECTIVE REPOSITORY REVISION is recorded in 0.4. Adoption decided
+none of the matters listed in 32.1; those not marked there as
+since-decided remain open. See section 32.
 
 
 ======================================================================
@@ -1857,6 +1884,35 @@ Q. Bound this protocol's prospective effect to one exact revision and
    CD3 implementation, staging and production all remain NOT
    AUTHORIZED.
 
+R. Recorded the EFFECTIVE REPOSITORY REVISION as main commit
+   8a9efb7cda85f1422966b326e1817d1718528e77,
+   established by the explicitly Human-Owner-authorized squash merge
+   of PR #13 (reviewed head
+   4089d3d074339411e642a46323a6c0cc25a26b6a)
+   into main on 2026-09-02. This is the separate, separately
+   authorized post-merge recording that entry Q and 0.4 required, and
+   it completes the effective-revision rule rather than changing it.
+
+   Updated for consistency, and only where the merge made the existing
+   text factually wrong: the header adoption record, the section 0
+   lead paragraph and the three-revision block (which now also records
+   the reviewed PR head), a merge record appended to the 0.3
+   adoption-status note, the 0.4 definition, the paragraph preceding
+   section 1, the 32.1 tracking bullet, and the closing status block.
+
+   Q8 is unchanged in substance. The section 32 Q1-Q8 historical
+   ruling records are unchanged. No authority hierarchy, gate
+   separation, AI role, risk class, waiver rule, financial,
+   settlement, database, data-exposure, human-authority or production
+   provision was altered. The protocol remains VERSION 1.1; no higher
+   authority requires a version increment for a factual post-merge
+   record.
+
+   This entry authorizes nothing. Gemini operational use, CD3
+   implementation, staging and production remain NOT AUTHORIZED, and
+   any further merge requires its own explicit exact-head Human Owner
+   authorization.
+
 No provision of v1.0 was removed or weakened, and no v1.0 section was
 renumbered.
 
@@ -2178,9 +2234,11 @@ remains OPEN and requires a separate Human Owner decision:
   2026-09-02 (section 0).
 - TRACKING of this file. NOT decided by the Q1-Q8 rulings. Tracking
   through the dedicated governance PR route in 0.3 was subsequently
-  authorized by the Human Owner on 2026-09-02. MERGE of that PR
-  remains NOT AUTHORIZED and requires explicit Human Owner
-  authorization bound to the exact reviewed PR head revision.
+  authorized by the Human Owner on 2026-09-02, and that PR was merged
+  under explicit Human Owner authorization bound to its exact reviewed
+  head, establishing the effective repository revision recorded in
+  0.4. Any FURTHER merge remains NOT AUTHORIZED and requires its own
+  explicit Human Owner authorization bound to an exact head.
 - GEMINI PROVIDER / DATA-HANDLING CLEARANCE. Gemini operational use
   remains NOT CLEARED (4A.1, Q4).
 - CD3 IMPLEMENTATION, which remains NOT AUTHORIZED (21A).
@@ -2208,11 +2266,15 @@ This protocol was adopted by the Human Owner on 2026-09-02 (section 0),
 at proposal source revision SHA-256
 533d45fd30934185006b3473018e8c17a1c59cbc69cbc609d64baa4a476f9b95.
 
-Its authority is bounded by 0.2. Adoption authorized no work under it;
-every gate in 2A remains separately required.
+EFFECTIVE REPOSITORY REVISION (main), see 0.4:
+8a9efb7cda85f1422966b326e1817d1718528e77
+
+Its authority is bounded by 0.2. Neither adoption nor the establishing
+merge authorized any work under it; every gate in 2A remains
+separately required.
 
 GEMINI OPERATIONAL USE:  NOT CLEARED (see 4A.1, 4A.2).
 CD3 IMPLEMENTATION:      NOT AUTHORIZED (see 21A).
-PR MERGE:                NOT AUTHORIZED (see 0.3, 28).
+FURTHER PR MERGE:        NOT AUTHORIZED (see 0.3, 28).
 STAGING:                 NOT AUTHORIZED (see 2A GATE 6, 29).
 PRODUCTION:              NOT AUTHORIZED (see 2A GATE 7, 29).
