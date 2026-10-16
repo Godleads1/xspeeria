@@ -7,8 +7,10 @@
  * than merely documented.
  *
  * Values are the Phase 1 committed design system
- * (`docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22). Do not normalise
- * `#1F3A8A` to any other blue, and do not reintroduce the superseded palette.
+ * (`docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22), amended by DEC-005
+ * (human-approved 2026-10-16): the brand primary is the logo navy `#001A6E`, which is
+ * also the fill the Figma mobile screens actually paint for active navigation. Do not
+ * normalise `#001A6E` to any other navy, and do not reintroduce the superseded palette.
  */
 
 export const palette = {
@@ -27,6 +29,11 @@ export const palette = {
   blue800: '#1E40AF',
   blue900: '#1F3A8A',
   blue950: '#172554',
+
+  /** Logo navy (vector `Asset_6.svg`) and the ladder designed for it. DEC-005. */
+  navy700: '#002885',
+  navy900: '#001A6E',
+  navy950: '#001350',
 
   emerald50: '#ECFDF5',
   emerald500: '#10B981',

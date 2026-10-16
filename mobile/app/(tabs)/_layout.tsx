@@ -13,8 +13,8 @@ import { TABS, type TabName } from '../../src/navigation/tabs';
  */
 const ICON_FOR: Record<TabName, IconName> = {
   index: 'home',
-  marketplace: 'marketplace',
-  track: 'track',
+  marketplace: 'market',
+  history: 'history',
   cards: 'cards',
   profile: 'profile',
 };
@@ -26,8 +26,9 @@ export default function TabsLayout(): ReactElement {
         headerShown: false,
         tabBarActiveTintColor: color.brand.primary,
         tabBarInactiveTintColor: color.text.secondary,
+        // Figma paints the navigation bar on the soft surface, not the canvas.
         tabBarStyle: {
-          backgroundColor: color.bg.canvas,
+          backgroundColor: color.bg.sunken,
           borderTopColor: color.border.subtle,
           borderTopWidth: StyleSheet.hairlineWidth,
         },
@@ -57,10 +58,16 @@ export default function TabsLayout(): ReactElement {
             title: tab.title,
             tabBarBadge: tab.comingSoon ? 'Soon' : undefined,
             tabBarAccessibilityLabel: tab.comingSoon ? `${tab.title}, coming soon` : tab.title,
-            // The active state thickens the stroke as well as changing the tint, so the
-            // selection is never carried by colour alone.
+            // The active glyph turns solid as well as changing the tint (as in Figma), so
+            // the selection is never carried by colour alone.
             tabBarIcon: ({ color: tint, focused }) => (
-              <Icon name={ICON_FOR[tab.name]} color={tint} size={24} weight={focused ? 2.25 : 1.75} />
+              <Icon
+                name={ICON_FOR[tab.name]}
+                color={tint}
+                size={24}
+                filled={focused}
+                knockout={color.bg.sunken}
+              />
             ),
           }}
         />

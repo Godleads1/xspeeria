@@ -1,7 +1,8 @@
 /**
  * SEMANTIC tier — the only tier product applications may consume.
  *
- * Source of truth: `docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22.
+ * Source of truth: `docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22, as amended
+ * by DEC-005 (brand primary `#001A6E`, human-approved 2026-10-16).
  * Primitives are intentionally not re-exported from this entry point.
  *
  * Architecture: PRIMITIVE -> SEMANTIC -> COMPONENT.
@@ -46,8 +47,8 @@ export const color = {
   },
 
   brand: {
-    /** 10.34:1 on canvas; white on it is also 10.34:1. */
-    primary: palette.blue900,
+    /** Logo navy, DEC-005. 15.30:1 on canvas; white on it is also 15.30:1. */
+    primary: palette.navy900,
     /**
      * 3.68:1 — passes for large text and UI components, FAILS AA for normal-size text.
      * Use `brand.secondaryText` where normal-size text is required.
@@ -87,11 +88,14 @@ export const color = {
 
 export const interaction = {
   primary: {
-    default: palette.blue900,
-    /** Lighter on hover: the dark navy base has little darkening headroom. 8.72:1. */
-    hover: palette.blue800,
-    /** Darker on press. 14.69:1. */
-    pressed: palette.blue950,
+    default: palette.navy900,
+    /** Lighter on hover: the dark navy base has little darkening headroom. 12.79:1. */
+    hover: palette.navy700,
+    /**
+     * Darker on press. 17.37:1. `blue950` (#172554) is LIGHTER than the navy default and
+     * would read as no feedback at all, so the ladder designed for this navy is used.
+     */
+    pressed: palette.navy950,
     /** NOT `brand.secondary` — that measures 2.81:1 against the primary fill. */
     focus: palette.blue700,
     /** A fill swap, never reduced opacity over an arbitrary background. */

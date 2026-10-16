@@ -51,6 +51,7 @@ Several documents are designated PRIMARY, each for its own domain. The authority
 |---|---|---|
 | Transaction/settlement state model | `docs/05-financial/Appendix_D_...v1.1.md` §5 · `docs/03-architecture/Xspeeria_Master_Prompt_Python_Backend.md` §8 · `docs/06-banking/07_Banking_Integration_Specification_v1.1.md` §4.3 · `docs/04-api-data/05_API_Contract_Data_Dictionary.md` Settlement/Transaction entities · `docs/03-architecture/02_Technical_Design_Specification.md` §10 | **ADR-001 (DEC-003), approved 2026-08-18** — `docs/adr/001-transaction-state-machine.md` |
 | Financial event and accounting-ledger model | `docs/05-financial/Appendix_D_...v1.1.md` §7/§14 · `docs/04-api-data/05_API_Contract_Data_Dictionary.md` entities · `docs/03-architecture/Xspeeria_Master_Prompt_Python_Backend.md` §7 · `docs/03-architecture/02_Technical_Design_Specification.md` §6 | **ADR-002 (DEC-004), approved 2026-08-18** — `docs/adr/002-financial-event-ledger-architecture.md` |
+| Application brand primary and mobile bottom navigation | `PRODUCT.md` Brand Commitments (B) · `docs/09-ui-ux/DESIGN_SYSTEM.md` · `docs/13-governance/CORRECTIONS_v3.md` §9.1 · `docs/02-product/04_Product_Design_Specification.md` colour tables | **ADR-003 (DEC-005), approved 2026-10-16** — `docs/adr/003-brand-primary-and-bottom-navigation.md` |
 
 ---
 

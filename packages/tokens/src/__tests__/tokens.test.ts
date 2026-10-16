@@ -24,10 +24,7 @@ const DEPRECATED = [
   '#179A43', // old success
   '#E52421', // old alert
   '#F8FAFC', // old supporting surface
-  '#002885', // old hover
-  '#001350', // old pressed
   '#F3F4F6', // old subtle border value (now the disabled fill only)
-  '#001A6E',
   '#208B3B',
   '#F90A09',
   '#FEB700',
@@ -57,6 +54,15 @@ describe('semantic token presence', () => {
     }
   });
 
+  it('presses darker and hovers lighter than the primary default', () => {
+    expect(luminance(interaction.primary.pressed)).toBeLessThan(
+      luminance(interaction.primary.default),
+    );
+    expect(luminance(interaction.primary.hover)).toBeGreaterThan(
+      luminance(interaction.primary.default),
+    );
+  });
+
   it('exposes the full primary interaction ladder', () => {
     expect(Object.keys(interaction.primary).sort()).toEqual(
       ['default', 'disabledFill', 'disabledLabel', 'focus', 'hover', 'pressed'].sort(),
@@ -70,10 +76,13 @@ describe('semantic token presence', () => {
 });
 
 describe('approved token values', () => {
-  it('keeps the approved brand primary exactly', () => {
-    // Deliberately NOT normalised to the framework default #1E3A8A.
-    expect(color.brand.primary).toBe('#1F3A8A');
-    expect(interaction.primary.default).toBe('#1F3A8A');
+  it('keeps the approved brand primary exactly (DEC-005: logo navy)', () => {
+    expect(color.brand.primary).toBe('#001A6E');
+    expect(interaction.primary.default).toBe('#001A6E');
+  });
+
+  it('no longer uses the superseded application primary #1F3A8A', () => {
+    expect(JSON.stringify(tokens).toUpperCase()).not.toContain('#1F3A8A');
   });
 
   it('keeps the approved surfaces, text and borders', () => {
@@ -109,8 +118,8 @@ describe('approved token values', () => {
   });
 
   it('keeps the approved interaction ladder', () => {
-    expect(interaction.primary.hover).toBe('#1E40AF');
-    expect(interaction.primary.pressed).toBe('#172554');
+    expect(interaction.primary.hover).toBe('#002885');
+    expect(interaction.primary.pressed).toBe('#001350');
     expect(interaction.primary.focus).toBe('#1D4ED8');
   });
 });

@@ -66,6 +66,6 @@ export const typography = {
    */
   rowLabel: { ...brandTextStyle, fontSize: 15, lineHeight: 20, fontWeight: '600' },
   chipLabel: { ...brandTextStyle, fontSize: 12, lineHeight: 16, fontWeight: '600' },
-  /** 11pt is a platform navigation convention; "Marketplace" must not truncate. */
+  /** 11pt is a platform navigation convention; labels must not truncate. */
   navLabel: { ...brandTextStyle, fontSize: 11, lineHeight: 14, fontWeight: '600' },
 } as const satisfies Record<string, TextStyle>;

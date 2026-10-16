@@ -3,7 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import HomeRoute from '../app/(tabs)/index';
 import MarketplaceRoute from '../app/(tabs)/marketplace';
 import ProfileRoute from '../app/(tabs)/profile';
-import TrackRoute from '../app/(tabs)/track';
+import HistoryRoute from '../app/(tabs)/history';
+import { Icon } from '../src/components/icons';
 import { ComingSoonScreen } from '../src/features/shared/ComingSoonScreen';
 import { PlaceholderScreen } from '../src/features/shared/PlaceholderScreen';
 import { TABS } from '../src/navigation/tabs';
@@ -20,8 +21,8 @@ describe('bottom navigation', () => {
   it('has exactly the five approved destinations in order', async () => {
     expect(TABS.map((t) => t.title)).toEqual([
       'Home',
-      'Marketplace',
-      'Track',
+      'Market',
+      'History',
       'Cards',
       'Profile',
     ]);
@@ -68,7 +69,7 @@ describe('placeholder destinations', () => {
     await render(
       <PlaceholderScreen
         testID="probe"
-        title="Track"
+        title="History"
         message="Nothing in progress yet"
         actionLabel="Browse the marketplace"
         onAction={() => {}}
@@ -82,7 +83,7 @@ describe('placeholder destinations', () => {
     await render(
       <PlaceholderScreen
         testID="probe"
-        title="Track"
+        title="History"
         message="Nothing in progress yet"
         actionLabel="Browse the marketplace"
       />,
@@ -111,8 +112,8 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('sends the Track action to the Marketplace', async () => {
-    await render(<TrackRoute />);
+  it('sends the History action to the Marketplace', async () => {
+    await render(<HistoryRoute />);
     fireEvent.press(screen.getByText('Browse the marketplace'));
     expect(mockPush).toHaveBeenCalledWith('/marketplace');
   });
@@ -129,4 +130,16 @@ describe('Phase 1 screen actions', () => {
     expect(screen.queryByText('Clear filters')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
   });
+});
+
+describe('navigation icons', () => {
+  it.each(['home', 'market', 'history', 'cards', 'profile'] as const)(
+    'renders the %s glyph in both states',
+    async (name) => {
+      await render(<Icon name={name} color="#001A6E" />);
+      expect(screen.getByTestId(`icon-${name}`)).toBeTruthy();
+      await render(<Icon name={name} color="#001A6E" filled knockout="#F8F9FD" />);
+      expect(screen.getByTestId(`icon-${name}`)).toBeTruthy();
+    },
+  );
 });

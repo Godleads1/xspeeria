@@ -9,7 +9,12 @@
 > requires human approval. Logo/brand-asset colours are a **separate question** — see `PRODUCT.md`
 > “Brand Commitments”.
 
-Primary: #1F3A8A
+> **AMENDED — ADR-003 (DEC-005), human-approved 2026-10-16.** The application primary is now the
+> logo navy **`#001A6E`** (hover `#002885`, pressed `#001350`, focus `#1D4ED8` unchanged), and the
+> bottom navigation is **Home · Market · History · Cards · Profile**. Where this document says
+> `#1F3A8A`, read `#001A6E`. See `docs/adr/003-brand-primary-and-bottom-navigation.md`.
+
+Primary: #001A6E (was #1F3A8A — ADR-003)
 Secondary: #3B82F6
 Application canvas / pure white: #FFFFFF
 Supporting soft surface (secondary/sunken regions only, never the screen background): #F8F9FD
