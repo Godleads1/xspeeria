@@ -20,29 +20,39 @@ import type { MarketRate } from '../../fixtures';
 import { color, numericTextStyle, radius, space, typography } from '../../theme';
 import { formatRate, pairLabel } from './rate';
 
-/** Flowing ribbon lines, authored on a 342 × 136 box (the Figma card size). */
-const RIBBONS = Array.from({ length: 9 }, (_, i) => {
-  const y = 4 + i * 9;
-  return `M120 ${y} C 190 ${y - 30}, 240 ${y + 70}, 342 ${y + 20}`;
-});
+/**
+ * Silky ribbon texture, authored on a 342 × 150 box (the card). Many fine strokes in two
+ * crossing bands with a soft sheen, standing in for the Figma texture image.
+ */
+const RIBBONS: readonly string[] = [
+  ...Array.from({ length: 34 }, (_, i) => {
+    const y = -10 + i * 3.4;
+    return `M90 ${y} C 160 ${y - 40}, 230 ${y + 80}, 342 ${y + 28}`;
+  }),
+  ...Array.from({ length: 22 }, (_, i) => {
+    const y = 70 + i * 3.6;
+    return `M150 ${y + 60} C 210 ${y - 10}, 270 ${y - 50}, 342 ${y - 70}`;
+  }),
+];
 
 function Texture(): ReactElement {
   return (
     <Svg
       style={StyleSheet.absoluteFill}
-      viewBox="0 0 342 136"
+      viewBox="0 0 342 150"
       preserveAspectRatio="none"
       pointerEvents="none"
     >
       <Defs>
         <LinearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor={color.text.onFill} stopOpacity="0" />
-          <Stop offset="0.6" stopColor={color.text.onFill} stopOpacity="0.22" />
-          <Stop offset="1" stopColor={color.text.onFill} stopOpacity="0.08" />
+          <Stop offset="0.55" stopColor={color.text.onFill} stopOpacity="0.16" />
+          <Stop offset="0.8" stopColor={color.text.onFill} stopOpacity="0.3" />
+          <Stop offset="1" stopColor={color.text.onFill} stopOpacity="0.1" />
         </LinearGradient>
       </Defs>
       {RIBBONS.map((d) => (
-        <Path key={d} d={d} stroke="url(#sheen)" strokeWidth={1.2} fill="none" />
+        <Path key={d} d={d} stroke="url(#sheen)" strokeWidth={0.45} fill="none" />
       ))}
     </Svg>
   );
