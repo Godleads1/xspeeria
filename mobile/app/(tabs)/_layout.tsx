@@ -34,20 +34,6 @@ export default function TabsLayout(): ReactElement {
         },
         tabBarLabelStyle: typography.navLabel,
         tabBarIconStyle: { marginBottom: 2 },
-        /**
-         * A subtle recap pill, not the default notification badge: "coming soon" is
-         * information, not an alert, and the alert-red default read as an error.
-         */
-        tabBarBadgeStyle: {
-          backgroundColor: color.bg.sunken,
-          color: color.text.secondary,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: color.border.subtle,
-          fontSize: 10,
-          lineHeight: 14,
-          minWidth: 0,
-          paddingHorizontal: 5,
-        },
       }}
     >
       {TABS.map((tab) => (
@@ -56,7 +42,6 @@ export default function TabsLayout(): ReactElement {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarBadge: tab.comingSoon ? 'Soon' : undefined,
             tabBarAccessibilityLabel: tab.comingSoon ? `${tab.title}, coming soon` : tab.title,
             // The active glyph turns solid as well as changing the tint (as in Figma), so
             // the selection is never carried by colour alone.

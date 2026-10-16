@@ -47,7 +47,7 @@ Home, top to bottom:
 | Three rates repeat 1,190.47 | Distinct mock values | Placeholder correction (allowed) |
 | Gold stars on rates | Omitted | Gold reserved for ratings |
 | "Shopping" transaction | Omitted | Cards is COMING SOON |
-| Amounts as `450,000` | `450000.00 NGN` via the `Amount` primitive | `Amount` is the only currency renderer; digit grouping there is a separate change |
+| Amounts as `450,000` | `450,000.00 NGN` via the `Amount` primitive | `Amount` stays the only currency renderer; it groups digits on the integer string, never via a float |
 
 ## 4. Data
 

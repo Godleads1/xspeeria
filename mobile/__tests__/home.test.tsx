@@ -137,9 +137,9 @@ describe('Home structure', () => {
     expect(screen.getByTestId('activity-alloc-1')).toBeTruthy();
     expect(screen.getByTestId('activity-offer-1')).toBeTruthy();
     expect(screen.getByTestId('activity-settle-1')).toBeTruthy();
-    expect(screen.getByText('450000.00 NGN')).toBeTruthy();
-    expect(screen.getByText('23000.00 NGN')).toBeTruthy();
-    expect(screen.getByText('67000.00 NGN')).toBeTruthy();
+    expect(screen.getByText('450,000.00 NGN')).toBeTruthy();
+    expect(screen.getByText('23,000.00 NGN')).toBeTruthy();
+    expect(screen.getByText('67,000.00 NGN')).toBeTruthy();
   });
 
   it('never renders an aggregate of the activity amounts', async () => {

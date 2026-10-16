@@ -13,7 +13,10 @@ export type TabName = 'index' | 'marketplace' | 'history' | 'cards' | 'profile';
 export interface TabDefinition {
   readonly name: TabName;
   readonly title: string;
-  /** Rendered as a badge on the tab; the destination is still fully interactive. */
+  /**
+   * Announced to screen readers as "coming soon". No visual badge on the tab (Figma has
+   * none, and it truncated); the destination screen says it. Still fully interactive.
+   */
   readonly comingSoon?: boolean;
 }
 

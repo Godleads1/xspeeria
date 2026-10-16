@@ -121,7 +121,9 @@ export function Amount({
   const divisor = 10 ** scale;
   const whole = Math.trunc(abs / divisor);
   const fraction = scale > 0 ? String(abs % divisor).padStart(scale, '0') : '';
-  const rendered = `${negative ? '-' : ''}${whole}${fraction ? `.${fraction}` : ''} ${currency}`;
+  // Thousands separators are added to the integer string, never via a float.
+  const grouped = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const rendered = `${negative ? '-' : ''}${grouped}${fraction ? `.${fraction}` : ''} ${currency}`;
 
   return (
     <Text
