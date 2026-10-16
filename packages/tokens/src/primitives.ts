@@ -22,6 +22,11 @@ export const palette = {
   grey500: '#6B7280',
   grey600: '#4B5563',
   grey900: '#111827',
+  /** Figma Home hero card fill (node 39:2882). */
+  ink900: '#191919',
+  /** Figma card-chip gold, decorative only. */
+  chipGold300: '#FFC738',
+  chipGold500: '#FFB42E',
 
   blue500: '#3B82F6',
   blue600: '#2563EB',

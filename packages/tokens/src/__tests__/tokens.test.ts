@@ -39,7 +39,7 @@ describe('semantic token presence', () => {
 
   it('exposes the approved colour roles', () => {
     expect(Object.keys(color).sort()).toEqual(
-      ['bg', 'border', 'brand', 'error', 'success', 'text', 'warning'].sort(),
+      ['bg', 'border', 'brand', 'decorative', 'error', 'success', 'text', 'warning'].sort(),
     );
     expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'inverse', 'overlay', 'sunken']);
     expect(Object.keys(color.text).sort()).toEqual(
@@ -140,10 +140,11 @@ describe('no deprecated palette leakage', () => {
     expect(interaction.primary.disabledFill).toBe('#F3F4F6');
   });
 
-  it('exports no accent/gold semantic token', () => {
+  it('keeps gold decorative only (DEC-009): no accent/gold role, no #F4C21F', () => {
     expect(exported).not.toContain('#F4C21F');
     expect(Object.keys(color)).not.toContain('accent');
     expect(Object.keys(color)).not.toContain('gold');
+    expect(Object.keys(color.decorative).sort()).toEqual(['chipDark', 'chipLight', 'star']);
   });
 });
 

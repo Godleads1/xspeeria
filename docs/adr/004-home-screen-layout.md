@@ -42,10 +42,10 @@ Home, top to bottom:
 | Figma | Implementation | Why |
 |---|---|---|
 | Balance card, black with texture image | Best-rate card on `color.bg.inverse` (#111827) with the texture redrawn as vector lines | No balance may exist; the texture image could not be exported |
-| Chip and contactless glyphs on the card | Omitted | They imply a payment card |
+| Chip and contactless glyphs on the card | Drawn as in Figma (A2) | Decorative only, DEC-009 |
 | Photo avatar | Initials on brand fill | No profile photos yet |
 | Three rates repeat 1,190.47 | Distinct mock values | Placeholder correction (allowed) |
-| Gold stars on rates | Omitted | Gold reserved for ratings |
+| Gold stars on rates | Drawn as in Figma (A2) | Decorative favourite marker, DEC-009 |
 | "Shopping" transaction | Omitted | Cards is COMING SOON |
 | Amounts as `450,000` | `450,000.00 NGN` via the `Amount` primitive | `Amount` stays the only currency renderer; it groups digits on the integer string, never via a float |
 
@@ -64,3 +64,15 @@ ever formatted as text — never converted to floating point.
 - Transaction statuses use Figma-style tinted pills with a small glyph.
 - Screen side margins are 24 pt (`space.md`), as in the Figma frames, replacing the
   design bible's 32 pt.
+
+## 6. Amendment A2 — DEC-009, 2026-10-17 (product owner chose "exact Figma look")
+
+- The hero matches the Figma card: `#191919` (`color.bg.inverse`), line texture, the gold
+  card **chip** and the **contactless** mark. These are decoration only: no card number,
+  no card action, no card feature is exposed. The figure remains the RATE
+  (`1 USD = 1,603.78 NGN`) — never "Available Balance".
+- The rates panel tucks under the card, with **gold stars** as favourite markers.
+- New tokens, decorative only: `color.decorative.star` (`#F59E0B`), `chipLight`
+  (`#FFC738`), `chipDark` (`#FFB42E`). This narrows the earlier "gold for ratings only" rule
+  in `DESIGN_SYSTEM.md`: gold may also decorate the hero chip and favourite stars, and is
+  still never a status colour or text.

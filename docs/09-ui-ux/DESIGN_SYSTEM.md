@@ -9,6 +9,10 @@
 > requires human approval. Logo/brand-asset colours are a **separate question** — see `PRODUCT.md`
 > “Brand Commitments”.
 
+> **AMENDED — ADR-004 A2 (DEC-009), 2026-10-17.** Gold/amber may also be used decoratively for
+> the Home hero card chip and favourite-rate stars (`color.decorative.*`). Still never a status
+> colour or text. Home hero fill `#191919` (`color.bg.inverse`).
+
 > **AMENDED — ADR-003 (DEC-005, DEC-006), human-approved 2026-10-16.** The application primary is now the
 > logo navy **`#001A6E`** (hover `#002885`, pressed `#001350`, focus `#1D4ED8` unchanged), and the
 > bottom navigation is **Home · Market · History · Cards · Profile**. Where this document says

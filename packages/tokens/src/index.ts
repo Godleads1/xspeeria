@@ -21,10 +21,10 @@ export const color = {
      */
     sunken: palette.blueTintedGrey50,
     /**
-     * Dark hero surface (Figma Home card, DEC-008). Only `text.onFill` goes on it
-     * (17.74:1). Never a screen background, never under body copy in other colours.
+     * Dark hero surface (Figma Home card `#191919`, DEC-008). Only `text.onFill` goes on
+     * it (17.4:1). Never a screen background, never under body copy in other colours.
      */
-    inverse: palette.grey900,
+    inverse: palette.ink900,
     overlay: palette.scrim,
   },
 
@@ -88,6 +88,17 @@ export const color = {
     border: palette.red500,
     /** 6.47:1 on canvas, 5.91:1 on `error.surface`. `#DC2626` is deliberately unused. */
     text: palette.red700,
+  },
+
+  /**
+   * DECORATIVE ONLY (DEC-009, 2026-10-17). Never a status, never text, never the sole
+   * carrier of meaning. `star` marks favourite corridors on Home; `chip*` paint the
+   * illustrative card chip on the Home hero.
+   */
+  decorative: {
+    star: palette.amber500,
+    chipLight: palette.chipGold300,
+    chipDark: palette.chipGold500,
   },
 } as const;
 

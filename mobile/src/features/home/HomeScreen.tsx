@@ -66,8 +66,14 @@ export function HomeScreen({
 
       {status === 'ready' ? (
         <View style={styles.body}>
-          {bestRate ? <BestRateCard rate={bestRate} onTrade={onCreateOffer} /> : null}
-          {rates.length > 0 ? <MarketRates rates={rates} /> : null}
+          <View>
+            {bestRate ? (
+              <View style={styles.hero}>
+                <BestRateCard rate={bestRate} onTrade={onCreateOffer} />
+              </View>
+            ) : null}
+            {rates.length > 0 ? <MarketRates rates={rates} attached={bestRate !== undefined} /> : null}
+          </View>
           <ActivityList items={activity} onCreateOffer={onCreateOffer} onViewAll={onViewAll} />
           <AccountReadiness dimensions={dimensions} />
         </View>
@@ -78,4 +84,6 @@ export function HomeScreen({
 
 const styles = StyleSheet.create({
   body: { gap: space.md },
+  /** Keeps the hero card above the rates panel it overlaps. */
+  hero: { zIndex: 1, elevation: 8 },
 });
