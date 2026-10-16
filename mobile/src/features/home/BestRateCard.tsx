@@ -1,23 +1,52 @@
 /**
- * Best-rate card — the Home hero (DEC-008).
+ * Best-rate card — the Home hero (DEC-008), styled after the Figma balance card
+ * (node 39:2882): dark card, flowing line texture, small label top-left, large figure
+ * bottom-left.
  *
- * Takes the place of the Figma balance card (node 39:2882). Xspeeria holds no
- * money, so the hero shows a PRICE, never an amount: the rate is always written with both
- * currencies (`1 USD = 1,603.78 NGN`) under an explicit "rate" label, so it cannot be read
- * as a balance. No chip or contactless glyphs: those imply a payment card.
+ * Xspeeria holds no money, so the hero shows a PRICE, never an amount: the rate is always
+ * written with both currencies (`1 USD = 1,603.78 NGN`) under an explicit "rate" label, so
+ * it cannot be read as a balance. The chip and contactless glyphs are not used: they imply
+ * a payment card. "Trade now" sits where Figma has the contactless mark.
  *
- * Deviation, recorded in ADR-004: Figma paints this card black with a texture image that
- * could not be exported; it uses the brand primary fill instead (white on it 15.30:1).
- *
- * The card carries Home's one primary action, routing to the Marketplace.
+ * The Figma texture is a raster image that could not be exported; it is redrawn here as
+ * vector strokes on `color.bg.inverse`. The whole card is Home's one primary action.
  */
 
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import type { MarketRate } from '../../fixtures';
 import { color, numericTextStyle, radius, space, typography } from '../../theme';
 import { formatRate, pairLabel } from './rate';
+
+/** Flowing ribbon lines, authored on a 342 × 136 box (the Figma card size). */
+const RIBBONS = Array.from({ length: 9 }, (_, i) => {
+  const y = 4 + i * 9;
+  return `M120 ${y} C 190 ${y - 30}, 240 ${y + 70}, 342 ${y + 20}`;
+});
+
+function Texture(): ReactElement {
+  return (
+    <Svg
+      style={StyleSheet.absoluteFill}
+      viewBox="0 0 342 136"
+      preserveAspectRatio="none"
+      pointerEvents="none"
+    >
+      <Defs>
+        <LinearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={color.text.onFill} stopOpacity="0" />
+          <Stop offset="0.6" stopColor={color.text.onFill} stopOpacity="0.22" />
+          <Stop offset="1" stopColor={color.text.onFill} stopOpacity="0.08" />
+        </LinearGradient>
+      </Defs>
+      {RIBBONS.map((d) => (
+        <Path key={d} d={d} stroke="url(#sheen)" strokeWidth={1.2} fill="none" />
+      ))}
+    </Svg>
+  );
+}
 
 export function BestRateCard({
   rate,
@@ -27,58 +56,81 @@ export function BestRateCard({
   onTrade?: () => void;
 }): ReactElement {
   const rendered = formatRate(rate);
-  return (
-    <View testID="home-best-rate" style={styles.card}>
-      <Text style={styles.label}>{`Best ${pairLabel(rate)} rate today`}</Text>
+  const label = `Best ${pairLabel(rate)} rate today`;
+
+  const body = (
+    <>
+      <Texture />
+      <View style={styles.topRow}>
+        <Text style={styles.label}>{label}</Text>
+        {onTrade ? <Text style={styles.trade}>Trade now ›</Text> : null}
+      </View>
       <Text
-        accessibilityLabel={`Best rate today: ${rendered}`}
+        accessibilityLabel={`${label}: ${rendered}`}
         adjustsFontSizeToFit
         numberOfLines={1}
         style={styles.rate}
       >
         {rendered}
       </Text>
-      <Text style={styles.note}>Matched peer to peer · your money stays in bank escrow</Text>
+    </>
+  );
 
-      {onTrade ? (
-        <Pressable
-          testID="home-primary-action"
-          accessibilityRole="button"
-          onPress={onTrade}
-          style={({ pressed }) => [styles.button, pressed ? styles.buttonPressed : null]}
-        >
-          <Text style={styles.buttonLabel}>Trade now</Text>
-        </Pressable>
-      ) : null}
+  if (!onTrade) {
+    return (
+      <View testID="home-best-rate" style={styles.card}>
+        {body}
+      </View>
+    );
+  }
+
+  return (
+    <View testID="home-best-rate" style={styles.shadow}>
+      <Pressable
+        testID="home-primary-action"
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${rendered}. Trade now`}
+        onPress={onTrade}
+        style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]}
+      >
+        {body}
+      </Pressable>
     </View>
   );
 }
 
+const CARD_HEIGHT = 136;
+
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: color.brand.primary,
+  // The hero is the one raised surface on Home, as in Figma; ordinary cards stay flat.
+  shadow: {
     borderRadius: radius.md,
-    padding: space.md,
-    gap: space.xs,
+    ...Platform.select({
+      ios: {
+        shadowColor: color.bg.inverse,
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+      },
+      default: { elevation: 8 },
+    }),
   },
-  label: { ...typography.caption, color: color.text.onFill },
+  card: {
+    height: CARD_HEIGHT,
+    backgroundColor: color.bg.inverse,
+    borderRadius: radius.md,
+    padding: space.sm,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  pressed: { opacity: 0.92 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  label: { ...typography.caption, fontWeight: '600', color: color.text.onFill },
+  trade: { ...typography.chipLabel, color: color.text.onFill },
   rate: {
     ...typography.sectionTitle,
     ...numericTextStyle,
-    color: color.text.onFill,
     fontWeight: '700',
+    color: color.text.onFill,
   },
-  note: { ...typography.caption, color: color.text.onFill },
-  button: {
-    marginTop: space.xs,
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    paddingHorizontal: space.md,
-    borderRadius: radius.lg,
-    backgroundColor: color.bg.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonPressed: { backgroundColor: color.bg.sunken },
-  buttonLabel: { ...typography.rowLabel, color: color.brand.primary },
 });

@@ -20,6 +20,11 @@ export const color = {
      * always pair it with a border, spacing or elevation.
      */
     sunken: palette.blueTintedGrey50,
+    /**
+     * Dark hero surface (Figma Home card, DEC-008). Only `text.onFill` goes on it
+     * (17.74:1). Never a screen background, never under body copy in other colours.
+     */
+    inverse: palette.grey900,
     overlay: palette.scrim,
   },
 

@@ -34,8 +34,8 @@ import {
  * The screen container.
  *
  * Screens render their own header, so the top safe-area inset is applied here rather
- * than by a navigation header. Gutters are `space.lg` (32), the frozen screen-edge
- * margin (`docs/09-ui-ux/xspeeria-design-bible.md`, page 6). Rows that pair a label with
+ * than by a navigation header. Gutters are `space.md` (24), matching the Figma mobile
+ * frames (DEC-008; previously the design bible's 32). Rows that pair a label with
  * a status chip let the label column shrink and wrap; the chip never truncates.
  */
 export function Screen({
@@ -304,7 +304,7 @@ export function ErrorState({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   screenContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
     paddingBottom: space.lg,
     gap: space.md,
   },

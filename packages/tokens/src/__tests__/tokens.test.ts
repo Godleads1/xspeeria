@@ -41,7 +41,7 @@ describe('semantic token presence', () => {
     expect(Object.keys(color).sort()).toEqual(
       ['bg', 'border', 'brand', 'error', 'success', 'text', 'warning'].sort(),
     );
-    expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'overlay', 'sunken']);
+    expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'inverse', 'overlay', 'sunken']);
     expect(Object.keys(color.text).sort()).toEqual(
       ['disabled', 'onFill', 'primary', 'secondary'].sort(),
     );
@@ -166,6 +166,10 @@ describe('contrast assumptions', () => {
   it('text roles pass AA on the canvas', () => {
     expect(contrast(color.text.primary, canvas)).toBeGreaterThanOrEqual(7);
     expect(contrast(color.text.secondary, canvas)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('white on the inverse hero surface passes AAA', () => {
+    expect(contrast(color.text.onFill, color.bg.inverse)).toBeGreaterThanOrEqual(7);
   });
 
   it('text roles still pass AA on the sunken surface', () => {

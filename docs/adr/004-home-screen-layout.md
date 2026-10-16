@@ -41,7 +41,7 @@ Home, top to bottom:
 
 | Figma | Implementation | Why |
 |---|---|---|
-| Balance card, black with texture image | Best-rate card on `color.brand.primary` | No balance may exist; the texture image could not be exported |
+| Balance card, black with texture image | Best-rate card on `color.bg.inverse` (#111827) with the texture redrawn as vector lines | No balance may exist; the texture image could not be exported |
 | Chip and contactless glyphs on the card | Omitted | They imply a payment card |
 | Photo avatar | Initials on brand fill | No profile photos yet |
 | Three rates repeat 1,190.47 | Distinct mock values | Placeholder correction (allowed) |
@@ -53,3 +53,14 @@ Home, top to bottom:
 
 All Home data is mock (`mobile/src/fixtures`). Rates are decimal strings and are only
 ever formatted as text — never converted to floating point.
+
+## 5. Amendment A1 — 2026-10-17 (closer match to Figma, product owner request)
+
+- Order now matches Figma at the top: header → best-rate card → market rates → recent
+  transactions. **Account Readiness moves below the transactions** (still shown in full
+  while any step is outstanding).
+- The hero is dark (`color.bg.inverse`, new token) with a vector line texture and a drop
+  shadow; the whole card is the "Trade now" action.
+- Transaction statuses use Figma-style tinted pills with a small glyph.
+- Screen side margins are 24 pt (`space.md`), as in the Figma frames, replacing the
+  design bible's 32 pt.

@@ -17,10 +17,11 @@ import { Fragment, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../components/icons';
-import { Amount, Caption, Divider, EmptyState, StatusChip } from '../../components/primitives';
+import { Amount, Caption, Divider, EmptyState } from '../../components/primitives';
 import type { ActivityItem } from '../../fixtures';
 import { color, space, typography } from '../../theme';
 import { SectionLabel } from './SectionLabel';
+import { StatusPill } from './StatusPill';
 
 export function orderActivity(items: readonly ActivityItem[]): readonly ActivityItem[] {
   return [...items].sort((a, b) => Number(b.timeCritical ?? false) - Number(a.timeCritical ?? false));
@@ -79,7 +80,7 @@ export function ActivityList({
                   ) : null}
                 </View>
                 <View style={styles.side}>
-                  <StatusChip label={item.status} tone={item.statusTone} />
+                  <StatusPill label={item.status} tone={item.statusTone} />
                   <Caption>{item.when}</Caption>
                 </View>
               </View>

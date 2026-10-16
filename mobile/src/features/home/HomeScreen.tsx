@@ -1,8 +1,9 @@
 /**
  * Home (Figma node 39:2882, as amended by DEC-008 / ADR-004).
  *
- * Order: header -> best-rate card (carries the one primary action) -> Account Readiness
- * -> current market rates -> recent transactions.
+ * Order follows Figma: header -> best-rate card (the one primary action) -> current
+ * market rates -> recent transactions, then Account Readiness (not in Figma; kept below
+ * so the top of the screen matches the design).
  *
  * There is no balance region, no wallet identifier and no aggregate currency figure
  * under any condition. The hero shows a rate written with both currencies, never a lone
@@ -66,9 +67,9 @@ export function HomeScreen({
       {status === 'ready' ? (
         <View style={styles.body}>
           {bestRate ? <BestRateCard rate={bestRate} onTrade={onCreateOffer} /> : null}
-          <AccountReadiness dimensions={dimensions} />
           {rates.length > 0 ? <MarketRates rates={rates} /> : null}
           <ActivityList items={activity} onCreateOffer={onCreateOffer} onViewAll={onViewAll} />
+          <AccountReadiness dimensions={dimensions} />
         </View>
       ) : null}
     </Screen>
