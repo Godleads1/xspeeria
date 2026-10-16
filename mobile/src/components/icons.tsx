@@ -16,7 +16,15 @@ import type { ReactElement } from 'react';
 import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-export type IconName = 'home' | 'market' | 'history' | 'cards' | 'profile' | 'bell';
+export type IconName =
+  | 'home'
+  | 'market'
+  | 'history'
+  | 'cards'
+  | 'profile'
+  | 'bell'
+  | 'help'
+  | 'swap';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -108,6 +116,21 @@ export function Icon({
         <>
           <Path d="M6.5 16v-5a5.5 5.5 0 0 1 11 0v5l1.5 2h-14z" {...stroke} />
           <Path d="M10.25 20.5h3.5" {...stroke} />
+        </>
+      ) : null}
+
+      {name === 'help' ? (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...stroke} />
+          <Path d="M9.75 9.5a2.25 2.25 0 1 1 3.4 1.95c-.7.4-1.15.95-1.15 1.8v.25" {...stroke} />
+          <Path d="M12 16.75h.01" {...stroke} />
+        </>
+      ) : null}
+
+      {name === 'swap' ? (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...stroke} />
+          <Path d="M8 10.5h7.5l-2-2M16 13.5H8.5l2 2" {...stroke} />
         </>
       ) : null}
     </Svg>

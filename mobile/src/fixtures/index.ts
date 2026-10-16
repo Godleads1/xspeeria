@@ -60,10 +60,14 @@ export type ActivityKind = 'offer' | 'allocation' | 'settlement';
  * Each item carries its own amount. Amounts are never summed into a single figure:
  * an aggregate currency hero reads as a balance regardless of its label, and Xspeeria
  * has no balance of any kind.
+ *
+ * MOCK DATA (DEC-008): pairs and amounts follow the Figma Home frame (node 39:2882),
+ * currency swaps only. The Figma "Shopping" row is omitted because Cards is COMING SOON.
  */
 export interface ActivityItem {
   readonly id: string;
   readonly kind: ActivityKind;
+  /** Corridor as shown in the row title, e.g. `NGN → USD`. */
   readonly title: string;
   readonly pair: string;
   /** Minor units, with an explicit scale. Never a float. */
@@ -72,6 +76,8 @@ export interface ActivityItem {
   readonly scale: number;
   readonly status: string;
   readonly statusTone: 'neutral' | 'success' | 'warning' | 'error';
+  /** Display time or date, already formatted. */
+  readonly when: string;
   readonly nextAction?: string;
   /** Surfaced first when true. */
   readonly timeCritical?: boolean;
@@ -79,40 +85,69 @@ export interface ActivityItem {
 
 export const ACTIVITY_ITEMS: readonly ActivityItem[] = [
   {
+    id: 'settle-1',
+    kind: 'settlement',
+    title: 'NGN → USD',
+    pair: 'NGN / USD',
+    amountMinor: 45000000,
+    currency: 'NGN',
+    scale: 2,
+    status: 'Completed',
+    statusTone: 'success',
+    when: '4:34 AM',
+  },
+  {
     id: 'alloc-1',
     kind: 'allocation',
-    title: 'Allocation awaiting preparation',
-    pair: 'NGN / GBP',
-    amountMinor: 100000,
-    currency: 'GBP',
+    title: 'NGN → CAD',
+    pair: 'NGN / CAD',
+    amountMinor: 2300000,
+    currency: 'NGN',
     scale: 2,
-    status: 'Preparation',
+    status: 'Pending',
     statusTone: 'warning',
-    nextAction: 'Choose a destination',
+    when: '23/09/2024',
+    nextAction: 'Add your payout account',
     timeCritical: true,
   },
   {
     id: 'offer-1',
     kind: 'offer',
-    title: 'Open offer',
-    pair: 'NGN / GBP',
-    amountMinor: 250000,
-    currency: 'GBP',
+    title: 'NGN → EUR',
+    pair: 'NGN / EUR',
+    amountMinor: 6700000,
+    currency: 'NGN',
     scale: 2,
-    status: 'Partially matched',
-    statusTone: 'neutral',
-  },
-  {
-    id: 'settle-1',
-    kind: 'settlement',
-    title: 'Settlement in progress',
-    pair: 'NGN / GBP',
-    amountMinor: 75000,
-    currency: 'GBP',
-    scale: 2,
-    status: 'Awaiting funding',
-    statusTone: 'neutral',
+    status: 'Failed',
+    statusTone: 'error',
+    when: '12/09/2024',
   },
 ];
 
 export const NO_ACTIVITY: readonly ActivityItem[] = [];
+
+/**
+ * A market rate: how many units of `base` buy ONE unit of `quote`.
+ *
+ * `rate` is a decimal string, never a float, and it is a price, not an amount anyone
+ * holds. MOCK DATA (DEC-008): the Figma frame repeats one placeholder value (1,190.47)
+ * for three corridors; distinct illustrative values are used instead.
+ */
+export interface MarketRate {
+  readonly id: string;
+  readonly base: string;
+  readonly quote: string;
+  readonly rate: string;
+}
+
+export const MARKET_RATES: readonly MarketRate[] = [
+  { id: 'ngn-usd', base: 'NGN', quote: 'USD', rate: '1603.78' },
+  { id: 'ngn-cad', base: 'NGN', quote: 'CAD', rate: '1148.20' },
+  { id: 'ngn-eur', base: 'NGN', quote: 'EUR', rate: '1742.35' },
+  { id: 'ngn-aud', base: 'NGN', quote: 'AUD', rate: '1051.60' },
+];
+
+/** The best NGN → USD rate currently offered on the marketplace (mock). */
+export const BEST_RATE: MarketRate = { id: 'best-ngn-usd', base: 'NGN', quote: 'USD', rate: '1603.78' };
+
+export const MOCK_USER = { name: 'David Peters', initials: 'DP' } as const;
