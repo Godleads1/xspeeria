@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **APPROVED** |
 | **Date** | 2026-10-16 |
-| **Decision ID** | DEC-005 |
+| **Decision IDs** | DEC-005 (bottom navigation) · DEC-006 (brand primary) |
 | **Supersedes** | Application primary `#1F3A8A` and its interaction ladder (`PRODUCT.md` Brand Commitments (B); `docs/09-ui-ux/DESIGN_SYSTEM.md`; `docs/13-governance/CORRECTIONS_v3.md` §9.1). Bottom-navigation labels `Marketplace` / `Track` (`mobile/src/navigation/tabs.ts`, approved 2026-08-22) |
 | **Authority** | Human decision by the product owner, 2026-10-16 — `DOCUMENT_INDEX.md` §1 rank 2 |
 
@@ -12,10 +12,10 @@
 
 ## 1. Decisions
 
-1. **Brand primary is the logo navy `#001A6E`.** Source: the vector logo `Asset_6.svg` (navy
+1. **DEC-006 — Brand primary is the logo navy `#001A6E`.** Source: the vector logo `Asset_6.svg` (navy
    `#001A6E`, red `#F80B09`, yellow `#FFB700`, green `#208B3A`). Only the navy becomes an
    application token; the other logo colours remain brand-asset values, not UI tokens.
-2. **Bottom navigation is `Home · Market · History · Cards · Profile`.** `Cards` stays
+2. **DEC-005 — Bottom navigation is `Home · Market · History · Cards · Profile`.** `Cards` stays
    COMING SOON. Notifications remain off the bottom navigation.
 3. **The Figma mobile design (file `5ayAjPFxxHmEQIrEjauHTB`, page `1:2`) is followed
    strictly**, including the Satoshi font and the card screens on mock data. Permitted

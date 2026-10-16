@@ -76,7 +76,7 @@ describe('semantic token presence', () => {
 });
 
 describe('approved token values', () => {
-  it('keeps the approved brand primary exactly (DEC-005: logo navy)', () => {
+  it('keeps the approved brand primary exactly (DEC-006: logo navy)', () => {
     expect(color.brand.primary).toBe('#001A6E');
     expect(interaction.primary.default).toBe('#001A6E');
   });

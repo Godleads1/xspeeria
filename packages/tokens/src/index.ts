@@ -2,7 +2,7 @@
  * SEMANTIC tier — the only tier product applications may consume.
  *
  * Source of truth: `docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22, as amended
- * by DEC-005 (brand primary `#001A6E`, human-approved 2026-10-16).
+ * by DEC-006 (brand primary `#001A6E`, human-approved 2026-10-16).
  * Primitives are intentionally not re-exported from this entry point.
  *
  * Architecture: PRIMITIVE -> SEMANTIC -> COMPONENT.
@@ -47,7 +47,7 @@ export const color = {
   },
 
   brand: {
-    /** Logo navy, DEC-005. 15.30:1 on canvas; white on it is also 15.30:1. */
+    /** Logo navy, DEC-006. 15.30:1 on canvas; white on it is also 15.30:1. */
     primary: palette.navy900,
     /**
      * 3.68:1 — passes for large text and UI components, FAILS AA for normal-size text.
