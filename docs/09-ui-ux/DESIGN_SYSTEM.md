@@ -9,6 +9,9 @@
 > requires human approval. Logo/brand-asset colours are a **separate question** — see `PRODUCT.md`
 > “Brand Commitments”.
 
+> **AMENDED — ADR-004 A3 (DEC-010), 2026-10-17.** Brand typeface is **Satoshi** (bundled in the
+> private repo; ITF Free Font License forbids public redistribution).
+
 > **AMENDED — ADR-004 A2 (DEC-009), 2026-10-17.** Gold/amber may also be used decoratively for
 > the Home hero card chip and favourite-rate stars (`color.decorative.*`). Still never a status
 > colour or text. Home hero fill `#191919` (`color.bg.inverse`).

@@ -219,9 +219,9 @@ describe('typography roles', () => {
     expect(Object.keys(font).sort()).toEqual(['brand', 'numeric']);
   });
 
-  it('resolves brand to a system stack, with no Satoshi anywhere', () => {
-    expect(font.brand.family).toBe('system');
-    expect(JSON.stringify(font).toLowerCase()).not.toContain('satoshi');
+  it('resolves brand to Satoshi with a system fallback (DEC-010)', () => {
+    expect(font.brand.family).toBe('Satoshi');
+    expect(font.brand.webStack.startsWith('Satoshi, system-ui')).toBe(true);
   });
 
   it('carries the approved Inter numeric role with tabular figures', () => {

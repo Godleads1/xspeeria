@@ -147,10 +147,15 @@ export const radius = {
  */
 export const font = {
   brand: {
-    family: 'system' as const,
+    /**
+     * Satoshi (DEC-010, 2026-10-17), as in the Figma frames. ITF Free Font License:
+     * embedding in our own apps is allowed; the files must never be redistributed or put
+     * in a public repository or public server.
+     */
+    family: 'Satoshi' as const,
     /** Per-platform stacks; consumers pick the one that applies. */
     webStack:
-      'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      'Satoshi, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   numeric: {
     family: 'Inter' as const,

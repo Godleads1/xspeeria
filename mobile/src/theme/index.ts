@@ -13,12 +13,39 @@ import { color, font, interaction, radius, space } from '@xspeeria/tokens';
 export { color, interaction, radius, space };
 
 /**
- * `font.brand` is a system stack today. Satoshi is the leading candidate but is not
- * production-approved and no font files exist in this repository. Adopting it later is
- * a change to this resolver, not to any component.
+ * Brand face: Satoshi (DEC-010, 2026-10-17), as in the Figma mobile frames. Licensed under
+ * the ITF Free Font License, which allows embedding in our app but NOT redistribution:
+ * the files live only in this PRIVATE repository (`mobile/assets/fonts/satoshi`).
+ *
+ * React Native custom fonts are selected per weight by family name, not by `fontWeight`,
+ * so each weight below names its own file. Satoshi has no 600: semibold maps to Medium,
+ * which is what Figma uses for labels.
  */
+export const SATOSHI_FILES = {
+  'Satoshi-Regular': require('../../assets/fonts/satoshi/Satoshi-Regular.otf'),
+  'Satoshi-Medium': require('../../assets/fonts/satoshi/Satoshi-Medium.otf'),
+  'Satoshi-Bold': require('../../assets/fonts/satoshi/Satoshi-Bold.otf'),
+  'Satoshi-Black': require('../../assets/fonts/satoshi/Satoshi-Black.otf'),
+} as const;
+
+export type BrandWeight = '400' | '500' | '600' | '700' | '800' | '900';
+
+const SATOSHI_FOR: Record<BrandWeight, keyof typeof SATOSHI_FILES> = {
+  '400': 'Satoshi-Regular',
+  '500': 'Satoshi-Medium',
+  '600': 'Satoshi-Medium',
+  '700': 'Satoshi-Bold',
+  '800': 'Satoshi-Black',
+  '900': 'Satoshi-Black',
+};
+
+/** Brand text at a given weight. `fontWeight` stays normal so no faux-bold is applied. */
+export function brandWeight(weight: BrandWeight): TextStyle {
+  return { fontFamily: SATOSHI_FOR[weight], fontWeight: 'normal' };
+}
+
 export const fontFamily = {
-  brand: Platform.select({ ios: 'System', android: 'sans-serif', default: 'System' }),
+  brand: SATOSHI_FOR['400'],
   /**
    * The approved Inter financial/numeric role. Until the Inter asset is bundled this
    * falls back to the platform face, which also supports tabular figures — the
@@ -36,9 +63,7 @@ export const numericTextStyle: TextStyle = {
   fontVariant: font.numeric.tabular ? ['tabular-nums', 'lining-nums'] : undefined,
 };
 
-export const brandTextStyle: TextStyle = {
-  fontFamily: fontFamily.brand,
-};
+export const brandTextStyle: TextStyle = brandWeight('400');
 
 /**
  * The five roles below are the approved type scale
@@ -47,25 +72,24 @@ export const brandTextStyle: TextStyle = {
  * detail of the system face, not a new type role.
  */
 export const typography = {
-  title: { ...brandTextStyle, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.4 },
+  title: { ...brandWeight('700'), fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
   sectionTitle: {
-    ...brandTextStyle,
+    ...brandWeight('600'),
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '600',
     letterSpacing: -0.2,
   },
-  headline: { ...brandTextStyle, fontSize: 17, lineHeight: 22, fontWeight: '600' },
-  body: { ...brandTextStyle, fontSize: 15, lineHeight: 20, fontWeight: '400' },
-  caption: { ...brandTextStyle, fontSize: 12, lineHeight: 16, fontWeight: '400' },
+  headline: { ...brandWeight('600'), fontSize: 17, lineHeight: 22 },
+  body: { ...brandWeight('400'), fontSize: 15, lineHeight: 20 },
+  caption: { ...brandWeight('400'), fontSize: 12, lineHeight: 16 },
 
   /**
    * COMPONENT tier, not new scale roles: emphasis variants of `body` and `caption` used
    * for list-row labels, chip text and navigation labels. They add weight, not a new
    * size, so the approved scale is unchanged.
    */
-  rowLabel: { ...brandTextStyle, fontSize: 15, lineHeight: 20, fontWeight: '600' },
-  chipLabel: { ...brandTextStyle, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  rowLabel: { ...brandWeight('600'), fontSize: 15, lineHeight: 20 },
+  chipLabel: { ...brandWeight('600'), fontSize: 12, lineHeight: 16 },
   /** 11pt is a platform navigation convention; labels must not truncate. */
-  navLabel: { ...brandTextStyle, fontSize: 11, lineHeight: 14, fontWeight: '600' },
+  navLabel: { ...brandWeight('600'), fontSize: 11, lineHeight: 14 },
 } as const satisfies Record<string, TextStyle>;

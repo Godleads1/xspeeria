@@ -19,7 +19,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  brandTextStyle,
   color,
   interaction,
   numericTextStyle,
@@ -174,7 +173,6 @@ export function PrimaryButton({
       <Text
         style={[
           typography.headline,
-          brandTextStyle,
           styles.buttonLabel,
           { color: effectiveDisabled ? interaction.primary.disabledLabel : color.text.onFill },
         ]}

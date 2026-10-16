@@ -14,7 +14,7 @@ import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '../../components/icons';
-import { brandTextStyle, color, typography } from '../../theme';
+import { color, typography } from '../../theme';
 
 function HeaderButton({
   icon,
@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
   },
   avatarLabel: {
     ...typography.rowLabel,
-    ...brandTextStyle,
     color: color.text.onFill,
     letterSpacing: 0.2,
   },

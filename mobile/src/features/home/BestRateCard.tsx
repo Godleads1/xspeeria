@@ -17,7 +17,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import type { MarketRate } from '../../fixtures';
-import { color, numericTextStyle, radius, space, typography } from '../../theme';
+import { brandWeight, color, numericTextStyle, radius, space, typography } from '../../theme';
 import { formatRate, pairLabel } from './rate';
 
 /**
@@ -182,13 +182,14 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   labelColumn: { gap: 10 },
   bottomRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 },
-  label: { ...typography.caption, fontWeight: '600', color: color.text.onFill },
+  label: { ...typography.caption, ...brandWeight('500'), color: color.text.onFill },
   trade: { ...typography.chipLabel, color: color.text.onFill },
   rate: {
     flexShrink: 1,
     ...typography.sectionTitle,
-    ...numericTextStyle,
-    fontWeight: '700',
+    // Figma sets the hero figure in Satoshi Bold; keep tabular figures from the numeric role.
+    fontVariant: numericTextStyle.fontVariant,
+    ...brandWeight('700'),
     color: color.text.onFill,
   },
 });

@@ -19,7 +19,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { Amount, Caption, Divider, EmptyState } from '../../components/primitives';
 import type { ActivityItem } from '../../fixtures';
-import { color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography } from '../../theme';
 import { SectionLabel } from './SectionLabel';
 import { StatusPill } from './StatusPill';
 
@@ -118,5 +118,5 @@ const styles = StyleSheet.create({
   main: { flex: 1, gap: 2 },
   title: { ...typography.rowLabel, color: color.text.primary },
   side: { alignItems: 'flex-end', gap: space.xs },
-  nextAction: { ...typography.caption, fontWeight: '600', color: color.brand.secondaryText },
+  nextAction: { ...typography.caption, ...brandWeight('500'), color: color.brand.secondaryText },
 });

@@ -76,3 +76,15 @@ ever formatted as text — never converted to floating point.
   (`#FFC738`), `chipDark` (`#FFB42E`). This narrows the earlier "gold for ratings only" rule
   in `DESIGN_SYSTEM.md`: gold may also decorate the hero chip and favourite stars, and is
   still never a status colour or text.
+
+## 7. Amendment A3 — DEC-010, 2026-10-17 (Satoshi brand font)
+
+- The brand face is **Satoshi** (Regular, Medium, Bold, Black), as in the Figma frames,
+  bundled at `mobile/assets/fonts/satoshi/` with its licence (`LICENSE-FFL.txt`).
+- Licence: ITF Free Font License 2.0 — embedding in our own app is allowed; the files may
+  **not** be redistributed, including via a public repository or public server. The
+  repository was made **private** on 2026-10-17 before the files were committed. It must
+  stay private while the files are in it (or the files must be removed first).
+- Weights are selected by family (`brandWeight()` in `mobile/src/theme`); Satoshi has no
+  600, so semibold maps to Medium, matching Figma labels. Financial numerics keep the
+  numeric role (system face, tabular); the Home hero figure uses Satoshi Bold, as in Figma.
