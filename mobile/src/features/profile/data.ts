@@ -82,6 +82,10 @@ export type BeneficiaryFilter = (typeof BENEFICIARY_FILTERS)[number];
 
 export const BENEFICIARIES: readonly Beneficiary[] = [
   { id: 'b1', name: 'Tunde Bakere Olamilekan', currency: 'NGN', bank: 'Access Bank', accountLast4: '9309', status: 'verified' },
+  // The user's own payout accounts (demo, ADR-014): trades pay out only to these (Banking spec §3.3).
+  { id: 'b2', name: 'David Peters', currency: 'NGN', bank: 'GTBank', accountLast4: '5521', status: 'verified' },
+  { id: 'b3', name: 'David Peters', currency: 'USD', bank: 'Chase', accountLast4: '4410', status: 'verified' },
+  { id: 'b4', name: 'David Peters', currency: 'EUR', bank: 'Revolut', accountLast4: '2207', status: 'verified' },
 ];
 
 /** `9309` → `•••• 9309`. */

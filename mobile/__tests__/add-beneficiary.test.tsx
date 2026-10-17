@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { AddBeneficiaryScreen } from '../src/features/profile/AddBeneficiaryScreen';
 import { BeneficiariesScreen } from '../src/features/profile/BeneficiariesScreen';
 import { beneficiaryStore } from '../src/features/profile/beneficiaryStore';
-import { isValidRoutingNumber, validateBankForm } from '../src/features/profile/data';
+import { BENEFICIARIES, isValidRoutingNumber, validateBankForm } from '../src/features/profile/data';
 
 beforeEach(() => beneficiaryStore.reset());
 
@@ -85,7 +85,7 @@ describe('2FA re-check (ADR-008)', () => {
     await fireEvent.press(screen.getByTestId('add-beneficiary-submit'));
     expect(deny).toHaveBeenCalledWith(expect.stringMatching(/NGN account at GTBank/));
     expect(onDone).not.toHaveBeenCalled();
-    expect(beneficiaryStore.get()).toHaveLength(1);
+    expect(beneficiaryStore.get()).toHaveLength(BENEFICIARIES.length);
   });
 
   it('does not ask for 2FA when the form is invalid', async () => {

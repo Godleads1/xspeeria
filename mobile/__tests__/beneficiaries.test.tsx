@@ -27,7 +27,7 @@ describe('beneficiary helpers', () => {
   });
 
   it('filters by currency and by name, case-insensitively', () => {
-    expect(filterBeneficiaries(LIST, '', 'All')).toHaveLength(2);
+    expect(filterBeneficiaries(LIST, '', 'All')).toHaveLength(LIST.length);
     expect(filterBeneficiaries(LIST, '', 'GHS').map((b) => b.id)).toEqual(['x2']);
     expect(filterBeneficiaries(LIST, 'TUNDE', 'All').map((b) => b.id)).toEqual(['b1']);
     expect(filterBeneficiaries(LIST, 'tunde', 'GHS')).toHaveLength(0);
@@ -56,7 +56,7 @@ describe('Manage Beneficiaries screen', () => {
 
   it('filters with chips and search, showing an empty state', async () => {
     await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={allow} />);
-    await fireEvent.press(screen.getByTestId('beneficiary-filter-USD'));
+    await fireEvent.press(screen.getByTestId('beneficiary-filter-GBP'));
     expect(screen.getByTestId('beneficiaries-empty')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('beneficiary-filter-All'));
     await fireEvent.changeText(screen.getByTestId('beneficiaries-search'), 'zzz');

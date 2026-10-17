@@ -1,7 +1,7 @@
 import { useEffect, type ReactElement } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { HISTORY } from '../../../src/features/history/data';
+import { useAllHistory } from '../../../src/features/trade/history';
 import { ReceiptScreen } from '../../../src/features/history/ReceiptScreen';
 import { useThemeMode } from '../../../src/theme';
 
@@ -10,7 +10,8 @@ export default function ReceiptRoute(): ReactElement | null {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const item = typeof id === 'string' ? HISTORY.find((h) => h.id === id) : undefined;
+  const all = useAllHistory();
+  const item = typeof id === 'string' ? all.find((h) => h.id === id) : undefined;
 
   useEffect(() => {
     if (!item) router.back();
