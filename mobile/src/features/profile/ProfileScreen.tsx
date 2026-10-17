@@ -14,7 +14,8 @@ import { Icon } from '../../components/icons';
 import { MenuIcon, type MenuIconName } from '../../components/menuIcons';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, setThemeMode, typography, themed, useThemeMode } from '../../theme';
-import { PROFILE_USER } from './data';
+import { ProfileAvatar } from './ProfileAvatar';
+import { useProfile } from './profileStore';
 
 export type ProfileDestination =
   | 'account'
@@ -83,7 +84,7 @@ export function ProfileScreen({
   /** Where each row goes; rows without a screen yet explain that they are coming. */
   onOpen?: (destination: ProfileDestination) => void;
 }): ReactElement {
-  const user = PROFILE_USER;
+  const user = useProfile();
   const dark = useThemeMode() === 'dark';
 
   const open = (key: ProfileDestination, title: string): void => {
@@ -107,9 +108,7 @@ export function ProfileScreen({
         onPress={() => open('account', 'Account details')}
         style={({ pressed }) => [styles.header, pressed ? styles.pressed : null]}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user.initials}</Text>
-        </View>
+        <ProfileAvatar testID="profile-avatar" size={70} initials={user.initials} uri={user.avatarUri} />
         <View style={styles.headerText}>
           <Text style={styles.name}>{user.fullName}</Text>
           <Text style={styles.headerSub}>Account details</Text>
@@ -162,7 +161,6 @@ export function ProfileScreen({
   );
 }
 
-const AVATAR = 70;
 const BADGE = 40;
 
 const styles = themed(() => ({
@@ -175,15 +173,6 @@ const styles = themed(() => ({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    backgroundColor: color.brand.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { ...brandWeight('700'), fontSize: 24, color: color.text.onFill },
   headerText: { flex: 1, gap: 4 },
   name: { ...typography.headline, ...brandWeight('700'), fontSize: 19, color: color.text.primary },
   headerSub: { ...typography.body, fontSize: 14, color: color.text.secondary },

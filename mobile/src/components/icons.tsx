@@ -53,7 +53,9 @@ export type IconName =
   | 'copy'
   | 'hexagon'
   | 'dollar'
-  | 'minus';
+  | 'minus'
+  | 'camera'
+  | 'pencil';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -295,6 +297,13 @@ export function Icon({
           <Path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.9 0 2.6 5 1.4 5 4.1 0 1.2-1.1 2-2.5 2-1.2 0-2.2-.5-2.7-1.3M12 6.5v11" {...stroke} />
         </>
       ) : null}
+      {name === 'camera' ? (
+        <>
+          <Path d="M3 7.5h4l2-2.5h6l2 2.5h4V19H3z" {...stroke} />
+          <Circle cx={12} cy={13} r={3.5} {...stroke} />
+        </>
+      ) : null}
+      {name === 'pencil' ? <Path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 013 3L8 18.5zM13.5 7l3 3" {...stroke} /> : null}
       {name === 'minus' ? <Path d="M5 12h14" {...stroke} /> : null}
       {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
       {name === 'globe' ? (

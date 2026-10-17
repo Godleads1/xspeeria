@@ -2,8 +2,8 @@
  * Home header (Figma node 39:2882), DEC-008.
  *
  * Avatar with a "Welcome" caption and the user's name, then help and notifications.
- * The Figma avatar is a photo; until profile photos exist it shows initials on the brand
- * fill. The spec's gradient avatar is not used: no gradient runtime is a dependency.
+ * The Figma avatar is a photo: the user's own photo when set (ADR-011), otherwise initials
+ * on the brand fill. The spec's gradient avatar is not used: no gradient runtime is a dependency.
  *
  * Help and notifications have no destination yet. They stay in the layout but are
  * disabled and drawn in the disabled colour rather than looking available and doing
@@ -11,7 +11,7 @@
  */
 
 import type { ReactElement } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, Image } from 'react-native';
 
 import { Icon, type IconName } from '../../components/icons';
 import { color, typography, themed } from '../../theme';
@@ -47,20 +47,27 @@ function HeaderButton({
 export function HomeHeader({
   name,
   initials,
+  avatarUri = null,
   onHelp,
   onNotifications,
 }: {
   name: string;
   initials: string;
+  /** Profile photo (ADR-011); initials when absent. */
+  avatarUri?: string | null;
   onHelp?: () => void;
   onNotifications?: () => void;
 }): ReactElement {
   return (
     <View style={styles.bar}>
       <View accessible accessibilityLabel={`Welcome, ${name}`} style={styles.identity}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLabel}>{initials}</Text>
-        </View>
+        {avatarUri ? (
+          <Image testID="home-avatar-photo" source={{ uri: avatarUri }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLabel}>{initials}</Text>
+          </View>
+        )}
         <View>
           <Text style={styles.welcome}>Welcome</Text>
           <Text style={styles.name}>{name}</Text>

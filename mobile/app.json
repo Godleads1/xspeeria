@@ -26,6 +26,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#F8F9FD"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Xspeeria uses your photos only when you choose a profile picture, banner or ID document.",
+          "cameraPermission": false
+        }
       ]
     ],
     "experiments": {

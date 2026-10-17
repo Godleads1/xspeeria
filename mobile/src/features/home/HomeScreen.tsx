@@ -38,7 +38,7 @@ export function HomeScreen({
   onHelp,
   onNotifications,
 }: {
-  user?: { readonly name: string; readonly initials: string };
+  user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
   bestRate?: MarketRate;
   rates?: readonly MarketRate[];
   dimensions: readonly ReadinessDimension[];
@@ -55,6 +55,7 @@ export function HomeScreen({
       <HomeHeader
         name={user.name}
         initials={user.initials}
+        avatarUri={user.avatarUri ?? null}
         onHelp={onHelp}
         onNotifications={onNotifications}
       />

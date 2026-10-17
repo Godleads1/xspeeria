@@ -7,5 +7,5 @@ import { useThemeMode } from '../../src/theme';
 export default function AccountDetailsRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
-  return <AccountDetailsScreen onBack={() => router.back()} />;
+  return <AccountDetailsScreen onBack={() => router.back()} onEdit={() => router.push('/profile/edit')} />;
 }

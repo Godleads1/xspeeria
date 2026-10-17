@@ -7,7 +7,7 @@
  */
 
 import type { ReactElement } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -16,7 +16,9 @@ import { Icon, type IconName } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
-import { KYC_REGIONS, PROFILE_USER, formatRating, longDate } from './data';
+import { KYC_REGIONS, formatRating, longDate } from './data';
+import { ProfileAvatar } from './ProfileAvatar';
+import { useProfile } from './profileStore';
 
 function Star(): ReactElement {
   return (
@@ -26,26 +28,29 @@ function Star(): ReactElement {
   );
 }
 
-function Detail({ icon, label, value }: { icon: IconName; label: string; value: string }): ReactElement {
+function Detail({ icon, label, value, note }: { icon: IconName; label: string; value: string; note?: string }): ReactElement {
   return (
     <View style={styles.detail} accessible accessibilityLabel={`${label}: ${value}`}>
       <Icon name={icon} color={color.text.secondary} size={18} />
       <View style={styles.detailText}>
         <Text style={styles.detailLabel}>{label}</Text>
         <Text style={styles.detailValue}>{value}</Text>
+        {note ? <Text style={styles.detailLabel}>{note}</Text> : null}
       </View>
     </View>
   );
 }
 
-export function AccountDetailsScreen({ onBack }: { onBack: () => void }): ReactElement {
+export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; onEdit?: () => void }): ReactElement {
   const insets = useSafeAreaInsets();
-  const user = PROFILE_USER;
+  const user = useProfile();
 
   return (
     <View testID="account-details-screen" style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.lg }}>
         <View style={[styles.band, { paddingTop: insets.top + space.xs }]}>
+          {user.bannerUri ? <Image testID="account-banner-photo" source={{ uri: user.bannerUri }} style={styles.bannerImage} /> : null}
+          <View style={styles.bandBar}>
           <Pressable
             testID="account-back"
             accessibilityRole="button"
@@ -56,12 +61,17 @@ export function AccountDetailsScreen({ onBack }: { onBack: () => void }): ReactE
           >
             <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
           </Pressable>
+            {onEdit ? (
+              <Pressable testID="account-edit" accessibilityRole="button" accessibilityLabel="Edit profile" onPress={onEdit} style={styles.editBtn}>
+                <Icon name="pencil" color={color.text.primary} size={16} />
+                <Text style={styles.editText}>Edit</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.identity}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user.initials}</Text>
-          </View>
+          <ProfileAvatar testID="account-avatar" size={AVATAR} initials={user.initials} uri={user.avatarUri} ring={4} />
           <Text style={styles.handle}>{user.handle}</Text>
           <View style={styles.rating} accessible accessibilityLabel={`Rated ${formatRating(user.ratingHundredths)} out of 5`}>
             <Star />
@@ -77,7 +87,12 @@ export function AccountDetailsScreen({ onBack }: { onBack: () => void }): ReactE
             <Detail icon="idcard" label="Full Name" value={user.fullName} />
             <Detail icon="phone" label="Phone Number" value={user.phone} />
             <Detail icon="mail" label="Email Address" value={user.email} />
-            <Detail icon="calendar" label="Date of birth" value={longDate(user.dateOfBirth)} />
+            <Detail
+              icon="calendar"
+              label="Date of birth"
+              value={longDate(user.dateOfBirth)}
+              note={user.pendingDob ? `Change to ${longDate(user.pendingDob.dateOfBirth)} under review` : undefined}
+            />
             <Detail icon="gender" label="Gender" value={user.gender} />
           </View>
 
@@ -104,20 +119,13 @@ const AVATAR = 132;
 
 const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
-  band: { height: 120, backgroundColor: color.border.subtle, paddingHorizontal: space.md },
+  band: { height: 120, backgroundColor: color.border.subtle, overflow: 'hidden' },
+  bannerImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: 120 },
+  bandBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.md },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.bg.canvas, borderRadius: 18, paddingHorizontal: 12, height: 34 },
+  editText: { ...typography.caption, ...brandWeight('700'), color: color.text.primary },
   back: { width: 36, height: 36, justifyContent: 'center' },
   identity: { alignItems: 'center', marginTop: -AVATAR / 2, gap: 6 },
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 4,
-    borderColor: color.bg.canvas,
-    backgroundColor: color.brand.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { ...brandWeight('700'), fontSize: 40, color: color.text.onFill },
   handle: { ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: { ...typography.caption, ...brandWeight('700'), color: color.text.primary },

@@ -6,18 +6,19 @@ import {
   ACTIVITY_ITEMS,
   BEST_RATE,
   MARKET_RATES,
-  MOCK_USER,
   READINESS_INCOMPLETE,
 } from '../../src/fixtures';
+import { useProfile } from '../../src/features/profile/profileStore';
 import { useThemeMode } from '../../src/theme';
 
 /** Mock data only (DEC-008): no API, auth or money flow exists yet. */
 export default function HomeRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
+  const profile = useProfile();
   return (
     <HomeScreen
-      user={MOCK_USER}
+      user={{ name: profile.fullName, initials: profile.initials, avatarUri: profile.avatarUri }}
       bestRate={BEST_RATE}
       rates={MARKET_RATES}
       dimensions={READINESS_INCOMPLETE}
