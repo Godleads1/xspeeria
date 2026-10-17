@@ -51,6 +51,7 @@ approved SDK 57 stack.
 | Date | Change | By |
 |---|---|---|
 | 2026-10-17 | Created; braces and node-forge accepted until 2026-11-16 | Product owner (option 1) |
+| 2026-10-17 | Gate hardened after review (ADR-018): future-dated approvals, unknown severities and npm count mismatches now fail | Independent review |
 
 ## 5. Consequences
 

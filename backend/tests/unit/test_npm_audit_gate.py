@@ -164,6 +164,38 @@ def _run(tmp_path: Path, payload: str, *extra: str) -> subprocess.CompletedProce
     )
 
 
+def test_future_dated_approval_fails() -> None:
+    exc = _exc(approved="2030-01-01", expires="2030-01-31")
+    errors = gate.check(_report(("GHSA-aaaa", "braces", "critical")), [exc], TODAY)
+    assert any("in the future" in e for e in errors)
+
+
+@pytest.mark.parametrize("sev", ["", "unknown", "severe"])
+def test_unknown_severity_is_blocking(sev: str) -> None:
+    errors = gate.check(_report(("GHSA-q", "lib", sev)), [], TODAY)
+    assert any("unknown severity" in e for e in errors)
+
+
+def test_metadata_count_must_match_advisories() -> None:
+    report = _report()
+    report["metadata"]["vulnerabilities"] = {"high": 1, "critical": 0}
+    errors = gate.check(report, [], TODAY)
+    assert any("no advisory was found" in e for e in errors)
+
+
+def test_bool_dependency_total_is_rejected() -> None:
+    report = _report()
+    report["metadata"]["dependencies"]["total"] = True
+    assert gate.check(report, [], TODAY) != []
+
+
+def test_non_dict_vulnerabilities_is_rejected() -> None:
+    report = _report()
+    report["vulnerabilities"] = []
+    errors = gate.check(report, [], TODAY)
+    assert any("unexpected shape" in e for e in errors)
+
+
 def test_cli_fails_on_unparseable_report(tmp_path: Path) -> None:
     assert _run(tmp_path, "not json").returncode == 1
 

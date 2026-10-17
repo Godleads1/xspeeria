@@ -11,14 +11,15 @@ import { useThemeMode } from '../../../src/theme';
 export default function SignupDoneRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const draft = useSignup();
-  if (!draft.pin || !draft.phone || !draft.email || !draft.emailVerified) return <Redirect href="/signup/start" />;
-  const { phone, email, pin } = draft;
+  if (!draft.pin || !draft.pinConfirmed || !draft.phone || !draft.email || !draft.emailVerified) return <Redirect href="/signup/start" />;
+  const { phone, email, pin, biometric } = draft;
   return (
     <DoneScreen
       onFinish={() => {
+        // Clears any earlier user's data first (ADR-018), then fills the new profile.
+        session.completeSignUp({ phone, email, pin }, { biometric });
         profileStore.confirmPhone(phone);
         profileStore.confirmEmail(email);
-        session.completeSignUp({ phone, email, pin });
         signup.clear();
       }}
     />

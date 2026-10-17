@@ -106,7 +106,16 @@ export function ReceiptScreen({
   const insets = useSafeAreaInsets();
   const isBuy = item.side === "buy";
   const ngnMinor = quoteMinor(item.amountMinor, item.rateHundredths);
-  const paidMinor = ngnMinor + COORDINATION_FEE_KOBO;
+  // Recorded figures win (FIN-02); older mock items fall back to the computed ones.
+  const buyFeeKobo = item.recorded ? (item.recorded.feeKobo ?? COORDINATION_FEE_KOBO) : COORDINATION_FEE_KOBO;
+  const paidMinor = item.recorded ? item.recorded.transferMinor : ngnMinor + buyFeeKobo;
+  // Labels follow the status (FIN-03): nothing is "paid" or "received" on a failed trade.
+  const done = item.status === "completed";
+  const failed = item.status === "failed";
+  // Completed buy receipts use Figma's "Received"/"Paid"; Figma's sell receipt says "to
+  // receive"/"to pay" throughout, so that wording stays for sells.
+  const receivedLabel = failed ? "Amount (not received)" : done && isBuy ? "Amount Received" : "Amount to receive";
+  const paidLabel = failed ? "Amount (not paid)" : done && isBuy ? "Amount Paid" : "Amount to pay";
   const foreign = `${formatHundredths(item.amountMinor)} ${item.currency}`;
   const rate = `NGN ${formatCompact(item.rateHundredths)}/${item.currency}`;
   const [fromCode, toCode] = isBuy
@@ -182,7 +191,7 @@ export function ReceiptScreen({
               </View>
             </View>
             <Line
-              label={isBuy ? "Amount Received" : "Amount to receive"}
+              label={receivedLabel}
               value={isBuy ? foreign : `${formatHundredths(ngnMinor)} NGN`}
             />
             <Line label="Rate" value={rate} />
@@ -198,10 +207,10 @@ export function ReceiptScreen({
               <>
                 <Line
                   label="Coordination Fee"
-                  value={`${formatHundredths(COORDINATION_FEE_KOBO)} NGN`}
+                  value={`${formatHundredths(buyFeeKobo)} NGN`}
                 />
                 <Line
-                  label="Amount Paid"
+                  label={paidLabel}
                   value={`${formatHundredths(paidMinor)} NGN`}
                   strong
                 />
@@ -221,8 +230,12 @@ export function ReceiptScreen({
                   }
                 />
                 <Line
-                  label="Amount to pay"
-                  value={`${formatHundredths(item.amountMinor + (sellerFee ?? 0))} ${item.currency}`}
+                  label={paidLabel}
+                  value={
+                    sellerFee === null
+                      ? `${formatHundredths(item.amountMinor)} ${item.currency} + fee`
+                      : `${formatHundredths(item.amountMinor + sellerFee)} ${item.currency}`
+                  }
                   strong
                   tone="sell"
                 />

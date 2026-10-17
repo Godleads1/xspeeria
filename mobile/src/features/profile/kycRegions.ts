@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { KYC_REGIONS, type KycRegion } from './data';
+import { session } from '../auth/session';
 
 let regions: readonly KycRegion[] = KYC_REGIONS;
 const listeners = new Set<() => void>();
@@ -20,12 +21,16 @@ export const kycRegions = {
     regions = [...regions, { ...region, state: 'pending' }];
     for (const l of listeners) l();
   },
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     regions = KYC_REGIONS;
     for (const l of listeners) l();
   },
 };
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => kycRegions.reset());
 
 export function useKycRegions(): readonly KycRegion[] {
   return useSyncExternalStore(kycRegions.subscribe, kycRegions.get, kycRegions.get);

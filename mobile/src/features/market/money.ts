@@ -10,20 +10,23 @@
  * every value (frontend restrictions are not security controls).
  */
 
-const DECIMAL = /^\d+(\.\d{0,2})?$/;
-
-/** Strips grouping commas and spaces a user might type. */
-function clean(input: string): string {
-  return input.replace(/[,\s]/g, '');
-}
+/**
+ * Plain digits, or digits in correct groups of three with commas ("1,644"), then up to two
+ * decimals after a point. A comma anywhere else is refused, never guessed: "1,50" might mean
+ * 1.50 to a user who writes a decimal comma, and silently reading it as 150 is a 100×
+ * error (FIN-07). Digits must be ASCII.
+ */
+const DECIMAL = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{0,2})?$/;
 
 /**
- * `"799"` → `79900`, `"1,644.5"` → `164450`. Returns null for empty, malformed, more than
- * two decimals, or values that are not positive safe integers in minor units.
+ * `"799"` → `79900`, `"1,644.5"` → `164450`. Returns null for empty, malformed, misplaced
+ * commas, inner spaces, more than two decimals, or values that are not positive safe
+ * integers in minor units. Surrounding spaces are ignored.
  */
 export function parseToHundredths(input: string): number | null {
-  const value = clean(input);
-  if (!DECIMAL.test(value)) return null;
+  const trimmed = input.trim();
+  if (!DECIMAL.test(trimmed)) return null;
+  const value = trimmed.replace(/,/g, '');
   const [whole, fraction = ''] = value.split('.');
   const minor = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
   if (!Number.isSafeInteger(minor) || minor <= 0) return null;
@@ -52,11 +55,35 @@ export function formatCompact(hundredths: number): string {
  * rounded half-up. Exact integer arithmetic via BigInt.
  */
 export function quoteMinor(amountMinor: number, rateHundredths: number): number {
+  // Half-up as written is only correct for non-negative values; amounts and rates are
+  // always positive, so anything else is a caller error.
+  if (!Number.isSafeInteger(amountMinor) || !Number.isSafeInteger(rateHundredths) || amountMinor < 0 || rateHundredths < 0) {
+    throw new Error('quoteMinor needs non-negative safe integers');
+  }
   const product = BigInt(amountMinor) * BigInt(rateHundredths);
   const rounded = (product + 50n) / 100n;
   const result = Number(rounded);
   if (!Number.isSafeInteger(result)) throw new Error('Amount to pay is out of range');
   return result;
+}
+
+/** quoteMinor, or null when the result would be out of the safe integer range. */
+export function quoteMinorOrNull(amountMinor: number, rateHundredths: number): number | null {
+  try {
+    return quoteMinor(amountMinor, rateHundredths);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Strict parse of a positive integer from untrusted text (route params): ASCII digits
+ * only, no sign, exponent, hex, spaces or leading zero. Returns null otherwise.
+ */
+export function parsePositiveInt(value: string | undefined): number | null {
+  if (value === undefined || !/^[1-9]\d*$/.test(value)) return null;
+  const n = Number(value);
+  return Number.isSafeInteger(n) ? n : null;
 }
 
 /**

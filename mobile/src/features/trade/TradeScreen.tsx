@@ -230,7 +230,9 @@ export function TradeScreen({
   const confirmPaid = (): void =>
     Alert.alert(
       "Have you paid?",
-      `Only continue once you have sent exactly ${payLabel} from a bank account in your name.`,
+      t.side === "buy"
+        ? `Only continue once you have sent exactly ${payLabel} from a bank account in your name.`
+        : `Only continue once you have sent ${payLabel} from a bank account in your name. The seller’s fee is not set yet in this demo.`,
       [
         { text: "Not yet", style: "cancel" },
         {

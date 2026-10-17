@@ -7,6 +7,8 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import * as ScreenCapture from 'expo-screen-capture';
 
+import { session } from '../auth/session';
+
 interface SecuritySettings {
   /** Figma default: on. */
   readonly allowScreenshots: boolean;
@@ -25,12 +27,16 @@ export const securitySettings = {
     state = { ...state, allowScreenshots: allow };
     for (const l of listeners) l();
   },
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     state = { allowScreenshots: true };
     for (const l of listeners) l();
   },
 };
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => securitySettings.reset());
 
 export function useSecuritySettings(): SecuritySettings {
   return useSyncExternalStore(securitySettings.subscribe, securitySettings.get, securitySettings.get);

@@ -13,7 +13,7 @@ jest.mock('expo-screen-capture', () => ({
   preventScreenCaptureAsync: jest.fn(() => Promise.resolve()),
   usePreventScreenCapture: jest.fn(),
 }));
-jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)), getStringAsync: jest.fn(() => Promise.resolve('')) }));
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );

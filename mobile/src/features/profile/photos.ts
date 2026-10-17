@@ -34,11 +34,18 @@ export async function pickPhoto(kind: PhotoKind): Promise<PickOutcome> {
   return { kind: 'picked', uri: saved.uri };
 }
 
-/** ID document photo for a date-of-birth check. Not stored on the device after submission. */
+/**
+ * ID document photo for an identity check. Re-encoded as JPEG like profile photos (SEC-08),
+ * which drops EXIF metadata such as GPS location; the size is kept large enough to read.
+ * The app keeps only the in-memory reference; the server must re-encode on upload.
+ */
 export async function pickDocument(): Promise<PickOutcome> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return { kind: 'denied' };
-  const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, exif: false });
+  const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1, exif: false });
   if (res.canceled || !res.assets[0]) return { kind: 'cancelled' };
-  return { kind: 'picked', uri: res.assets[0].uri };
+  const ctx = ImageManipulator.manipulate(res.assets[0].uri);
+  const image = await ctx.renderAsync();
+  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+  return { kind: 'picked', uri: saved.uri };
 }

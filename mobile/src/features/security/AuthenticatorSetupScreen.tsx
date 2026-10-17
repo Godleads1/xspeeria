@@ -7,7 +7,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Clipboard from 'expo-clipboard';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import { Icon } from '../../components/icons';
@@ -17,6 +16,7 @@ import { QrCode } from './QrCode';
 import { RecoveryCodes } from './RecoveryCodes';
 import { otpauthUri } from './totp';
 import { twoFactor, type RandomBytes } from './twoFactorStore';
+import { copySensitive } from './sensitiveClipboard';
 
 /** `JBSWY3DP…` → `JBSW Y3DP …` for reading aloud/typing. */
 export function groupKey(secret: string): string {
@@ -102,13 +102,13 @@ export function AuthenticatorSetupScreen({
                 accessibilityLabel="Copy key"
                 hitSlop={8}
                 onPress={() => {
-                  Clipboard.setStringAsync(secret).then(() => setCopied(true), () => setCopied(false));
+                  copySensitive(secret).then(() => setCopied(true), () => setCopied(false));
                 }}
               >
                 <Icon name="copy" color={color.brand.primary} size={20} />
               </Pressable>
             </View>
-            {copied ? <Text style={styles.hint}>Key copied</Text> : null}
+            {copied ? <Text style={styles.hint}>Key copied. Paste it now: it clears in 1 minute.</Text> : null}
 
             <Text style={[styles.step, styles.stepGap]}>2. Enter the 6-digit code it shows</Text>
             <TextInput

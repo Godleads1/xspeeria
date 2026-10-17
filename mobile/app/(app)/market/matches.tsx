@@ -9,7 +9,7 @@ import type {
   Side,
   TradeRequest,
 } from "../../../src/features/market/MarketScreen";
-import { formatHundredths } from "../../../src/features/market/money";
+import { formatHundredths, parsePositiveInt, quoteMinorOrNull } from "../../../src/features/market/money";
 import { useBeneficiaries } from "../../../src/features/profile/beneficiaryStore";
 import { useProfile } from "../../../src/features/profile/profileStore";
 import { requestStepUp } from "../../../src/features/security/stepUp";
@@ -30,16 +30,16 @@ function parseParams(
   };
   const side = one("side");
   const currency = one("currency");
-  const amount = Number(one("amount"));
-  const rate = Number(one("rate"));
+  const amount = parsePositiveInt(one("amount"));
+  const rate = parsePositiveInt(one("rate"));
   if (side !== "buy" && side !== "sell") return null;
   const valid =
     BUYABLE.some((c) => c.code === currency) &&
-    Number.isSafeInteger(amount) &&
-    amount > 0 &&
-    Number.isSafeInteger(rate) &&
-    rate > 0;
-  return valid
+    amount !== null &&
+    rate !== null &&
+    // The quote must be computable, or Select Match could not render (FIN-06).
+    quoteMinorOrNull(amount, rate) !== null;
+  return valid && amount !== null && rate !== null
     ? {
         side,
         currency: currency as string,

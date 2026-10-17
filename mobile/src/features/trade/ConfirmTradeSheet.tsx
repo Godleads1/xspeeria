@@ -16,7 +16,7 @@ import type { Listing } from "../market/data";
 import type { Side } from "../market/MarketScreen";
 import { formatHundredths } from "../market/money";
 import type { Beneficiary } from "../profile/data";
-import { FUNDING_WINDOW_MS, ngnFor, transferFor } from "./tradeStore";
+import { FUNDING_WINDOW_MS, ngnFor, tradeStore, transferFor, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_KOBO, sellerFeeMinor } from "../history/data";
 
 function Row({
@@ -58,8 +58,12 @@ export function ConfirmTradeSheet({
   onClose: () => void;
   onAddAccount: () => void;
 }): ReactElement {
-  const amountMinor = Math.min(requestedMinor, listing.availableMinor);
-  const partial = amountMinor < requestedMinor;
+  useTrades(); // re-read what is left when trades change
+  // What earlier trades have not already taken from this listing.
+  const available = tradeStore.remainingMinor(listing);
+  const amountMinor = Math.min(requestedMinor, available);
+  const soldOut = available === 0;
+  const partial = !soldOut && amountMinor < requestedMinor;
   const cur = listing.currency;
   const ngn = ngnFor(amountMinor, listing.rateHundredths);
   const transfer = transferFor(side, cur, amountMinor, listing.rateHundredths);
@@ -87,8 +91,14 @@ export function ConfirmTradeSheet({
             <Text testID="confirm-partial" style={styles.notice}>
               You asked for {formatHundredths(requestedMinor)} {cur}. This{" "}
               {side === "buy" ? "offer" : "request"} has{" "}
-              {formatHundredths(listing.availableMinor)} {cur}, so this trade is
+              {formatHundredths(available)} {cur} left, so this trade is
               for {formatHundredths(amountMinor)} {cur}.
+            </Text>
+          ) : null}
+          {soldOut ? (
+            <Text testID="confirm-sold-out" style={styles.notice}>
+              This {side === "buy" ? "offer" : "request"} has been fully taken.
+              Choose another one.
             </Text>
           ) : null}
           <View style={styles.card}>
@@ -130,7 +140,11 @@ export function ConfirmTradeSheet({
                 />
                 <Row
                   label="You transfer"
-                  value={`${formatHundredths(transfer.minor + (sellerFee ?? 0))} ${cur}`}
+                  value={
+                    sellerFee === null
+                      ? `${formatHundredths(transfer.minor)} ${cur} + fee`
+                      : `${formatHundredths(transfer.minor + sellerFee)} ${cur}`
+                  }
                   strong
                 />
                 {sellerFee === null ? (
@@ -193,8 +207,8 @@ export function ConfirmTradeSheet({
           <PrimaryButton
             testID="confirm-accept"
             label={side === "buy" ? "Accept offer" : "Accept request"}
-            onPress={payout ? () => onAccept(amountMinor, payout) : undefined}
-            disabled={!payout}
+            onPress={payout && !soldOut ? () => onAccept(amountMinor, payout) : undefined}
+            disabled={!payout || soldOut}
             tone={side === "sell" ? "sell" : "primary"}
           />
           <Pressable

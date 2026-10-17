@@ -207,3 +207,25 @@ const styles = themed(() => ({
   keyPressed: { backgroundColor: color.bg.sunken, borderRadius: 32 },
   keyText: { fontSize: 24, color: color.text.primary, ...brandWeight('500') },
 }));
+
+/**
+ * Shown instead of the app in a release build while only demo services exist (ADR-018).
+ * There is no log-in path behind it: the demo account and simulated checks are off.
+ */
+export function UnavailableBuild(): ReactElement {
+  return (
+    <View testID="unavailable-build" style={unavailableStyles.screen}>
+      <Text accessibilityRole="header" style={unavailableStyles.title}>Not available yet</Text>
+      <Text style={unavailableStyles.body}>
+        This version of Xspeeria isn’t connected to our services yet, so you can’t sign up or log in. Please use an
+        official release from your app store.
+      </Text>
+    </View>
+  );
+}
+
+const unavailableStyles = themed(() => ({
+  screen: { flex: 1, justifyContent: 'center', paddingHorizontal: space.lg, backgroundColor: color.bg.canvas },
+  title: { ...typography.headline, ...brandWeight('700'), fontSize: 24, color: color.text.primary, textAlign: 'center' },
+  body: { ...typography.body, lineHeight: 22, color: color.text.secondary, textAlign: 'center', marginTop: space.sm },
+}));

@@ -102,6 +102,8 @@ describe('trade phases', () => {
 
   it('rating is 1–5 stars and feedback is capped', () => {
     const t = make();
+    tradeStore.markPaid(t.id, T0);
+    for (let i = 1; i <= 3; i++) tradeStore.tick(t.id, T0 + i * DEMO_STEP_MS);
     expect(tradeStore.rate(t.id, 0, '')).toBe(false);
     expect(tradeStore.rate(t.id, 5, 'x'.repeat(900))).toBe(true);
     expect(tradeStore.get(t.id)?.rating?.feedback).toHaveLength(500);
@@ -207,7 +209,8 @@ describe('Sell flow (ADR-015)', () => {
     expect(screen.getByText('Amount to receive')).toBeTruthy();
     expect(screen.getByText('378,600.00 NGN')).toBeTruthy();
     expect(screen.getByText('Amount to pay')).toBeTruthy();
-    expect(screen.getAllByText('200.00 USD')).toHaveLength(2); // amount and amount to pay (fee not set)
+    expect(screen.getByText('200.00 USD')).toBeTruthy(); // transaction amount
+    expect(screen.getByText('200.00 USD + fee')).toBeTruthy(); // fee not set: no bare total (FIN-04)
     expect(screen.getByText('To be confirmed')).toBeTruthy();
     expect(screen.getByText(/378,600 NGN/)).toBeTruthy(); // payout to the NGN account
   });

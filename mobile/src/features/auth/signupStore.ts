@@ -9,9 +9,13 @@ export interface SignupDraft {
   readonly emailVerified: boolean;
   readonly newsletter: boolean;
   readonly pin: string | null;
+  /** Set only by Confirm PIN when both entries match; later steps require it. */
+  readonly pinConfirmed: boolean;
+  /** Face ID chosen during sign-up; applied when the account is created. */
+  readonly biometric: boolean;
 }
 
-const EMPTY: SignupDraft = { phone: null, identityVerified: false, email: null, emailVerified: false, newsletter: false, pin: null };
+const EMPTY: SignupDraft = { phone: null, identityVerified: false, email: null, emailVerified: false, newsletter: false, pin: null, pinConfirmed: false, biometric: false };
 let draft: SignupDraft = EMPTY;
 const listeners = new Set<() => void>();
 

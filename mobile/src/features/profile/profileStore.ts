@@ -7,6 +7,7 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { session } from '../auth/session';
 import { PROFILE_USER, type ProfileUser } from './data';
 
 export interface PendingDob {
@@ -38,18 +39,28 @@ export const profileStore = {
   },
   setAvatar: (uri: string | null): void => set({ avatarUri: uri }),
   setBanner: (uri: string | null): void => set({ bannerUri: uri }),
-  /** Only call after the code sent to `phone` was confirmed (verification.ts). */
-  confirmPhone: (phone: string): void => set({ phone }),
-  /** Only call after the code sent to `email` was confirmed (verification.ts). */
-  confirmEmail: (email: string): void => set({ email }),
+  /** Only call after the code sent to `phone` was confirmed (verification.ts). Log-in follows. */
+  confirmPhone(phone: string): void {
+    set({ phone });
+    session.updateContact({ phone });
+  },
+  /** Only call after the code sent to `email` was confirmed (verification.ts). Log-in follows. */
+  confirmEmail(email: string): void {
+    set({ email });
+    session.updateContact({ email });
+  },
   /** Date of birth stays unchanged until the ID check approves it. */
   submitDob: (dateOfBirth: string, now: number): void => set({ pendingDob: { dateOfBirth, submittedAt: now } }),
-  /** Tests only. */
+  /** Back to the initial profile (log-out / new account, and tests). */
   reset(): void {
     state = INITIAL;
     for (const l of listeners) l();
   },
 };
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => profileStore.reset());
 
 export function useProfile(): Profile {
   return useSyncExternalStore(profileStore.subscribe, profileStore.get, profileStore.get);

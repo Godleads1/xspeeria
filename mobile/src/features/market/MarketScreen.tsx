@@ -37,7 +37,7 @@ import {
   type Currency,
   type Listing,
 } from "./data";
-import { formatHundredths, matchPotential, parseToHundredths } from "./money";
+import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
 
 export type Side = "buy" | "sell";
 
@@ -91,8 +91,12 @@ export function MarketScreen({
     band && rateHundredths !== null
       ? matchPotential(side, rateHundredths, band)
       : null;
+  // An amount whose NGN value cannot be computed safely is not a valid request (FIN-06).
   const ready =
-    foreign !== null && amountMinor !== null && rateHundredths !== null;
+    foreign !== null &&
+    amountMinor !== null &&
+    rateHundredths !== null &&
+    quoteMinorOrNull(amountMinor, rateHundredths) !== null;
 
   const listings = useMemo(() => {
     if (!foreign) return [];

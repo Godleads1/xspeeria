@@ -13,7 +13,8 @@
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "package": "com.xspeeria.app"
+      "package": "com.xspeeria.app",
+      "allowBackup": false
     },
     "plugins": [
       "expo-router",

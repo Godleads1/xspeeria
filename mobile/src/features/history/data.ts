@@ -40,6 +40,17 @@ export interface HistoryItem {
   readonly payouts: readonly PayoutAccount[];
   /** Ordered user-facing stages; reached ones carry a time. */
   readonly progress: readonly ProgressStep[];
+  /**
+   * Amounts as recorded when the trade was made (FIN-02). A receipt shows these, never a
+   * figure recomputed from today's constants. Absent on older mock items only.
+   */
+  readonly recorded?: {
+    /** What the user paid into escrow, minor units of `payCurrency`. */
+    readonly transferMinor: number;
+    readonly payCurrency: string;
+    /** The user's own coordination fee, kobo (buy side); null when not set (sell side). */
+    readonly feeKobo: number | null;
+  };
 }
 
 /** Flat coordination fee per side, NGN kobo. Business plan §5: illustrative ₦375. */

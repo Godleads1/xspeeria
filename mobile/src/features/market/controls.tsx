@@ -63,6 +63,7 @@ export function FieldInput({
   maxLength = 16,
   inputMode = "decimal",
   secure = false,
+  noAutofill = false,
 }: {
   value: string;
   onChangeText: (next: string) => void;
@@ -72,6 +73,11 @@ export function FieldInput({
   inputMode?: "decimal" | "numeric" | "text";
   /** Password entry: masked, no autocorrect/capitalisation. */
   secure?: boolean;
+  /**
+   * Masked identity numbers (e.g. SSN): never offered to a password manager or autofill,
+   * so the OS does not ask to save them as a password (SEC-12).
+   */
+  noAutofill?: boolean;
   testID?: string;
   accessibilityLabel: string;
   trailing?: ReactNode;
@@ -91,7 +97,9 @@ export function FieldInput({
         secureTextEntry={secure}
         autoCapitalize={secure ? "none" : undefined}
         autoCorrect={secure ? false : undefined}
-        textContentType={secure ? "password" : undefined}
+        textContentType={noAutofill ? "none" : secure ? "password" : undefined}
+        autoComplete={noAutofill ? "off" : undefined}
+        importantForAutofill={noAutofill ? "no" : undefined}
         style={styles.input}
       />
       {trailing}

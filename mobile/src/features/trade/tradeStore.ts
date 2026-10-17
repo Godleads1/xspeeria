@@ -15,6 +15,8 @@ import { COORDINATION_FEE_KOBO, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
 import { quoteMinor } from '../market/money';
+import { DEMO_MODE } from '../auth/demo';
+import { session } from '../auth/session';
 
 export const FUNDING_WINDOW_MS = 5 * 60 * 1000;
 export const EXTENSION_MS = 5 * 60 * 1000;
@@ -60,6 +62,8 @@ export interface Trade {
   readonly events: readonly TradeEvent[];
   readonly deadline: number;
   readonly extension: 'none' | 'requested' | 'approved';
+  /** Listing the trade took its amount from (capacity accounting). */
+  readonly listingId: string;
   readonly phaseSince: number;
   readonly rating?: { readonly stars: number; readonly feedback: string };
 }
@@ -123,13 +127,16 @@ export const tradeStore = {
   }): Trade {
     const { side, listing, amountMinor, payout, now, random } = input;
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error('Amount must be a positive integer');
-    // Never silently resize: the caller must ask for an amount the listing can fill.
-    if (amountMinor > listing.availableMinor) throw new Error('Amount is more than this listing has available');
+    // Never silently resize: the caller must ask for an amount the listing can fill. What
+    // earlier live trades already took from the listing is not available again
+    // (Standing Standards §7.1: original = matched + remaining).
+    if (amountMinor > tradeStore.remainingMinor(listing)) throw new Error('Amount is more than this listing has available');
     const t = transferFor(side, listing.currency, amountMinor, listing.rateHundredths);
     const trade: Trade = {
       id: `t-${reference(random).toLowerCase()}`,
       reference: reference(random),
       side,
+      listingId: listing.id,
       currency: listing.currency,
       amountMinor,
       rateHundredths: listing.rateHundredths,
@@ -152,6 +159,14 @@ export const tradeStore = {
     return trade;
   },
 
+  /** What is left on a listing after live and completed trades took their share. */
+  remainingMinor(listing: Listing): number {
+    const taken = trades
+      .filter((t) => t.listingId === listing.id && t.phase !== 'expired' && t.phase !== 'cancelled')
+      .reduce((sum, t) => sum + t.amountMinor, 0);
+    return Math.max(0, listing.availableMinor - taken);
+  },
+
   requestExtension(id: string, now: number): boolean {
     const t = tradeStore.get(id);
     if (!t || t.phase !== 'awaiting_payment' || t.extension !== 'none' || now > t.deadline) return false;
@@ -162,14 +177,16 @@ export const tradeStore = {
   markPaid(id: string, now: number): boolean {
     const t = tradeStore.get(id);
     if (!t || t.phase !== 'awaiting_payment' || now > t.deadline) return false;
-    patch(id, (x) => ({ ...x, phase: 'confirming', phaseSince: now }));
+    // Paying ends any pending extension request: it is no longer needed.
+    patch(id, (x) => ({ ...x, phase: 'confirming', phaseSince: now, extension: x.extension === 'requested' ? 'none' : x.extension }));
     return true;
   },
 
   /** Only before the user has said they paid. */
   cancel(id: string, now: number): boolean {
     const t = tradeStore.get(id);
-    if (!t || t.phase !== 'awaiting_payment') return false;
+    // After the deadline the trade has expired (tick records that); it cannot be "cancelled".
+    if (!t || t.phase !== 'awaiting_payment' || now > t.deadline) return false;
     patch(id, (x) => ({ ...x, phase: 'cancelled', phaseSince: now, events: [...x.events, { label: 'You cancelled the trade', at: now }] }));
     return true;
   },
@@ -181,14 +198,20 @@ export const tradeStore = {
     const due = now - t.phaseSince >= DEMO_STEP_MS;
     const add = (x: Trade, label: string): TradeEvent[] => [...x.events, { label, at: now }];
     if (t.phase === 'awaiting_payment') {
-      if (t.extension === 'requested' && due) {
-        patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, `Extension approved by ${x.counterparty}`) }));
+      // A request made before the deadline holds expiry until it is answered (FIN-08); the
+      // extension runs from the original deadline. Demo only: the counterparty "answers".
+      if (t.extension === 'requested') {
+        if (due && DEMO_MODE) {
+          patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, `Extension approved by ${x.counterparty}`) }));
+        }
       } else if (now > t.deadline) {
         patch(id, (x) => ({ ...x, phase: 'expired', phaseSince: now, events: add(x, 'Time ran out: the trade was cancelled') }));
       }
       return;
     }
-    if (!due) return;
+    // The partner bank's steps advance on their own only in the demo (ADR-018). A real build
+    // moves a trade only on bank evidence from the server, never on the user's "I have paid".
+    if (!due || !DEMO_MODE) return;
     if (t.phase === 'confirming') {
       patch(id, (x) => ({ ...x, phase: 'awaiting_counterparty', phaseSince: now, events: add(x, 'Payment made to escrow by you') }));
     } else if (t.phase === 'awaiting_counterparty') {
@@ -203,12 +226,15 @@ export const tradeStore = {
     }
   },
 
+  /** One rating per completed trade. */
   rate(id: string, stars: number, feedback: string): boolean {
     if (!Number.isInteger(stars) || stars < 1 || stars > 5) return false;
+    const t = tradeStore.get(id);
+    if (!t || t.phase !== 'completed' || t.rating) return false;
     return patch(id, (x) => ({ ...x, rating: { stars, feedback: feedback.trim().slice(0, 500) } })) !== null;
   },
 
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     trades = [];
     emit();
@@ -218,6 +244,10 @@ export const tradeStore = {
 export function useTrade(id: string): Trade | undefined {
   return useSyncExternalStore(tradeStore.subscribe, () => tradeStore.get(id), () => tradeStore.get(id));
 }
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => tradeStore.reset());
 
 export function useTrades(): readonly Trade[] {
   return useSyncExternalStore(tradeStore.subscribe, tradeStore.all, tradeStore.all);
@@ -262,5 +292,6 @@ export function toHistoryItem(t: Trade): HistoryItem {
     reference: t.reference,
     payouts: t.phase === 'completed' ? [{ name: t.payout.name, bank: t.payout.bank, last4: t.payout.last4, amountMinor: t.side === 'buy' ? t.amountMinor : ngnFor(t.amountMinor, t.rateHundredths) }] : [],
     progress: progressFor(t),
+    recorded: { transferMinor: t.transferMinor, payCurrency: t.payCurrency, feeKobo: t.side === 'buy' ? t.feeKobo : null },
   };
 }

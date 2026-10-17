@@ -51,6 +51,7 @@ only as hashes. Losing every factor and every code → identity re-verification 
 | 2FA overview (Security → 2 FA authentication) | IMPLEMENTED (mock) |
 | Authenticator setup: QR + key, code confirmation, recovery codes shown once | IMPLEMENTED (mock) |
 | Step-up sheet before adding/removing a beneficiary, with 5-try / 15-min lock | IMPLEMENTED (mock) |
+| Each TOTP code accepted once (last used step kept; RFC 6238 §5.2) — ADR-018 | IMPLEMENTED (mock) |
 | Passkeys | DOCUMENTED — needs a native passkey module (not in Expo Go), an EAS build and a server relying party with associated domains |
 | Trusted devices, new-device alerts, payout hold, Support recovery | DOCUMENTED — server-side |
 | Step-up before password/email/phone change, trade acceptance, payout confirmation | DOCUMENTED — wire in as those flows are built |
