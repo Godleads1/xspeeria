@@ -4,6 +4,7 @@ import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AddBeneficiaryScreen } from '../../src/features/profile/AddBeneficiaryScreen';
 import { DESTINATION_COUNTRIES } from '../../src/features/profile/data';
+import { requestStepUp } from '../../src/features/security/stepUp';
 
 /** Route params are untrusted: only a live corridor currency opens the form. */
 export default function BeneficiaryDetailsRoute(): ReactElement {
@@ -15,9 +16,10 @@ export default function BeneficiaryDetailsRoute(): ReactElement {
     <AddBeneficiaryScreen
       currency={country.currency}
       onBack={() => router.back()}
+      stepUp={requestStepUp}
       onDone={() => {
         router.dismissTo('/profile/beneficiaries');
-        Alert.alert('Beneficiary added', 'Your bank will confirm the account name. You can use it once it is verified.');
+        Alert.alert('Beneficiary added', 'Your bank will confirm the account name. Payouts to a new beneficiary are held for 24 hours.');
       }}
     />
   );

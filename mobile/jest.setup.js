@@ -6,3 +6,11 @@
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default,
 );
+
+/** Native modules with no JS fallback in Jest: record calls, do nothing. */
+jest.mock('expo-screen-capture', () => ({
+  allowScreenCaptureAsync: jest.fn(() => Promise.resolve()),
+  preventScreenCaptureAsync: jest.fn(() => Promise.resolve()),
+  usePreventScreenCapture: jest.fn(),
+}));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, interaction, space, typography } from '../../theme';
+import type { StepUp } from '../security/stepUp';
 import { beneficiaryStore, useBeneficiaries } from './beneficiaryStore';
 import {
   BENEFICIARY_FILTERS,
@@ -87,9 +88,12 @@ function BeneficiaryRow({ item, onDelete }: { item: Beneficiary; onDelete: () =>
 export function BeneficiariesScreen({
   onBack,
   onAdd,
+  stepUp,
 }: {
   onBack: () => void;
   onAdd?: () => void;
+  /** ADR-008: 2FA re-check before removing a beneficiary. Required, so it cannot be forgotten. */
+  stepUp: StepUp;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const items = useBeneficiaries();
@@ -100,7 +104,12 @@ export function BeneficiariesScreen({
   const confirmDelete = (b: Beneficiary): void =>
     Alert.alert('Delete beneficiary?', `${b.name} (${maskAccount(b.accountLast4)}) will be removed from your saved accounts.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => beneficiaryStore.remove(b.id) },
+      { text: 'Delete', style: 'destructive', onPress: () => {
+          void stepUp(`Remove ${b.name} (${maskAccount(b.accountLast4)})`).then((ok) => {
+            if (ok) beneficiaryStore.remove(b.id);
+          });
+        },
+      },
     ]);
 
   const add = (): void => {

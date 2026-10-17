@@ -1,10 +1,11 @@
 import { useEffect, type ReactElement } from 'react';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
+import { StepUpHost } from '../src/features/security/StepUpHost';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES } from '../src/theme';
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
@@ -33,6 +34,8 @@ export default function RootLayout(): ReactElement | null {
     <>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
+      {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
+      <StepUpHost onSetUp={() => router.push('/profile/two-factor')} />
     </>
   );
 }

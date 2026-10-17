@@ -15,6 +15,7 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
+import type { StepUp } from '../security/stepUp';
 import { beneficiaryStore } from './beneficiaryStore';
 import {
   ACCOUNT_TYPES,
@@ -31,11 +32,14 @@ export function AddBeneficiaryScreen({
   currency,
   onBack,
   onDone,
+  stepUp,
 }: {
   /** Must already be validated against DESTINATION_COUNTRIES by the route. */
   currency: string;
   onBack: () => void;
   onDone: (added: Beneficiary) => void;
+  /** ADR-008: 2FA re-check before adding a beneficiary. */
+  stepUp: StepUp;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const fields = BANK_FORMS[currency] ?? [];
@@ -49,10 +53,11 @@ export function AddBeneficiaryScreen({
     if (errors[f.key]) setErrors((e) => ({ ...e, [f.key]: undefined }));
   };
 
-  const submit = (): void => {
+  const submit = async (): Promise<void> => {
     const found = validateBankForm(currency, values);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
+    if (!(await stepUp(`Add a ${currency} account at ${(values.bankName ?? '').trim()}`))) return;
     const added = beneficiaryStore.add({
       currency,
       bank: values.bankName ?? '',
@@ -128,7 +133,7 @@ export function AddBeneficiaryScreen({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
-        <PrimaryButton testID="add-beneficiary-submit" label="Add Beneficiary" onPress={submit} />
+        <PrimaryButton testID="add-beneficiary-submit" label="Add Beneficiary" onPress={() => void submit()} />
       </View>
 
       <ActionSheet

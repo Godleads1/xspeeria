@@ -47,7 +47,10 @@ export type IconName =
   | 'search'
   | 'trash'
   | 'plus'
-  | 'globe';
+  | 'globe'
+  | 'check'
+  | 'key'
+  | 'copy';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -263,6 +266,19 @@ export function Icon({
       ) : null}
       {name === 'trash' ? (
         <Path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13.5h9l1-13.5M10 10.5v6M14 10.5v6" {...stroke} />
+      ) : null}
+      {name === 'check' ? <Path d="M5 12.5l4.5 4.5L19 7.5" {...stroke} /> : null}
+      {name === 'key' ? (
+        <>
+          <Circle cx={8} cy={14} r={4} {...stroke} />
+          <Path d="M11 11l8-8M16 6l2.5 2.5M14 8l2 2" {...stroke} />
+        </>
+      ) : null}
+      {name === 'copy' ? (
+        <>
+          <Path d="M9 9h10v11H9z" {...stroke} />
+          <Path d="M5 15V4h10" {...stroke} />
+        </>
       ) : null}
       {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
       {name === 'globe' ? (

@@ -16,6 +16,8 @@ const LIST: Beneficiary[] = [
   { id: 'x2', name: 'Ama Mensah', currency: 'GHS', bank: 'GCB Bank', accountLast4: '1122', status: 'pending' },
 ];
 
+const allow = async (): Promise<boolean> => true;
+
 describe('beneficiary helpers', () => {
   it('masks to the last 4 and builds initials', () => {
     expect(maskAccount('9309')).toBe('•••• 9309');
@@ -42,7 +44,7 @@ describe('Manage Beneficiaries screen', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('renders the Figma content with a masked account', async () => {
-    await render(<BeneficiariesScreen onBack={jest.fn()} />);
+    await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={allow} />);
     expect(screen.getByText('Manage Beneficiaries')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search name')).toBeTruthy();
     for (const f of ['All', 'USD', 'NGN', 'GBP', 'GHS']) expect(screen.getByTestId(`beneficiary-filter-${f}`)).toBeTruthy();
@@ -53,7 +55,7 @@ describe('Manage Beneficiaries screen', () => {
   });
 
   it('filters with chips and search, showing an empty state', async () => {
-    await render(<BeneficiariesScreen onBack={jest.fn()} />);
+    await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={allow} />);
     await fireEvent.press(screen.getByTestId('beneficiary-filter-USD'));
     expect(screen.getByTestId('beneficiaries-empty')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('beneficiary-filter-All'));
@@ -65,7 +67,7 @@ describe('Manage Beneficiaries screen', () => {
 
   it('asks before deleting and only deletes on confirm', async () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    await render(<BeneficiariesScreen onBack={jest.fn()} />);
+    await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={allow} />);
     await fireEvent.press(screen.getByTestId('beneficiary-delete-b1'));
     expect(alert).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Tunde Bakere Olamilekan')).toBeTruthy();
@@ -76,10 +78,21 @@ describe('Manage Beneficiaries screen', () => {
     expect(screen.queryByText('Tunde Bakere Olamilekan')).toBeNull();
   });
 
+  it('keeps the beneficiary when the 2FA check fails', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const deny = jest.fn(async () => false);
+    await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={deny} />);
+    await fireEvent.press(screen.getByTestId('beneficiary-delete-b1'));
+    const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[];
+    await act(async () => buttons.find((b) => b.text === 'Delete')?.onPress?.());
+    expect(deny).toHaveBeenCalledWith(expect.stringMatching(/9309/));
+    expect(screen.getByText('Tunde Bakere Olamilekan')).toBeTruthy();
+  });
+
   it('back and add are wired', async () => {
     const onBack = jest.fn();
     const onAdd = jest.fn();
-    await render(<BeneficiariesScreen onBack={onBack} onAdd={onAdd} />);
+    await render(<BeneficiariesScreen onBack={onBack} onAdd={onAdd} stepUp={allow} />);
     await fireEvent.press(screen.getByTestId('beneficiaries-back'));
     await fireEvent.press(screen.getByTestId('beneficiaries-add'));
     expect(onBack).toHaveBeenCalled();
