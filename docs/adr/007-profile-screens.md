@@ -27,6 +27,9 @@
   fields with notched labels and a navy "Add Beneficiary" button. A new beneficiary is
   saved as **Awaiting bank verification** until the partner's account-name inquiry
   confirms it (Banking spec v1.1 §3.3; `BENEFICIARIES.validation_state`).
+- **KYC and limits** (amendment A4, 2026-10-17): a card per tier with "Tier N",
+  "Limit: X Naira per month", required documents, and a "Current Level" pill or a navy
+  "Upgrade" button. Adds token `brand.tint` (`navy100 #CBD2EA`) for the pill.
 
 ## 2. Recorded deviations
 
@@ -59,5 +62,15 @@
   its copy promises "a 10% bonus on your next currency exchange" and shows "Total Earnings
   $0". The business plan sets a flat coordination fee (not a percentage), and the app may
   show no stored balance; a referral reward has to be defined in those terms first.
+- **KYC tier limits and requirements are PLACEHOLDERS, not approved values.** The figures
+  (₦50,000 / ₦100,000 / ₦150,000 per month) and the identical document list on every tier
+  come from Figma. The Compliance Operations Manual (ASSUMPTION-COM-01, §3) says tier
+  thresholds are set by Compliance and Risk before go-live, and CDD requires photo ID,
+  liveness and verified contact details. Open questions for the product owner/Compliance:
+  the real limit per tier (and whether limits are per month or per rolling window), what
+  each tier requires, and whether the pilot also needs a GBP-side limit. Limits must be
+  enforced server-side; the app only displays them.
+- "Upgrade" is shown only on tiers above the user's current tier (Figma shows it on both
+  higher tiers); it explains that higher-tier verification is coming next.
 - Gender is displayed because Figma shows it; whether it is collected at all is a KYC/
   privacy decision (data minimisation) to confirm.

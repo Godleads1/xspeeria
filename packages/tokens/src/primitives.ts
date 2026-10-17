@@ -43,6 +43,8 @@ export const palette = {
   blue950: '#172554',
 
   /** Logo navy (vector `Asset_6.svg`) and the ladder designed for it. DEC-006. */
+  /** Light navy tint for pills on sunken surfaces (Figma KYC "Current Level"). */
+  navy100: '#CBD2EA',
   navy700: '#002885',
   navy900: '#001A6E',
   navy950: '#001350',

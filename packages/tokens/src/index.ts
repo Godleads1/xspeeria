@@ -54,6 +54,8 @@ export const color = {
   brand: {
     /** Logo navy, DEC-006. 15.30:1 on canvas; white on it is also 15.30:1. */
     primary: palette.navy900,
+    /** Light navy tint behind `brand.primary` text (pills). Navy on it ≈ 10.8:1. */
+    tint: palette.navy100,
     /**
      * 3.68:1 — passes for large text and UI components, FAILS AA for normal-size text.
      * Use `brand.secondaryText` where normal-size text is required.

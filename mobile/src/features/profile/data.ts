@@ -205,3 +205,34 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
   }
   return errors;
 }
+
+/* --------------------------------------------------------------------- KYC tiers */
+
+/**
+ * KYC tiers and monthly limits as drawn in Figma ("KYC and limits").
+ *
+ * PLACEHOLDER — NOT APPROVED. The Compliance Operations Manual (ASSUMPTION-COM-01) says
+ * numeric tier thresholds are set by Compliance and Risk before go-live; no figure is
+ * approved yet. These are Figma's numbers for layout only. Limits are always enforced
+ * server-side; the app only displays them. Whole naira, integers (never floats).
+ */
+export interface KycTier {
+  readonly level: number;
+  readonly monthlyLimitNaira: number;
+  readonly requirements: readonly string[];
+}
+
+export const KYC_TIERS: readonly KycTier[] = [
+  { level: 1, monthlyLimitNaira: 50_000, requirements: ['BVN', 'NIN', 'International Passport'] },
+  { level: 2, monthlyLimitNaira: 100_000, requirements: ['BVN', 'NIN', 'International Passport'] },
+  { level: 3, monthlyLimitNaira: 150_000, requirements: ['BVN', 'NIN', 'International Passport'] },
+];
+
+/** The signed-in user's current tier (mock; the server is authoritative). */
+export const CURRENT_KYC_TIER = 1;
+
+/** 50000 → `50,000`. Integer-only grouping. */
+export function groupThousands(n: number): string {
+  if (!Number.isSafeInteger(n) || n < 0) throw new Error('groupThousands expects a non-negative safe integer');
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
