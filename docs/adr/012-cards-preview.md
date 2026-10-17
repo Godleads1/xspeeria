@@ -23,7 +23,7 @@ carousel of USD / EUR / NGN virtual-card designs with page dots, the Details / F
 | Card number ending 4892 | `•••• •••• •••• ••••` | No card exists |
 | Transaction list incl. "Card funded +$260" | Empty state: card transactions will appear once cards are available | Funding a card implies holding customer money |
 | Details / Freeze Card / More active | Shown disabled | No card to act on |
-| 3D glowing currency artwork | Original SVG artwork in the same style | Artwork not exportable (view-only). A closer wireframe redraw was tried and reverted at the product owner's request (2026-10-17) |
+| 3D glowing currency artwork | **Figma "Card BG" artwork used** (2026-10-17, product owner: "this is better"): taken from the design file (1036:4840 / 4939 / 5038) at 1×, upscaled 3× with sharpening; plus a soft shadow, thin glossy edge and light sheen. **Licence to confirm before release** (likely stock imagery); a true 3× export from Figma would be sharper | Product owner preferred the original artwork over redraws |
 | — | "Create yours" button added | Product owner request |
 
 ## 3. Open — product, legal and partner decision before cards can launch
