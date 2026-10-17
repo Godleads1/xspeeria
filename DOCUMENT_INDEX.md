@@ -87,6 +87,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `014-confirm-trade-flow.md` | Confirm-trade flow: confirm sheet + 2FA, transaction in progress, completed + rating, trades in History; demo bank (DEC-020) | **APPROVED** — 2026-10-17 |
 | `015-sell-flow.md` | Sell flow: offer matches, green actions, seller fee in sent currency (to be confirmed), sell receipt in Figma layout (DEC-021) | **APPROVED** — 2026-10-17 |
 | `016-new-location-region-kyc.md` | New-location prompt and US identity check (SSN, ID document, selfie) with pending region; demo trigger (DEC-022) | **APPROVED** — 2026-10-17 |
+| `017-npm-audit-time-limited-exceptions.md` | npm audit gate: high threshold kept; exact-advisory exceptions, max 31 days, enforced by `scripts/check_npm_audit.py` (DEC-023) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 
