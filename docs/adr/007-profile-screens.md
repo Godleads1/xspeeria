@@ -47,6 +47,9 @@
 - **Referral Program** (amendment A8, 2026-10-17): illustration, "Refer a friend, get 10%
   off!", referral code with Copy, a "Friends joined" count box, and "Invite Friends" (system
   share sheet). Reward per ADR-009.
+- **Terms and Conditions** (amendment A9, 2026-10-17): scrollable document with bold title
+  block, numbered sections, sub-headings and bullets; the contact email opens the mail app.
+  Text transcribed verbatim from Figma (`src/features/legal/privacyPolicy.ts`).
 
 ## 2. Recorded deviations
 
@@ -96,3 +99,35 @@
   higher tiers); it explains that higher-tier verification is coming next.
 - Gender is displayed because Figma shows it; whether it is collected at all is a KYC/
   privacy decision (data minimisation) to confirm.
+
+## 4. Terms and Conditions text — DRAFT, needs Legal review before release
+
+The Figma text is the product owner's and is shown verbatim. These points conflict with
+approved docs or are unverified claims (CLAUDE.md: never invent compliance claims):
+
+1. **Wrong document.** The "Terms and Conditions" page contains a *Privacy Policy*. No Terms
+   of Service text exists yet.
+2. **Dates.** Effective 1 Oct 2025 is later than Last Updated 1 Aug 2025.
+3. **"We comply with … GDPR, CCPA, NDPR, PIPEDA".** Unverified compliance claim. Nigeria's
+   NDPR has been largely superseded by the Nigeria Data Protection Act 2023; whether CCPA or
+   PIPEDA apply depends on corridors and entities (pilot is NGN⇄GBP).
+4. **"Licensed financial partners worldwide" / "Licensed Escrow & Settlement Partners".**
+   The Banking spec v1.1 §11 says no licence or partner agreement may be implied as held;
+   corridors are NGN⇄GBP then NGN⇄USD, not worldwide.
+5. **"Registered in Canada and Nigeria, with technology development in the UK".** Company
+   facts for Legal to confirm.
+6. **"AI rate optimization".** Xspeeria does not set rates (users do; no spread, Business
+   Plan §5). Remove or explain.
+7. **"Biometric verification".** Special-category data under UK GDPR; needs a stated legal
+   basis and the KYC provider named once chosen.
+8. **TLS 1.3, AES-256, "GDPR-compliant data centers in the EU".** Hosting and encryption
+   choices are not decided; do not publish as fact.
+9. **Retention 5 / 7 years.** The Compliance Operations Manual marks retention periods as
+   assumptions needing sign-off.
+10. **"Binding corporate rules with our partners".** BCRs apply within a corporate group, not
+    with outside partners.
+11. **Cookies / "browser settings".** The mobile app uses no browser cookies; this section
+    fits the website only.
+12. **"[Data Protection Contact Email]"** is an unfilled placeholder.
+13. **Phone "+234701399012"** has 9 digits after +234; Nigerian numbers have 10. It is not
+    made tappable until corrected.
