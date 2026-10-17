@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState, type ReactElement } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../components/icons';
 import { Screen } from '../../components/primitives';
@@ -48,6 +48,8 @@ export interface TradeRequest {
 }
 
 const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
+
+const ADVERT = require('../../../assets/images/market-advert.png');
 
 export function MarketScreen({
   initialSide = 'buy',
@@ -248,9 +250,15 @@ export function MarketScreen({
       )}
 
       {side === 'buy' ? (
-        <View testID="market-advert" accessibilityRole="text" style={styles.advert}>
-          <Icon name="megaphone" color={color.text.primary} size={56} weight={1.5} />
-          <Text style={styles.advertText}>PLACE ADVERT{'\n'}HERE</Text>
+        <View testID="market-advert" style={styles.advert}>
+          {/* Figma advert slot (node 787:4204). PLACEHOLDER artwork supplied by the product
+              owner; the stock photo needs a confirmed licence before release. */}
+          <Image
+            source={ADVERT}
+            accessibilityLabel="Place advert here"
+            resizeMode="cover"
+            style={styles.advertImage}
+          />
         </View>
       ) : null}
 
@@ -321,15 +329,14 @@ const styles = StyleSheet.create({
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
   },
+  // Figma: 342 × 100, radius 10, 1 pt #9CA3AF border.
   advert: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    minHeight: 100,
+    aspectRatio: 342 / 100,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: color.text.disabled,
     backgroundColor: color.trade.advert,
+    overflow: 'hidden',
   },
-  advertText: { ...brandWeight('700'), fontSize: 14, lineHeight: 18, color: color.text.primary, textAlign: 'center' },
+  advertImage: { width: '100%', height: '100%' },
 });
