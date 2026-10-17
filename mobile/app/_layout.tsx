@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
+import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES } from '../src/theme';
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
@@ -16,6 +17,7 @@ export default function RootLayout(): ReactElement | null {
   const [loaded, error] = useFonts({ ...SATOSHI_FILES, ...SPACE_GROTESK_FILES });
   // A font failure must not block the app: it falls back to the system face.
   const ready = loaded || error !== null;
+  useApplyScreenCapturePreference();
 
   useEffect(() => {
     if (ready) {

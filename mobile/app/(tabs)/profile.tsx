@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ProfileScreen } from '../../src/features/profile/ProfileScreen';
 
-/** Profile tab (ADR-007). Account details, Manage Beneficiaries and KYC and limits are built; other rows are coming next. */
+/** Profile tab (ADR-007). Account details, Manage Beneficiaries, KYC and limits and Security are built; other rows are coming next. */
 export default function ProfileRoute(): ReactElement {
   const router = useRouter();
   return (
@@ -13,6 +13,7 @@ export default function ProfileRoute(): ReactElement {
         if (destination === 'account') router.push('/profile/account');
         else if (destination === 'beneficiaries') router.push('/profile/beneficiaries');
         else if (destination === 'kyc') router.push('/profile/kyc');
+        else if (destination === 'security') router.push('/profile/security');
         else Alert.alert('Coming next', 'This screen is one of the next to be built.');
       }}
     />

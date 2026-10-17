@@ -30,6 +30,11 @@
 - **KYC and limits** (amendment A4, 2026-10-17): a card per tier with "Tier N",
   "Limit: X Naira per month", required documents, and a "Current Level" pill or a navy
   "Upgrade" button. Adds token `brand.tint` (`navy100 #CBD2EA`) for the pill.
+- **Security** (amendment A5, 2026-10-17): Change Password ›, 2 FA authentication ›, and
+  a working **Allow Screenshot** switch (default on, as in Figma). Turning it off blocks
+  screenshots and screen recording app-wide via `expo-screen-capture` (`~57.0.0`, in Expo
+  Go; a new EAS dev build is needed for the custom client). In memory only for now. It is a
+  privacy convenience, never a security control.
 
 ## 2. Recorded deviations
 
@@ -47,6 +52,8 @@
 | One US-format form for every country (Routing Number, Bank Name, Account Number, Account Type) | US form kept for USD; Nigeria = Bank Name + 10-digit NUBAN account number; UK = Sort Code + Bank Name + 8-digit account number | Routing numbers and checking/savings types do not exist in NGN/GBP banking |
 | Fifth field "Account Type * — enter" (duplicate label) | Read-only **Account Name — "Confirmed by your bank"**, plus "You can only add accounts in your own name" | Banking spec §3.3: the holder name comes from the partner's name inquiry and must match the KYC legal name; it is never typed by the user |
 | Full account number held by the app | Only the last 4 digits kept on the device; full number to be sent once to the server, stored as tokenised `account_ref` (API Data Dictionary, BENEFICIARIES) | Security rule; no backend yet, so the full number is discarded |
+| Security row "Hide Balance" (toggle) | **Omitted** | Xspeeria is wallet-less and never shows a stored balance (design bible, no-balance rule enforced by `no-balance.test.ts`); the toggle would imply one exists |
+| Change Password / 2FA open working flows | Rows say the screen is coming next | Password, MFA and session specifics are **Open Decision 2** (Standing Standards §15); MFA is required to transact (§7.7), so 2FA will not be optional once built |
 | Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items
