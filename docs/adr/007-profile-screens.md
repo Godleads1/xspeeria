@@ -35,6 +35,11 @@
   screenshots and screen recording app-wide via `expo-screen-capture` (`~57.0.0`, in Expo
   Go; a new EAS dev build is needed for the custom client). In memory only for now. It is a
   privacy convenience, never a security control.
+- **Change Password** (Security → Change Password, amendment A6, 2026-10-17): three
+  masked outlined fields (old, new, confirm) and a navy "Change password" button. Client
+  checks only: required, confirmation matches, new differs from old. Passwords stay in
+  component state, are never logged or stored, and are cleared on submit. With no backend,
+  submit says the password has not been changed.
 
 ## 2. Recorded deviations
 
@@ -53,7 +58,7 @@
 | Fifth field "Account Type * — enter" (duplicate label) | Read-only **Account Name — "Confirmed by your bank"**, plus "You can only add accounts in your own name" | Banking spec §3.3: the holder name comes from the partner's name inquiry and must match the KYC legal name; it is never typed by the user |
 | Full account number held by the app | Only the last 4 digits kept on the device; full number to be sent once to the server, stored as tokenised `account_ref` (API Data Dictionary, BENEFICIARIES) | Security rule; no backend yet, so the full number is discarded |
 | Security row "Hide Balance" (toggle) | **Omitted** | Xspeeria is wallet-less and never shows a stored balance (design bible, no-balance rule enforced by `no-balance.test.ts`); the toggle would imply one exists |
-| Change Password / 2FA open working flows | Rows say the screen is coming next | Password, MFA and session specifics are **Open Decision 2** (Standing Standards §15); MFA is required to transact (§7.7), so 2FA will not be optional once built |
+| Change Password / 2FA open working flows | Change Password form built (A6) without any length/complexity rule; 2FA row says it is coming next | Password, MFA and session specifics are **Open Decision 2** (Standing Standards §15); MFA is required to transact (§7.7), so 2FA will not be optional once built |
 | Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items

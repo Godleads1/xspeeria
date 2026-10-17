@@ -53,6 +53,7 @@ export function FieldInput({
   trailing,
   maxLength = 16,
   inputMode = 'decimal',
+  secure = false,
 }: {
   value: string;
   onChangeText: (next: string) => void;
@@ -60,6 +61,8 @@ export function FieldInput({
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
   inputMode?: 'decimal' | 'numeric' | 'text';
+  /** Password entry: masked, no autocorrect/capitalisation. */
+  secure?: boolean;
   testID?: string;
   accessibilityLabel: string;
   trailing?: ReactNode;
@@ -76,6 +79,10 @@ export function FieldInput({
         keyboardType={keyboardType}
         inputMode={inputMode}
         maxLength={maxLength}
+        secureTextEntry={secure}
+        autoCapitalize={secure ? 'none' : undefined}
+        autoCorrect={secure ? false : undefined}
+        textContentType={secure ? 'password' : undefined}
         style={styles.input}
       />
       {trailing}
