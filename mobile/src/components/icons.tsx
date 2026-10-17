@@ -43,7 +43,11 @@ export type IconName =
   | 'phone'
   | 'mail'
   | 'calendar'
-  | 'gender';
+  | 'gender'
+  | 'search'
+  | 'trash'
+  | 'plus'
+  | 'globe';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -249,6 +253,22 @@ export function Icon({
         <>
           <Circle cx={10} cy={14} r={4.5} {...stroke} />
           <Path d="M13.2 10.8 19 5M15 5h4v4" {...stroke} />
+        </>
+      ) : null}
+      {name === 'search' ? (
+        <>
+          <Circle cx={11} cy={11} r={6.5} {...stroke} />
+          <Path d="M16 16l4 4" {...stroke} />
+        </>
+      ) : null}
+      {name === 'trash' ? (
+        <Path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13.5h9l1-13.5M10 10.5v6M14 10.5v6" {...stroke} />
+      ) : null}
+      {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
+      {name === 'globe' ? (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...stroke} />
+          <Path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" {...stroke} />
         </>
       ) : null}
     </Svg>

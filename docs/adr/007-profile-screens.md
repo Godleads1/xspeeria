@@ -17,6 +17,10 @@
 - **Account details** (`1041:11224`): grey band, large avatar, public handle and rating,
   a card of personal details, and **KYC approved regions** with Approved/Pending pills.
 
+- **Manage Beneficiaries** (Profile → Manage Beneficiaries, amendment A1, 2026-10-17): back
+  + title, "Search name", currency chips All · USD · NGN · GBP · GHS, saved payout accounts
+  (initials avatar with a flag badge, name, account, bank, delete) and a navy "+" button.
+
 ## 2. Recorded deviations
 
 | Figma | Implementation | Why |
@@ -27,10 +31,17 @@
 | Working Light/Dark switch | Switch shown **disabled**, subtitle "Dark mode is coming soon" | No dark palette exists yet; a switch that did nothing would mislead |
 | Delete Profile (one tap) | Confirmation dialog that explains consequences; nothing is deleted yet | Irreversible action; account closure must handle open trades and legal record retention |
 | Phone "+238938383838" | `+234 803 838 3838` | Placeholder correction (Nigerian format) |
+| Beneficiary account "920298299309" in full | `•••• 9309` (last 4 only; the device never holds the full number) | Security rule: never show or store full bank account numbers on the client |
+| Chip label "GHC" | "GHS" | The Ghana cedi's ISO 4217 code is GHS (GHC was retired in 2007) |
+| Trash icon deletes on tap | Confirmation dialog (Cancel / Delete) | Destructive action |
 
 ## 3. Open items
 
-- Rows other than Account details explain they are coming next. Planned order: Security,
+- Manage Beneficiaries is mock-only: delete affects the on-screen list, and "+" says the
+  add flow is next. **Saving or paying out to a third party's account depends on DEC-007**
+  (legal/partner-bank confirmation); the add flow must also verify account name with the
+  bank server-side, never trust a client-entered name.
+- Rows other than Account details and Manage Beneficiaries explain they are coming next. Planned order: Security,
   KYC and limits, Manage Beneficiaries (payout accounts; third-party payouts per DEC-007
   pending legal/partner-bank confirmation), Contact Support, FAQ, Terms and Conditions.
 - **Referral Program (Figma `1041:11976`) needs a product decision before it is built:**

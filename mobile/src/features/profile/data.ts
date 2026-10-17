@@ -61,3 +61,48 @@ export function longDate(iso: string): string {
 export function formatRating(hundredths: number): string {
   return `${Math.trunc(hundredths / 100)}.${String(hundredths % 100).padStart(2, '0')}`;
 }
+
+/**
+ * Payout accounts the user has saved (Figma Manage Beneficiaries). Only the last 4 digits
+ * of an account number are ever held on the device; the full number stays server-side.
+ * Third-party payouts are pending legal/partner-bank confirmation (DEC-007).
+ */
+export interface Beneficiary {
+  readonly id: string;
+  readonly name: string;
+  readonly currency: string;
+  readonly bank: string;
+  readonly accountLast4: string;
+}
+
+export const BENEFICIARY_FILTERS = ['All', 'USD', 'NGN', 'GBP', 'GHS'] as const;
+export type BeneficiaryFilter = (typeof BENEFICIARY_FILTERS)[number];
+
+export const BENEFICIARIES: readonly Beneficiary[] = [
+  { id: 'b1', name: 'Tunde Bakere Olamilekan', currency: 'NGN', bank: 'Access Bank', accountLast4: '9309' },
+];
+
+/** `9309` → `•••• 9309`. */
+export function maskAccount(last4: string): string {
+  return `•••• ${last4}`;
+}
+
+/** `Tunde Bakere Olamilekan` → `TO` (first and last name). */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return `${first}${last}`.toUpperCase();
+}
+
+export function filterBeneficiaries(
+  list: readonly Beneficiary[],
+  query: string,
+  filter: BeneficiaryFilter,
+): Beneficiary[] {
+  const q = query.trim().toLowerCase();
+  return list.filter(
+    (b) => (filter === 'All' || b.currency === filter) && (q === '' || b.name.toLowerCase().includes(q)),
+  );
+}

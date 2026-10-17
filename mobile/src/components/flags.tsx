@@ -21,6 +21,10 @@ const FLAG = {
   etYellow: '#FCDD09',
   etRed: '#DA121A',
   etBlue: '#0F47AF',
+  ghRed: '#CE1126',
+  ghGold: '#FCD116',
+  ghGreen: '#006B3F',
+  black: '#000000',
 } as const;
 
 function UsStripes(): ReactElement {
@@ -101,6 +105,15 @@ function art(code: string): ReactElement {
           <Rect y={16} width={24} height={8} fill={FLAG.etRed} />
           <Circle cx={12} cy={12} r={5} fill={FLAG.etBlue} />
           <Path d="M12 8.6l.9 2.6h2.6l-2.1 1.6.8 2.6-2.2-1.6-2.2 1.6.8-2.6-2.1-1.6h2.6z" fill={FLAG.etYellow} />
+        </>
+      );
+    case 'GHS':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.ghRed} />
+          <Rect y={8} width={24} height={8} fill={FLAG.ghGold} />
+          <Rect y={16} width={24} height={8} fill={FLAG.ghGreen} />
+          <Path d="M12 8.4l.95 2.9h3.05l-2.45 1.8.95 2.9L12 14.2 9.5 16l.95-2.9L8 11.3h3.05z" fill={FLAG.black} />
         </>
       );
     default:
