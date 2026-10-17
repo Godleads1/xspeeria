@@ -17,7 +17,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^16.3.2",
+    "@next/eslint-plugin-next": "^16.3.8",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

@@ -143,9 +143,11 @@ export const interaction = {
 } as const;
 
 /** Same keys as `color`, any value. Both schemes must satisfy it. */
-export type ColorScheme = { readonly [G in keyof typeof color]: { readonly [K in keyof (typeof color)[G]]: string } };
+export type ColorScheme = {
+  readonly [G in keyof typeof color]: Readonly<Record<keyof (typeof color)[G], string>>;
+};
 export type InteractionScheme = {
-  readonly [G in keyof typeof interaction]: { readonly [K in keyof (typeof interaction)[G]]: string };
+  readonly [G in keyof typeof interaction]: Readonly<Record<keyof (typeof interaction)[G], string>>;
 };
 
 /**
