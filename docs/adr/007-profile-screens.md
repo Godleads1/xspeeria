@@ -40,6 +40,10 @@
   checks only: required, confirmation matches, new differs from old. Passwords stay in
   component state, are never logged or stored, and are cleared on submit. With no backend,
   submit says the password has not been changed.
+- **FAQ** (amendment A7, 2026-10-17): "How can we help you?", keyword search, topic cards
+  (Getting Started, How to Sell, Payments) that filter the list, "Top Questions" with
+  "View all", and expandable question cards. Adds token `brand.secondarySurface`
+  (`blue50 #EFF6FF`) and line icons hexagon, dollar, minus.
 
 ## 2. Recorded deviations
 
@@ -59,6 +63,7 @@
 | Full account number held by the app | Only the last 4 digits kept on the device; full number to be sent once to the server, stored as tokenised `account_ref` (API Data Dictionary, BENEFICIARIES) | Security rule; no backend yet, so the full number is discarded |
 | Security row "Hide Balance" (toggle) | **Omitted** | Xspeeria is wallet-less and never shows a stored balance (design bible, no-balance rule enforced by `no-balance.test.ts`); the toggle would imply one exists |
 | Change Password / 2FA open working flows | Change Password form built (A6) without any length/complexity rule; 2FA built to ADR-008 (DEC-014) | Password, MFA and session specifics are **Open Decision 2** (Standing Standards §15); MFA is required to transact (§7.7), so 2FA will not be optional once built |
+| FAQ: "How to create a account?" … "Tradebase account"; other questions lorem ipsum | Ten questions written from approved docs (`src/features/faq/data.ts`); "Tradebase" → "Xspeeria"; grammar fixed | Placeholder/product-name slip. Answers avoid unapproved figures and claims: no fee amount (business plan says reconfirm before publishing), no "licensed" claim, no settlement-window length. **Needs Legal/Compliance review before release** |
 | Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items

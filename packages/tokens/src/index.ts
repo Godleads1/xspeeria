@@ -56,6 +56,8 @@ export const color = {
     primary: palette.navy900,
     /** Light navy tint behind `brand.primary` text (pills). Navy on it ≈ 10.8:1. */
     tint: palette.navy100,
+    /** Very light blue card surface (Figma FAQ "Getting Started"). Not a text colour. */
+    secondarySurface: palette.blue50,
     /**
      * 3.68:1 — passes for large text and UI components, FAILS AA for normal-size text.
      * Use `brand.secondaryText` where normal-size text is required.

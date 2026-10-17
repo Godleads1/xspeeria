@@ -35,6 +35,7 @@ export const palette = {
   /** Figma card-chip contact lines. */
   chipBronze: '#B96634',
 
+  blue50: '#EFF6FF',
   blue500: '#3B82F6',
   blue600: '#2563EB',
   blue700: '#1D4ED8',

@@ -50,7 +50,10 @@ export type IconName =
   | 'globe'
   | 'check'
   | 'key'
-  | 'copy';
+  | 'copy'
+  | 'hexagon'
+  | 'dollar'
+  | 'minus';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -280,6 +283,19 @@ export function Icon({
           <Path d="M5 15V4h10" {...stroke} />
         </>
       ) : null}
+      {name === 'hexagon' ? (
+        <>
+          <Path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z" {...stroke} />
+          <Circle cx={12} cy={12} r={3} {...stroke} />
+        </>
+      ) : null}
+      {name === 'dollar' ? (
+        <>
+          <Path d="M4 5h16v14H4z" {...stroke} />
+          <Path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.9 0 2.6 5 1.4 5 4.1 0 1.2-1.1 2-2.5 2-1.2 0-2.2-.5-2.7-1.3M12 6.5v11" {...stroke} />
+        </>
+      ) : null}
+      {name === 'minus' ? <Path d="M5 12h14" {...stroke} /> : null}
       {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
       {name === 'globe' ? (
         <>
