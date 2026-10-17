@@ -90,6 +90,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `017-npm-audit-time-limited-exceptions.md` | npm audit gate: high threshold kept; exact-advisory exceptions, max 31 days, enforced by `scripts/check_npm_audit.py` (DEC-023) | **APPROVED** — 2026-10-17 |
 | `018-security-review-remediation.md` | Independent security/QA/financial review: DEMO_MODE from the build, per-user data cleared on log-out, TOTP single-use, strict money input; two rounding/partial-fill conflicts open (DEC-024) | **APPROVED** — 2026-10-17 |
 | `019-review-decisions-and-multi-offer-fill.md` | High-severity release rule relaxed with risk acceptance (C1); rounding half to even; one request filled from several listings, each part explicit (DEC-025) | **APPROVED** — 2026-10-17 |
+| `020-official-rate-ceiling.md` | The official rate is the reference ceiling: `0 < rate ≤ official rate`, hard block above, no floor; source/cadence still open (DEC-026) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 

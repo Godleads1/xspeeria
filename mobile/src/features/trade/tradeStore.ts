@@ -15,6 +15,7 @@ import { COORDINATION_FEE_KOBO, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
 import { quoteMinor } from '../market/money';
+import { rateProblem } from '../market/rateCeiling';
 import { DEMO_MODE } from '../auth/demo';
 import { session } from '../auth/session';
 
@@ -134,6 +135,8 @@ export const tradeStore = {
     // earlier live trades already took from the listing is not available again
     // (Standing Standards §7.1: original = matched + remaining).
     if (amountMinor > tradeStore.remainingMinor(listing)) throw new Error('Amount is more than this listing has available');
+    // Re-checked at acceptance: a listing above the official rate cannot be taken (§7.2).
+    if (rateProblem(listing.currency, listing.rateHundredths) !== null) throw new Error('This rate is above the official rate');
     const t = transferFor(side, listing.currency, amountMinor, listing.rateHundredths);
     const trade: Trade = {
       id: `t-${reference(random).toLowerCase()}`,

@@ -4,6 +4,8 @@
  * NGN price of one unit of the foreign currency; amounts are integer minor units.
  */
 
+import { rateProblem } from './rateCeiling';
+
 export interface Currency {
   readonly code: string;
   readonly name: string;
@@ -51,6 +53,9 @@ export const OFFERS: readonly Listing[] = [
   { id: 'o2', currency: 'USD', availableMinor: 20000, rateHundredths: 190700, meta: 'User 9867' },
   { id: 'o3', currency: 'USD', availableMinor: 20000, rateHundredths: 190200, meta: 'User 0897' },
   { id: 'o4', currency: 'USD', availableMinor: 50000, rateHundredths: 189300, meta: 'Offer Time: 12 mins ago' },
+  // Demo addition (ADR-020): o2 and o3 keep their Figma rates, which are above the demo
+  // official rate and so are not eligible; this offer keeps a 1,000 USD multi-offer fill possible.
+  { id: 'o8', currency: 'USD', availableMinor: 40000, rateHundredths: 189800, meta: 'User 5512' },
   { id: 'o5', currency: 'CAD', availableMinor: 30000, rateHundredths: 118000, meta: 'Offer Time: 3 mins ago', best: true },
   { id: 'o6', currency: 'EUR', availableMinor: 15000, rateHundredths: 176500, meta: 'User 4410', best: true },
   { id: 'o7', currency: 'AUD', availableMinor: 25000, rateHundredths: 105500, meta: 'Offer Time: 9 mins ago', best: true },
@@ -70,7 +75,8 @@ export function listingsFor(
 ): readonly Listing[] {
   const source = side === 'buy' ? OFFERS : REQUESTS;
   return source
-    .filter((l) => l.currency === currency)
+    // A listing above the official rate is not eligible to be accepted (rateCeiling.ts).
+    .filter((l) => l.currency === currency && rateProblem(l.currency, l.rateHundredths) === null)
     .slice()
     .sort((a, b) =>
       side === 'buy' ? a.rateHundredths - b.rateHundredths : b.rateHundredths - a.rateHundredths,

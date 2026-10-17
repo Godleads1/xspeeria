@@ -8,6 +8,7 @@ import { BUYABLE } from "../../../src/features/market/data";
 import type { Listing } from "../../../src/features/market/data";
 import type { TradeRequest } from "../../../src/features/market/MarketScreen";
 import { formatHundredths, parsePositiveInt, quoteMinorOrNull } from "../../../src/features/market/money";
+import { rateProblem } from "../../../src/features/market/rateCeiling";
 import { useBeneficiaries } from "../../../src/features/profile/beneficiaryStore";
 import { useProfile } from "../../../src/features/profile/profileStore";
 import { requestStepUp } from "../../../src/features/security/stepUp";
@@ -43,6 +44,8 @@ function parseParams(
     BUYABLE.some((c) => c.code === currency) &&
     amount !== null &&
     rate !== null &&
+    // The official rate is the maximum (rateCeiling.ts); a link cannot get round it.
+    rateProblem(currency as string, rate) === null &&
     // The quote must be computable, or Select Match could not render (FIN-06).
     quoteMinorOrNull(amount, rate) !== null;
   return valid && amount !== null && rate !== null

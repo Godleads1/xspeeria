@@ -38,6 +38,7 @@ import {
   type Listing,
 } from "./data";
 import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
+import { officialRateFor, rateProblem } from "./rateCeiling";
 
 export type Side = "buy" | "sell";
 
@@ -88,14 +89,25 @@ export function MarketScreen({
   const amountMinor = parseToHundredths(amount);
   const rateHundredths = parseToHundredths(rate);
   const potential =
-    band && rateHundredths !== null
+    band && rateHundredths !== null && (!foreign || rateProblem(foreign.code, rateHundredths) === null)
       ? matchPotential(side, rateHundredths, band)
       : null;
+  // The official rate is the maximum (rateCeiling.ts, Standing Standards §7.2).
+  const official = foreign ? officialRateFor(foreign.code) : null;
+  const problem =
+    foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths) : null;
+  const rateError =
+    problem === "above-official" && foreign && official !== null
+      ? `Your rate can’t be above the official rate of NGN ${formatHundredths(official)} per ${foreign.code}.`
+      : problem === "official-unavailable"
+        ? "The official rate isn’t available right now, so offers can’t be created. Try again later."
+        : null;
   // An amount whose NGN value cannot be computed safely is not a valid request (FIN-06).
   const ready =
     foreign !== null &&
     amountMinor !== null &&
     rateHundredths !== null &&
+    problem === null &&
     quoteMinorOrNull(amountMinor, rateHundredths) !== null;
 
   const listings = useMemo(() => {
@@ -230,7 +242,7 @@ export function MarketScreen({
           ) : null}
         </View>
 
-        <OutlinedField label="Rate *">
+        <OutlinedField label="Rate *" invalid={rateError !== null}>
           <FieldInput
             testID="market-rate"
             accessibilityLabel={`Rate in NGN per ${foreign?.code ?? "unit"}`}
@@ -265,6 +277,16 @@ export function MarketScreen({
             }
           />
         </OutlinedField>
+        {foreign && official !== null ? (
+          <Text testID="market-official" style={styles.official}>
+            {`Official rate (demo): NGN ${formatHundredths(official)} per ${foreign.code}. Your rate must be this or lower.`}
+          </Text>
+        ) : null}
+        {rateError ? (
+          <Text testID="market-rate-error" accessibilityRole="alert" style={styles.rateError}>
+            {rateError}
+          </Text>
+        ) : null}
 
         <Pressable
           testID="market-create"
@@ -398,6 +420,8 @@ const styles = themed(() => ({
   },
   details: { flexDirection: "row", alignItems: "center", gap: 4 },
   detailsText: { ...typography.caption, fontSize: 11, color: color.error.text },
+  official: { ...typography.caption, fontSize: 12, color: color.text.secondary, marginTop: -6 },
+  rateError: { ...typography.caption, fontSize: 12, color: color.error.text, marginTop: -6 },
   potential: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 },
   potentialGood: { backgroundColor: color.success.surface },
   potentialLow: { backgroundColor: color.error.surface },

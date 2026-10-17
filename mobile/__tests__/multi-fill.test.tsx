@@ -21,7 +21,7 @@ const own = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency 
 const PAYOUT = { id: 'b3', name: 'David Peters', bank: 'Chase', last4: '4410' };
 
 // Four sellers with 250.00 USD each, at slightly different rates.
-const SELLERS: readonly Listing[] = [189300, 189500, 190000, 190200].map((rate, i) => ({
+const SELLERS: readonly Listing[] = [189300, 189500, 189800, 189999].map((rate, i) => ({
   id: `s${i + 1}`,
   currency: 'USD',
   availableMinor: 25000,
@@ -65,10 +65,10 @@ describe('fill plan', () => {
     let plan: FillPlan = [];
     for (const l of SELLERS) plan = addToPlan(plan, l, 100000, remaining);
     const t = planTotals('buy', plan);
-    // 250 × (1,893 + 1,895 + 1,900 + 1,902) = 1,897,500.00 NGN
-    expect(t.ngnMinor).toBe(189750000);
+    // 250 × (1,893 + 1,895 + 1,898 + 1,899.99) = 1,896,497.50 NGN
+    expect(t.ngnMinor).toBe(189649750);
     expect(t.feeKobo).toBe(4 * COORDINATION_FEE_KOBO);
-    expect(t.transferMinor).toBe(189750000 + 4 * COORDINATION_FEE_KOBO);
+    expect(t.transferMinor).toBe(189649750 + 4 * COORDINATION_FEE_KOBO);
     expect(t.payCurrency).toBe('NGN');
     expect(planTotals('sell', plan)).toMatchObject({ feeKobo: null, transferMinor: 100000, payCurrency: 'USD' });
   });
@@ -116,7 +116,7 @@ describe('Confirm sheet for several trades', () => {
     expect(screen.getByText('1,000.00 USD')).toBeTruthy();
     expect(screen.getByText('Coordination fee (4 × 375.00)')).toBeTruthy();
     expect(screen.getByText('1,500.00 NGN')).toBeTruthy();
-    expect(screen.getByText('1,899,000.00 NGN')).toBeTruthy(); // 1,897,500 + 1,500
+    expect(screen.getByText('1,897,997.50 NGN')).toBeTruthy(); // 1,896,497.50 + 1,500
     expect(screen.queryByTestId('confirm-partial')).toBeNull();
     await fireEvent.press(screen.getByTestId('confirm-accept'));
     expect(onAccept).toHaveBeenCalledWith(plan, own[0]);

@@ -338,6 +338,9 @@ The two conditions are disjoint.
   and no symmetric band.
 - Reference provider, cadence, staleness policy and unavailable behaviour remain
   **OPEN/configurable** (§15).
+- **2026-10-17 (product owner):** the applicable reference ceiling is the **official rate**
+  for the currency — a rate may equal it or be below it, never above
+  (`docs/adr/020-official-rate-ceiling.md`). The source of the official rate is still open.
 
 ## 7.3 Insufficient remaining
 

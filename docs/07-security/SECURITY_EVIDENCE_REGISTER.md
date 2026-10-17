@@ -63,7 +63,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-020 | DOCUMENTED | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding decided: half to even (`docs/adr/019-review-decisions-and-multi-offer-fill.md`). |
+| SEC-020 | DOCUMENTED (+ demo ceiling IMPLEMENTED, `docs/adr/020-official-rate-ceiling.md`) | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding decided: half to even (`docs/adr/019-review-decisions-and-multi-offer-fill.md`). |
 | SEC-021 | DOCUMENTED | `webhook_shared_secret` placeholder only; Banking Integration Spec. | Signature check, replay window, `provider_event_id` idempotency (`docs/adr/002-*` §4.5). |
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
 | SEC-023 | DOCUMENTED | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
