@@ -29,7 +29,7 @@ The History tab follows the Figma frames (file `5ayAjPFxxHmEQIrEjauHTB`):
 | "TRANSACTION SUCESSFUL", "Refrence" | "SUCCESSFUL", "Reference" | Typo correction |
 | Progress shows one step | All stages: accepted → escrow opened → you funded → counterparty funded → payout accounts → released → paid out | Mapped onto ADR-001 leg states; reached stages show a time |
 | Receipt as a sheet with no close control | Back control top-left | Android has no swipe-to-dismiss on this presentation |
-| Date fields with a calendar picker | Typed DD/MM/YYYY with auto slashes and validation | Avoids adding a native date-picker dependency now; the calendar glyph is kept |
+| Date fields with a calendar picker | Tapping a field opens an in-app calendar sheet (month/year navigation; end can't precede start; Clear date) | Pure JS, styled like the app's sheets — no native date-picker module, so no rebuild |
 
 For **sell** trades the receipt shows the NGN the seller receives and no NGN-side fee:
 who pays the fee on each side is a business decision still open (BRS §11), so none is

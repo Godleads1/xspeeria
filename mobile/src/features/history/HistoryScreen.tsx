@@ -7,9 +7,10 @@
  */
 
 import { useMemo, useState, type ReactElement } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { CalendarSheet } from '../../components/CalendarSheet';
 import { RoundFlag } from '../../components/flags';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
@@ -19,7 +20,6 @@ import {
   HISTORY,
   displayDate,
   filterHistory,
-  parseDisplayDate,
   type HistoryItem,
 } from './data';
 
@@ -33,42 +33,31 @@ function CalendarGlyph(): ReactElement {
   );
 }
 
-/** Auto-inserts the slashes as the user types digits: `12052025` → `12/05/2025`. */
-function maskDate(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-}
-
+/** Figma date field: tapping it opens the calendar sheet. */
 function DateField({
   label,
   value,
-  onChange,
-  invalid,
+  onPress,
   testID,
 }: {
   label: string;
-  value: string;
-  onChange: (next: string) => void;
-  invalid: boolean;
+  value: string | null;
+  onPress: () => void;
   testID: string;
 }): ReactElement {
   return (
-    <View style={[styles.dateField, invalid ? styles.dateInvalid : null]}>
-      <TextInput
-        testID={testID}
-        accessibilityLabel={`${label}, day month year`}
-        value={value}
-        onChangeText={(t) => onChange(maskDate(t))}
-        placeholder={label}
-        placeholderTextColor={color.text.disabled}
-        keyboardType="number-pad"
-        maxLength={10}
-        style={styles.dateInput}
-      />
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={value ? `${label}: ${displayDate(value)}. Change` : `${label}. Choose a date`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.dateField, pressed ? styles.rowPressed : null]}
+    >
+      <Text style={[styles.dateText, value ? null : styles.datePlaceholder]}>
+        {value ? displayDate(value) : label}
+      </Text>
       <CalendarGlyph />
-    </View>
+    </Pressable>
   );
 }
 
@@ -129,19 +118,13 @@ export function HistoryScreen({
   onMenu?: (key: HistoryMenuKey) => void;
 }): ReactElement {
   const [menu, setMenu] = useState(false);
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [from, setFrom] = useState<string | null>(null);
+  const [to, setTo] = useState<string | null>(null);
+  const [picking, setPicking] = useState<'start' | 'end' | null>(null);
 
-  const from = start.length === 10 ? parseDisplayDate(start) : null;
-  const to = end.length === 10 ? parseDisplayDate(end) : null;
-  const startInvalid = start.length === 10 && from === null;
-  const endInvalid = end.length === 10 && to === null;
-  const reversed = from !== null && to !== null && from > to;
-
-  const visible = useMemo(
-    () => (reversed ? [] : filterHistory(items, from, to)),
-    [items, from, to, reversed],
-  );
+  const visible = useMemo(() => filterHistory(items, from, to), [items, from, to]);
+  // Open the calendar on the newest trade's month, not today's, so history is one tap away.
+  const newest = filterHistory(items, null, null)[0]?.date ?? '2025-01-01';
 
   return (
     <Screen testID="history-screen">
@@ -153,14 +136,9 @@ export function HistoryScreen({
       </View>
 
       <View style={styles.dates}>
-        <DateField label="Start date" value={start} onChange={setStart} invalid={startInvalid} testID="history-start" />
-        <DateField label="End date" value={end} onChange={setEnd} invalid={endInvalid || reversed} testID="history-end" />
+        <DateField label="Start date" value={from} onPress={() => setPicking('start')} testID="history-start" />
+        <DateField label="End date" value={to} onPress={() => setPicking('end')} testID="history-end" />
       </View>
-      {startInvalid || endInvalid || reversed ? (
-        <Text testID="history-date-error" style={styles.dateError}>
-          {reversed ? 'End date is before start date' : 'Enter a real date as DD/MM/YYYY'}
-        </Text>
-      ) : null}
 
       {visible.length === 0 ? (
         <Text testID="history-empty" style={styles.empty}>
@@ -173,6 +151,28 @@ export function HistoryScreen({
           ))}
         </View>
       )}
+
+      <CalendarSheet
+        testID="history-calendar"
+        visible={picking !== null}
+        title={picking === 'end' ? 'End date' : 'Start date'}
+        value={picking === 'end' ? to : from}
+        initialMonth={(picking === 'end' ? from : to) ?? newest}
+        // The end can never be before the start, and the start never after the end.
+        min={picking === 'end' ? from : null}
+        max={picking === 'start' ? to : null}
+        onSelect={(iso) => {
+          if (picking === 'end') setTo(iso);
+          else setFrom(iso);
+          setPicking(null);
+        }}
+        onClear={() => {
+          if (picking === 'end') setTo(null);
+          else setFrom(null);
+          setPicking(null);
+        }}
+        onClose={() => setPicking(null)}
+      />
 
       <ActionSheet
         testID="history-menu"
@@ -205,9 +205,8 @@ const styles = StyleSheet.create({
     borderColor: color.border.strong,
     borderRadius: 8,
   },
-  dateInvalid: { borderColor: color.error.border },
-  dateInput: { flex: 1, ...typography.body, fontSize: 14, color: color.text.primary, paddingVertical: 8 },
-  dateError: { ...typography.caption, color: color.error.text, marginTop: -8 },
+  dateText: { flex: 1, ...typography.body, fontSize: 14, color: color.text.primary },
+  datePlaceholder: { color: color.text.disabled },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64 },
   // Figma: the divider starts under the text, not under the flag.
   rowDivided: {

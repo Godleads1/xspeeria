@@ -48,14 +48,39 @@ describe('History screen (Figma 342:6121)', () => {
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 'h3' }));
   });
 
-  it('filters by date and flags a reversed range', async () => {
+  it('filters by dates picked on the calendar', async () => {
     await render(<HistoryScreen />);
-    await fireEvent.changeText(screen.getByTestId('history-start'), '10052025');
-    await fireEvent.changeText(screen.getByTestId('history-end'), '12052025');
+    await fireEvent.press(screen.getByTestId('history-start'));
+    // Opens on the newest trade's month (May 2025).
+    expect(screen.getByText('May 2025')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('history-calendar-day-2025-05-10'));
+    await fireEvent.press(screen.getByTestId('history-end'));
+    await fireEvent.press(screen.getByTestId('history-calendar-day-2025-05-12'));
     expect(screen.queryByTestId('history-h5')).toBeNull();
     expect(screen.getByTestId('history-h1')).toBeTruthy();
-    await fireEvent.changeText(screen.getByTestId('history-end'), '01052025');
-    expect(screen.getByTestId('history-date-error')).toBeTruthy();
+    expect(screen.getByLabelText('Start date: 10/05/2025. Change')).toBeTruthy();
+  });
+
+  it('never lets the end date fall before the start date', async () => {
+    await render(<HistoryScreen />);
+    await fireEvent.press(screen.getByTestId('history-start'));
+    await fireEvent.press(screen.getByTestId('history-calendar-day-2025-05-10'));
+    await fireEvent.press(screen.getByTestId('history-end'));
+    const early = screen.getByTestId('history-calendar-day-2025-05-09');
+    expect(early.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
+  });
+
+  it('moves between months and can clear a date', async () => {
+    await render(<HistoryScreen />);
+    await fireEvent.press(screen.getByTestId('history-start'));
+    await fireEvent.press(screen.getByTestId('history-calendar-next'));
+    expect(screen.getByText('June 2025')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('history-calendar-prev-year'));
+    expect(screen.getByText('June 2024')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('history-calendar-day-2024-06-01'));
+    await fireEvent.press(screen.getByTestId('history-start'));
+    await fireEvent.press(screen.getByTestId('history-calendar-clear'));
+    expect(screen.getByText('Start date')).toBeTruthy();
   });
 });
 
