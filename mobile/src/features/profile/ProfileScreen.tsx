@@ -80,7 +80,10 @@ function Row({
 
 export function ProfileScreen({
   onOpen,
+  onLogOut,
 }: {
+  /** Signs out after a confirmation (ADR-013). */
+  onLogOut?: () => void;
   /** Where each row goes; rows without a screen yet explain that they are coming. */
   onOpen?: (destination: ProfileDestination) => void;
 }): ReactElement {
@@ -148,6 +151,23 @@ export function ProfileScreen({
         </View>
       </View>
 
+      {onLogOut ? (
+        <Pressable
+          testID="profile-logout"
+          accessibilityRole="button"
+          onPress={() =>
+            Alert.alert('Log out?', 'You will need your PIN or Face ID to log in again.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Log out', style: 'destructive', onPress: onLogOut },
+            ])
+          }
+          hitSlop={8}
+          style={styles.delete}
+        >
+          <Text style={styles.logoutText}>Log out</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable
         testID="profile-delete"
         accessibilityRole="button"
@@ -203,5 +223,6 @@ const styles = themed(() => ({
   rowSubtitle: { ...typography.caption, fontSize: 11, color: color.text.secondary },
   modeLabel: { ...typography.caption, color: color.text.secondary },
   delete: { alignSelf: 'center', paddingVertical: 12 },
+  logoutText: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.brand.primary },
   deleteText: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.error.text },
 }));

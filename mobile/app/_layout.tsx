@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
 import { StepUpHost } from '../src/features/security/StepUpHost';
+import { session, useSession } from '../src/features/auth/session';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useThemeMode } from '../src/theme';
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
@@ -21,10 +22,11 @@ export default function RootLayout(): ReactElement | null {
   // Restore the saved light/dark choice before the splash hides, so nothing flashes.
   const [modeReady, setModeReady] = useState(false);
   useEffect(() => {
-    loadSavedThemeMode().finally(() => setModeReady(true));
+    Promise.all([loadSavedThemeMode(), session.restore()]).finally(() => setModeReady(true));
   }, []);
   const ready = fontsReady && modeReady;
   const mode = useThemeMode();
+  const { signedIn } = useSession();
   useApplyScreenCapturePreference();
 
   useEffect(() => {
@@ -40,9 +42,17 @@ export default function RootLayout(): ReactElement | null {
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas } }} />
+      {/* ADR-013: the app is reachable only when signed in; otherwise welcome / log in / sign-up. */}
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas } }}>
+        <Stack.Protected guard={signedIn}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
       {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
-      <StepUpHost onSetUp={() => router.push('/profile/two-factor')} />
+      {signedIn ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
     </>
   );
 }

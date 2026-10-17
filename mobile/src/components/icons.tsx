@@ -55,7 +55,8 @@ export type IconName =
   | 'dollar'
   | 'minus'
   | 'camera'
-  | 'pencil';
+  | 'pencil'
+  | 'scan';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -304,6 +305,12 @@ export function Icon({
         </>
       ) : null}
       {name === 'pencil' ? <Path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 013 3L8 18.5zM13.5 7l3 3" {...stroke} /> : null}
+      {name === 'scan' ? (
+        <>
+          <Path d="M4 8V5.5A1.5 1.5 0 015.5 4H8M16 4h2.5A1.5 1.5 0 0120 5.5V8M20 16v2.5a1.5 1.5 0 01-1.5 1.5H16M8 20H5.5A1.5 1.5 0 014 18.5V16" {...stroke} />
+          <Path d="M9 10v1M15 10v1M12 10v3h-1M9.5 15.5c1.4 1 3.6 1 5 0" {...stroke} />
+        </>
+      ) : null}
       {name === 'minus' ? <Path d="M5 12h14" {...stroke} /> : null}
       {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
       {name === 'globe' ? (

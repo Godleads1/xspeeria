@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import HomeRoute from '../app/(tabs)/index';
-import MarketplaceRoute from '../app/(tabs)/marketplace';
-import ProfileRoute from '../app/(tabs)/profile';
-import HistoryRoute from '../app/(tabs)/history';
+import HomeRoute from '../app/(app)/(tabs)/index';
+import MarketplaceRoute from '../app/(app)/(tabs)/marketplace';
+import ProfileRoute from '../app/(app)/(tabs)/profile';
+import HistoryRoute from '../app/(app)/(tabs)/history';
 import { Icon } from '../src/components/icons';
 import { Alert } from 'react-native';
 

@@ -83,6 +83,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `010-dark-mode.md` | Dark mode: Switch Mode toggles a dark scheme for every screen; `brand.fill` role; rules for future screens (DEC-016) | **APPROVED** — 2026-10-17 |
 | `011-profile-editing.md` | Profile editing: photo/banner; phone & email changed only after a code to the new address + 2FA; date of birth via ID review (DEC-017) | **APPROVED** — 2026-10-17 |
 | `012-cards-preview.md` | Cards tab as a preview of the Figma design with "Create yours" (cards not available); no balances or card transactions (DEC-018) | **APPROVED** — 2026-10-17 |
+| `013-onboarding-and-login.md` | Onboarding and log-in from Figma in demo mode; protected routes; PIN rules; no account enumeration (DEC-019) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 
