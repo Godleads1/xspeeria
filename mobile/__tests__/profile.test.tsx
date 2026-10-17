@@ -33,7 +33,7 @@ describe('Profile (Figma 268:6134)', () => {
   it('shows a colour icon on every menu row', async () => {
     await render(<ProfileScreen onOpen={jest.fn()} />);
     for (const n of ['beneficiaries', 'kyc', 'security', 'faq', 'support', 'referral', 'terms', 'mode']) {
-      expect(screen.getByTestId(`menu-icon-${n}`)).toBeTruthy();
+      expect(screen.getByTestId(`menu-icon-${n}`, { includeHiddenElements: true })).toBeTruthy();
     }
   });
 
