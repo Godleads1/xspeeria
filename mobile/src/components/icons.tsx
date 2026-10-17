@@ -30,7 +30,20 @@ export type IconName =
   | 'back'
   | 'info'
   | 'caret'
-  | 'megaphone';
+  | 'megaphone'
+  | 'people'
+  | 'idcard'
+  | 'lock'
+  | 'faq'
+  | 'headset'
+  | 'gift'
+  | 'document'
+  | 'moon'
+  | 'chevron'
+  | 'phone'
+  | 'mail'
+  | 'calendar'
+  | 'gender';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -167,6 +180,75 @@ export function Icon({
         <>
           <Path d="M4 10v4h3l8 4.5v-13L7 10z" {...stroke} />
           <Path d="M7 14l1.5 5h2.5L10 14M18 9a4 4 0 0 1 0 6" {...stroke} />
+        </>
+      ) : null}
+
+      {name === 'people' ? (
+        <>
+          <Circle cx={9} cy={8} r={3} {...stroke} />
+          <Path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.5a3 3 0 0 1 0 5.5M17 14a5.5 5.5 0 0 1 3.5 5" {...stroke} />
+        </>
+      ) : null}
+      {name === 'idcard' ? (
+        <>
+          <Rect x={3} y={5} width={18} height={14} rx={2} {...stroke} />
+          <Circle cx={9} cy={11} r={2} {...stroke} />
+          <Path d="M6 16a3 3 0 0 1 6 0M14.5 10h4M14.5 13.5h3" {...stroke} />
+        </>
+      ) : null}
+      {name === 'lock' ? (
+        <>
+          <Rect x={5} y={10.5} width={14} height={10} rx={2} {...stroke} />
+          <Path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5" {...stroke} />
+        </>
+      ) : null}
+      {name === 'faq' ? (
+        <>
+          <Path d="M4 5.5h16v10H10l-4 3.5v-3.5H4z" {...stroke} />
+          <Path d="M10.25 8.75a1.75 1.75 0 1 1 2.6 1.5c-.5.3-.85.7-.85 1.3M12 13.4h.01" {...stroke} />
+        </>
+      ) : null}
+      {name === 'headset' ? (
+        <>
+          <Path d="M5 14v-2a7 7 0 0 1 14 0v2" {...stroke} />
+          <Rect x={3.5} y={13} width={3.5} height={5.5} rx={1.2} {...stroke} />
+          <Rect x={17} y={13} width={3.5} height={5.5} rx={1.2} {...stroke} />
+          <Path d="M19 18.5c0 1.7-1.5 2.5-4 2.5h-2" {...stroke} />
+        </>
+      ) : null}
+      {name === 'gift' ? (
+        <>
+          <Rect x={4} y={9.5} width={16} height={4} rx={1} {...stroke} />
+          <Path d="M5.5 13.5V20h13v-6.5M12 9.5V20M12 9.5S10.5 5 8.5 5.5 9 9.5 12 9.5zM12 9.5S13.5 5 15.5 5.5 15 9.5 12 9.5z" {...stroke} />
+        </>
+      ) : null}
+      {name === 'document' ? (
+        <>
+          <Path d="M7 3.5h7l4 4V20.5H7z" {...stroke} />
+          <Path d="M14 3.5v4h4M9.5 12h6M9.5 15.5h6" {...stroke} />
+        </>
+      ) : null}
+      {name === 'moon' ? <Path d="M19 14.5A7.5 7.5 0 1 1 9.5 5a6 6 0 0 0 9.5 9.5z" {...stroke} /> : null}
+      {name === 'chevron' ? <Path d="M9.5 6l6 6-6 6" {...stroke} /> : null}
+      {name === 'phone' ? (
+        <Path d="M6.5 4h3l1.5 4-2 1.5a10 10 0 0 0 5.5 5.5l1.5-2 4 1.5v3A2 2 0 0 1 18 20 14 14 0 0 1 4.5 6.5 2 2 0 0 1 6.5 4z" {...stroke} />
+      ) : null}
+      {name === 'mail' ? (
+        <>
+          <Rect x={3.5} y={6} width={17} height={12} rx={1.5} {...stroke} />
+          <Path d="M4 7l8 6 8-6" {...stroke} />
+        </>
+      ) : null}
+      {name === 'calendar' ? (
+        <>
+          <Rect x={3.5} y={5} width={17} height={15} rx={2} {...stroke} />
+          <Path d="M3.5 10h17M8 3v4M16 3v4" {...stroke} />
+        </>
+      ) : null}
+      {name === 'gender' ? (
+        <>
+          <Circle cx={10} cy={14} r={4.5} {...stroke} />
+          <Path d="M13.2 10.8 19 5M15 5h4v4" {...stroke} />
         </>
       ) : null}
     </Svg>

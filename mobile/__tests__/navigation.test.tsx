@@ -118,10 +118,10 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/history/[id]', params: { id: 'h1' } });
   });
 
-  it('sends the Profile action Home', async () => {
+  it('opens Account details from the Profile header', async () => {
     await render(<ProfileRoute />);
-    fireEvent.press(screen.getByText('Back to home'));
-    expect(mockPush).toHaveBeenCalledWith('/');
+    await fireEvent.press(screen.getByTestId('profile-account'));
+    expect(mockPush).toHaveBeenCalledWith('/profile/account');
   });
 
   it('renders the Market tab screen (ADR-005) without invented filter controls', async () => {

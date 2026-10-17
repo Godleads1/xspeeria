@@ -17,6 +17,10 @@ const FLAG = {
   navy: '#012169',
   euBlue: '#003399',
   gold: '#FFCC00',
+  etGreen: '#078930',
+  etYellow: '#FCDD09',
+  etRed: '#DA121A',
+  etBlue: '#0F47AF',
 } as const;
 
 function UsStripes(): ReactElement {
@@ -77,6 +81,26 @@ function art(code: string): ReactElement {
           {[[6, 18, 1.4], [17, 7, 0.9], [20, 12, 0.9], [17, 18, 0.9], [14, 13, 0.6]].map(([x, y, r]) => (
             <Circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill={FLAG.white} />
           ))}
+        </>
+      );
+    case 'GBP':
+      return (
+        <>
+          <Rect width={24} height={24} fill={FLAG.navy} />
+          <Path d="M0 0l24 24M24 0L0 24" stroke={FLAG.white} strokeWidth={4.5} />
+          <Path d="M0 0l24 24M24 0L0 24" stroke={FLAG.red} strokeWidth={1.6} />
+          <Path d="M12 0v24M0 12h24" stroke={FLAG.white} strokeWidth={7} />
+          <Path d="M12 0v24M0 12h24" stroke={FLAG.red} strokeWidth={4} />
+        </>
+      );
+    case 'ETB':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.etGreen} />
+          <Rect y={8} width={24} height={8} fill={FLAG.etYellow} />
+          <Rect y={16} width={24} height={8} fill={FLAG.etRed} />
+          <Circle cx={12} cy={12} r={5} fill={FLAG.etBlue} />
+          <Path d="M12 8.6l.9 2.6h2.6l-2.1 1.6.8 2.6-2.2-1.6-2.2 1.6.8-2.6-2.1-1.6h2.6z" fill={FLAG.etYellow} />
         </>
       );
     default:
