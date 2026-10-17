@@ -10,7 +10,6 @@
  * server serialises each acceptance on its own Offer (§7.1). Integers only.
  */
 
-import { COORDINATION_FEE_KOBO } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
 import { ngnFor, transferFor } from './tradeStore';
@@ -60,9 +59,9 @@ export interface PlanTotals {
   readonly foreignMinor: number;
   /** NGN value of the parts at their own rates, kobo. */
   readonly ngnMinor: number;
-  /** Buyer: one coordination fee per trade, kobo. Seller: null (fee not set, ADR-015). */
-  readonly feeKobo: number | null;
-  /** What the user transfers in total, minor units of `payCurrency` (excludes an unset fee). */
+  /** Sum of each trade's 1% coordination fee, minor units of `payCurrency` (ADR-021). */
+  readonly feeMinor: number;
+  /** What the user transfers in total, minor units of `payCurrency`, fees included. */
   readonly transferMinor: number;
   readonly payCurrency: string;
 }
@@ -71,16 +70,19 @@ export function planTotals(side: Side, plan: FillPlan): PlanTotals {
   const currency = plan[0]?.listing.currency ?? '';
   let ngn = 0;
   let transfer = 0;
+  let fee = 0;
   for (const p of plan) {
     ngn += ngnFor(p.amountMinor, p.listing.rateHundredths);
-    transfer += transferFor(side, currency, p.amountMinor, p.listing.rateHundredths).minor;
+    const t = transferFor(side, currency, p.amountMinor, p.listing.rateHundredths);
+    transfer += t.minor;
+    fee += t.feeMinor;
   }
   if (!Number.isSafeInteger(ngn) || !Number.isSafeInteger(transfer)) throw new Error('Total is out of range');
   return {
     count: plan.length,
     foreignMinor: plannedMinor(plan),
     ngnMinor: ngn,
-    feeKobo: side === 'buy' ? plan.length * COORDINATION_FEE_KOBO : null,
+    feeMinor: fee,
     transferMinor: transfer,
     payCurrency: side === 'buy' ? 'NGN' : currency,
   };

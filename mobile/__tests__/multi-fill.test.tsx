@@ -5,7 +5,6 @@
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { COORDINATION_FEE_KOBO } from '../src/features/history/data';
 import type { Listing } from '../src/features/market/data';
 import { SelectMatchScreen } from '../src/features/market/SelectMatchScreen';
 import { BENEFICIARIES } from '../src/features/profile/data';
@@ -67,10 +66,10 @@ describe('fill plan', () => {
     const t = planTotals('buy', plan);
     // 250 × (1,325 + 1,327 + 1,330 + 1,333.26) = 1,328,815.00 NGN
     expect(t.ngnMinor).toBe(132881500);
-    expect(t.feeKobo).toBe(4 * COORDINATION_FEE_KOBO);
-    expect(t.transferMinor).toBe(132881500 + 4 * COORDINATION_FEE_KOBO);
+    expect(t.feeMinor).toBe(1328815); // 1% of each part, summed: 13,288.15 NGN
+    expect(t.transferMinor).toBe(132881500 + 1328815);
     expect(t.payCurrency).toBe('NGN');
-    expect(planTotals('sell', plan)).toMatchObject({ feeKobo: null, transferMinor: 100000, payCurrency: 'USD' });
+    expect(planTotals('sell', plan)).toMatchObject({ feeMinor: 1000, transferMinor: 101000, payCurrency: 'USD' });
   });
 });
 
@@ -114,12 +113,12 @@ describe('Confirm sheet for several trades', () => {
     await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
     expect(screen.getByText('Confirm 4 trades')).toBeTruthy();
     expect(screen.getByText('1,000.00 USD')).toBeTruthy();
-    expect(screen.getByText('Coordination fee (4 × 375.00)')).toBeTruthy();
-    expect(screen.getByText('1,500.00 NGN')).toBeTruthy();
-    expect(screen.getByText('1,330,315.00 NGN')).toBeTruthy(); // 1,328,815.00 + 1,500
+    expect(screen.getByText('Coordination fee (1%)')).toBeTruthy();
+    expect(screen.getByText('13,288.15 NGN')).toBeTruthy();
+    expect(screen.getByText('1,342,103.15 NGN')).toBeTruthy(); // 1,328,815.00 + 1%
     expect(screen.queryByTestId('confirm-partial')).toBeNull();
     await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(plan, own[0]);
+    expect(onAccept).toHaveBeenCalledWith(plan, [{ id: own[0].id, name: own[0].name, bank: own[0].bank, last4: own[0].accountLast4, amountMinor: 100000 }]);
   });
 
   it('says plainly when the parts fill less than asked', async () => {

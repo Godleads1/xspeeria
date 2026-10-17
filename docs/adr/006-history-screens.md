@@ -9,6 +9,10 @@
 
 ---
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). The receipt shows the 1% fee.
+
 ## 1. Decision
 
 The History tab follows the Figma frames (file `5ayAjPFxxHmEQIrEjauHTB`):

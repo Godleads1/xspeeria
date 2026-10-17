@@ -13,7 +13,6 @@ import { useBeneficiaries } from "../../../src/features/profile/beneficiaryStore
 import { useProfile } from "../../../src/features/profile/profileStore";
 import { requestStepUp } from "../../../src/features/security/stepUp";
 import { ConfirmTradeSheet } from "../../../src/features/trade/ConfirmTradeSheet";
-import type { Beneficiary } from "../../../src/features/profile/data";
 import {
   addToPlan,
   inPlan,
@@ -21,7 +20,8 @@ import {
   removeFromPlan,
   type FillPlan,
 } from "../../../src/features/trade/fillPlan";
-import { tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
+import { allocatePayouts, type PayoutShare } from "../../../src/features/trade/payoutSplit";
+import { receiveFor, tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
 import { useThemeMode } from "../../../src/theme";
 
 /**
@@ -97,7 +97,7 @@ export default function SelectMatchRoute(): ReactElement | null {
     if (next !== plan && plannedMinor(next) >= request.amountMinor) setReviewing(true);
   };
 
-  const accept = async (parts: FillPlan, payout: Beneficiary): Promise<void> => {
+  const accept = async (parts: FillPlan, shares: readonly PayoutShare[]): Promise<void> => {
     setReviewing(false);
     const what =
       parts.length === 1
@@ -106,15 +106,20 @@ export default function SelectMatchRoute(): ReactElement | null {
     // One 2 FA check covers the whole order the user just reviewed (ADR-008, ADR-019).
     if (!(await requestStepUp(what))) return;
     const orderId = parts.length > 1 ? `o-${Array.from(Crypto.getRandomBytes(6), (b) => b.toString(16).padStart(2, "0")).join("")}` : undefined;
+    // The user's split across their accounts, spread over the trades of the order (ADR-021).
+    const perTrade = allocatePayouts(
+      parts.map((p) => receiveFor(side, p.amountMinor, p.listing.rateHundredths)),
+      shares,
+    );
     const created: string[] = [];
     let failed = 0;
-    for (const part of parts) {
+    for (const [i, part] of parts.entries()) {
       try {
         const trade = tradeStore.create({
           side,
           listing: part.listing,
           amountMinor: part.amountMinor,
-          payout: { id: payout.id, name: payout.name, bank: payout.bank, last4: payout.accountLast4 },
+          payouts: perTrade[i],
           now: Date.now(),
           random: Crypto.getRandomBytes,
           orderId,

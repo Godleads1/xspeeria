@@ -8,6 +8,10 @@
 | **Authority** | Product owner, 2026-10-17: chose "Keep Figma's 10% bonus", then clarified **"10% off the fee"** and **"Count, not money"** for the earnings box — `DOCUMENT_INDEX.md` §1 rank 2 |
 | **Amends** | 5-Year Business Plan §5 pricing (flat coordination fee) by adding a referral discount on that fee. The fee itself stays flat; no percentage-of-amount fee and no spread is introduced. |
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). The referral discount is 10% off the 1% fee.
+
 ## 1. Context
 
 Figma (Referral Program, `1041:11976`) promises "a 10% bonus on your next currency

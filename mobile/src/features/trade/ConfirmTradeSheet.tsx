@@ -21,7 +21,10 @@ import { formatHundredths } from "../market/money";
 import type { Beneficiary } from "../profile/data";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
-import { COORDINATION_FEE_KOBO, sellerFeeMinor } from "../history/data";
+import { COORDINATION_FEE_LABEL } from "../history/data";
+import { FieldInput, OutlinedField } from "../market/controls";
+import { parseToHundredths } from "../market/money";
+import { splitProblem, type PayoutShare } from "./payoutSplit";
 
 function Row({
   label,
@@ -59,7 +62,8 @@ export function ConfirmTradeSheet({
   parts: FillPlan;
   /** The user's own verified accounts in the currency they will receive. */
   payoutOptions: readonly Beneficiary[];
-  onAccept: (parts: FillPlan, payout: Beneficiary) => void;
+  /** The accounts the partner bank pays and the amount each gets (they add up exactly). */
+  onAccept: (parts: FillPlan, shares: readonly PayoutShare[]) => void;
   onClose: () => void;
   onAddAccount: () => void;
 }): ReactElement {
@@ -71,14 +75,44 @@ export function ConfirmTradeSheet({
   const several = parts.length > 1;
   const short = totals.foreignMinor < requestedMinor;
   const receiveCur = side === "buy" ? cur : "NGN";
-  const [payoutId, setPayoutId] = useState<string | null>(
-    payoutOptions[0]?.id ?? null,
+  // What the user receives, to be paid into one or more of their own accounts (ADR-021).
+  const receiveMinor = side === "buy" ? totals.foreignMinor : totals.ngnMinor;
+  // Selected account id → amount typed (ignored while only one account is selected).
+  const [chosen, setChosen] = useState<Record<string, string>>(() =>
+    payoutOptions[0] ? { [payoutOptions[0].id]: "" } : {},
   );
-  const payout = payoutOptions.find((b) => b.id === payoutId) ?? null;
+  const chosenIds = payoutOptions.map((b) => b.id).filter((id) => id in chosen);
+  const splitting = chosenIds.length > 1;
+  const draft = chosenIds.map((id) => ({
+    id,
+    amountMinor: splitting ? parseToHundredths(chosen[id]) : receiveMinor,
+  }));
+  const problem = splitProblem(receiveMinor, draft);
+  const assigned = draft.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
+  const shares: PayoutShare[] =
+    problem === null
+      ? draft.map((d) => {
+          const b = payoutOptions.find((x) => x.id === d.id) as Beneficiary;
+          return { id: b.id, name: b.name, bank: b.bank, last4: b.accountLast4, amountMinor: d.amountMinor as number };
+        })
+      : [];
+  const toggle = (id: string): void => {
+    setChosen((c) => {
+      const next = { ...c };
+      if (id in next) delete next[id];
+      else next[id] = "";
+      return next;
+    });
+  };
   const minutes = Math.round(FUNDING_WINDOW_MS / 60000);
-  const sellerFee = side === "sell" ? sellerFeeMinor(cur) : null;
   const noun = side === "buy" ? "offer" : "request";
-  const canAccept = payout !== null && !stale && parts.length > 0;
+  const canAccept = problem === null && !stale && parts.length > 0;
+  const splitMessage =
+    problem === "over"
+      ? `That is ${formatHundredths(assigned - receiveMinor)} ${receiveCur} more than you receive.`
+      : problem === "under" || problem === "empty-amount"
+        ? `Left to assign: ${formatHundredths(Math.max(0, receiveMinor - assigned))} ${receiveCur}.`
+        : null;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -135,8 +169,8 @@ export function ConfirmTradeSheet({
               <>
                 <Row label="Amount" value={`${formatHundredths(totals.ngnMinor)} NGN`} />
                 <Row
-                  label={several ? `Coordination fee (${parts.length} × ${formatHundredths(COORDINATION_FEE_KOBO)})` : "Coordination fee"}
-                  value={`${formatHundredths(totals.feeKobo ?? 0)} NGN`}
+                  label={`Coordination fee (${COORDINATION_FEE_LABEL})`}
+                  value={`${formatHundredths(totals.feeMinor)} NGN`}
                 />
                 <Row
                   label="Total to transfer"
@@ -151,28 +185,14 @@ export function ConfirmTradeSheet({
                   value={`${formatHundredths(totals.ngnMinor)} NGN`}
                 />
                 <Row
-                  label="Coordination fee"
-                  value={
-                    sellerFee === null
-                      ? `To be confirmed (${cur})`
-                      : `${formatHundredths(sellerFee * parts.length)} ${cur}`
-                  }
+                  label={`Coordination fee (${COORDINATION_FEE_LABEL})`}
+                  value={`${formatHundredths(totals.feeMinor)} ${cur}`}
                 />
                 <Row
                   label="You transfer"
-                  value={
-                    sellerFee === null
-                      ? `${formatHundredths(totals.transferMinor)} ${cur} + fee`
-                      : `${formatHundredths(totals.transferMinor + sellerFee * parts.length)} ${cur}`
-                  }
+                  value={`${formatHundredths(totals.transferMinor)} ${cur}`}
                   strong
                 />
-                {sellerFee === null ? (
-                  <Text testID="confirm-fee-tbd" style={styles.feeNote}>
-                    The seller’s fee is paid in {cur}. Its amount is not set yet
-                    in this demo.
-                  </Text>
-                ) : null}
               </>
             )}
           </View>
@@ -192,26 +212,52 @@ export function ConfirmTradeSheet({
               </Pressable>
             </View>
           ) : (
-            payoutOptions.map((b) => {
-              const on = b.id === payoutId;
-              return (
-                <Pressable
-                  key={b.id}
-                  testID={`confirm-payout-${b.id}`}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: on }}
-                  onPress={() => setPayoutId(b.id)}
-                  style={[styles.option, on ? styles.optionOn : null]}
-                >
-                  <View style={[styles.radio, on ? styles.radioOn : null]}>
-                    {on ? <View style={styles.radioDot} /> : null}
+            <>
+              {payoutOptions.length > 1 ? (
+                <Text style={styles.feeNote}>
+                  {`You can split the ${formatHundredths(receiveMinor)} ${receiveCur} across several of your accounts. The partner bank pays each one.`}
+                </Text>
+              ) : null}
+              {payoutOptions.map((b) => {
+                const on = b.id in chosen;
+                return (
+                  <View key={b.id} style={[styles.option, on ? styles.optionOn : null]}>
+                    <Pressable
+                      testID={`confirm-payout-${b.id}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                      accessibilityLabel={`${b.bank} account ending ${b.accountLast4}`}
+                      onPress={() => toggle(b.id)}
+                      style={styles.optionMain}
+                    >
+                      <View style={[styles.box, on ? styles.boxOn : null]}>
+                        {on ? <Icon name="check" color={color.text.onFill} size={12} weight={2.5} /> : null}
+                      </View>
+                      <Text style={styles.optionText}>
+                        {b.bank} •••• {b.accountLast4}
+                      </Text>
+                    </Pressable>
+                    {on && splitting ? (
+                      <View style={styles.shareField}>
+                        <OutlinedField label={`Amount (${receiveCur})`}>
+                          <FieldInput
+                            testID={`confirm-share-${b.id}`}
+                            accessibilityLabel={`Amount for account ending ${b.accountLast4}, ${receiveCur}`}
+                            value={chosen[b.id]}
+                            onChangeText={(t) => setChosen((c) => ({ ...c, [b.id]: t }))}
+                          />
+                        </OutlinedField>
+                      </View>
+                    ) : on ? (
+                      <Text style={styles.shareAll}>{`All ${formatHundredths(receiveMinor)} ${receiveCur}`}</Text>
+                    ) : null}
                   </View>
-                  <Text style={styles.optionText}>
-                    {b.bank} •••• {b.accountLast4}
-                  </Text>
-                </Pressable>
-              );
-            })
+                );
+              })}
+              {splitting && splitMessage ? (
+                <Text testID="confirm-split-error" style={styles.splitError}>{splitMessage}</Text>
+              ) : null}
+            </>
           )}
 
           <View style={styles.hint}>
@@ -228,7 +274,7 @@ export function ConfirmTradeSheet({
           <PrimaryButton
             testID="confirm-accept"
             label={several ? `Accept ${parts.length} ${noun}s` : side === "buy" ? "Accept offer" : "Accept request"}
-            onPress={canAccept && payout ? () => onAccept(parts, payout) : undefined}
+            onPress={canAccept ? () => onAccept(parts, shares) : undefined}
             disabled={!canAccept}
             tone={side === "sell" ? "sell" : "primary"}
           />
@@ -298,9 +344,7 @@ const styles = themed(() => ({
     marginTop: space.xs,
   },
   option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    gap: 4,
     borderWidth: 1,
     borderColor: color.border.subtle,
     borderRadius: 12,
@@ -324,6 +368,20 @@ const styles = themed(() => ({
     backgroundColor: color.brand.primary,
   },
   optionText: { ...typography.body, fontSize: 15, color: color.text.primary },
+  optionMain: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 32 },
+  box: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: color.border.strong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  boxOn: { borderColor: color.brand.fill, backgroundColor: color.brand.fill },
+  shareField: { marginTop: space.xs },
+  shareAll: { ...typography.caption, fontSize: 12, color: color.text.secondary, marginTop: 4 },
+  splitError: { ...typography.caption, fontSize: 12, color: color.error.text },
   empty: {
     gap: 6,
     padding: space.sm,

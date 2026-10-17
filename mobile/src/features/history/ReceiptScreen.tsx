@@ -2,7 +2,7 @@
  * Transaction receipt (Figma frame 344:6152), ADR-006.
  *
  * A ticket-style summary: status, reference, the NGN ⇄ foreign corridor, amount and rate;
- * transaction details (amount, the flat coordination fee, amount paid into escrow);
+ * transaction details (amount, the 1% coordination fee, amount paid into escrow);
  * the payout ("settlement") accounts with only their last four digits; and the trade's
  * progress through escrow. Figures are computed in integers and always add up.
  * MOCK DATA ONLY.
@@ -19,8 +19,8 @@ import { brandWeight, color, space, typography, themed } from "../../theme";
 import { SectionLabel } from "../home/SectionLabel";
 import { formatCompact, formatHundredths, quoteMinor } from "../market/money";
 import {
-  COORDINATION_FEE_KOBO,
-  sellerFeeMinor,
+  COORDINATION_FEE_LABEL,
+  coordinationFeeMinor,
   type HistoryItem,
 } from "./data";
 
@@ -107,8 +107,9 @@ export function ReceiptScreen({
   const isBuy = item.side === "buy";
   const ngnMinor = quoteMinor(item.amountMinor, item.rateHundredths);
   // Recorded figures win (FIN-02); older mock items fall back to the computed ones.
-  const buyFeeKobo = item.recorded ? (item.recorded.feeKobo ?? COORDINATION_FEE_KOBO) : COORDINATION_FEE_KOBO;
-  const paidMinor = item.recorded ? item.recorded.transferMinor : ngnMinor + buyFeeKobo;
+  const sentMinor = isBuy ? ngnMinor : item.amountMinor;
+  const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeMinor(sentMinor);
+  const paidMinor = item.recorded ? item.recorded.transferMinor : sentMinor + feeMinor;
   // Labels follow the status (FIN-03): nothing is "paid" or "received" on a failed trade.
   const done = item.status === "completed";
   const failed = item.status === "failed";
@@ -121,7 +122,6 @@ export function ReceiptScreen({
   const [fromCode, toCode] = isBuy
     ? ["NGN", item.currency]
     : [item.currency, "NGN"];
-  const sellerFee = isBuy ? null : sellerFeeMinor(item.currency);
   // Payouts are in the currency received: foreign when buying, NGN when selling.
   const payoutCurrency = isBuy ? item.currency : "NGN";
 
@@ -206,8 +206,8 @@ export function ReceiptScreen({
             {isBuy ? (
               <>
                 <Line
-                  label="Coordination Fee"
-                  value={`${formatHundredths(buyFeeKobo)} NGN`}
+                  label={`Coordination Fee (${COORDINATION_FEE_LABEL})`}
+                  value={`${formatHundredths(feeMinor)} NGN`}
                 />
                 <Line
                   label={paidLabel}
@@ -222,20 +222,12 @@ export function ReceiptScreen({
               <>
                 {/* Figma sell receipt: fee and amount to pay in the currency the seller sends. */}
                 <Line
-                  label="Transaction fee"
-                  value={
-                    sellerFee === null
-                      ? "To be confirmed"
-                      : `${formatHundredths(sellerFee)} ${item.currency}`
-                  }
+                  label={`Transaction fee (${COORDINATION_FEE_LABEL})`}
+                  value={`${formatHundredths(feeMinor)} ${item.currency}`}
                 />
                 <Line
                   label={paidLabel}
-                  value={
-                    sellerFee === null
-                      ? `${formatHundredths(item.amountMinor)} ${item.currency} + fee`
-                      : `${formatHundredths(item.amountMinor + sellerFee)} ${item.currency}`
-                  }
+                  value={`${formatHundredths(paidMinor)} ${item.currency}`}
                   strong
                   tone="sell"
                 />

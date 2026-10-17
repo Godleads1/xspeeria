@@ -16,7 +16,7 @@ import { AuthTop, GhostButton } from './ui';
 export const SLIDES = [
   { title: 'Welcome to Xspeeria', body: 'Experience fast, secure, and low-fee currency exchange — anytime, anywhere.' },
   { title: 'Your money stays yours', body: 'Xspeeria never holds your money. Each side pays into a partner bank account in their own country.' },
-  { title: 'One flat, clear fee', body: 'No percentage and no hidden margin in the rate. You see the fee before you confirm.' },
+  { title: 'One clear fee', body: '1% of what you send, and no hidden margin in the rate. You see the fee before you confirm.' },
   { title: 'Real, verified people', body: 'Everyone confirms their identity before they trade, so you always deal with real people.' },
 ] as const;
 

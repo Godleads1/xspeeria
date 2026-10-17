@@ -342,7 +342,7 @@ describe('receipts show what was recorded, worded by status', () => {
     const item: HistoryItem = {
       ...toHistoryItem(tradeStore.create({ side: 'buy', listing: offer, amountMinor: 20000, payout: PAYOUT, now: NOW, random: rnd })),
       status: 'completed',
-      recorded: { transferMinor: 37893750, payCurrency: 'NGN', feeKobo: 33750 }, // e.g. a 10% referral discount
+      recorded: { transferMinor: 37893750, payCurrency: 'NGN', feeMinor: 33750 }, // e.g. a recorded fee that differs from today's
     };
     await render(<ReceiptScreen item={item} onClose={jest.fn()} />);
     expect(screen.getByText('378,937.50 NGN')).toBeTruthy();

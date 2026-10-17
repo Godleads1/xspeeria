@@ -1,12 +1,14 @@
 /**
  * MOCK DATA for History (ADR-006). Shapes follow the Figma History list (342:6121) and
- * receipt (344:6152); figures are corrected so they add up, the fee is the flat
- * coordination fee from the business plan (illustrative ₦375, not a percentage), and
+ * receipt (344:6152); figures are corrected so they add up, the fee is the coordination
+ * fee (1% of what each side sends, ADR-021; Figma's receipt also shows 1%), and
  * payout accounts carry only their last four digits — full account numbers are never
  * held or shown in the app.
  *
  * Amounts are integer minor units; rates are integer hundredths of NGN per 1 unit.
  */
+
+import { divRoundHalfEven } from '../market/money';
 
 export type TradeSide = 'buy' | 'sell';
 export type TradeStatus = 'completed' | 'pending' | 'failed';
@@ -48,22 +50,27 @@ export interface HistoryItem {
     /** What the user paid into escrow, minor units of `payCurrency`. */
     readonly transferMinor: number;
     readonly payCurrency: string;
-    /** The user's own coordination fee, kobo (buy side); null when not set (sell side). */
-    readonly feeKobo: number | null;
+    /** The user's own coordination fee, minor units of `payCurrency`. */
+    readonly feeMinor: number;
   };
 }
 
-/** Flat coordination fee per side, NGN kobo. Business plan §5: illustrative ₦375. */
-export const COORDINATION_FEE_KOBO = 37500;
-
 /**
- * The seller's side pays its coordination fee locally, in the currency it sends (Business
- * Plan §5; Figma sell receipt shows "1 USD"). No amount is approved for any foreign currency
- * yet, so this returns null ("to be confirmed") — it must not be invented (ADR-015).
+ * Coordination fee: 1% of the money each side sends, charged in that side's currency
+ * (product owner, 2026-10-17, `docs/adr/021-percentage-fee-and-split-payouts.md`;
+ * supersedes the flat fee of Business Plan §5). Buyer: 1% of the NGN amount, in NGN.
+ * Seller: 1% of the foreign amount, in that currency. Integer basis points, BigInt,
+ * rounded half to even. The server computes the authoritative fee.
  */
-export function sellerFeeMinor(_currency: string): number | null {
-  return null;
+export const COORDINATION_FEE_BPS = 100;
+
+export function coordinationFeeMinor(sentMinor: number): number {
+  if (!Number.isSafeInteger(sentMinor) || sentMinor < 0) throw new Error('amount must be a non-negative integer (minor units)');
+  return Number(divRoundHalfEven(BigInt(sentMinor) * BigInt(COORDINATION_FEE_BPS), 10000n));
 }
+
+/** "1%" for labels, from the basis points (never a float). */
+export const COORDINATION_FEE_LABEL = `${COORDINATION_FEE_BPS / 100}%`;
 
 /**
  * The stages a trade passes through, in user language, mapped onto ADR-001 leg states:

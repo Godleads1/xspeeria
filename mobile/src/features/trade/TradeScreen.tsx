@@ -26,6 +26,7 @@ import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import { DemoNote, GhostButton } from "../auth/ui";
 import { ActionSheet, RoundButton } from "../market/controls";
+import { COORDINATION_FEE_LABEL } from "../history/data";
 import { formatHundredths } from "../market/money";
 import { orderSiblings, progressFor, tradeStore, useTrade, useTrades, type Trade } from "./tradeStore";
 
@@ -272,9 +273,7 @@ export function TradeScreen({
   const confirmPaid = (): void =>
     Alert.alert(
       "Have you paid?",
-      t.side === "buy"
-        ? `Only continue once you have sent exactly ${payLabel} from a bank account in your name.`
-        : `Only continue once you have sent ${payLabel} from a bank account in your name. The seller’s fee is not set yet in this demo.`,
+      `Only continue once you have sent exactly ${payLabel} (including the ${COORDINATION_FEE_LABEL} fee) from a bank account in your name.`,
       [
         { text: "Not yet", style: "cancel" },
         {

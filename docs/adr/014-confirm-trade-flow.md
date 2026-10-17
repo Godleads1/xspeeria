@@ -7,6 +7,10 @@
 | **Decision ID** | DEC-020 |
 | **Authority** | Product owner, 2026-10-17: "ok. start" on the recommended confirm-trade flow (Figma 120:990 → 190:1791) — `DOCUMENT_INDEX.md` §1 rank 2 |
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). Totals include the 1% fee.
+
 ## 1. Flow
 
 | Step | Figma | Implementation |

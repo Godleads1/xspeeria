@@ -1,7 +1,7 @@
 import { quoteMinor } from '../src/features/market/money';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { COORDINATION_FEE_KOBO, HISTORY, displayDate, filterHistory, parseDisplayDate } from '../src/features/history/data';
+import { COORDINATION_FEE_BPS, HISTORY, displayDate, filterHistory, parseDisplayDate } from '../src/features/history/data';
 import { HistoryScreen } from '../src/features/history/HistoryScreen';
 import { ReceiptScreen } from '../src/features/history/ReceiptScreen';
 
@@ -87,13 +87,14 @@ describe('History screen (Figma 342:6121)', () => {
 });
 
 describe('Receipt (Figma 344:6152)', () => {
-  it('adds up: 500 USD at 1,257 = 628,500 NGN, plus the flat fee', async () => {
+  it('adds up: 500 USD at 1,257 = 628,500 NGN, plus the 1% fee (ADR-021)', async () => {
     await render(<ReceiptScreen item={h1} onClose={jest.fn()} />);
     expect(screen.getByText('TRANSACTION SUCCESSFUL')).toBeTruthy();
     expect(screen.getByText('628,500.00 NGN')).toBeTruthy();
-    expect(screen.getByText('375.00 NGN')).toBeTruthy();
-    expect(screen.getByText('628,875.00 NGN')).toBeTruthy();
-    expect(COORDINATION_FEE_KOBO).toBe(37500);
+    expect(screen.getByText('Coordination Fee (1%)')).toBeTruthy();
+    expect(screen.getByText('6,285.00 NGN')).toBeTruthy();
+    expect(screen.getByText('634,785.00 NGN')).toBeTruthy();
+    expect(COORDINATION_FEE_BPS).toBe(100);
   });
 
   it('masks payout accounts to the last four digits', async () => {

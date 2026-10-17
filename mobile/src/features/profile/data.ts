@@ -86,6 +86,10 @@ export const BENEFICIARIES: readonly Beneficiary[] = [
   { id: 'b2', name: 'David Peters', currency: 'NGN', bank: 'GTBank', accountLast4: '5521', status: 'verified' },
   { id: 'b3', name: 'David Peters', currency: 'USD', bank: 'Chase', accountLast4: '4410', status: 'verified' },
   { id: 'b4', name: 'David Peters', currency: 'EUR', bank: 'Revolut', accountLast4: '2207', status: 'verified' },
+  // Second own accounts so a payout can be split (ADR-021). Mock.
+  { id: 'b5', name: 'David Peters', currency: 'USD', bank: 'Bank of America', accountLast4: '7781', status: 'verified' },
+  { id: 'b6', name: 'David Peters', currency: 'NGN', bank: 'Zenith Bank', accountLast4: '3390', status: 'verified' },
+  { id: 'b7', name: 'David Peters', currency: 'GBP', bank: 'Monzo', accountLast4: '6142', status: 'verified' },
 ];
 
 /** `9309` → `•••• 9309`. */

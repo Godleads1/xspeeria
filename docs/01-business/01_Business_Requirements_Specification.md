@@ -509,6 +509,10 @@ Xspeeria generates revenue through a transparent, disclosed transaction fee appl
 
 **\[ASSUMPTION-BRS-04\] Per the 5-Year Business Plan (Section 5), Xspeeria's fee is a flat coordination fee — a fixed multiple (illustratively 7.5x) of the prevailing local instant-transfer cost on each side of the corridor, not a percentage of the transaction amount. Specific multiples, minimum floor fees, and any volume-based discount structure are commercial/pricing decisions to be finalized by the business team and are not asserted as fixed figures in this document. The mechanism (a disclosed, flat, transaction-linked fee) is the requirement; the exact multiple and floor are configurable business parameters.**
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). ASSUMPTION-BRS-04 and §11.2 below are superseded.
+
 ## 11.2 Illustrative Fee Structure (Flat Coordination Fee, Not a Final Rate — see 5-Year Business Plan Section 5)
 
 | Fee Component                                                           | Applied To                                                               | Notes                                                                |

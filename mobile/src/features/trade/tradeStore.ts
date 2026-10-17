@@ -11,10 +11,11 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { COORDINATION_FEE_KOBO, type HistoryItem } from '../history/data';
+import { coordinationFeeMinor, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
-import { quoteMinor } from '../market/money';
+import { formatHundredths, quoteMinor } from '../market/money';
+import { splitProblem, type PayoutShare } from './payoutSplit';
 import { rateProblem } from '../market/rateCeiling';
 import { DEMO_MODE } from '../auth/demo';
 import { session } from '../auth/session';
@@ -53,12 +54,14 @@ export interface Trade {
   /** Foreign amount, minor units of `currency`. */
   readonly amountMinor: number;
   readonly rateHundredths: number;
-  /** What the user transfers into escrow, minor units of `payCurrency` (fee included on the NGN side). */
+  /** What the user transfers into escrow, minor units of `payCurrency`, fee included. */
   readonly transferMinor: number;
   readonly payCurrency: string;
-  readonly feeKobo: number;
+  /** The user's coordination fee (1%), minor units of `payCurrency` (ADR-021). */
+  readonly feeMinor: number;
   readonly counterparty: string;
-  readonly payout: PayoutChoice;
+  /** Own accounts the partner bank pays, with the amount each gets (ADR-021). */
+  readonly payouts: readonly PayoutShare[];
   readonly phase: Phase;
   readonly events: readonly TradeEvent[];
   readonly deadline: number;
@@ -85,11 +88,34 @@ export function ngnFor(amountMinor: number, rateHundredths: number): number {
   return quoteMinor(amountMinor, rateHundredths);
 }
 
-/** What the user must transfer: NGN + fee when buying; the foreign amount when selling. */
-export function transferFor(side: Side, currency: string, amountMinor: number, rateHundredths: number): { minor: number; currency: string } {
-  return side === 'buy'
-    ? { minor: ngnFor(amountMinor, rateHundredths) + COORDINATION_FEE_KOBO, currency: 'NGN' }
-    : { minor: amountMinor, currency };
+/** What the user receives from escrow: the foreign amount when buying, NGN when selling. */
+export function receiveFor(side: Side, amountMinor: number, rateHundredths: number): number {
+  return side === 'buy' ? amountMinor : ngnFor(amountMinor, rateHundredths);
+}
+
+/** Event text for one payout, with the amount when the money was split. */
+function paidLabel(t: Trade, p: PayoutShare): string {
+  const cur = t.side === 'buy' ? t.currency : 'NGN';
+  return t.payouts.length > 1
+    ? `Paid ${formatHundredths(p.amountMinor)} ${cur} to your account ending ${p.last4}`
+    : `Paid to your account ending ${p.last4}`;
+}
+
+/**
+ * What the user must transfer into escrow, fee included (ADR-021): buying, the NGN amount
+ * plus 1% of it in NGN; selling, the foreign amount plus 1% of it in that currency.
+ */
+export function transferFor(
+  side: Side,
+  currency: string,
+  amountMinor: number,
+  rateHundredths: number,
+): { minor: number; currency: string; feeMinor: number } {
+  const sent = side === 'buy' ? ngnFor(amountMinor, rateHundredths) : amountMinor;
+  const feeMinor = coordinationFeeMinor(sent);
+  const minor = sent + feeMinor;
+  if (!Number.isSafeInteger(minor)) throw new Error('Amount to pay is out of range');
+  return { minor, currency: side === 'buy' ? 'NGN' : currency, feeMinor };
 }
 
 let trades: readonly Trade[] = [];
@@ -124,7 +150,9 @@ export const tradeStore = {
     side: Side;
     listing: Listing;
     amountMinor: number;
-    payout: PayoutChoice;
+    /** One account that receives everything, or `payouts` to split (ADR-021). */
+    payout?: PayoutChoice;
+    payouts?: readonly PayoutShare[];
     now: number;
     random: RandomBytes;
     orderId?: string;
@@ -138,6 +166,11 @@ export const tradeStore = {
     // Re-checked at acceptance: a listing above the official rate cannot be taken (§7.2).
     if (rateProblem(listing.currency, listing.rateHundredths) !== null) throw new Error('This rate is above the official rate');
     const t = transferFor(side, listing.currency, amountMinor, listing.rateHundredths);
+    // What the user receives: the foreign amount when buying, the NGN amount when selling.
+    const receiveMinor = receiveFor(side, amountMinor, listing.rateHundredths);
+    const payouts: readonly PayoutShare[] =
+      input.payouts ?? (payout ? [{ ...payout, amountMinor: receiveMinor }] : []);
+    if (splitProblem(receiveMinor, payouts) !== null) throw new Error('Payout accounts must add up to the amount received');
     const trade: Trade = {
       id: `t-${reference(random).toLowerCase()}`,
       reference: reference(random),
@@ -149,9 +182,9 @@ export const tradeStore = {
       rateHundredths: listing.rateHundredths,
       transferMinor: t.minor,
       payCurrency: t.currency,
-      feeKobo: COORDINATION_FEE_KOBO,
+      feeMinor: t.feeMinor,
       counterparty: other(side),
-      payout,
+      payouts,
       phase: 'awaiting_payment',
       events: [
         { label: side === 'buy' ? 'You accepted the offer' : 'You accepted the request', at: now },
@@ -228,7 +261,11 @@ export const tradeStore = {
         ...x,
         phase: 'completed',
         phaseSince: now,
-        events: [...add(x, 'Partner bank released the funds'), { label: `Paid to your account ending ${x.payout.last4}`, at: now }],
+        events: [
+          ...add(x, 'Partner bank released the funds'),
+          ...x.payouts.map((p) => ({ label: paidLabel(x, p), at: now })),
+          { label: `Confirmation sent to you and the ${x.counterparty}`, at: now },
+        ],
       }));
     }
   },
@@ -279,7 +316,8 @@ export function pendingSteps(t: Trade): string[] {
     'Payment made to escrow by you',
     `Payment made to escrow by ${t.counterparty}`,
     'Partner bank released the funds',
-    `Paid to your account ending ${t.payout.last4}`,
+    ...t.payouts.map((p) => paidLabel(t, p)),
+    `Confirmation sent to you and the ${t.counterparty}`,
   ];
   const done = new Set(t.events.map((e) => e.label));
   if (t.phase === 'expired' || t.phase === 'cancelled') return [];
@@ -303,8 +341,8 @@ export function toHistoryItem(t: Trade): HistoryItem {
     date: iso,
     status: t.phase === 'completed' ? 'completed' : t.phase === 'expired' || t.phase === 'cancelled' ? 'failed' : 'pending',
     reference: t.reference,
-    payouts: t.phase === 'completed' ? [{ name: t.payout.name, bank: t.payout.bank, last4: t.payout.last4, amountMinor: t.side === 'buy' ? t.amountMinor : ngnFor(t.amountMinor, t.rateHundredths) }] : [],
+    payouts: t.phase === 'completed' ? t.payouts.map((p) => ({ name: p.name, bank: p.bank, last4: p.last4, amountMinor: p.amountMinor })) : [],
     progress: progressFor(t),
-    recorded: { transferMinor: t.transferMinor, payCurrency: t.payCurrency, feeKobo: t.side === 'buy' ? t.feeKobo : null },
+    recorded: { transferMinor: t.transferMinor, payCurrency: t.payCurrency, feeMinor: t.feeMinor },
   };
 }
