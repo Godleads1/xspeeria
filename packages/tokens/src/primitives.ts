@@ -27,6 +27,11 @@ export const palette = {
   /** Figma card-chip gold, decorative only. */
   chipGold300: '#FFC738',
   chipGold500: '#FFB42E',
+  /** Logo green: Figma Market "Sell" actions. */
+  logoGreen: '#208B3A',
+  logoGreen50: '#F4F9F5',
+  /** Figma Market advert slot. */
+  advertSky: '#8DD4E6',
   /** Figma card-chip contact lines. */
   chipBronze: '#B96634',
 

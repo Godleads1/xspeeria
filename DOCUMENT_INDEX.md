@@ -53,6 +53,7 @@ Several documents are designated PRIMARY, each for its own domain. The authority
 | Financial event and accounting-ledger model | `docs/05-financial/Appendix_D_...v1.1.md` §7/§14 · `docs/04-api-data/05_API_Contract_Data_Dictionary.md` entities · `docs/03-architecture/Xspeeria_Master_Prompt_Python_Backend.md` §7 · `docs/03-architecture/02_Technical_Design_Specification.md` §6 | **ADR-002 (DEC-004), approved 2026-08-18** — `docs/adr/002-financial-event-ledger-architecture.md` |
 | Application brand primary and mobile bottom navigation | `PRODUCT.md` Brand Commitments (B) · `docs/09-ui-ux/DESIGN_SYSTEM.md` · `docs/13-governance/CORRECTIONS_v3.md` §9.1 · `docs/02-product/04_Product_Design_Specification.md` colour tables | **ADR-003 (DEC-005, DEC-006), approved 2026-10-16** — `docs/adr/003-brand-primary-and-bottom-navigation.md` |
 | Home screen layout | `docs/09-ui-ux/UI_UX_SCREEN_SPEC.md` § Home Screen · Figma Home frame `39:2882` | **ADR-004 (DEC-008), approved 2026-10-16** — `docs/adr/004-home-screen-layout.md` |
+| Mobile Market screen | `docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md` § Marketplace · Figma Market frames `79:399`, `94:557`, `436:7771`, `106:1150` | **ADR-005 (DEC-011), approved 2026-10-17** — `docs/adr/005-market-screen.md` |
 
 ---
 
@@ -74,6 +75,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `002-financial-event-ledger-architecture.md` | Financial event acceptance and accounting-ledger architecture (DEC-004) | **APPROVED** — 2026-08-18 |
 | `003-brand-primary-and-bottom-navigation.md` | Mobile bottom navigation (DEC-005) and application brand primary `#001A6E` (DEC-006) | **APPROVED** — 2026-10-16 |
 | `004-home-screen-layout.md` | Home screen layout: Figma Home with a best-rate hero (DEC-008) | **APPROVED** — 2026-10-16 |
+| `005-market-screen.md` | Market tab (Figma Buy/Sell) and Select Match (DEC-011) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 

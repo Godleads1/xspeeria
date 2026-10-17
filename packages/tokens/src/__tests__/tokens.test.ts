@@ -39,7 +39,7 @@ describe('semantic token presence', () => {
 
   it('exposes the approved colour roles', () => {
     expect(Object.keys(color).sort()).toEqual(
-      ['bg', 'border', 'brand', 'decorative', 'error', 'success', 'text', 'warning'].sort(),
+      ['bg', 'border', 'brand', 'decorative', 'error', 'success', 'text', 'trade', 'warning'].sort(),
     );
     expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'inverse', 'overlay', 'sunken']);
     expect(Object.keys(color.text).sort()).toEqual(
@@ -167,6 +167,10 @@ describe('contrast assumptions', () => {
   it('text roles pass AA on the canvas', () => {
     expect(contrast(color.text.primary, canvas)).toBeGreaterThanOrEqual(7);
     expect(contrast(color.text.secondary, canvas)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('white on the Sell green passes the large-text threshold (3:1)', () => {
+    expect(contrast(color.text.onFill, color.trade.sell)).toBeGreaterThanOrEqual(3);
   });
 
   it('white on the inverse hero surface passes AAA', () => {

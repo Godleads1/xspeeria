@@ -24,7 +24,13 @@ export type IconName =
   | 'profile'
   | 'bell'
   | 'help'
-  | 'swap';
+  | 'swap'
+  | 'more'
+  | 'sort'
+  | 'back'
+  | 'info'
+  | 'caret'
+  | 'megaphone';
 
 /** Reference box the geometry below is authored against. */
 const BOX = 24;
@@ -131,6 +137,36 @@ export function Icon({
         <>
           <Circle cx={12} cy={12} r={8.5} {...stroke} />
           <Path d="M8 10.5h7.5l-2-2M16 13.5H8.5l2 2" {...stroke} />
+        </>
+      ) : null}
+
+      {name === 'more' ? (
+        <>
+          <Circle cx={12} cy={6} r={1.6} fill={color} />
+          <Circle cx={12} cy={12} r={1.6} fill={color} />
+          <Circle cx={12} cy={18} r={1.6} fill={color} />
+        </>
+      ) : null}
+
+      {name === 'sort' ? (
+        <Path d="M7 4v15M4 16l3 3 3-3M13 6h8M13 10.5h6M13 15h4M13 19.5h2" {...stroke} />
+      ) : null}
+
+      {name === 'back' ? <Path d="M20 12H4M10 6l-6 6 6 6" {...stroke} /> : null}
+
+      {name === 'info' ? (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...stroke} />
+          <Path d="M12 11v5.5M12 7.75h.01" {...stroke} />
+        </>
+      ) : null}
+
+      {name === 'caret' ? <Path d="M6 9.5h12L12 16z" fill={color} /> : null}
+
+      {name === 'megaphone' ? (
+        <>
+          <Path d="M4 10v4h3l8 4.5v-13L7 10z" {...stroke} />
+          <Path d="M7 14l1.5 5h2.5L10 14M18 9a4 4 0 0 1 0 6" {...stroke} />
         </>
       ) : null}
     </Svg>

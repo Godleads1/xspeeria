@@ -1,17 +1,24 @@
 import type { ReactElement } from 'react';
-import { PlaceholderScreen } from '../../src/features/shared/PlaceholderScreen';
+import { useRouter } from 'expo-router';
 
-/**
- * No filtering exists yet, so the screen offers no "Clear filters". Inventing a filter
- * control to satisfy the empty-state pattern would promise behaviour the milestone does
- * not have; the message stands on its own until the marketplace is built.
- */
+import { MarketScreen } from '../../src/features/market/MarketScreen';
+
+/** Market tab (ADR-005). Mock data only; "Create" opens Select Match. */
 export default function MarketplaceRoute(): ReactElement {
+  const router = useRouter();
   return (
-    <PlaceholderScreen
-      testID="marketplace-screen"
-      title="Marketplace"
-      message="Offers arrive in a later milestone"
+    <MarketScreen
+      onCreate={(req) =>
+        router.push({
+          pathname: '/market/matches',
+          params: {
+            side: req.side,
+            currency: req.currency,
+            amount: String(req.amountMinor),
+            rate: String(req.rateHundredths),
+          },
+        })
+      }
     />
   );
 }

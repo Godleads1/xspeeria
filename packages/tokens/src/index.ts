@@ -101,6 +101,17 @@ export const color = {
     chipDark: palette.chipGold500,
     chipLine: palette.chipBronze,
   },
+
+  /**
+   * Market trade sides (Figma Market, ADR-005). Buy actions use the brand primary; Sell
+   * actions use the logo green. White on `sell` is 4.37:1, so labels on it must be large
+   * text (>= 14 pt bold) — the Sell button label is 19 pt bold.
+   */
+  trade: {
+    sell: palette.logoGreen,
+    sellSurface: palette.logoGreen50,
+    advert: palette.advertSky,
+  },
 } as const;
 
 export const interaction = {

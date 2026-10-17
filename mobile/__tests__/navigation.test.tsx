@@ -124,11 +124,10 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('offers no filter action on a Marketplace that has no filtering', async () => {
+  it('renders the Market tab screen (ADR-005) without invented filter controls', async () => {
     await render(<MarketplaceRoute />);
     expect(screen.getByTestId('marketplace-screen')).toBeTruthy();
     expect(screen.queryByText('Clear filters')).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 
