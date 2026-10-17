@@ -5,7 +5,9 @@ import MarketplaceRoute from '../app/(tabs)/marketplace';
 import ProfileRoute from '../app/(tabs)/profile';
 import HistoryRoute from '../app/(tabs)/history';
 import { Icon } from '../src/components/icons';
-import { ComingSoonScreen } from '../src/features/shared/ComingSoonScreen';
+import { Alert } from 'react-native';
+
+import { CARDS_UNAVAILABLE, CARD_DESIGNS, CardsScreen } from '../src/features/cards/CardsScreen';
 import { PlaceholderScreen } from '../src/features/shared/PlaceholderScreen';
 import { TABS } from '../src/navigation/tabs';
 
@@ -43,23 +45,37 @@ describe('bottom navigation', () => {
   });
 });
 
-describe('Cards Coming Soon destination', () => {
-  it('renders a real screen rather than a dead tab', async () => {
-    await render(<ComingSoonScreen />);
-    expect(screen.getByTestId('cards-screen')).toBeTruthy();
-    expect(screen.getByTestId('cards-explainer')).toBeTruthy();
-    expect(screen.getByText('Coming soon')).toBeTruthy();
+describe('Cards preview (ADR-012)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('renders the Figma layout: three card designs, actions, Create yours, history', async () => {
+    await render(<CardsScreen />);
+    expect(screen.getByText('Debit Cards')).toBeTruthy();
+    expect(screen.getByTestId('cards-label').props.children.join('')).toBe('USD Card');
+    for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}`)).toBeTruthy();
+    for (const t of ['Details', 'Freeze Card', 'More', 'Transaction History']) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText('Create yours')).toBeTruthy();
   });
 
-  it('exposes no card functionality and no card balance', async () => {
-    await render(<ComingSoonScreen />);
-    for (const forbidden of [/card number/i, /activate/i, /spend/i, /top up/i]) {
-      expect(screen.queryByText(forbidden)).toBeNull();
+  it('Create yours says cards are not available yet', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<CardsScreen />);
+    await fireEvent.press(screen.getByTestId('cards-create'));
+    expect(alert).toHaveBeenCalledWith('Cards are not available', CARDS_UNAVAILABLE);
+  });
+
+  it('card actions are disabled', async () => {
+    await render(<CardsScreen />);
+    for (const id of ['cards-details', 'cards-freeze', 'cards-actions-more']) {
+      expect(screen.getByTestId(id).props.accessibilityState).toEqual({ disabled: true });
     }
   });
 
-  it('states plainly that Xspeeria holds no money', async () => {
-    await render(<ComingSoonScreen />);
+  it('shows no balance, card number, amounts or card transactions', async () => {
+    await render(<CardsScreen />);
+    for (const forbidden of [/\d+\.\d{2}\s?(USD|EUR|NGN)/, /[$€₦]\s?\d/, /\b\d{4}\b/, /activate/i, /spend/i, /top up/i, /card funded/i]) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
     expect(screen.getByText(/never holds your money/i)).toBeTruthy();
   });
 });

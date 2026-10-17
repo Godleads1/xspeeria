@@ -73,7 +73,7 @@ function Texture(): ReactElement {
  * Decorative card chip. Figma: a 38.8 box with the chip art inset 11.05% top and bottom
  * (38.8 × 30.2), gold with bronze contact lines.
  */
-function Chip({ size }: { size: number }): ReactElement {
+export function Chip({ size }: { size: number }): ReactElement {
   const line = {
     stroke: color.decorative.chipLine,
     strokeWidth: 0.9,
@@ -98,7 +98,7 @@ function Chip({ size }: { size: number }): ReactElement {
 }
 
 /** Decorative contactless mark. Figma: a 38.8 box with the art inset 18.49% each side. */
-function Contactless({ size }: { size: number }): ReactElement {
+export function Contactless({ size }: { size: number }): ReactElement {
   const s = {
     stroke: color.text.onFill,
     strokeWidth: 2.4,
