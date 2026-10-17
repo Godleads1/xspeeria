@@ -1,24 +1,21 @@
 import type { ReactElement } from 'react';
-import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
-import { ProfileScreen } from '../../src/features/profile/ProfileScreen';
+import { ProfileScreen, type ProfileDestination } from '../../src/features/profile/ProfileScreen';
 
-/** Profile tab (ADR-007). Account details, Manage Beneficiaries, KYC and limits, Security, FAQ, Referral Program and Terms are built; other rows are coming next. */
+/** Every Profile row has a screen (ADR-007). A missing entry is a type error. */
+const ROUTES: Record<ProfileDestination, Href> = {
+  account: '/profile/account',
+  beneficiaries: '/profile/beneficiaries',
+  kyc: '/profile/kyc',
+  security: '/profile/security',
+  faq: '/profile/faq',
+  support: '/profile/support',
+  referral: '/profile/referral',
+  terms: '/profile/terms',
+};
+
 export default function ProfileRoute(): ReactElement {
   const router = useRouter();
-  return (
-    <ProfileScreen
-      onOpen={(destination) => {
-        if (destination === 'account') router.push('/profile/account');
-        else if (destination === 'beneficiaries') router.push('/profile/beneficiaries');
-        else if (destination === 'kyc') router.push('/profile/kyc');
-        else if (destination === 'security') router.push('/profile/security');
-        else if (destination === 'faq') router.push('/profile/faq');
-        else if (destination === 'referral') router.push('/profile/referral');
-        else if (destination === 'terms') router.push('/profile/terms');
-        else Alert.alert('Coming next', 'This screen is one of the next to be built.');
-      }}
-    />
-  );
+  return <ProfileScreen onOpen={(destination) => router.push(ROUTES[destination])} />;
 }

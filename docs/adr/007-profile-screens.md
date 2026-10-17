@@ -50,6 +50,9 @@
 - **Terms and Conditions** (amendment A9, 2026-10-17): scrollable document with bold title
   block, numbered sections, sub-headings and bullets; the contact email opens the mail app.
   Text transcribed verbatim from Figma (`src/features/legal/privacyPolicy.ts`).
+- **Contact Support** (amendment A10, 2026-10-17): "Alex Mobile Assistant" chat with an
+  avatar, bubbles, quick-reply chips, timestamps, and a composer (camera, "Write a comment",
+  emoji). With this, every Profile row has a screen.
 
 ## 2. Recorded deviations
 
@@ -72,6 +75,11 @@
 | FAQ: "How to create a account?" … "Tradebase account"; other questions lorem ipsum | Ten questions written from approved docs (`src/features/faq/data.ts`); "Tradebase" → "Xspeeria"; grammar fixed | Placeholder/product-name slip. Answers avoid unapproved figures and claims: no fee amount (business plan says reconfirm before publishing), no "licensed" claim, no settlement-window length. **Needs Legal/Compliance review before release** |
 | Referral: "10% bonus on your next currency exchange"; "Total Earnings $0" | "10% off the coordination fee on your next exchange"; "Friends joined 0" | ADR-009: discount on Xspeeria's fee only; no earnings or balance shown |
 | Referral 3D illustration | Original SVG illustration in the same style (two figures, paper plane) | Artwork not exportable (view-only); ours, no licence needed |
+| Chat greeting "Hi Kitsbase" | "Hi David" (the signed-in user's first name) | Product-name slip in Figma |
+| One quick-reply chip ("Opening an account") | Four chips: Opening an account, How to sell, Fees, Is my money safe? | More useful starting points; all answered from the approved FAQ |
+| "Alex" presented as an assistant with no backend | Offline, rule-based assistant answering only from FAQ content, labelled "Automated assistant"; anything else gets "chat with our support team isn't available yet" plus the support email | No AI model or support desk is approved or connected; the app must not invent answers or pretend a human is replying |
+| Camera attaches photos | Camera explains photos aren't accepted in chat | Compliance Manual §3: ID documents must never be sent in support tickets; payment evidence goes through the dispute flow |
+| Free-text sending | 2FA codes, recovery codes, passwords and 8+ digit numbers are blocked before sending, with a warning | ADR-008: staff never need codes; account numbers stay masked |
 | Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items
