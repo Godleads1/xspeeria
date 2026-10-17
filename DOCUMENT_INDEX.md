@@ -79,6 +79,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `006-history-screens.md` | History list and transaction receipt (DEC-012) | **APPROVED** — 2026-10-17 |
 | `007-profile-screens.md` | Profile menu and Account details (DEC-013) | **APPROVED** — 2026-10-17 |
 | `008-two-factor-authentication.md` | Two-factor authentication: passkey/authenticator, no SMS, step-up, recovery (DEC-014; resolves the MFA part of Open Decision 2) | **APPROVED** — 2026-10-17 |
+| `009-referral-reward.md` | Referral reward: 10% off the coordination fee for both people; count, not earnings (DEC-015) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 

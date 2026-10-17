@@ -32,7 +32,7 @@ const ITEMS: readonly { key: ProfileDestination; icon: MenuIconName; title: stri
   { key: 'security', icon: 'security', title: 'Security', subtitle: 'Protect yourself from intruders' },
   { key: 'faq', icon: 'faq', title: 'FAQ', subtitle: 'Find answers to common questions' },
   { key: 'support', icon: 'support', title: 'Contact Support', subtitle: 'Get support or send feedback' },
-  { key: 'referral', icon: 'referral', title: 'Referral Program', subtitle: 'Get paid when your friends join Xspeeria' },
+  { key: 'referral', icon: 'referral', title: 'Referral Program', subtitle: 'Get 10% off fees when your friends join Xspeeria' },
   { key: 'terms', icon: 'terms', title: 'Terms and Conditions', subtitle: 'Learn about our terms and conditions, privacy policies' },
 ];
 

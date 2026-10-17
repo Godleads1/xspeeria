@@ -44,6 +44,9 @@
   (Getting Started, How to Sell, Payments) that filter the list, "Top Questions" with
   "View all", and expandable question cards. Adds token `brand.secondarySurface`
   (`blue50 #EFF6FF`) and line icons hexagon, dollar, minus.
+- **Referral Program** (amendment A8, 2026-10-17): illustration, "Refer a friend, get 10%
+  off!", referral code with Copy, a "Friends joined" count box, and "Invite Friends" (system
+  share sheet). Reward per ADR-009.
 
 ## 2. Recorded deviations
 
@@ -64,6 +67,8 @@
 | Security row "Hide Balance" (toggle) | **Omitted** | Xspeeria is wallet-less and never shows a stored balance (design bible, no-balance rule enforced by `no-balance.test.ts`); the toggle would imply one exists |
 | Change Password / 2FA open working flows | Change Password form built (A6) without any length/complexity rule; 2FA built to ADR-008 (DEC-014) | Password, MFA and session specifics are **Open Decision 2** (Standing Standards §15); MFA is required to transact (§7.7), so 2FA will not be optional once built |
 | FAQ: "How to create a account?" … "Tradebase account"; other questions lorem ipsum | Ten questions written from approved docs (`src/features/faq/data.ts`); "Tradebase" → "Xspeeria"; grammar fixed | Placeholder/product-name slip. Answers avoid unapproved figures and claims: no fee amount (business plan says reconfirm before publishing), no "licensed" claim, no settlement-window length. **Needs Legal/Compliance review before release** |
+| Referral: "10% bonus on your next currency exchange"; "Total Earnings $0" | "10% off the coordination fee on your next exchange"; "Friends joined 0" | ADR-009: discount on Xspeeria's fee only; no earnings or balance shown |
+| Referral 3D illustration | Original SVG illustration in the same style (two figures, paper plane) | Artwork not exportable (view-only); ours, no licence needed |
 | Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items
@@ -75,7 +80,7 @@
 - Rows other than Account details and Manage Beneficiaries explain they are coming next. Planned order: Security,
   KYC and limits, Manage Beneficiaries (payout accounts; third-party payouts per DEC-007
   pending legal/partner-bank confirmation), Contact Support, FAQ, Terms and Conditions.
-- **Referral Program (Figma `1041:11976`) needs a product decision before it is built:**
+- **Referral Program — RESOLVED by ADR-009 (DEC-015), built as amendment A8.** Original note:
   its copy promises "a 10% bonus on your next currency exchange" and shows "Total Earnings
   $0". The business plan sets a flat coordination fee (not a percentage), and the app may
   show no stored balance; a referral reward has to be defined in those terms first.
