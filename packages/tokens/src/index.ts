@@ -99,6 +99,7 @@ export const color = {
     star: palette.amber500,
     chipLight: palette.chipGold300,
     chipDark: palette.chipGold500,
+    chipLine: palette.chipBronze,
   },
 } as const;
 
@@ -158,10 +159,11 @@ export const font = {
       'Satoshi, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   numeric: {
-    family: 'Inter' as const,
+    /** Satoshi, as in the Figma frames (DEC-010); tabular figures requested. */
+    family: 'Satoshi' as const,
     /** Falls back to the platform face, which also supports tabular figures. */
     webStack:
-      'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      'Satoshi, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     /** Financial numerics must retain tabular alignment, including in fallback. */
     tabular: true as const,
   },

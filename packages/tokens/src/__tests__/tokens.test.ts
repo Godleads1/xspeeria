@@ -144,7 +144,7 @@ describe('no deprecated palette leakage', () => {
     expect(exported).not.toContain('#F4C21F');
     expect(Object.keys(color)).not.toContain('accent');
     expect(Object.keys(color)).not.toContain('gold');
-    expect(Object.keys(color.decorative).sort()).toEqual(['chipDark', 'chipLight', 'star']);
+    expect(Object.keys(color.decorative).sort()).toEqual(['chipDark', 'chipLight', 'chipLine', 'star']);
   });
 });
 
@@ -224,8 +224,8 @@ describe('typography roles', () => {
     expect(font.brand.webStack.startsWith('Satoshi, system-ui')).toBe(true);
   });
 
-  it('carries the approved Inter numeric role with tabular figures', () => {
-    expect(font.numeric.family).toBe('Inter');
+  it('carries the Satoshi numeric role with tabular figures (DEC-010)', () => {
+    expect(font.numeric.family).toBe('Satoshi');
     expect(font.numeric.tabular).toBe(true);
   });
 });

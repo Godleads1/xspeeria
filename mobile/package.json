@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@xspeeria/tokens": "*",
     "expo": "~57.0.15",
     "expo-constants": "~57.0.13",

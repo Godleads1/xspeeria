@@ -1,37 +1,48 @@
 /**
- * Best-rate card — the Home hero (DEC-008), styled after the Figma balance card
- * (node 39:2882): dark card, flowing line texture, small label top-left, large figure
- * bottom-left.
+ * Best-rate card — the Home hero (DEC-008), built to the Figma card's geometry
+ * (node 51:1719): 342 × 135, 17.24 padding, an 11 pt bold label, a 38.8 pt row holding the
+ * chip (left) and contactless mark (right), then the figure in Space Grotesk Bold 23 pt.
+ * Everything is authored on that 342-wide frame and scaled to the card's real width, so
+ * the proportions match Figma on any phone.
  *
  * Xspeeria holds no money, so the hero shows a PRICE, never an amount: the rate is always
  * written with both currencies (`1 USD = 1,603.78 NGN`) under an explicit "rate" label, so
- * it cannot be read as a balance. The chip and contactless marks are drawn as in Figma
- * (DEC-009, product owner, 2026-10-17); they are decoration and expose no card feature.
+ * it cannot be read as a balance. The chip and contactless marks are decoration only
+ * (DEC-009) and expose no card feature. The whole card is Home's one primary action.
  *
- * The Figma texture is a raster image that could not be exported; it is redrawn here as
- * vector strokes on `color.bg.inverse`. The whole card is Home's one primary action.
+ * The Figma texture and chip are raster/vector assets that could not be exported; they are
+ * redrawn here as vectors.
  */
 
-import type { ReactElement } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactElement } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import type { MarketRate } from '../../fixtures';
-import { brandWeight, color, numericTextStyle, radius, space, typography } from '../../theme';
+import { brandWeight, color, heroFigureStyle, radius } from '../../theme';
 import { formatRate, pairLabel } from './rate';
 
-/**
- * Silky ribbon texture, authored on a 342 × 150 box (the card). Many fine strokes in two
- * crossing bands with a soft sheen, standing in for the Figma texture image.
- */
+/** The Figma frame every measurement below is taken from. */
+const FIGMA = {
+  width: 342,
+  height: 135,
+  padding: 17.24,
+  gap: 10.06,
+  label: 11,
+  mark: 38.8,
+  figure: 23,
+  figureTracking: 0.92,
+} as const;
+
+/** Silky ribbon texture on the 342 × 135 frame: fine strokes in two crossing bands. */
 const RIBBONS: readonly string[] = [
   ...Array.from({ length: 34 }, (_, i) => {
-    const y = -10 + i * 3.4;
-    return `M90 ${y} C 160 ${y - 40}, 230 ${y + 80}, 342 ${y + 28}`;
+    const y = -10 + i * 3.1;
+    return `M90 ${y} C 160 ${y - 36}, 230 ${y + 72}, 342 ${y + 25}`;
   }),
   ...Array.from({ length: 22 }, (_, i) => {
-    const y = 70 + i * 3.6;
-    return `M150 ${y + 60} C 210 ${y - 10}, 270 ${y - 50}, 342 ${y - 70}`;
+    const y = 62 + i * 3.3;
+    return `M150 ${y + 54} C 210 ${y - 9}, 270 ${y - 45}, 342 ${y - 63}`;
   }),
 ];
 
@@ -39,7 +50,7 @@ function Texture(): ReactElement {
   return (
     <Svg
       style={StyleSheet.absoluteFill}
-      viewBox="0 0 342 150"
+      viewBox={`0 0 ${FIGMA.width} ${FIGMA.height}`}
       preserveAspectRatio="none"
       pointerEvents="none"
     >
@@ -58,41 +69,48 @@ function Texture(): ReactElement {
   );
 }
 
-/** Decorative card chip, as on the Figma card (40 × 30). */
-function Chip(): ReactElement {
+/**
+ * Decorative card chip. Figma: a 38.8 box with the chip art inset 11.05% top and bottom
+ * (38.8 × 30.2), gold with bronze contact lines.
+ */
+function Chip({ size }: { size: number }): ReactElement {
+  const line = {
+    stroke: color.decorative.chipLine,
+    strokeWidth: 0.9,
+    fill: 'none',
+    strokeLinecap: 'round' as const,
+  };
   return (
-    <Svg width={40} height={30} viewBox="0 0 40 30">
+    <Svg width={size} height={size} viewBox="0 0 40 40">
       <Defs>
         <LinearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={color.decorative.chipLight} />
           <Stop offset="1" stopColor={color.decorative.chipDark} />
         </LinearGradient>
       </Defs>
-      <Rect x={0.5} y={0.5} width={39} height={29} rx={5} fill="url(#chip)" />
-      <Path
-        d="M0.5 10h12M0.5 20h12M27.5 10h12M27.5 20h12M12.5 0.5v29M27.5 0.5v29M12.5 15h15"
-        stroke={color.bg.inverse}
-        strokeOpacity={0.35}
-        strokeWidth={1}
-        fill="none"
-      />
+      <Rect x={0.4} y={4.8} width={39.2} height={30.4} rx={5} fill="url(#chip)" />
+      {/* Centre pad, then the contact rows either side, as on a real chip. */}
+      <Rect x={14} y={11.5} width={12} height={17} rx={3} {...line} />
+      <Path d="M0.4 14.5h13.6M0.4 25.5h13.6M26 14.5h13.6M26 25.5h13.6" {...line} />
+      <Path d="M14 20h-6M26 20h6M20 4.8v6.7M20 28.5v6.7" {...line} />
     </Svg>
   );
 }
 
-/** Decorative contactless mark (three arcs and a dot), top-right as in Figma. */
-function Contactless(): ReactElement {
+/** Decorative contactless mark. Figma: a 38.8 box with the art inset 18.49% each side. */
+function Contactless({ size }: { size: number }): ReactElement {
   const s = {
     stroke: color.text.onFill,
-    strokeWidth: 2,
+    strokeWidth: 2.4,
     strokeLinecap: 'round' as const,
     fill: 'none',
   };
   return (
-    <Svg width={26} height={30} viewBox="0 0 26 30">
-      <Path d="M4 11.5a5 5 0 0 1 0 7" {...s} />
-      <Path d="M10 7.5a11 11 0 0 1 0 15" {...s} />
-      <Path d="M16 3.5a17 17 0 0 1 0 23" {...s} />
+    <Svg width={size} height={size} viewBox="0 0 40 40">
+      <Path d="M10 15a7 7 0 0 1 0 10" {...s} />
+      <Path d="M16.5 10a14 14 0 0 1 0 20" {...s} />
+      <Path d="M23 5a21 21 0 0 1 0 30" {...s} />
+      <Path d="M29.5 1.5a27 27 0 0 1 0 37" {...s} />
     </Svg>
   );
 }
@@ -107,54 +125,68 @@ export function BestRateCard({
   const rendered = formatRate(rate);
   const label = `Best ${pairLabel(rate)} rate today`;
 
+  // Scale every Figma measurement by the card's real width.
+  const [width, setWidth] = useState<number>(FIGMA.width);
+  const k = width / FIGMA.width;
+  const onLayout = (event: LayoutChangeEvent): void => {
+    const next = event.nativeEvent.layout.width;
+    if (next > 0 && Math.abs(next - width) > 0.5) setWidth(next);
+  };
+
+  const frame = {
+    height: FIGMA.height * k,
+    padding: FIGMA.padding * k,
+    gap: FIGMA.gap * k,
+  };
+  const labelStyle = { fontSize: FIGMA.label * k, lineHeight: FIGMA.label * 1.4 * k };
+  const figureStyle = {
+    fontSize: FIGMA.figure * k,
+    letterSpacing: FIGMA.figureTracking * k,
+  };
+  const mark = FIGMA.mark * k;
+
   const body = (
     <>
       <Texture />
-      <View style={styles.topRow}>
-        <View style={styles.labelColumn}>
-          <Text style={styles.label}>{label}</Text>
-          <Chip />
-        </View>
-        <Contactless />
+      <Text style={[styles.label, labelStyle]}>{label}</Text>
+      <View style={styles.marks}>
+        <Chip size={mark} />
+        <Contactless size={mark} />
       </View>
-      <View style={styles.bottomRow}>
-        <Text
-          accessibilityLabel={`${label}: ${rendered}`}
-          adjustsFontSizeToFit
-          numberOfLines={1}
-          style={styles.rate}
-        >
-          {rendered}
-        </Text>
-        {onTrade ? <Text style={styles.trade}>Trade ›</Text> : null}
-      </View>
+      <Text
+        accessibilityLabel={`${label}: ${rendered}`}
+        adjustsFontSizeToFit
+        numberOfLines={1}
+        style={[styles.figure, figureStyle]}
+      >
+        {rendered}
+      </Text>
     </>
   );
 
   if (!onTrade) {
     return (
-      <View testID="home-best-rate" style={styles.card}>
+      <View testID="home-best-rate" onLayout={onLayout} style={[styles.card, frame]}>
         {body}
       </View>
     );
   }
 
   return (
-    <View testID="home-best-rate" style={styles.shadow}>
+    <View testID="home-best-rate" onLayout={onLayout} style={styles.shadow}>
       <Pressable
         testID="home-primary-action"
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${rendered}. Trade now`}
+        accessibilityHint="Opens the marketplace"
         onPress={onTrade}
-        style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]}
+        style={({ pressed }) => [styles.card, frame, pressed ? styles.pressed : null]}
       >
         {body}
       </Pressable>
     </View>
   );
 }
-
-const CARD_HEIGHT = 150;
 
 const styles = StyleSheet.create({
   // The hero is the one raised surface on Home, as in Figma; ordinary cards stay flat.
@@ -171,25 +203,12 @@ const styles = StyleSheet.create({
     }),
   },
   card: {
-    height: CARD_HEIGHT,
     backgroundColor: color.bg.inverse,
     borderRadius: radius.md,
-    padding: space.sm,
     overflow: 'hidden',
-    justifyContent: 'space-between',
   },
   pressed: { opacity: 0.92 },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  labelColumn: { gap: 10 },
-  bottomRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 },
-  label: { ...typography.caption, ...brandWeight('500'), color: color.text.onFill },
-  trade: { ...typography.chipLabel, color: color.text.onFill },
-  rate: {
-    flexShrink: 1,
-    ...typography.sectionTitle,
-    // Figma sets the hero figure in Satoshi Bold; keep tabular figures from the numeric role.
-    fontVariant: numericTextStyle.fontVariant,
-    ...brandWeight('700'),
-    color: color.text.onFill,
-  },
+  label: { ...brandWeight('700'), color: color.text.onFill },
+  marks: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  figure: { ...heroFigureStyle, color: color.text.onFill },
 });

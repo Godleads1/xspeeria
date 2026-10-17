@@ -7,7 +7,7 @@
  * family directly.
  */
 
-import { Platform, type TextStyle } from 'react-native';
+import type { TextStyle } from 'react-native';
 import { color, font, interaction, radius, space } from '@xspeeria/tokens';
 
 export { color, interaction, radius, space };
@@ -44,14 +44,23 @@ export function brandWeight(weight: BrandWeight): TextStyle {
   return { fontFamily: SATOSHI_FOR[weight], fontWeight: 'normal' };
 }
 
+/**
+ * Space Grotesk Bold — the Figma Home hero figure only (node 51:1741). SIL Open Font
+ * License (redistributable), loaded from @expo-google-fonts/space-grotesk.
+ */
+export const SPACE_GROTESK_FILES = {
+  'SpaceGrotesk-Bold': require('@expo-google-fonts/space-grotesk/700Bold/SpaceGrotesk_700Bold.ttf'),
+} as const;
+
+export const heroFigureStyle: TextStyle = {
+  fontFamily: 'SpaceGrotesk-Bold',
+  fontWeight: 'normal',
+};
+
 export const fontFamily = {
   brand: SATOSHI_FOR['400'],
-  /**
-   * The approved Inter financial/numeric role. Until the Inter asset is bundled this
-   * falls back to the platform face, which also supports tabular figures — the
-   * normative requirement is the rendering outcome, not a particular font build.
-   */
-  numeric: Platform.select({ ios: 'System', android: 'sans-serif', default: 'System' }),
+  /** Numerics use Satoshi too (DEC-010); the weight comes from the typography role. */
+  numeric: SATOSHI_FOR['400'],
 } as const;
 
 /**
@@ -59,7 +68,7 @@ export const fontFamily = {
  * and for system faces on iOS; it is deliberately not sprayed onto ordinary labels.
  */
 export const numericTextStyle: TextStyle = {
-  fontFamily: fontFamily.numeric,
+  // No fontFamily here: numbers inherit the Satoshi weight of their typography role.
   fontVariant: font.numeric.tabular ? ['tabular-nums', 'lining-nums'] : undefined,
 };
 

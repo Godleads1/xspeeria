@@ -27,6 +27,8 @@ export const palette = {
   /** Figma card-chip gold, decorative only. */
   chipGold300: '#FFC738',
   chipGold500: '#FFB42E',
+  /** Figma card-chip contact lines. */
+  chipBronze: '#B96634',
 
   blue500: '#3B82F6',
   blue600: '#2563EB',

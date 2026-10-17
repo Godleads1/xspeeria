@@ -88,3 +88,13 @@ ever formatted as text — never converted to floating point.
 - Weights are selected by family (`brandWeight()` in `mobile/src/theme`); Satoshi has no
   600, so semibold maps to Medium, matching Figma labels. Financial numerics keep the
   numeric role (system face, tabular); the Home hero figure uses Satoshi Bold, as in Figma.
+
+## 8. Amendment A4 — 2026-10-17 (exact Figma card geometry, numbers in Satoshi)
+
+- The hero is built to the Figma card (node `51:1719`): 342 × 135, 17.24 padding, 10.06
+  gap, 11 pt Satoshi Bold label, a 38.8 pt row with the chip and contactless mark, and the
+  figure in **Space Grotesk Bold 23 pt** (tracking 0.92), all scaled to the real card width.
+  Space Grotesk is SIL OFL (redistributable), from `@expo-google-fonts/space-grotesk`.
+- The small "Trade ›" text is removed to match Figma; the whole card remains the "Trade
+  now" action (accessible label and hint say so).
+- Amounts and rates now render in Satoshi (numeric role = Satoshi, tabular figures).
