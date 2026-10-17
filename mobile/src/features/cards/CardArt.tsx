@@ -134,14 +134,14 @@ function buildMesh(symbol: string, x: number, y: number, size: number): Mesh {
       L.push(P([p[0] - (dy / len) * w, p[1] + (dx / len) * w]));
       R.push(P([p[0] + (dy / len) * w, p[1] - (dx / len) * w]));
     });
-    const seg = (a: Pt, b: Pt): string => `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
+    const seg = (a: Pt, b: Pt): string => `M${r1(a[0])} ${r1(a[1])}L${r1(b[0])} ${r1(b[1])}`;
     for (let i = 0; i < L.length; i++) {
       edges += seg(L[i], R[i]);
       if (i + 1 < L.length) {
         edges += seg(L[i], L[i + 1]) + seg(R[i], R[i + 1]) + seg(i % 2 ? L[i] : R[i], i % 2 ? R[i + 1] : L[i + 1]);
         if (i % 3 === 0) {
           const t = [L[i], R[i], i % 2 ? R[i + 1] : L[i + 1]];
-          faces += `M${t[0][0].toFixed(1)} ${t[0][1].toFixed(1)}L${t[1][0].toFixed(1)} ${t[1][1].toFixed(1)}L${t[2][0].toFixed(1)} ${t[2][1].toFixed(1)}Z`;
+          faces += `M${r1(t[0][0])} ${r1(t[0][1])}L${r1(t[1][0])} ${r1(t[1][1])}L${r1(t[2][0])} ${r1(t[2][1])}Z`;
         }
       }
     }
@@ -149,6 +149,9 @@ function buildMesh(symbol: string, x: number, y: number, size: number): Mesh {
   }
   return { edges, nodes, faces };
 }
+
+/** One decimal place for SVG path coordinates. */
+const r1 = (n: number): number => Math.round(n * 10) / 10;
 
 /** Deterministic pseudo-random so the art is stable between renders. */
 function rand(seed: number): () => number {
