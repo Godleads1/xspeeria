@@ -26,7 +26,7 @@ rate** for the currency. A rate is valid only when:
 
 | Point | Behaviour |
 |---|---|
-| Market form | Shows "Official rate (demo): NGN 1,899.99 per USD. Your rate must be this or lower."; a higher rate shows an error, hides "match potential" and disables Create. |
+| Market form | Shows "Official rate (CBN, 17 Oct 2026): NGN 1,333.26 per USD. Your rate must be this or lower."; a higher rate shows an error, hides "match potential" and disables Create. |
 | Deep link to Select Match | A rate above the official rate returns to Market. |
 | Listings | A listing above the official rate is not shown as a match (not eligible for acceptance, API contract `RES_409_OFFER_UNAVAILABLE` cause b). |
 | Accepting a trade | Re-checked at creation; refused above the official rate. The agreed rate is then locked and never re-priced. |
@@ -46,8 +46,8 @@ to euros. and use that as the max."
 
 Cross-check: CBN figures for 15 Oct 2026 reported by Arbiterz — USD NFEM close 1,332.75,
 GBP selling 1,764.26, EUR selling 1,490.48. The CBN's own rates page did not return data
-when fetched, so the CBN figures are **as reported by a third party**: VERIFIED against two
-independent reports, not against the CBN page itself.
+when fetched, so the CBN figures are **as reported by third parties**: cross-checked between two
+independent reports, not read from the CBN page itself.
 
 Consequences:
 
