@@ -112,10 +112,10 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('sends the History action to the Marketplace', async () => {
+  it('opens a History row receipt', async () => {
     await render(<HistoryRoute />);
-    fireEvent.press(screen.getByText('Browse the marketplace'));
-    expect(mockPush).toHaveBeenCalledWith('/marketplace');
+    await fireEvent.press(screen.getByTestId('history-h1'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/history/[id]', params: { id: 'h1' } });
   });
 
   it('sends the Profile action Home', async () => {

@@ -76,3 +76,9 @@ export function listingsFor(
       side === 'buy' ? a.rateHundredths - b.rateHundredths : b.rateHundredths - a.rateHundredths,
     );
 }
+
+/** Emoji flag for a currency code; decorative only, the code is always shown too. */
+export function flagFor(code: string): string {
+  if (code === NGN.code) return NGN.flag;
+  return BUYABLE.find((c) => c.code === code)?.flag ?? '🏳️';
+}

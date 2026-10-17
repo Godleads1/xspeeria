@@ -76,6 +76,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `003-brand-primary-and-bottom-navigation.md` | Mobile bottom navigation (DEC-005) and application brand primary `#001A6E` (DEC-006) | **APPROVED** — 2026-10-16 |
 | `004-home-screen-layout.md` | Home screen layout: Figma Home with a best-rate hero (DEC-008) | **APPROVED** — 2026-10-16 |
 | `005-market-screen.md` | Market tab (Figma Buy/Sell) and Select Match (DEC-011) | **APPROVED** — 2026-10-17 |
+| `006-history-screens.md` | History list and transaction receipt (DEC-012) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 
