@@ -4,7 +4,7 @@
  * buttons and the listing row.
  */
 
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactElement, ReactNode } from "react";
 import {
   Modal,
   Pressable,
@@ -13,13 +13,20 @@ import {
   TextInput,
   View,
   type KeyboardTypeOptions,
-} from 'react-native';
+} from "react-native";
 
-import { RoundFlag } from '../../components/flags';
-import { Icon, type IconName } from '../../components/icons';
-import { brandWeight, color, numericTextStyle, space, typography, themed } from '../../theme';
-import type { Currency, Listing } from './data';
-import { formatCompact, formatHundredths } from './money';
+import { RoundFlag } from "../../components/flags";
+import { Icon, type IconName } from "../../components/icons";
+import {
+  brandWeight,
+  color,
+  numericTextStyle,
+  space,
+  typography,
+  themed,
+} from "../../theme";
+import type { Currency, Listing } from "./data";
+import { formatCompact, formatHundredths } from "./money";
 
 /* ------------------------------------------------------------ Outlined field */
 
@@ -36,7 +43,9 @@ export function OutlinedField({
   return (
     <View style={[styles.field, invalid ? styles.fieldInvalid : null]}>
       <View style={styles.notch} pointerEvents="none">
-        <Text style={[styles.notchLabel, invalid ? styles.invalidText : null]}>{label}</Text>
+        <Text style={[styles.notchLabel, invalid ? styles.invalidText : null]}>
+          {label}
+        </Text>
       </View>
       {children}
     </View>
@@ -46,13 +55,13 @@ export function OutlinedField({
 export function FieldInput({
   value,
   onChangeText,
-  placeholder = 'enter',
-  keyboardType = 'decimal-pad',
+  placeholder = "enter",
+  keyboardType = "decimal-pad",
   testID,
   accessibilityLabel,
   trailing,
   maxLength = 16,
-  inputMode = 'decimal',
+  inputMode = "decimal",
   secure = false,
 }: {
   value: string;
@@ -60,7 +69,7 @@ export function FieldInput({
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
-  inputMode?: 'decimal' | 'numeric' | 'text';
+  inputMode?: "decimal" | "numeric" | "text";
   /** Password entry: masked, no autocorrect/capitalisation. */
   secure?: boolean;
   testID?: string;
@@ -80,9 +89,9 @@ export function FieldInput({
         inputMode={inputMode}
         maxLength={maxLength}
         secureTextEntry={secure}
-        autoCapitalize={secure ? 'none' : undefined}
+        autoCapitalize={secure ? "none" : undefined}
         autoCorrect={secure ? false : undefined}
-        textContentType={secure ? 'password' : undefined}
+        textContentType={secure ? "password" : undefined}
         style={styles.input}
       />
       {trailing}
@@ -96,12 +105,12 @@ export function BuySellToggle({
   side,
   onChange,
 }: {
-  side: 'buy' | 'sell';
-  onChange: (next: 'buy' | 'sell') => void;
+  side: "buy" | "sell";
+  onChange: (next: "buy" | "sell") => void;
 }): ReactElement {
-  const option = (value: 'buy' | 'sell', label: string): ReactElement => {
+  const option = (value: "buy" | "sell", label: string): ReactElement => {
     const selected = side === value;
-    const tint = value === 'buy' ? color.brand.primary : color.trade.sell;
+    const tint = value === "buy" ? color.brand.primary : color.trade.sell;
     return (
       <Pressable
         testID={`market-${value}`}
@@ -111,14 +120,17 @@ export function BuySellToggle({
         style={[
           styles.segment,
           selected
-            ? { backgroundColor: value === 'buy' ? color.bg.sunken : color.trade.sellSurface }
+            ? {
+                backgroundColor:
+                  value === "buy" ? color.bg.sunken : color.trade.sellSurface,
+              }
             : null,
         ]}
       >
         <Text
           style={[
             styles.segmentLabel,
-            selected ? { ...brandWeight('700'), color: tint } : null,
+            selected ? { ...brandWeight("700"), color: tint } : null,
           ]}
         >
           {label}
@@ -128,8 +140,8 @@ export function BuySellToggle({
   };
   return (
     <View accessibilityRole="tablist" style={styles.toggle}>
-      {option('buy', 'Buy')}
-      {option('sell', 'Sell')}
+      {option("buy", "Buy")}
+      {option("sell", "Sell")}
     </View>
   );
 }
@@ -156,14 +168,25 @@ export function RoundButton({
       accessibilityState={{ disabled: !available }}
       disabled={!available}
       onPress={onPress}
-      style={({ pressed }) => [styles.round, pressed ? styles.roundPressed : null]}
+      style={({ pressed }) => [
+        styles.round,
+        pressed ? styles.roundPressed : null,
+      ]}
     >
-      <Icon name={icon} color={available ? color.text.primary : color.text.disabled} size={18} />
+      <Icon
+        name={icon}
+        color={available ? color.text.primary : color.text.disabled}
+        size={18}
+      />
     </Pressable>
   );
 }
 
-export function CurrencyChip({ currency }: { currency: Currency }): ReactElement {
+export function CurrencyChip({
+  currency,
+}: {
+  currency: Currency;
+}): ReactElement {
   return (
     <View
       accessible
@@ -193,8 +216,17 @@ export function CurrencySheet({
   onClose: () => void;
 }): ReactElement {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={styles.scrim}
+        onPress={onClose}
+        accessibilityLabel="Close"
+      />
       <View style={styles.sheet}>
         <View style={styles.sheetGroup}>
           <Text style={styles.sheetTitle}>{title}</Text>
@@ -204,14 +236,23 @@ export function CurrencySheet({
               testID={`currency-${c.code}`}
               accessibilityRole="button"
               onPress={() => onSelect(c)}
-              style={({ pressed }) => [styles.sheetRow, pressed ? styles.roundPressed : null]}
+              style={({ pressed }) => [
+                styles.sheetRow,
+                pressed ? styles.roundPressed : null,
+              ]}
             >
               <RoundFlag code={c.code} size={26} />
-              <Text style={styles.sheetRowLabel}>{`${c.name} (${c.code})`}</Text>
+              <Text
+                style={styles.sheetRowLabel}
+              >{`${c.name} (${c.code})`}</Text>
             </Pressable>
           ))}
         </View>
-        <Pressable accessibilityRole="button" onPress={onClose} style={styles.sheetCancel}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.sheetCancel}
+        >
           <Text style={styles.sheetCancelLabel}>Cancel</Text>
         </Pressable>
       </View>
@@ -242,14 +283,23 @@ export function ActionSheet({
   testID?: string;
 }): ReactElement {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close menu" />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={styles.scrim}
+        onPress={onClose}
+        accessibilityLabel="Close menu"
+      />
       <View testID={testID} style={styles.sheet}>
         <View style={styles.sheetGroup}>
           {actions.map((a, i) => (
             <Pressable
               key={a.key}
-              testID={`${testID ?? 'sheet'}-${a.key}`}
+              testID={`${testID ?? "sheet"}-${a.key}`}
               accessibilityRole="button"
               onPress={a.onPress}
               style={({ pressed }) => [
@@ -260,13 +310,15 @@ export function ActionSheet({
             >
               <Text style={styles.actionLabel}>
                 {a.label}
-                {a.hint ? <Text style={styles.actionHint}>{` ${a.hint}`}</Text> : null}
+                {a.hint ? (
+                  <Text style={styles.actionHint}>{` ${a.hint}`}</Text>
+                ) : null}
               </Text>
             </Pressable>
           ))}
         </View>
         <Pressable
-          testID={`${testID ?? 'sheet'}-cancel`}
+          testID={`${testID ?? "sheet"}-cancel`}
           accessibilityRole="button"
           onPress={onClose}
           style={styles.sheetCancel}
@@ -285,32 +337,47 @@ export function ListingRow({
   listing,
   side,
   onAction,
+  number,
 }: {
   listing: Listing;
-  side: 'buy' | 'sell';
+  side: "buy" | "sell";
   onAction: (listing: Listing) => void;
+  /** Figma sell Select Match numbers each match (1, 2, 3…) in a small green badge. */
+  number?: number;
 }): ReactElement {
-  const action = side === 'buy' ? 'Buy' : 'Sell';
-  const tint = side === 'buy' ? color.brand.primary : color.trade.sell;
+  const action = side === "buy" ? "Buy" : "Sell";
+  const tint = side === "buy" ? color.brand.primary : color.trade.sell;
   return (
     <View testID={`listing-${listing.id}`} style={styles.listing}>
+      {number !== undefined ? (
+        <View
+          testID={`listing-${listing.id}-number`}
+          style={styles.numberBadge}
+        >
+          <Text style={styles.numberText}>{number}</Text>
+        </View>
+      ) : null}
       <View style={styles.listingMain}>
         <Text style={styles.listingLine}>
-          {'Amount available: '}
+          {"Amount available: "}
           <Text style={styles.listingStrong}>
             {`${formatCompact(listing.availableMinor)} ${listing.currency}`}
           </Text>
         </Text>
         <View style={styles.rateRow}>
           <Text style={styles.listingLine}>
-            {'Rate: '}
+            {"Rate: "}
             <Text style={styles.listingMuted}>NGN </Text>
-            <Text style={styles.listingRate}>{formatCompact(listing.rateHundredths)}</Text>
+            <Text style={styles.listingRate}>
+              {formatCompact(listing.rateHundredths)}
+            </Text>
             <Text style={styles.listingMuted}>{` /${listing.currency}`}</Text>
           </Text>
           {listing.best ? (
             <View style={styles.bestPill}>
-              <Text style={styles.bestLabel}>{side === 'buy' ? 'Best Offer' : 'Best Deal'}</Text>
+              <Text style={styles.bestLabel}>
+                {side === "buy" ? "Best Offer" : "Best Deal"}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -323,11 +390,13 @@ export function ListingRow({
         onPress={() => onAction(listing)}
         style={({ pressed }) => [
           styles.listingAction,
-          side === 'sell' ? styles.listingActionSell : null,
+          side === "sell" ? styles.listingActionSell : null,
           pressed ? styles.roundPressed : null,
         ]}
       >
-        <Text style={[styles.listingActionLabel, { color: tint }]}>{action}</Text>
+        <Text style={[styles.listingActionLabel, { color: tint }]}>
+          {action}
+        </Text>
       </Pressable>
     </View>
   );
@@ -343,13 +412,13 @@ const styles = themed(() => ({
     borderWidth: 1,
     borderColor: color.border.strong,
     borderRadius: 4,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingLeft: space.sm,
     paddingRight: 8,
   },
   fieldInvalid: { borderColor: color.error.border },
   notch: {
-    position: 'absolute',
+    position: "absolute",
     top: -9,
     left: 12,
     paddingHorizontal: 4,
@@ -357,7 +426,7 @@ const styles = themed(() => ({
   },
   notchLabel: { ...typography.caption, color: color.text.primary },
   invalidText: { color: color.error.text },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   input: {
     flex: 1,
     ...typography.body,
@@ -368,7 +437,7 @@ const styles = themed(() => ({
   },
 
   toggle: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderWidth: 1,
     borderColor: color.border.subtle,
     borderRadius: 30,
@@ -376,7 +445,11 @@ const styles = themed(() => ({
     gap: 8,
   },
   segment: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 30 },
-  segmentLabel: { ...typography.body, fontSize: 17, color: color.text.secondary },
+  segmentLabel: {
+    ...typography.body,
+    fontSize: 17,
+    color: color.text.secondary,
+  },
 
   round: {
     width: ROUND,
@@ -384,13 +457,13 @@ const styles = themed(() => ({
     borderRadius: ROUND / 2,
     borderWidth: 1,
     borderColor: color.border.subtle,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   roundPressed: { backgroundColor: color.bg.sunken },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     height: ROUND,
     paddingHorizontal: 10,
@@ -398,57 +471,99 @@ const styles = themed(() => ({
     borderWidth: 1,
     borderColor: color.border.subtle,
   },
-  chipCode: { ...typography.caption, ...brandWeight('500'), color: color.text.primary },
+  chipCode: {
+    ...typography.caption,
+    ...brandWeight("500"),
+    color: color.text.primary,
+  },
 
   scrim: { flex: 1, backgroundColor: color.bg.overlay },
-  sheet: { padding: 10, gap: 8, backgroundColor: 'transparent', position: 'absolute', left: 0, right: 0, bottom: 16 },
-  sheetGroup: { backgroundColor: color.bg.canvas, borderRadius: 16, overflow: 'hidden' },
+  sheet: {
+    padding: 10,
+    gap: 8,
+    backgroundColor: "transparent",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 16,
+  },
+  sheetGroup: {
+    backgroundColor: color.bg.canvas,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
   sheetTitle: {
     ...typography.body,
     color: color.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
   sheetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingHorizontal: 20,
     minHeight: 56,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
-  sheetRowLabel: { ...typography.body, fontSize: 17, color: color.text.primary },
+  sheetRowLabel: {
+    ...typography.body,
+    fontSize: 17,
+    color: color.text.primary,
+  },
   sheetCancel: {
     backgroundColor: color.bg.canvas,
     borderRadius: 16,
     minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  sheetCancelLabel: { ...typography.body, fontSize: 17, color: color.error.text },
+  sheetCancelLabel: {
+    ...typography.body,
+    fontSize: 17,
+    color: color.error.text,
+  },
 
-  actionRow: { minHeight: 56, alignItems: 'center', justifyContent: 'center', marginHorizontal: 20 },
-  actionDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
+  actionRow: {
+    minHeight: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 20,
+  },
+  actionDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border.subtle,
+  },
   actionLabel: { ...typography.body, fontSize: 17, color: color.text.primary },
   actionHint: { color: color.text.disabled },
 
   listing: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: space.xs,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
   listingMain: { flex: 1, gap: 6 },
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  rateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
   listingLine: { ...typography.caption, color: color.text.primary },
-  listingStrong: { ...brandWeight('700'), color: color.text.primary },
+  listingStrong: { ...brandWeight("700"), color: color.text.primary },
   listingMuted: { color: color.text.secondary },
-  listingRate: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.text.primary },
+  listingRate: {
+    ...typography.body,
+    ...brandWeight("700"),
+    fontSize: 16,
+    color: color.text.primary,
+  },
   listingMeta: { ...typography.caption, color: color.text.secondary },
   bestPill: {
     backgroundColor: color.success.surface,
@@ -456,18 +571,38 @@ const styles = themed(() => ({
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
-  bestLabel: { ...typography.caption, fontSize: 10, lineHeight: 12, color: color.success.text },
+  bestLabel: {
+    ...typography.caption,
+    fontSize: 10,
+    lineHeight: 12,
+    color: color.success.text,
+  },
   listingAction: {
     minWidth: 64,
     minHeight: 44,
     paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
     borderColor: color.border.subtle,
     backgroundColor: color.bg.sunken,
   },
   listingActionSell: { backgroundColor: color.trade.sellSurface },
+  numberBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: color.trade.sellSurface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    alignSelf: "center",
+  },
+  numberText: {
+    ...typography.caption,
+    fontSize: 11,
+    color: color.success.text,
+  },
   listingActionLabel: { ...typography.rowLabel },
 }));

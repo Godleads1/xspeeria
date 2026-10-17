@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 import { COORDINATION_FEE_KOBO } from '../src/features/history/data';
+import { ReceiptScreen } from '../src/features/history/ReceiptScreen';
 import { OFFERS, REQUESTS } from '../src/features/market/data';
 import { BENEFICIARIES } from '../src/features/profile/data';
 import { ConfirmTradeSheet } from '../src/features/trade/ConfirmTradeSheet';
@@ -184,5 +185,30 @@ describe('Transaction screens', () => {
     expect(countdown(300000)).toBe('05:00');
     expect(countdown(61000)).toBe('01:01');
     expect(countdown(-5)).toBe('00:00');
+  });
+});
+
+describe('Sell flow (ADR-015)', () => {
+  const ownNgn = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency === 'NGN');
+
+  it('confirm sheet: seller fee is in the sent currency and not invented', async () => {
+    await render(<ConfirmTradeSheet side="sell" requestedMinor={20000} listing={REQUESTS[0]} payoutOptions={ownNgn} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    expect(screen.getByText('To be confirmed (USD)')).toBeTruthy();
+    expect(screen.queryByText('375.00 NGN')).toBeNull();
+    expect(screen.getByText('378,600.00 NGN')).toBeTruthy();
+    expect(screen.getByTestId('confirm-fee-tbd')).toBeTruthy();
+  });
+
+  it('sell receipt follows Figma: amount to receive in NGN, amount to pay in USD', async () => {
+    const t = make('sell');
+    tradeStore.markPaid(t.id, T0);
+    for (let i = 1; i <= 3; i++) tradeStore.tick(t.id, T0 + i * DEMO_STEP_MS);
+    await render(<ReceiptScreen item={toHistoryItem(tradeStore.get(t.id)!)} onClose={jest.fn()} />);
+    expect(screen.getByText('Amount to receive')).toBeTruthy();
+    expect(screen.getByText('378,600.00 NGN')).toBeTruthy();
+    expect(screen.getByText('Amount to pay')).toBeTruthy();
+    expect(screen.getAllByText('200.00 USD')).toHaveLength(2); // amount and amount to pay (fee not set)
+    expect(screen.getByText('To be confirmed')).toBeTruthy();
+    expect(screen.getByText(/378,600 NGN/)).toBeTruthy(); // payout to the NGN account
   });
 });

@@ -57,7 +57,6 @@ memory (reload clears them).
 
 - Funding window and extension length/policy (Figma 5 min + 5 min; Appendix D: configurable, TBD).
 - How the coordination fee is charged on the foreign-currency side, and after a counterparty
-  timeout (ADR-001 U-1, Appendix D: TBD Product/Legal). The sell-side sheet shows ₦375 for
-  consistency with the receipt only.
+  timeout (ADR-001 U-1, Appendix D: TBD Product/Legal). Sell side: see ADR-015 (fee in the sent currency, to be confirmed).
 - Disputes ("Raise a dispute") and what happens if a payment arrives after expiry.
 - Market lists USD/CAD/EUR/AUD while the approved corridors are NGN⇄GBP then NGN⇄USD (ADR-005).

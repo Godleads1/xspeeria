@@ -1,3 +1,4 @@
+import { quoteMinor } from '../src/features/market/money';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { COORDINATION_FEE_KOBO, HISTORY, displayDate, filterHistory, parseDisplayDate } from '../src/features/history/data';
@@ -21,10 +22,11 @@ describe('history data', () => {
     expect(list.map((h) => h.date)).toEqual(['2025-05-12', '2025-05-12', '2025-05-10', '2025-05-08']);
   });
 
-  it('payout splits add up to the traded amount on every completed trade', () => {
+  it('payout splits add up to what was received on every completed trade', () => {
+    // Buyers receive the foreign currency; sellers receive NGN (ADR-015).
     for (const h of HISTORY.filter((x) => x.status === 'completed')) {
       const sum = h.payouts.reduce((a, p) => a + p.amountMinor, 0);
-      expect(sum).toBe(h.amountMinor);
+      expect(sum).toBe(h.side === 'buy' ? h.amountMinor : quoteMinor(h.amountMinor, h.rateHundredths));
     }
   });
 

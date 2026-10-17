@@ -8,32 +8,46 @@
  * DEMO: the partner bank and the other person are simulated; the screen says so.
  */
 
-import { useEffect, useState, type ReactElement } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Clipboard from 'expo-clipboard';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { useEffect, useState, type ReactElement } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
+import Svg, { Circle, Path } from "react-native-svg";
 
-import { Icon } from '../../components/icons';
-import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, themed, typography } from '../../theme';
-import { DemoNote, GhostButton } from '../auth/ui';
-import { ActionSheet, RoundButton } from '../market/controls';
-import { formatHundredths } from '../market/money';
-import { progressFor, tradeStore, useTrade, type Trade } from './tradeStore';
+import { Icon } from "../../components/icons";
+import { PrimaryButton } from "../../components/primitives";
+import { brandWeight, color, space, themed, typography } from "../../theme";
+import { DemoNote, GhostButton } from "../auth/ui";
+import { ActionSheet, RoundButton } from "../market/controls";
+import { formatHundredths } from "../market/money";
+import { progressFor, tradeStore, useTrade, type Trade } from "./tradeStore";
 
 /** Demo escrow details — obviously not a real account. */
-export const DEMO_ESCROW = { bank: 'Partner bank (demo)', account: '00 0000 0000' } as const;
+export const DEMO_ESCROW = {
+  bank: "Partner bank (demo)",
+  account: "00 0000 0000",
+} as const;
 
 export function countdown(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function Step({ label, at }: { label: string; at?: string }): ReactElement {
   const done = at !== undefined;
   return (
-    <View style={styles.step} accessible accessibilityLabel={`${label}. ${done ? `Completed ${at}` : 'Pending'}`}>
+    <View
+      style={styles.step}
+      accessible
+      accessibilityLabel={`${label}. ${done ? `Completed ${at}` : "Pending"}`}
+    >
       <View style={[styles.stepDot, done ? styles.stepDone : styles.stepTodo]}>
         <Icon name="check" color={color.text.onFill} size={12} weight={3} />
       </View>
@@ -42,7 +56,9 @@ function Step({ label, at }: { label: string; at?: string }): ReactElement {
           <Text style={styles.stepLabel}>{label}</Text>
           <View style={[styles.stepLine, done ? styles.stepLineDone : null]} />
         </View>
-        <Text style={styles.stepTime}>{done ? `Completed . ${at}` : 'Pending'}</Text>
+        <Text style={styles.stepTime}>
+          {done ? `Completed . ${at}` : "Pending"}
+        </Text>
       </View>
     </View>
   );
@@ -50,26 +66,57 @@ function Step({ label, at }: { label: string; at?: string }): ReactElement {
 
 function DoneArt(): ReactElement {
   return (
-    <Svg width={64} height={64} viewBox="0 0 64 64" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <Svg
+      width={64}
+      height={64}
+      viewBox="0 0 64 64"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       <Circle cx={32} cy={32} r={28} fill={color.success.surface} />
       <Circle cx={32} cy={32} r={20} fill={color.success.fill} />
-      <Path d="M23 32l6 6 12-12" stroke="#FFFFFF" strokeWidth={4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M23 32l6 6 12-12"
+        stroke="#FFFFFF"
+        strokeWidth={4}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function Completed({ trade, onReceipt, onFinish }: { trade: Trade; onReceipt: () => void; onFinish: () => void }): ReactElement {
+function Completed({
+  trade,
+  onReceipt,
+  onFinish,
+}: {
+  trade: Trade;
+  onReceipt: () => void;
+  onFinish: () => void;
+}): ReactElement {
   const [stars, setStars] = useState(0);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const [sent, setSent] = useState(Boolean(trade.rating));
   return (
-    <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.body}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.doneHead}>
         <DoneArt />
         <Text testID="trade-done-text" style={styles.doneText}>
-          Your transaction (Ref No. {trade.reference}) has been completed successfully.
+          Your transaction (Ref No. {trade.reference}) has been completed
+          successfully.
         </Text>
-        <Pressable testID="trade-receipt" accessibilityRole="link" onPress={onReceipt} style={styles.receiptLink} hitSlop={8}>
+        <Pressable
+          testID="trade-receipt"
+          accessibilityRole="link"
+          onPress={onReceipt}
+          style={styles.receiptLink}
+          hitSlop={8}
+        >
           <Icon name="info" color={color.success.text} size={16} />
           <Text style={styles.receiptText}>View Receipt</Text>
         </Pressable>
@@ -77,7 +124,9 @@ function Completed({ trade, onReceipt, onFinish }: { trade: Trade; onReceipt: ()
       <View style={styles.rule} />
       <Text style={styles.sectionTitle}>RATE THIS TRANSACTION</Text>
       {sent ? (
-        <Text testID="trade-rated" style={styles.thanks}>Thank you for your feedback.</Text>
+        <Text testID="trade-rated" style={styles.thanks}>
+          Thank you for your feedback.
+        </Text>
       ) : (
         <>
           <View style={styles.stars} accessibilityRole="radiogroup">
@@ -86,13 +135,18 @@ function Completed({ trade, onReceipt, onFinish }: { trade: Trade; onReceipt: ()
                 key={n}
                 testID={`trade-star-${n}`}
                 accessibilityRole="radio"
-                accessibilityLabel={`${n} star${n > 1 ? 's' : ''}`}
+                accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`}
                 accessibilityState={{ checked: stars === n }}
                 onPress={() => setStars(n)}
                 hitSlop={6}
               >
                 <Svg width={40} height={40} viewBox="0 0 24 24">
-                  <Path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill={n <= stars ? color.decorative.star : color.border.subtle} />
+                  <Path
+                    d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
+                    fill={
+                      n <= stars ? color.decorative.star : color.border.subtle
+                    }
+                  />
                 </Svg>
               </Pressable>
             ))}
@@ -115,7 +169,11 @@ function Completed({ trade, onReceipt, onFinish }: { trade: Trade; onReceipt: ()
       )}
       <View style={styles.actions}>
         {sent ? (
-          <PrimaryButton testID="trade-finish" label="Done" onPress={onFinish} />
+          <PrimaryButton
+            testID="trade-finish"
+            label="Done"
+            onPress={onFinish}
+          />
         ) : (
           <>
             <PrimaryButton
@@ -167,31 +225,68 @@ export function TradeScreen({
   const t = trade;
   const left = t.deadline - now();
   const payLabel = `${t.payCurrency} ${formatHundredths(t.transferMinor)}`;
-  const ended = t.phase === 'expired' || t.phase === 'cancelled';
+  const ended = t.phase === "expired" || t.phase === "cancelled";
 
   const confirmPaid = (): void =>
-    Alert.alert('Have you paid?', `Only continue once you have sent exactly ${payLabel} from a bank account in your name.`, [
-      { text: 'Not yet', style: 'cancel' },
-      { text: 'Yes, I have paid', onPress: () => tradeStore.markPaid(t.id, now()) },
-    ]);
+    Alert.alert(
+      "Have you paid?",
+      `Only continue once you have sent exactly ${payLabel} from a bank account in your name.`,
+      [
+        { text: "Not yet", style: "cancel" },
+        {
+          text: "Yes, I have paid",
+          onPress: () => tradeStore.markPaid(t.id, now()),
+        },
+      ],
+    );
 
-  const title = t.phase === 'completed' ? 'Transaction Completed' : ended ? 'Transaction Cancelled' : 'Transaction In Progress';
+  const title =
+    t.phase === "completed"
+      ? "Transaction Completed"
+      : ended
+        ? "Transaction Cancelled"
+        : "Transaction In Progress";
 
   return (
-    <View testID="trade-screen" style={[styles.screen, { paddingTop: insets.top + space.xs, paddingBottom: insets.bottom }]}>
+    <View
+      testID="trade-screen"
+      style={[
+        styles.screen,
+        { paddingTop: insets.top + space.xs, paddingBottom: insets.bottom },
+      ]}
+    >
       <View style={styles.header}>
-        {t.phase === 'completed' ? (
+        {t.phase === "completed" ? (
           <View style={styles.headerSide} />
         ) : (
-          <Pressable testID="trade-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12} style={styles.headerSide}>
-            <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
+          <Pressable
+            testID="trade-back"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={onBack}
+            hitSlop={12}
+            style={styles.headerSide}
+          >
+            <Icon
+              name="back"
+              color={color.text.primary}
+              size={24}
+              weight={2.25}
+            />
           </Pressable>
         )}
-        <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-        <RoundButton icon="more" label="More options" testID="trade-more" onPress={() => setMenu(true)} />
+        <Text accessibilityRole="header" style={styles.title}>
+          {title}
+        </Text>
+        <RoundButton
+          icon="more"
+          label="More options"
+          testID="trade-more"
+          onPress={() => setMenu(true)}
+        />
       </View>
 
-      {t.phase === 'completed' ? (
+      {t.phase === "completed" ? (
         <Completed trade={t} onReceipt={onReceipt} onFinish={onFinish} />
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
@@ -199,19 +294,22 @@ export function TradeScreen({
             <Text style={styles.noteTitle}>Please Note:</Text>
             <View style={styles.noteRule} />
             <Text style={styles.note}>
-              1. All payments <Text style={styles.noteStrong}>MUST</Text> be made from a bank account registered in your name,
-              matching the name on your Xspeeria profile.
+              1. All payments <Text style={styles.noteStrong}>MUST</Text> be
+              made from a bank account registered in your name, matching the
+              name on your Xspeeria profile.
             </Text>
             <Text style={styles.note}>
-              2. Payments must be completed within the specified time frame to avoid automatic cancellation of the
-              transaction.
+              2. Payments must be completed within the specified time frame to
+              avoid automatic cancellation of the transaction.
             </Text>
           </View>
 
           <View style={styles.transfer}>
             <View style={styles.transferHead}>
               <Text style={styles.transferLabel}>Transfer </Text>
-              <Text testID="trade-amount" style={styles.transferAmount}>{payLabel}</Text>
+              <Text testID="trade-amount" style={styles.transferAmount}>
+                {payLabel}
+              </Text>
               <Text style={styles.transferLabel}> to </Text>
               <Pressable
                 testID="trade-info"
@@ -219,7 +317,10 @@ export function TradeScreen({
                 accessibilityLabel="About this account"
                 hitSlop={8}
                 onPress={() =>
-                  Alert.alert('Partner bank escrow', 'This is a local escrow account held by our partner bank. Xspeeria never holds your money; it is released only when both sides have paid.')
+                  Alert.alert(
+                    "Partner bank escrow",
+                    "This is a local escrow account held by our partner bank. Xspeeria never holds your money; it is released only when both sides have paid.",
+                  )
                 }
               >
                 <Icon name="info" color={color.text.secondary} size={14} />
@@ -227,52 +328,88 @@ export function TradeScreen({
             </View>
             <Text style={styles.bank}>{DEMO_ESCROW.bank}</Text>
             <View style={styles.accountRow}>
-              <Text testID="trade-account" style={styles.account}>{DEMO_ESCROW.account}</Text>
+              <Text testID="trade-account" style={styles.account}>
+                {DEMO_ESCROW.account}
+              </Text>
               <Pressable
                 testID="trade-copy"
                 accessibilityRole="button"
                 accessibilityLabel="Copy account number"
                 hitSlop={8}
                 onPress={() => {
-                  Clipboard.setStringAsync(DEMO_ESCROW.account.replace(/\s/g, '')).then(() => setCopied(true), () => undefined);
+                  Clipboard.setStringAsync(
+                    DEMO_ESCROW.account.replace(/\s/g, ""),
+                  ).then(
+                    () => setCopied(true),
+                    () => undefined,
+                  );
                 }}
               >
                 <Icon name="copy" color={color.text.secondary} size={16} />
               </Pressable>
             </View>
-            {t.phase === 'awaiting_payment' ? (
-              <Text testID="trade-expires" style={styles.expires}>Expires in {countdown(left)} mins</Text>
+            {t.phase === "awaiting_payment" ? (
+              <Text testID="trade-expires" style={styles.expires}>
+                Expires in {countdown(left)} mins
+              </Text>
             ) : null}
-            {copied ? <Text style={styles.expires}>Account number copied</Text> : null}
+            {copied ? (
+              <Text style={styles.expires}>Account number copied</Text>
+            ) : null}
           </View>
-          <DemoNote>Demo app: there is no real bank and no real person on the other side. Do not send real money.</DemoNote>
+          <DemoNote>
+            Demo app: there is no real bank and no real person on the other
+            side. Do not send real money.
+          </DemoNote>
 
-          {t.phase === 'awaiting_payment' ? (
+          {t.phase === "awaiting_payment" ? (
             <View style={styles.buttonsRow}>
-              {t.extension === 'none' ? (
-                <Pressable testID="trade-extend" accessibilityRole="button" onPress={() => tradeStore.requestExtension(t.id, now())} style={styles.extend}>
+              {t.extension === "none" ? (
+                <Pressable
+                  testID="trade-extend"
+                  accessibilityRole="button"
+                  onPress={() => tradeStore.requestExtension(t.id, now())}
+                  style={styles.extend}
+                >
                   <Text style={styles.extendText}>Request Extension</Text>
                 </Pressable>
               ) : (
                 <View testID="trade-extension-state" style={styles.extend}>
-                  <Text style={styles.extendMuted}>{t.extension === 'requested' ? 'Waiting…' : `${countdown(left)} mins`}</Text>
+                  <Text style={styles.extendMuted}>
+                    {t.extension === "requested"
+                      ? "Waiting…"
+                      : `${countdown(left)} mins`}
+                  </Text>
                 </View>
               )}
               <View style={styles.flex}>
-                <PrimaryButton testID="trade-paid" label="I Have Paid" onPress={confirmPaid} />
+                <PrimaryButton
+                  testID="trade-paid"
+                  label="I Have Paid"
+                  onPress={confirmPaid}
+                  tone={t.side === "sell" ? "sell" : "primary"}
+                />
               </View>
             </View>
-          ) : t.phase === 'confirming' ? (
+          ) : t.phase === "confirming" ? (
             <View>
               <View testID="trade-confirming" style={styles.statusBox}>
                 <Text style={styles.statusMuted}>Confirming payment ••••</Text>
               </View>
-              <Text style={styles.statusCaption}>Payment confirmation usually takes a few minutes</Text>
+              <Text style={styles.statusCaption}>
+                Payment confirmation usually takes a few minutes
+              </Text>
             </View>
           ) : ended ? (
-            <View testID="trade-ended" style={[styles.statusBox, styles.statusError]}>
+            <View
+              testID="trade-ended"
+              style={[styles.statusBox, styles.statusError]}
+            >
               <Text style={styles.statusErrorText}>
-                {t.phase === 'expired' ? 'Time ran out, so this trade was cancelled.' : 'You cancelled this trade.'} Nothing was taken from you.
+                {t.phase === "expired"
+                  ? "Time ran out, so this trade was cancelled."
+                  : "You cancelled this trade."}{" "}
+                Nothing was taken from you.
               </Text>
             </View>
           ) : (
@@ -282,7 +419,9 @@ export function TradeScreen({
                 <Text style={styles.statusOk}>Payment received</Text>
               </View>
               <Text style={styles.statusCaption}>
-                {t.phase === 'awaiting_counterparty' ? `Waiting for the ${t.counterparty}’s payment` : 'Releasing funds to both sides'}
+                {t.phase === "awaiting_counterparty"
+                  ? `Waiting for the ${t.counterparty}’s payment`
+                  : "Releasing funds to both sides"}
               </Text>
             </View>
           )}
@@ -292,7 +431,13 @@ export function TradeScreen({
           {progressFor(t).map((s, i) => (
             <Step key={`${s.label}-${i}`} label={s.label} at={s.at} />
           ))}
-          {ended ? <PrimaryButton testID="trade-back-market" label="Back to Market" onPress={onFinish} /> : null}
+          {ended ? (
+            <PrimaryButton
+              testID="trade-back-market"
+              label="Back to Market"
+              onPress={onFinish}
+            />
+          ) : null}
         </ScrollView>
       )}
 
@@ -301,18 +446,33 @@ export function TradeScreen({
         visible={menu}
         onClose={() => setMenu(false)}
         actions={[
-          { key: 'support', label: 'Contact Support', onPress: () => { setMenu(false); onSupport(); } },
-          ...(t.phase === 'awaiting_payment'
+          {
+            key: "support",
+            label: "Contact Support",
+            onPress: () => {
+              setMenu(false);
+              onSupport();
+            },
+          },
+          ...(t.phase === "awaiting_payment"
             ? [
                 {
-                  key: 'cancel',
-                  label: 'Cancel trade',
+                  key: "cancel",
+                  label: "Cancel trade",
                   onPress: () => {
                     setMenu(false);
-                    Alert.alert('Cancel this trade?', 'Only cancel if you have not sent any money.', [
-                      { text: 'Keep trade', style: 'cancel' },
-                      { text: 'Cancel trade', style: 'destructive', onPress: () => tradeStore.cancel(t.id, now()) },
-                    ]);
+                    Alert.alert(
+                      "Cancel this trade?",
+                      "Only cancel if you have not sent any money.",
+                      [
+                        { text: "Keep trade", style: "cancel" },
+                        {
+                          text: "Cancel trade",
+                          style: "destructive",
+                          onPress: () => tradeStore.cancel(t.id, now()),
+                        },
+                      ],
+                    );
                   },
                 },
               ]
@@ -325,54 +485,223 @@ export function TradeScreen({
 
 const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.md, minHeight: 48 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: space.md,
+    minHeight: 48,
+  },
   headerSide: { width: 36 },
-  title: { ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
-  body: { paddingHorizontal: space.md, paddingTop: space.xs, paddingBottom: space.lg, gap: space.sm },
-  noteBox: { borderWidth: 1, borderColor: color.border.subtle, borderRadius: 16, padding: space.sm, gap: 6 },
+  title: {
+    ...typography.headline,
+    ...brandWeight("700"),
+    fontSize: 18,
+    color: color.text.primary,
+  },
+  body: {
+    paddingHorizontal: space.md,
+    paddingTop: space.xs,
+    paddingBottom: space.lg,
+    gap: space.sm,
+  },
+  noteBox: {
+    borderWidth: 1,
+    borderColor: color.border.subtle,
+    borderRadius: 16,
+    padding: space.sm,
+    gap: 6,
+  },
   noteTitle: { ...typography.caption, color: color.error.text },
   noteRule: { height: 1, backgroundColor: color.border.subtle },
-  note: { ...typography.caption, fontSize: 12, lineHeight: 18, color: color.error.text },
-  noteStrong: { ...brandWeight('700') },
-  transfer: { backgroundColor: color.bg.sunken, borderRadius: 16, padding: space.sm, alignItems: 'center', gap: 6 },
-  transferHead: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' },
+  note: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    color: color.error.text,
+  },
+  noteStrong: { ...brandWeight("700") },
+  transfer: {
+    backgroundColor: color.bg.sunken,
+    borderRadius: 16,
+    padding: space.sm,
+    alignItems: "center",
+    gap: 6,
+  },
+  transferHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
   transferLabel: { ...typography.caption, color: color.text.secondary },
-  transferAmount: { ...typography.caption, ...brandWeight('700'), color: color.text.primary, fontVariant: ['tabular-nums'] },
-  bank: { ...typography.body, ...brandWeight('500'), fontSize: 15, color: color.text.primary, marginTop: 6 },
-  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  account: { fontSize: 22, letterSpacing: 1, color: color.text.primary, ...brandWeight('500') },
+  transferAmount: {
+    ...typography.caption,
+    ...brandWeight("700"),
+    color: color.text.primary,
+    fontVariant: ["tabular-nums"],
+  },
+  bank: {
+    ...typography.body,
+    ...brandWeight("500"),
+    fontSize: 15,
+    color: color.text.primary,
+    marginTop: 6,
+  },
+  accountRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  account: {
+    fontSize: 22,
+    letterSpacing: 1,
+    color: color.text.primary,
+    ...brandWeight("500"),
+  },
   expires: { ...typography.caption, color: color.text.secondary },
-  buttonsRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  buttonsRow: { flexDirection: "row", gap: 12, alignItems: "center" },
   flex: { flex: 1 },
-  extend: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, borderColor: color.border.subtle, alignItems: 'center', justifyContent: 'center' },
-  extendText: { ...typography.body, ...brandWeight('700'), fontSize: 15, color: color.text.primary },
-  extendMuted: { ...typography.body, ...brandWeight('700'), fontSize: 15, color: color.text.secondary },
-  statusBox: { flexDirection: 'row', gap: 10, height: 56, borderRadius: 12, borderWidth: 1, borderColor: color.border.subtle, alignItems: 'center', justifyContent: 'center' },
-  statusMuted: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.text.secondary },
-  statusOk: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.success.text },
-  statusCaption: { ...typography.caption, color: color.text.secondary, textAlign: 'center', marginTop: 6 },
-  statusError: { height: undefined, padding: space.sm, borderColor: color.error.border, backgroundColor: color.error.surface },
-  statusErrorText: { ...typography.body, fontSize: 14, color: color.error.text, textAlign: 'center' },
-  rule: { height: 1, backgroundColor: color.border.subtle, marginVertical: space.xs },
-  sectionTitle: { ...typography.caption, ...brandWeight('500'), fontSize: 13, letterSpacing: 0.5, color: color.text.secondary },
-  step: { flexDirection: 'row', gap: 12, paddingVertical: 6 },
-  stepDot: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  extend: {
+    flex: 1,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: color.border.subtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  extendText: {
+    ...typography.body,
+    ...brandWeight("700"),
+    fontSize: 15,
+    color: color.text.primary,
+  },
+  extendMuted: {
+    ...typography.body,
+    ...brandWeight("700"),
+    fontSize: 15,
+    color: color.text.secondary,
+  },
+  statusBox: {
+    flexDirection: "row",
+    gap: 10,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: color.border.subtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusMuted: {
+    ...typography.body,
+    ...brandWeight("700"),
+    fontSize: 16,
+    color: color.text.secondary,
+  },
+  statusOk: {
+    ...typography.body,
+    ...brandWeight("700"),
+    fontSize: 16,
+    color: color.success.text,
+  },
+  statusCaption: {
+    ...typography.caption,
+    color: color.text.secondary,
+    textAlign: "center",
+    marginTop: 6,
+  },
+  statusError: {
+    height: undefined,
+    padding: space.sm,
+    borderColor: color.error.border,
+    backgroundColor: color.error.surface,
+  },
+  statusErrorText: {
+    ...typography.body,
+    fontSize: 14,
+    color: color.error.text,
+    textAlign: "center",
+  },
+  rule: {
+    height: 1,
+    backgroundColor: color.border.subtle,
+    marginVertical: space.xs,
+  },
+  sectionTitle: {
+    ...typography.caption,
+    ...brandWeight("500"),
+    fontSize: 13,
+    letterSpacing: 0.5,
+    color: color.text.secondary,
+  },
+  step: { flexDirection: "row", gap: 12, paddingVertical: 6 },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
   stepDone: { backgroundColor: color.success.fill },
   stepTodo: { backgroundColor: color.text.disabled },
   stepText: { flex: 1, gap: 2 },
-  stepHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stepHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   stepLabel: { ...typography.body, fontSize: 15, color: color.text.primary },
-  stepLine: { flex: 1, height: 1, backgroundColor: color.border.strong, opacity: 0.4 },
+  stepLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: color.border.strong,
+    opacity: 0.4,
+  },
   stepLineDone: { backgroundColor: color.success.fill, opacity: 1 },
-  stepTime: { ...typography.caption, fontSize: 11, color: color.text.secondary },
-  doneHead: { alignItems: 'center', gap: space.sm, paddingTop: space.lg },
-  doneText: { ...typography.body, fontSize: 15, lineHeight: 22, color: color.text.primary, textAlign: 'center' },
-  receiptLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  receiptText: { ...typography.body, ...brandWeight('500'), color: color.success.text },
-  stars: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: space.sm },
-  feedbackBox: { borderWidth: 1, borderColor: color.border.subtle, borderRadius: 8, padding: 12, minHeight: 120 },
-  feedbackLabel: { ...typography.caption, color: color.text.secondary, marginBottom: 6 },
-  feedbackInput: { flex: 1, ...typography.body, fontSize: 15, color: color.text.primary, textAlignVertical: 'top', minHeight: 80 },
-  thanks: { ...typography.body, color: color.success.text, textAlign: 'center', marginVertical: space.md },
+  stepTime: {
+    ...typography.caption,
+    fontSize: 11,
+    color: color.text.secondary,
+  },
+  doneHead: { alignItems: "center", gap: space.sm, paddingTop: space.lg },
+  doneText: {
+    ...typography.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: color.text.primary,
+    textAlign: "center",
+  },
+  receiptLink: { flexDirection: "row", alignItems: "center", gap: 6 },
+  receiptText: {
+    ...typography.body,
+    ...brandWeight("500"),
+    color: color.success.text,
+  },
+  stars: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginVertical: space.sm,
+  },
+  feedbackBox: {
+    borderWidth: 1,
+    borderColor: color.border.subtle,
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 120,
+  },
+  feedbackLabel: {
+    ...typography.caption,
+    color: color.text.secondary,
+    marginBottom: 6,
+  },
+  feedbackInput: {
+    flex: 1,
+    ...typography.body,
+    fontSize: 15,
+    color: color.text.primary,
+    textAlignVertical: "top",
+    minHeight: 80,
+  },
+  thanks: {
+    ...typography.body,
+    color: color.success.text,
+    textAlign: "center",
+    marginVertical: space.md,
+  },
   actions: { gap: 12, marginTop: space.md },
 }));

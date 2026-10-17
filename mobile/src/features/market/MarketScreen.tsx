@@ -10,14 +10,14 @@
  * must re-validate everything.
  */
 
-import { useMemo, useState, type ReactElement } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, type ReactElement } from "react";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { RoundFlag } from '../../components/flags';
-import { Icon } from '../../components/icons';
-import { Screen } from '../../components/primitives';
-import { brandWeight, color, space, typography, themed } from '../../theme';
-import { SectionLabel } from '../home/SectionLabel';
+import { RoundFlag } from "../../components/flags";
+import { Icon } from "../../components/icons";
+import { Screen } from "../../components/primitives";
+import { brandWeight, color, space, typography, themed } from "../../theme";
+import { SectionLabel } from "../home/SectionLabel";
 import {
   ActionSheet,
   BuySellToggle,
@@ -27,7 +27,7 @@ import {
   ListingRow,
   OutlinedField,
   RoundButton,
-} from './controls';
+} from "./controls";
 import {
   BUYABLE,
   MARKET_BAND,
@@ -36,10 +36,10 @@ import {
   listingsFor,
   type Currency,
   type Listing,
-} from './data';
-import { formatHundredths, matchPotential, parseToHundredths } from './money';
+} from "./data";
+import { formatHundredths, matchPotential, parseToHundredths } from "./money";
 
-export type Side = 'buy' | 'sell';
+export type Side = "buy" | "sell";
 
 export interface TradeRequest {
   readonly side: Side;
@@ -52,18 +52,18 @@ export interface TradeRequest {
 const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
 
 /** Figma Market ⋮ menu (product-owner reference, 2026-10-17). */
-export type MenuKey = 'requests' | 'offers' | 'disputes' | 'forecast';
+export type MenuKey = "requests" | "offers" | "disputes" | "forecast";
 const MENU: readonly { key: MenuKey; label: string; hint?: string }[] = [
-  { key: 'requests', label: 'My Requests', hint: '(Buy)' },
-  { key: 'offers', label: 'My Offers', hint: '(Sell)' },
-  { key: 'disputes', label: 'Disputes' },
-  { key: 'forecast', label: 'AI Rate Forecasting' },
+  { key: "requests", label: "My Requests", hint: "(Buy)" },
+  { key: "offers", label: "My Offers", hint: "(Sell)" },
+  { key: "disputes", label: "Disputes" },
+  { key: "forecast", label: "AI Rate Forecasting" },
 ];
 
-const ADVERT = require('../../../assets/images/market-advert.png');
+const ADVERT = require("../../../assets/images/market-advert.png");
 
 export function MarketScreen({
-  initialSide = 'buy',
+  initialSide = "buy",
   onCreate,
   onTakeListing,
   onMenu,
@@ -77,19 +77,22 @@ export function MarketScreen({
   const [side, setSide] = useState<Side>(initialSide);
   const [buyCurrency, setBuyCurrency] = useState<Currency | null>(null);
   const [receive, setReceive] = useState<Currency>(NGN);
-  const [amount, setAmount] = useState('');
-  const [rate, setRate] = useState('');
+  const [amount, setAmount] = useState("");
+  const [rate, setRate] = useState("");
   const [sheet, setSheet] = useState(false);
   const [cheapestFirst, setCheapestFirst] = useState(true);
   const [menu, setMenu] = useState(false);
 
-  const foreign = side === 'buy' ? buyCurrency : SELL_CURRENCY;
+  const foreign = side === "buy" ? buyCurrency : SELL_CURRENCY;
   const band = foreign ? MARKET_BAND[foreign.code] : undefined;
   const amountMinor = parseToHundredths(amount);
   const rateHundredths = parseToHundredths(rate);
   const potential =
-    band && rateHundredths !== null ? matchPotential(side, rateHundredths, band) : null;
-  const ready = foreign !== null && amountMinor !== null && rateHundredths !== null;
+    band && rateHundredths !== null
+      ? matchPotential(side, rateHundredths, band)
+      : null;
+  const ready =
+    foreign !== null && amountMinor !== null && rateHundredths !== null;
 
   const listings = useMemo(() => {
     if (!foreign) return [];
@@ -99,12 +102,13 @@ export function MarketScreen({
 
   const switchSide = (next: Side): void => {
     setSide(next);
-    setAmount('');
-    setRate('');
+    setAmount("");
+    setRate("");
   };
 
   const create = (): void => {
-    if (!ready || !foreign || amountMinor === null || rateHundredths === null) return;
+    if (!ready || !foreign || amountMinor === null || rateHundredths === null)
+      return;
     onCreate?.({ side, currency: foreign.code, amountMinor, rateHundredths });
   };
 
@@ -112,22 +116,27 @@ export function MarketScreen({
     if (onTakeListing) onTakeListing(listing, side);
     else
       Alert.alert(
-        side === 'buy' ? 'Buy this offer' : 'Fill this request',
-        'Confirming a trade is the next screen to be built. Nothing has been sent.',
+        side === "buy" ? "Buy this offer" : "Fill this request",
+        "Confirming a trade is the next screen to be built. Nothing has been sent.",
       );
   };
 
-  const trendText = band && foreign
-    ? `Current Market Trend:  ${formatHundredths(band.low)} - ${formatHundredths(band.high)} NGN = 1 ${foreign.code}`
-    : 'Current Market Trend:  -----------';
+  const trendText =
+    band && foreign
+      ? `Current Market Trend:  ${formatHundredths(band.low)} - ${formatHundredths(band.high)} NGN = 1 ${foreign.code}`
+      : "Current Market Trend:  -----------";
 
   const amountField = (
     <OutlinedField
-      label={side === 'buy' ? `Amount in “${foreign?.code ?? 'USD'}” *` : `Amount in “${SELL_CURRENCY.code}” to sell *`}
+      label={
+        side === "buy"
+          ? `Amount in “${foreign?.code ?? "USD"}” *`
+          : `Amount in “${SELL_CURRENCY.code}” to sell *`
+      }
     >
       <FieldInput
         testID="market-amount"
-        accessibilityLabel={`Amount in ${foreign?.code ?? 'USD'}`}
+        accessibilityLabel={`Amount in ${foreign?.code ?? "USD"}`}
         value={amount}
         onChangeText={setAmount}
       />
@@ -135,20 +144,30 @@ export function MarketScreen({
   );
 
   const currencyField = (
-    <OutlinedField label={side === 'buy' ? 'Select Currency to buy *' : 'Select Currency to Receive *'}>
+    <OutlinedField
+      label={
+        side === "buy"
+          ? "Select Currency to buy *"
+          : "Select Currency to Receive *"
+      }
+    >
       <Pressable
         testID="market-currency"
         accessibilityRole="button"
-        accessibilityLabel={side === 'buy' ? 'Select currency to buy' : 'Select currency to receive'}
+        accessibilityLabel={
+          side === "buy"
+            ? "Select currency to buy"
+            : "Select currency to receive"
+        }
         onPress={() => setSheet(true)}
         style={styles.select}
       >
-        {side === 'buy' && buyCurrency ? (
+        {side === "buy" && buyCurrency ? (
           <View style={styles.selectChoice}>
             <RoundFlag code={buyCurrency.code} size={28} />
             <Text style={styles.selectValue}>{buyCurrency.code}</Text>
           </View>
-        ) : side === 'sell' ? (
+        ) : side === "sell" ? (
           <View style={styles.selectChoice}>
             <RoundFlag code={receive.code} size={28} />
             <Text style={styles.selectValue}>{receive.code}</Text>
@@ -166,8 +185,12 @@ export function MarketScreen({
       <View style={styles.header}>
         <BuySellToggle side={side} onChange={switchSide} />
         <View style={styles.headerActions}>
-          <CurrencyChip currency={side === 'buy' ? NGN : SELL_CURRENCY} />
-          <RoundButton icon="bell" label="Notifications" testID="market-notifications" />
+          <CurrencyChip currency={side === "buy" ? NGN : SELL_CURRENCY} />
+          <RoundButton
+            icon="bell"
+            label="Notifications"
+            testID="market-notifications"
+          />
           <RoundButton
             icon="more"
             label="More options"
@@ -178,8 +201,8 @@ export function MarketScreen({
       </View>
 
       <View style={styles.form}>
-        {side === 'buy' ? currencyField : amountField}
-        {side === 'buy' ? amountField : currencyField}
+        {side === "buy" ? currencyField : amountField}
+        {side === "buy" ? amountField : currencyField}
 
         <View style={styles.trend}>
           <Text testID="market-trend" style={styles.trendText}>
@@ -190,8 +213,8 @@ export function MarketScreen({
               accessibilityRole="button"
               onPress={() =>
                 Alert.alert(
-                  'Current market trend',
-                  'The range of rates in recent matched trades on Xspeeria. Rates inside it are more likely to find a match. Illustrative data.',
+                  "Current market trend",
+                  "The range of rates in recent matched trades on Xspeeria. Rates inside it are more likely to find a match. Illustrative data.",
                 )
               }
               hitSlop={8}
@@ -206,19 +229,29 @@ export function MarketScreen({
         <OutlinedField label="Rate *">
           <FieldInput
             testID="market-rate"
-            accessibilityLabel={`Rate in NGN per ${foreign?.code ?? 'unit'}`}
+            accessibilityLabel={`Rate in NGN per ${foreign?.code ?? "unit"}`}
             value={rate}
             onChangeText={setRate}
             trailing={
               potential !== null ? (
                 <View
                   testID="market-potential"
-                  style={[styles.potential, potential >= 50 ? styles.potentialGood : styles.potentialLow]}
+                  style={[
+                    styles.potential,
+                    potential >= 50
+                      ? styles.potentialGood
+                      : styles.potentialLow,
+                  ]}
                 >
                   <Text
                     style={[
                       styles.potentialText,
-                      { color: potential >= 50 ? color.success.text : color.error.text },
+                      {
+                        color:
+                          potential >= 50
+                            ? color.success.text
+                            : color.error.text,
+                      },
                     ]}
                   >
                     {`${potential}% Match Potential`}
@@ -237,23 +270,34 @@ export function MarketScreen({
           onPress={create}
           style={({ pressed }) => [
             styles.create,
-            { backgroundColor: side === 'buy' ? color.brand.primary : color.trade.sell },
+            {
+              backgroundColor:
+                side === "buy" ? color.brand.primary : color.trade.sell,
+            },
             !ready || !onCreate ? styles.createDisabled : null,
             pressed ? styles.createPressed : null,
           ]}
         >
-          <Text style={styles.createLabel}>{side === 'buy' ? 'Create request' : 'Create Offer'}</Text>
+          <Text style={styles.createLabel}>
+            {side === "buy" ? "Create request" : "Create Offer"}
+          </Text>
         </Pressable>
       </View>
 
       <View style={styles.listHeader}>
         <SectionLabel>
-          {side === 'buy' ? 'Available offers' : `Available ${SELL_CURRENCY.code} request`}
+          {side === "buy"
+            ? "Available offers"
+            : `Available ${SELL_CURRENCY.code} request`}
         </SectionLabel>
         <Pressable
           testID="market-sort"
           accessibilityRole="button"
-          accessibilityLabel={cheapestFirst ? 'Sorted by best rate. Reverse order' : 'Reversed. Sort by best rate'}
+          accessibilityLabel={
+            cheapestFirst
+              ? "Sorted by best rate. Reverse order"
+              : "Reversed. Sort by best rate"
+          }
           onPress={() => setCheapestFirst((v) => !v)}
           hitSlop={10}
         >
@@ -264,8 +308,8 @@ export function MarketScreen({
       {listings.length === 0 ? (
         <Text testID="market-empty" style={styles.empty}>
           {foreign
-            ? `No ${side === 'buy' ? 'offers' : 'requests'} for ${foreign.code} right now`
-            : 'Select a currency to buy to see available offers'}
+            ? `No ${side === "buy" ? "offers" : "requests"} for ${foreign.code} right now`
+            : "Select a currency to buy to see available offers"}
         </Text>
       ) : (
         <View testID="market-listings">
@@ -275,7 +319,7 @@ export function MarketScreen({
         </View>
       )}
 
-      {side === 'buy' ? (
+      {side === "buy" ? (
         <View testID="market-advert" style={styles.advert}>
           {/* Figma advert slot (node 787:4204). PLACEHOLDER artwork supplied by the product
               owner; the stock photo needs a confirmed licence before release. */}
@@ -298,18 +342,25 @@ export function MarketScreen({
             setMenu(false);
             if (onMenu) onMenu(item.key);
             else
-              Alert.alert(item.label, `${item.label} is one of the next screens to be built.`);
+              Alert.alert(
+                item.label,
+                `${item.label} is one of the next screens to be built.`,
+              );
           },
         }))}
       />
 
       <CurrencySheet
         visible={sheet}
-        title={side === 'buy' ? 'Currencies you can buy' : 'Currencies you are licensed to receive'}
-        currencies={side === 'buy' ? BUYABLE : RECEIVABLE}
+        title={
+          side === "buy"
+            ? "Currencies you can buy"
+            : "Currencies you are licensed to receive"
+        }
+        currencies={side === "buy" ? BUYABLE : RECEIVABLE}
         onClose={() => setSheet(false)}
         onSelect={(c) => {
-          if (side === 'buy') setBuyCurrency(c);
+          if (side === "buy") setBuyCurrency(c);
           else setReceive(c);
           setSheet(false);
         }}
@@ -319,21 +370,29 @@ export function MarketScreen({
 }
 
 const styles = themed(() => ({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   form: { gap: space.sm },
   select: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     minHeight: 52,
   },
-  selectChoice: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  selectChoice: { flexDirection: "row", alignItems: "center", gap: 12 },
   selectValue: { ...typography.body, fontSize: 17, color: color.text.primary },
   selectPlaceholder: { ...typography.body },
-  trend: { alignItems: 'flex-end', gap: 4, marginTop: -6 },
-  trendText: { ...typography.caption, fontSize: 11, color: color.text.secondary },
-  details: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trend: { alignItems: "flex-end", gap: 4, marginTop: -6 },
+  trendText: {
+    ...typography.caption,
+    fontSize: 11,
+    color: color.text.secondary,
+  },
+  details: { flexDirection: "row", alignItems: "center", gap: 4 },
   detailsText: { ...typography.caption, fontSize: 11, color: color.error.text },
   potential: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 },
   potentialGood: { backgroundColor: color.success.surface },
@@ -342,8 +401,8 @@ const styles = themed(() => ({
   create: {
     minHeight: 54,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     elevation: 4,
     shadowColor: color.bg.inverse,
     shadowOpacity: 0.2,
@@ -354,11 +413,15 @@ const styles = themed(() => ({
   createDisabled: { opacity: 0.5, elevation: 0, shadowOpacity: 0 },
   createPressed: { opacity: 0.9 },
   // 19 pt bold: large text, so white also passes on the Sell green (4.37:1).
-  createLabel: { ...brandWeight('700'), fontSize: 19, color: color.text.onFill },
+  createLabel: {
+    ...brandWeight("700"),
+    fontSize: 19,
+    color: color.text.onFill,
+  },
   listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: space.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: color.border.subtle,
@@ -367,7 +430,7 @@ const styles = themed(() => ({
     ...typography.caption,
     fontSize: 13,
     color: color.text.disabled,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
   },
@@ -378,7 +441,7 @@ const styles = themed(() => ({
     borderWidth: 1,
     borderColor: color.text.disabled,
     backgroundColor: color.trade.advert,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-  advertImage: { width: '100%', height: '100%' },
+  advertImage: { width: "100%", height: "100%" },
 }));

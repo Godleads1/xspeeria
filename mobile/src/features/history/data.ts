@@ -16,7 +16,7 @@ export interface PayoutAccount {
   readonly bank: string;
   /** Last four digits only. */
   readonly last4: string;
-  /** Minor units of the trade currency. */
+  /** Minor units of the currency paid out: the foreign currency when buying, NGN when selling. */
   readonly amountMinor: number;
 }
 
@@ -44,6 +44,15 @@ export interface HistoryItem {
 
 /** Flat coordination fee per side, NGN kobo. Business plan §5: illustrative ₦375. */
 export const COORDINATION_FEE_KOBO = 37500;
+
+/**
+ * The seller's side pays its coordination fee locally, in the currency it sends (Business
+ * Plan §5; Figma sell receipt shows "1 USD"). No amount is approved for any foreign currency
+ * yet, so this returns null ("to be confirmed") — it must not be invented (ADR-015).
+ */
+export function sellerFeeMinor(_currency: string): number | null {
+  return null;
+}
 
 /**
  * The stages a trade passes through, in user language, mapped onto ADR-001 leg states:
@@ -84,7 +93,7 @@ export const HISTORY: readonly HistoryItem[] = [
   {
     id: 'h3', side: 'sell', currency: 'USD', amountMinor: 50000, rateHundredths: 125700,
     date: '2025-05-10', status: 'completed', reference: '27Y3UNC2LP',
-    payouts: [{ name: 'David Peters', bank: 'Access Bank', last4: '4417', amountMinor: 50000 }],
+    payouts: [{ name: 'David Peters', bank: 'Access Bank', last4: '4417', amountMinor: 62850000 }],
     progress: steps(7, DONE),
   },
   {
