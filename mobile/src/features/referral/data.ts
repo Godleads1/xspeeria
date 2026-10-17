@@ -3,6 +3,8 @@
  * production. The reward is 10% off the coordination fee, never money paid out.
  */
 
+import { divRoundHalfEven } from '../market/money';
+
 export const REFERRAL = {
   /** Server-issued; Figma's sample code. */
   code: 'H73B373H',
@@ -13,12 +15,13 @@ export const REFERRAL = {
 export const REFERRAL_DISCOUNT_BPS = 1000;
 
 /**
- * Discount on a fee in minor units, half-up. Display/test helper only — the server applies
- * the real discount.
+ * Discount on a fee in minor units, rounded half to even (same rule as every money
+ * conversion). BigInt, so large fees keep full precision. Display/test helper only — the
+ * server applies the real discount.
  */
 export function referralDiscountMinor(feeMinor: number): number {
   if (!Number.isSafeInteger(feeMinor) || feeMinor < 0) throw new Error('fee must be a non-negative integer (minor units)');
-  return Math.floor((feeMinor * REFERRAL_DISCOUNT_BPS + 5000) / 10000);
+  return Number(divRoundHalfEven(BigInt(feeMinor) * BigInt(REFERRAL_DISCOUNT_BPS), 10000n));
 }
 
 export function inviteMessage(code: string): string {

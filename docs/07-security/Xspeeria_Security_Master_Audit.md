@@ -307,6 +307,12 @@ A vulnerability that can cause significant:
 
 **Production impact:** Must be fixed before normal production launch.
 
+> **Amended for release purposes 2026-10-17** (product owner,
+> `docs/adr/019-review-decisions-and-multi-offer-fill.md` §1): a High that does not expose
+> sensitive data, permit unauthorised access or threaten transaction integrity may ship
+> only with a written risk acceptance (approver, compensating controls, expiry). See
+> `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` §5.
+
 ### 🟡 MEDIUM
 
 A meaningful security weakness with limited scope, additional prerequisites, or lower impact.

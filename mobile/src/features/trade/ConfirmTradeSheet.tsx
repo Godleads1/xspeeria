@@ -2,8 +2,12 @@
  * Confirm trade (ADR-014; not in Figma). Shown when a match is tapped on Select Match:
  * amount, rate, the flat coordination fee and the total to transfer, plus the payout
  * account. The FAQ promises "the fee is shown before you confirm", and ADR-008 requires a
- * 2 FA re-check before accepting a trade (done by the caller after "Accept"). If the match
- * can fill less than was asked, the smaller amount is shown plainly — never resized silently.
+ * 2 FA re-check before accepting a trade (done by the caller after "Accept").
+ *
+ * Several listings can fill one request (ADR-019): the sheet lists each part, its rate and
+ * the totals, with one coordination fee per trade. Amounts are the ones the user picked;
+ * if a listing has been taken since, the sheet says so and cannot be accepted — it never
+ * shrinks a part silently (Standing Standards §7.3).
  */
 
 import { useState, type ReactElement } from "react";
@@ -12,11 +16,11 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Icon } from "../../components/icons";
 import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
-import type { Listing } from "../market/data";
 import type { Side } from "../market/MarketScreen";
 import { formatHundredths } from "../market/money";
 import type { Beneficiary } from "../profile/data";
-import { FUNDING_WINDOW_MS, ngnFor, tradeStore, transferFor, useTrades } from "./tradeStore";
+import { planTotals, type FillPlan } from "./fillPlan";
+import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_KOBO, sellerFeeMinor } from "../history/data";
 
 function Row({
@@ -43,7 +47,7 @@ function Row({
 export function ConfirmTradeSheet({
   side,
   requestedMinor,
-  listing,
+  parts,
   payoutOptions,
   onAccept,
   onClose,
@@ -51,22 +55,21 @@ export function ConfirmTradeSheet({
 }: {
   side: Side;
   requestedMinor: number;
-  listing: Listing;
+  /** Listings the user picked and the amount taken from each (fillPlan.ts). */
+  parts: FillPlan;
   /** The user's own verified accounts in the currency they will receive. */
   payoutOptions: readonly Beneficiary[];
-  onAccept: (amountMinor: number, payout: Beneficiary) => void;
+  onAccept: (parts: FillPlan, payout: Beneficiary) => void;
   onClose: () => void;
   onAddAccount: () => void;
 }): ReactElement {
-  useTrades(); // re-read what is left when trades change
-  // What earlier trades have not already taken from this listing.
-  const available = tradeStore.remainingMinor(listing);
-  const amountMinor = Math.min(requestedMinor, available);
-  const soldOut = available === 0;
-  const partial = !soldOut && amountMinor < requestedMinor;
-  const cur = listing.currency;
-  const ngn = ngnFor(amountMinor, listing.rateHundredths);
-  const transfer = transferFor(side, cur, amountMinor, listing.rateHundredths);
+  useTrades(); // re-check what is left when trades change
+  // A listing may have been taken since it was picked: never shrink a part silently.
+  const stale = parts.some((p) => p.amountMinor > tradeStore.remainingMinor(p.listing));
+  const cur = parts[0]?.listing.currency ?? "";
+  const totals = planTotals(side, parts);
+  const several = parts.length > 1;
+  const short = totals.foreignMinor < requestedMinor;
   const receiveCur = side === "buy" ? cur : "NGN";
   const [payoutId, setPayoutId] = useState<string | null>(
     payoutOptions[0]?.id ?? null,
@@ -74,6 +77,8 @@ export function ConfirmTradeSheet({
   const payout = payoutOptions.find((b) => b.id === payoutId) ?? null;
   const minutes = Math.round(FUNDING_WINDOW_MS / 60000);
   const sellerFee = side === "sell" ? sellerFeeMinor(cur) : null;
+  const noun = side === "buy" ? "offer" : "request";
+  const canAccept = payout !== null && !stale && parts.length > 0;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -85,42 +90,57 @@ export function ConfirmTradeSheet({
       <View testID="confirm-trade" style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.body}>
           <Text accessibilityRole="header" style={styles.title}>
-            Confirm trade
+            {several ? `Confirm ${parts.length} trades` : "Confirm trade"}
           </Text>
-          {partial ? (
+          {short ? (
             <Text testID="confirm-partial" style={styles.notice}>
-              You asked for {formatHundredths(requestedMinor)} {cur}. This{" "}
-              {side === "buy" ? "offer" : "request"} has{" "}
-              {formatHundredths(available)} {cur} left, so this trade is
-              for {formatHundredths(amountMinor)} {cur}.
+              You asked for {formatHundredths(requestedMinor)} {cur}.{" "}
+              {several ? `These ${parts.length} ${noun}s fill` : `This ${noun} fills`}{" "}
+              {formatHundredths(totals.foreignMinor)} {cur}. You can go back and add
+              more {noun}s.
             </Text>
           ) : null}
-          {soldOut ? (
-            <Text testID="confirm-sold-out" style={styles.notice}>
-              This {side === "buy" ? "offer" : "request"} has been fully taken.
-              Choose another one.
+          {stale ? (
+            <Text testID="confirm-stale" style={styles.notice}>
+              Someone else took part of {several ? `one of these ${noun}s` : `this ${noun}`}.
+              Go back and choose again.
             </Text>
           ) : null}
+
+          {several ? (
+            <View testID="confirm-parts" style={styles.card}>
+              {parts.map((p, i) => (
+                <Row
+                  key={p.listing.id}
+                  label={`${i + 1}. ${formatHundredths(p.amountMinor)} ${cur}`}
+                  value={`NGN ${formatHundredths(p.listing.rateHundredths)}/${cur}`}
+                />
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.card}>
             <Row
               label={side === "buy" ? "You buy" : "You sell"}
-              value={`${formatHundredths(amountMinor)} ${cur}`}
+              value={`${formatHundredths(totals.foreignMinor)} ${cur}`}
               strong
             />
-            <Row
-              label="Rate"
-              value={`NGN ${formatHundredths(listing.rateHundredths)}/${cur}`}
-            />
+            {several ? null : (
+              <Row
+                label="Rate"
+                value={`NGN ${formatHundredths(parts[0]?.listing.rateHundredths ?? 0)}/${cur}`}
+              />
+            )}
             {side === "buy" ? (
               <>
-                <Row label="Amount" value={`${formatHundredths(ngn)} NGN`} />
+                <Row label="Amount" value={`${formatHundredths(totals.ngnMinor)} NGN`} />
                 <Row
-                  label="Coordination fee"
-                  value={`${formatHundredths(COORDINATION_FEE_KOBO)} NGN`}
+                  label={several ? `Coordination fee (${parts.length} × ${formatHundredths(COORDINATION_FEE_KOBO)})` : "Coordination fee"}
+                  value={`${formatHundredths(totals.feeKobo ?? 0)} NGN`}
                 />
                 <Row
                   label="Total to transfer"
-                  value={`${formatHundredths(transfer.minor)} NGN`}
+                  value={`${formatHundredths(totals.transferMinor)} NGN`}
                   strong
                 />
               </>
@@ -128,22 +148,22 @@ export function ConfirmTradeSheet({
               <>
                 <Row
                   label="You receive"
-                  value={`${formatHundredths(ngn)} NGN`}
+                  value={`${formatHundredths(totals.ngnMinor)} NGN`}
                 />
                 <Row
                   label="Coordination fee"
                   value={
                     sellerFee === null
                       ? `To be confirmed (${cur})`
-                      : `${formatHundredths(sellerFee)} ${cur}`
+                      : `${formatHundredths(sellerFee * parts.length)} ${cur}`
                   }
                 />
                 <Row
                   label="You transfer"
                   value={
                     sellerFee === null
-                      ? `${formatHundredths(transfer.minor)} ${cur} + fee`
-                      : `${formatHundredths(transfer.minor + sellerFee)} ${cur}`
+                      ? `${formatHundredths(totals.transferMinor)} ${cur} + fee`
+                      : `${formatHundredths(totals.transferMinor + sellerFee * parts.length)} ${cur}`
                   }
                   strong
                 />
@@ -197,18 +217,19 @@ export function ConfirmTradeSheet({
           <View style={styles.hint}>
             <Icon name="info" color={color.text.secondary} size={16} />
             <Text style={styles.hintText}>
-              After you accept, you have {minutes} minutes to transfer from a
-              bank account in your own name. Xspeeria never holds your money: it
-              goes into a partner bank’s escrow account.
+              {several
+                ? `Each ${noun} is a separate trade with its own transfer and reference. After you accept, you have ${minutes} minutes to make each transfer from a bank account in your own name.`
+                : `After you accept, you have ${minutes} minutes to transfer from a bank account in your own name.`}{" "}
+              Xspeeria never holds your money: it goes into a partner bank’s escrow account.
             </Text>
           </View>
         </ScrollView>
         <View style={styles.actions}>
           <PrimaryButton
             testID="confirm-accept"
-            label={side === "buy" ? "Accept offer" : "Accept request"}
-            onPress={payout && !soldOut ? () => onAccept(amountMinor, payout) : undefined}
-            disabled={!payout || soldOut}
+            label={several ? `Accept ${parts.length} ${noun}s` : side === "buy" ? "Accept offer" : "Accept request"}
+            onPress={canAccept && payout ? () => onAccept(parts, payout) : undefined}
+            disabled={!canAccept}
             tone={side === "sell" ? "sell" : "primary"}
           />
           <Pressable

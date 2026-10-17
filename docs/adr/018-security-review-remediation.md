@@ -48,6 +48,10 @@ before any change. No Critical findings. Four High, the rest Medium/Low/Info.
 
 ## 3. Open — needs a human decision (not changed)
 
+> **Update 2026-10-17:** rounding and partial fill were decided —
+> `docs/adr/019-review-decisions-and-multi-offer-fill.md` (half to even; several listings
+> can fill one request, each part explicit).
+
 | Item | Conflict / gap |
 |---|---|
 | **Rounding rule** (FIN-01) | ADR-002 §4.4 `ROUND_HALF_EVEN` vs ADR-014 / ADR-009 "half-up". Mobile currently rounds half-up. |

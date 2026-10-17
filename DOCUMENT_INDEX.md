@@ -89,6 +89,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `016-new-location-region-kyc.md` | New-location prompt and US identity check (SSN, ID document, selfie) with pending region; demo trigger (DEC-022) | **APPROVED** — 2026-10-17 |
 | `017-npm-audit-time-limited-exceptions.md` | npm audit gate: high threshold kept; exact-advisory exceptions, max 31 days, enforced by `scripts/check_npm_audit.py` (DEC-023) | **APPROVED** — 2026-10-17 |
 | `018-security-review-remediation.md` | Independent security/QA/financial review: DEMO_MODE from the build, per-user data cleared on log-out, TOTP single-use, strict money input; two rounding/partial-fill conflicts open (DEC-024) | **APPROVED** — 2026-10-17 |
+| `019-review-decisions-and-multi-offer-fill.md` | High-severity release rule relaxed with risk acceptance (C1); rounding half to even; one request filled from several listings, each part explicit (DEC-025) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 

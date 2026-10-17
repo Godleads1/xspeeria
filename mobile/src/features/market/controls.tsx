@@ -346,17 +346,25 @@ export function ListingRow({
   side,
   onAction,
   number,
+  availableMinor = listing.availableMinor,
+  takingMinor,
 }: {
   listing: Listing;
   side: "buy" | "sell";
   onAction: (listing: Listing) => void;
   /** Figma sell Select Match numbers each match (1, 2, 3…) in a small green badge. */
   number?: number;
+  /** What is still left on the listing (live trades already took the rest). */
+  availableMinor?: number;
+  /** Set when this listing is part of the user's selection: the amount taken from it. */
+  takingMinor?: number;
 }): ReactElement {
-  const action = side === "buy" ? "Buy" : "Sell";
-  const tint = side === "buy" ? color.brand.primary : color.trade.sell;
+  const selected = takingMinor !== undefined;
+  const taken = !selected && availableMinor <= 0;
+  const action = selected ? "Remove" : taken ? "Taken" : side === "buy" ? "Buy" : "Sell";
+  const tint = taken ? color.text.disabled : side === "buy" ? color.brand.primary : color.trade.sell;
   return (
-    <View testID={`listing-${listing.id}`} style={styles.listing}>
+    <View testID={`listing-${listing.id}`} style={[styles.listing, selected ? styles.listingSelected : null]}>
       {number !== undefined ? (
         <View
           testID={`listing-${listing.id}-number`}
@@ -369,7 +377,7 @@ export function ListingRow({
         <Text style={styles.listingLine}>
           {"Amount available: "}
           <Text style={styles.listingStrong}>
-            {`${formatCompact(listing.availableMinor)} ${listing.currency}`}
+            {`${formatCompact(availableMinor)} ${listing.currency}`}
           </Text>
         </Text>
         <View style={styles.rateRow}>
@@ -390,11 +398,22 @@ export function ListingRow({
           ) : null}
         </View>
         <Text style={styles.listingMeta}>{listing.meta}</Text>
+        {selected ? (
+          <Text testID={`listing-${listing.id}-taking`} style={styles.listingTaking}>
+            {`Taking ${formatHundredths(takingMinor)} ${listing.currency}`}
+          </Text>
+        ) : null}
       </View>
       <Pressable
         testID={`listing-${listing.id}-action`}
         accessibilityRole="button"
-        accessibilityLabel={`${action} ${formatHundredths(listing.availableMinor)} ${listing.currency} at ${formatHundredths(listing.rateHundredths)} NGN`}
+        accessibilityLabel={
+          selected
+            ? `Remove ${formatHundredths(takingMinor)} ${listing.currency} at ${formatHundredths(listing.rateHundredths)} NGN from your selection`
+            : `${action} ${formatHundredths(availableMinor)} ${listing.currency} at ${formatHundredths(listing.rateHundredths)} NGN`
+        }
+        accessibilityState={{ selected, disabled: taken }}
+        disabled={taken}
         onPress={() => onAction(listing)}
         style={({ pressed }) => [
           styles.listingAction,
@@ -573,6 +592,9 @@ const styles = themed(() => ({
     color: color.text.primary,
   },
   listingMeta: { ...typography.caption, color: color.text.secondary },
+  listingTaking: { ...typography.caption, ...brandWeight("700"), color: color.text.primary },
+  // Selected for a multi-offer fill: light brand tint, like a pill (navy on it ≈ 10.8:1).
+  listingSelected: { backgroundColor: color.brand.tint, borderRadius: 12, paddingHorizontal: space.xs },
   bestPill: {
     backgroundColor: color.success.surface,
     borderRadius: 8,

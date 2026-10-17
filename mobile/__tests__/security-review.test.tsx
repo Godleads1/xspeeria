@@ -223,10 +223,14 @@ describe('FIN-07 / FIN-17 / QA-05 / FIN-06: strict amount parsing and no overflo
     ['9007199254740993', null],
   ])('route param %p', (input, expected) => expect(parsePositiveInt(input)).toBe(expected));
 
-  it('half-up at exactly .5, and negatives are refused', () => {
-    expect(quoteMinor(1, 50)).toBe(1);
+  it('half to even at exactly .5 (FIN-01 decision), and negatives are refused', () => {
+    expect(quoteMinor(1, 50)).toBe(0); // 0.5 → 0
+    expect(quoteMinor(3, 50)).toBe(2); // 1.5 → 2
+    expect(quoteMinor(5, 50)).toBe(2); // 2.5 → 2
+    expect(quoteMinor(1, 150)).toBe(2); // 1.5 → 2
+    expect(quoteMinor(1, 51)).toBe(1); // above half rounds up
     expect(quoteMinor(1, 49)).toBe(0);
-    expect(quoteMinor(3, 50)).toBe(2);
+    expect(quoteMinor(1, 189250)).toBe(1892); // the reviewer's example: 1892.5 → 1892
     expect(() => quoteMinor(-150, 100)).toThrow();
   });
 

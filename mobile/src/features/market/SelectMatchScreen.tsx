@@ -4,6 +4,11 @@
  * After "Create request" (or "Create Offer"): a summary of what was asked for, the amount
  * to pay worked out in exact integer arithmetic, the listings that match, and a red
  * "Cancel request" that returns to Market. MOCK DATA ONLY.
+ *
+ * One request can be filled from several listings (ADR-019): tapping a listing adds it to
+ * the selection with the amount it can give ("Taking 250.00 USD"); tapping again removes
+ * it. When the selection covers the amount asked for, the confirm sheet opens; "Review"
+ * opens it earlier for a smaller total, which the sheet states plainly.
  */
 
 import type { ReactElement } from "react";
@@ -11,6 +16,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../components/icons";
+import { PrimaryButton } from "../../components/primitives";
+import { inPlan, plannedMinor, type FillPlan } from "../trade/fillPlan";
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { SectionLabel } from "../home/SectionLabel";
 import { ListingRow, RoundButton } from "./controls";
@@ -22,17 +29,27 @@ export function SelectMatchScreen({
   request,
   onBack,
   onCancel,
-  onTakeListing,
+  onToggleListing,
+  onReview,
+  plan = [],
+  remainingOf = (l) => l.availableMinor,
 }: {
   request: TradeRequest;
   onBack: () => void;
   onCancel: () => void;
-  onTakeListing: (listing: Listing, side: Side) => void;
+  /** Add the listing to the selection, or remove it if already selected. */
+  onToggleListing: (listing: Listing, side: Side) => void;
+  /** Open the confirm sheet for the current selection. */
+  onReview: () => void;
+  plan?: FillPlan;
+  /** What is still left on a listing after other live trades. */
+  remainingOf?: (listing: Listing) => number;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const payMinor = quoteMinor(request.amountMinor, request.rateHundredths);
   const matches = listingsFor(request.side, request.currency);
   const isBuy = request.side === "buy";
+  const selected = plannedMinor(plan);
 
   return (
     <View
@@ -111,7 +128,9 @@ export function SelectMatchScreen({
                 listing={l}
                 side={request.side}
                 number={isBuy ? undefined : i + 1}
-                onAction={(x) => onTakeListing(x, request.side)}
+                availableMinor={remainingOf(l)}
+                takingMinor={inPlan(plan, l.id)?.amountMinor}
+                onAction={(x) => onToggleListing(x, request.side)}
               />
             ))}
           </View>
@@ -121,6 +140,19 @@ export function SelectMatchScreen({
       <View
         style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}
       >
+        {plan.length > 0 ? (
+          <View style={styles.selection}>
+            <Text testID="select-match-selected" style={styles.selectionText}>
+              {`Selected ${formatHundredths(selected)} of ${formatHundredths(request.amountMinor)} ${request.currency} from ${plan.length} ${plan.length === 1 ? (isBuy ? "offer" : "request") : isBuy ? "offers" : "requests"}`}
+            </Text>
+            <PrimaryButton
+              testID="select-match-review"
+              label={plan.length === 1 ? "Review trade" : `Review ${plan.length} trades`}
+              onPress={onReview}
+              tone={isBuy ? "primary" : "sell"}
+            />
+          </View>
+        ) : null}
         <Pressable
           testID="select-match-cancel"
           accessibilityRole="button"
@@ -190,7 +222,14 @@ const styles = themed(() => ({
     textAlign: "center",
     paddingVertical: space.md,
   },
-  footer: { paddingHorizontal: space.md, paddingTop: space.xs },
+  footer: { paddingHorizontal: space.md, paddingTop: space.xs, gap: space.xs },
+  selection: { gap: space.xs },
+  selectionText: {
+    ...typography.caption,
+    fontSize: 13,
+    color: color.text.secondary,
+    textAlign: "center",
+  },
   cancel: {
     minHeight: 54,
     borderRadius: 12,

@@ -6,17 +6,17 @@
 
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { copySensitive } from './sensitiveClipboard';
+import { useBlockScreenCapture } from './useBlockScreenCapture';
 
 export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => void }): ReactElement {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
-  usePreventScreenCapture('recovery-codes');
+  useBlockScreenCapture('recovery-codes');
   return (
     <View testID="recovery-codes" style={styles.wrap}>
       <Text accessibilityRole="header" style={styles.heading}>Save your recovery codes</Text>

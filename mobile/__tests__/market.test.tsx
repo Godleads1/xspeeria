@@ -104,7 +104,7 @@ describe('Select Match (Figma 106:1150)', () => {
 
   it('summarises the request with the exact amount to pay', async () => {
     await render(
-      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={jest.fn()} onTakeListing={jest.fn()} />,
+      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={jest.fn()} onToggleListing={jest.fn()} onReview={jest.fn()} />,
     );
     expect(screen.getByText('1,313,556.00 NGN')).toBeTruthy();
     expect(screen.getAllByTestId(/^listing-o\d$/).length).toBe(listingsFor('buy', 'USD').length);
@@ -113,7 +113,7 @@ describe('Select Match (Figma 106:1150)', () => {
   it('cancels back to Market', async () => {
     const onCancel = jest.fn();
     await render(
-      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={onCancel} onTakeListing={jest.fn()} />,
+      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={onCancel} onToggleListing={jest.fn()} onReview={jest.fn()} />,
     );
     await fireEvent.press(screen.getByTestId('select-match-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);

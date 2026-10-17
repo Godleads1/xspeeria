@@ -63,7 +63,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-020 | DOCUMENTED | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding conflict open (`docs/adr/018-security-review-remediation.md` §3). |
+| SEC-020 | DOCUMENTED | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding decided: half to even (`docs/adr/019-review-decisions-and-multi-offer-fill.md`). |
 | SEC-021 | DOCUMENTED | `webhook_shared_secret` placeholder only; Banking Integration Spec. | Signature check, replay window, `provider_event_id` idempotency (`docs/adr/002-*` §4.5). |
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
 | SEC-023 | DOCUMENTED | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
@@ -84,7 +84,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-031 | **BLOCKED** | PRs are used, but **branch protection is unavailable**: GitHub returns 403 "Upgrade to GitHub Pro or make this repository public" (checked 2026-10-17). The repo must stay private (licensed fonts). | Product owner: upgrade the plan (GitHub Pro / Team) so `main` can require a reviewed PR and passing checks; then add CODEOWNERS. |
+| SEC-031 | **BLOCKED** (upgrade deferred by product owner, ADR-019 §4) | PRs are used, but **branch protection is unavailable**: GitHub returns 403 "Upgrade to GitHub Pro or make this repository public" (checked 2026-10-17). The repo must stay private (licensed fonts). | Product owner: upgrade the plan (GitHub Pro / Team) so `main` can require a reviewed PR and passing checks; then add CODEOWNERS. |
 | SEC-032 | IMPLEMENTED | CI: pytest (unit + PostgreSQL integration), ruff, mypy strict, bandit, ESLint, typecheck, jest/vitest, pip-audit, npm audit gate, gitleaks (`.github/workflows/ci.yml`). | No TypeScript SAST beyond ESLint (CodeQL needs GitHub Advanced Security on private repos). |
 | SEC-033 | NOT STARTED | Lockfiles exist (`uv.lock`, `package-lock.json`). | Generate SBOM (e.g. CycloneDX) in CI and keep it as an artifact. |
 | SEC-034 | NOT STARTED | `app_env` setting exists; no environments deployed. | Separate accounts/credentials/data per environment. |

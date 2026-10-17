@@ -50,18 +50,30 @@ export function formatCompact(hundredths: number): string {
 }
 
 /**
+ * Integer division of a non-negative BigInt, rounding half to even (banker's rounding):
+ * the rule the ledger uses (`docs/adr/002-financial-event-ledger-architecture.md` §4.4,
+ * product owner decision 2026-10-17, `docs/adr/019-review-decisions-and-multi-offer-fill.md`).
+ */
+export function divRoundHalfEven(numerator: bigint, divisor: bigint): bigint {
+  const q = numerator / divisor;
+  const r = numerator % divisor;
+  const twice = r * 2n;
+  if (twice > divisor || (twice === divisor && q % 2n === 1n)) return q + 1n;
+  return q;
+}
+
+/**
  * Amount to pay in the quote currency's minor units:
  * `amountMinor` (e.g. US cents) × `rateHundredths` (NGN per 1 unit, ×100) ÷ 100,
- * rounded half-up. Exact integer arithmetic via BigInt.
+ * rounded half to even. Exact integer arithmetic via BigInt.
  */
 export function quoteMinor(amountMinor: number, rateHundredths: number): number {
-  // Half-up as written is only correct for non-negative values; amounts and rates are
-  // always positive, so anything else is a caller error.
+  // Amounts and rates are always positive; anything else is a caller error.
   if (!Number.isSafeInteger(amountMinor) || !Number.isSafeInteger(rateHundredths) || amountMinor < 0 || rateHundredths < 0) {
     throw new Error('quoteMinor needs non-negative safe integers');
   }
   const product = BigInt(amountMinor) * BigInt(rateHundredths);
-  const rounded = (product + 50n) / 100n;
+  const rounded = divRoundHalfEven(product, 100n);
   const result = Number(rounded);
   if (!Number.isSafeInteger(result)) throw new Error('Amount to pay is out of range');
   return result;

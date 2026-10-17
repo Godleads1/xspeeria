@@ -27,7 +27,7 @@ import { brandWeight, color, space, themed, typography } from "../../theme";
 import { DemoNote, GhostButton } from "../auth/ui";
 import { ActionSheet, RoundButton } from "../market/controls";
 import { formatHundredths } from "../market/money";
-import { progressFor, tradeStore, useTrade, type Trade } from "./tradeStore";
+import { orderSiblings, progressFor, tradeStore, useTrade, useTrades, type Trade } from "./tradeStore";
 
 /** Demo escrow details — obviously not a real account. */
 export const DEMO_ESCROW = {
@@ -192,12 +192,49 @@ function Completed({
   );
 }
 
+const PHASE_LABEL: Record<Trade["phase"], string> = {
+  awaiting_payment: "Waiting for your transfer",
+  confirming: "Checking your payment",
+  awaiting_counterparty: "Waiting for the other side",
+  releasing: "Releasing funds",
+  completed: "Completed",
+  expired: "Expired",
+  cancelled: "Cancelled",
+};
+
+/** The other trades of a multi-listing order (ADR-019): each is paid and tracked on its own. */
+function OrderStrip({ trade, onOpenTrade }: { trade: Trade; onOpenTrade?: (id: string) => void }): ReactElement | null {
+  const all = useTrades();
+  const others = orderSiblings(trade, all);
+  if (others.length === 0) return null;
+  const total = others.length + 1;
+  return (
+    <View testID="trade-order" style={styles.order}>
+      <Text style={styles.orderTitle}>{`This order has ${total} trades. Pay each one separately.`}</Text>
+      {others.map((o) => (
+        <Pressable
+          key={o.id}
+          testID={`trade-order-${o.id}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Open trade ${o.reference}, ${formatHundredths(o.amountMinor)} ${o.currency}, ${PHASE_LABEL[o.phase]}`}
+          onPress={onOpenTrade ? () => onOpenTrade(o.id) : undefined}
+          style={styles.orderRow}
+        >
+          <Text style={styles.orderAmount}>{`${formatHundredths(o.amountMinor)} ${o.currency}`}</Text>
+          <Text style={styles.orderPhase}>{PHASE_LABEL[o.phase]}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export function TradeScreen({
   id,
   onBack,
   onReceipt,
   onFinish,
   onSupport,
+  onOpenTrade,
   now = Date.now,
 }: {
   id: string;
@@ -205,6 +242,8 @@ export function TradeScreen({
   onReceipt: () => void;
   onFinish: () => void;
   onSupport: () => void;
+  /** Opens another trade of the same order. */
+  onOpenTrade?: (id: string) => void;
   now?: () => number;
 }): ReactElement | null {
   const insets = useSafeAreaInsets();
@@ -216,6 +255,9 @@ export function TradeScreen({
   useEffect(() => {
     const t = setInterval(() => {
       tradeStore.tick(id, now());
+      // Keep the other trades of the same order current too (expiry, demo bank steps).
+      const self = tradeStore.get(id);
+      if (self) for (const o of orderSiblings(self, tradeStore.all())) tradeStore.tick(o.id, now());
       setTick((n) => n + 1);
     }, 1000);
     return () => clearInterval(t);
@@ -288,6 +330,7 @@ export function TradeScreen({
         />
       </View>
 
+      <OrderStrip trade={t} onOpenTrade={onOpenTrade} />
       {t.phase === "completed" ? (
         <Completed trade={t} onReceipt={onReceipt} onFinish={onFinish} />
       ) : (
@@ -486,6 +529,18 @@ export function TradeScreen({
 }
 
 const styles = themed(() => ({
+  order: {
+    marginHorizontal: space.md,
+    marginBottom: space.xs,
+    padding: space.sm,
+    borderRadius: 12,
+    backgroundColor: color.brand.tint,
+    gap: 6,
+  },
+  orderTitle: { ...typography.caption, ...brandWeight("700"), fontSize: 13, color: color.text.primary },
+  orderRow: { flexDirection: "row", justifyContent: "space-between", minHeight: 32, alignItems: "center" },
+  orderAmount: { ...typography.body, fontSize: 14, color: color.brand.primary, ...brandWeight("700") },
+  orderPhase: { ...typography.caption, fontSize: 12, color: color.text.secondary },
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: {
     flexDirection: "row",

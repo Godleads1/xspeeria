@@ -4,7 +4,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED — supplied by the product owner as mandatory, 2026-10-17** (one clause pending decision: §6 C1) |
+| **Status** | **APPROVED — supplied by the product owner as mandatory, 2026-10-17**; C1 decided the same day (`docs/adr/019-review-decisions-and-multi-offer-fill.md` §1) |
 | **Owner** | Product owner (Godleads) |
 | **Relationship** | **Extends** `docs/07-security/Xspeeria_Security_Master_Audit.md` (the standing baseline, Standing Standards §4). It adds requirements and release gates; it removes none. Where the two differ, the **stricter** applies until a human decides otherwise (§6). |
 | **Evidence register** | `docs/07-security/SECURITY_EVIDENCE_REGISTER.md` — current state of every requirement |
@@ -137,7 +137,7 @@ A requirement only protects anyone if failing it stops a release.
 | Finding severity | Required response |
 |---|---|
 | **Critical** | Block release. Fix and retest before deployment. |
-| **High** | **Block release** (Security Master Audit §6: "must be fixed before normal production launch"). *Pending decision C1 (§6) on whether a High that does not expose sensitive data, permit unauthorised access or threaten transaction integrity may ship with documented risk acceptance.* |
+| **High** | **Block release** if it exposes sensitive data, permits unauthorised access or threatens transaction integrity. Any other High needs a documented risk acceptance (approver, compensating controls, expiry). Decided C1, 2026-10-17. |
 | **Medium** | Assign an owner, a remediation deadline and a documented mitigation before release. |
 | **Low** | Track and resolve through normal security maintenance. |
 
@@ -156,7 +156,7 @@ A requirement only protects anyone if failing it stops a release.
 
 | # | Topic | Resolution |
 |---|---|---|
-| **C1** | **High-severity release rule** | **OPEN — HUMAN DECISION REQUIRED.** Security Master Audit §6 blocks launch on every High; the supplied standard allows some Highs with documented risk acceptance. Allowing it is a relaxation of the baseline and needs explicit approval (Standing Standards §4.3). Until decided, every High blocks release. |
+| **C1** | **High-severity release rule** | **DECIDED 2026-10-17 by the product owner** (`docs/adr/019-review-decisions-and-multi-offer-fill.md` §1): the relaxation of Security Master Audit §6 is approved for release purposes; the §5 table governs. Critical findings always block. |
 | C2 | ID collision | Requirements use three-digit IDs (`SEC-001`). Review findings use the report's own prefix with two digits (`SEC-01`, `QA-01`, `FIN-01` in `docs/07-security/reviews/`). They are different things; always cite the report path with a finding ID. |
 | C3 | Baseline count | This standard adds 40 requirements and 5 financial requirements to the 112 Master Audit controls. Nothing is removed (Standing Standards §4.3). |
 | C4 | AI review vs independent testing | Assistant-run reviews are AI-IDENTIFIED evidence (Standing Standards §5). They do not satisfy SEC-040, which needs independent human-led testing. |

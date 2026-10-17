@@ -22,8 +22,8 @@ A bonus paid in money, or on the exchange amount, would break that model.
   money is paid out, credited or held, and the exchange rate is untouched.
 - **Display:** the Figma "Total Earnings $0" box shows a **count** ("Friends joined"), never
   a money amount or balance. The no-balance guard test stays unchanged.
-- **Arithmetic:** the discount is computed server-side on integer minor units with half-up
-  rounding (e.g. 10% of ₦375.00 = ₦37.50 → 3,750 kobo). Never floating point.
+- **Arithmetic:** the discount is computed server-side on integer minor units, rounding half to even
+  (`docs/adr/019-review-decisions-and-multi-offer-fill.md` §2) (e.g. 10% of ₦375.00 = ₦37.50 → 3,750 kobo). Never floating point.
 
 ## 3. Open items (must not be assumed in code)
 

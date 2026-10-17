@@ -119,23 +119,23 @@ describe('Confirm trade sheet', () => {
 
   it('shows amount, rate, fee and total before accepting', async () => {
     const onAccept = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} listing={offer} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} parts={[{ listing: offer, amountMinor: 20000 }]} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
     expect(screen.getByText('200.00 USD')).toBeTruthy();
     expect(screen.getByText('375.00 NGN')).toBeTruthy();
     expect(screen.getByText('378,975.00 NGN')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(20000, own[0]);
+    expect(onAccept).toHaveBeenCalledWith([{ listing: offer, amountMinor: 20000 }], own[0]);
   });
 
   it('says plainly when the match fills less than asked', async () => {
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={79900} listing={offer} payoutOptions={own} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 799.00 USD.*200.00 USD/);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={79900} parts={[{ listing: offer, amountMinor: 20000 }]} payoutOptions={own} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 799.00 USD.*This offer fills.*200.00 USD/);
   });
 
   it('cannot accept without an own payout account', async () => {
     const onAccept = jest.fn();
     const onAdd = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} listing={offer} payoutOptions={[]} onAccept={onAccept} onClose={jest.fn()} onAddAccount={onAdd} />);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} parts={[{ listing: offer, amountMinor: 20000 }]} payoutOptions={[]} onAccept={onAccept} onClose={jest.fn()} onAddAccount={onAdd} />);
     expect(screen.getByTestId('confirm-accept').props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(screen.getByTestId('confirm-add-account'));
     expect(onAdd).toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe('Sell flow (ADR-015)', () => {
   const ownNgn = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency === 'NGN');
 
   it('confirm sheet: seller fee is in the sent currency and not invented', async () => {
-    await render(<ConfirmTradeSheet side="sell" requestedMinor={20000} listing={REQUESTS[0]} payoutOptions={ownNgn} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    await render(<ConfirmTradeSheet side="sell" requestedMinor={20000} parts={[{ listing: REQUESTS[0], amountMinor: 20000 }]} payoutOptions={ownNgn} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
     expect(screen.getByText('To be confirmed (USD)')).toBeTruthy();
     expect(screen.queryByText('375.00 NGN')).toBeNull();
     expect(screen.getByText('378,600.00 NGN')).toBeTruthy();

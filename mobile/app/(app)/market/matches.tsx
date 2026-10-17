@@ -1,20 +1,26 @@
 import { useEffect, useState, type ReactElement } from "react";
+import { Alert } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { SelectMatchScreen } from "../../../src/features/market/SelectMatchScreen";
 import { BUYABLE } from "../../../src/features/market/data";
 import type { Listing } from "../../../src/features/market/data";
-import type {
-  Side,
-  TradeRequest,
-} from "../../../src/features/market/MarketScreen";
+import type { TradeRequest } from "../../../src/features/market/MarketScreen";
 import { formatHundredths, parsePositiveInt, quoteMinorOrNull } from "../../../src/features/market/money";
 import { useBeneficiaries } from "../../../src/features/profile/beneficiaryStore";
 import { useProfile } from "../../../src/features/profile/profileStore";
 import { requestStepUp } from "../../../src/features/security/stepUp";
 import { ConfirmTradeSheet } from "../../../src/features/trade/ConfirmTradeSheet";
-import { tradeStore } from "../../../src/features/trade/tradeStore";
+import type { Beneficiary } from "../../../src/features/profile/data";
+import {
+  addToPlan,
+  inPlan,
+  plannedMinor,
+  removeFromPlan,
+  type FillPlan,
+} from "../../../src/features/trade/fillPlan";
+import { tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
 import { useThemeMode } from "../../../src/theme";
 
 /**
@@ -53,25 +59,23 @@ export default function SelectMatchRoute(): ReactElement | null {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const request = parseParams(useLocalSearchParams());
-  const [picked, setPicked] = useState<{ listing: Listing; side: Side } | null>(
-    null,
-  );
+  // Listings picked so far and the amount from each (ADR-019).
+  const [plan, setPlan] = useState<FillPlan>([]);
+  const [reviewing, setReviewing] = useState(false);
   const beneficiaries = useBeneficiaries();
   const profile = useProfile();
+  useTrades(); // remaining amounts change as trades are created
 
   useEffect(() => {
     if (!request) router.back();
   }, [request, router]);
 
   if (!request) return null;
+  const { side } = request;
 
   // Payouts go only to the user's own verified accounts in the currency they receive
   // (Banking spec §3.3, ADR-014).
-  const receive = picked
-    ? picked.side === "buy"
-      ? picked.listing.currency
-      : "NGN"
-    : "";
+  const receive = side === "buy" ? request.currency : "NGN";
   const payoutOptions = beneficiaries.filter(
     (b) =>
       b.status === "verified" &&
@@ -79,48 +83,80 @@ export default function SelectMatchRoute(): ReactElement | null {
       b.name === profile.fullName,
   );
 
+  const toggle = (listing: Listing): void => {
+    if (inPlan(plan, listing.id)) {
+      setPlan(removeFromPlan(plan, listing.id));
+      return;
+    }
+    const next = addToPlan(plan, listing, request.amountMinor, (l) => tradeStore.remainingMinor(l));
+    setPlan(next);
+    // Covered in full: go straight to confirm (one tap when one listing is enough).
+    if (next !== plan && plannedMinor(next) >= request.amountMinor) setReviewing(true);
+  };
+
+  const accept = async (parts: FillPlan, payout: Beneficiary): Promise<void> => {
+    setReviewing(false);
+    const what =
+      parts.length === 1
+        ? `${side === "buy" ? "Buy" : "Sell"} ${formatHundredths(parts[0].amountMinor)} ${parts[0].listing.currency} at NGN ${formatHundredths(parts[0].listing.rateHundredths)}`
+        : `${side === "buy" ? "Buy" : "Sell"} ${formatHundredths(plannedMinor(parts))} ${parts[0].listing.currency} in ${parts.length} trades`;
+    // One 2 FA check covers the whole order the user just reviewed (ADR-008, ADR-019).
+    if (!(await requestStepUp(what))) return;
+    const orderId = parts.length > 1 ? `o-${Array.from(Crypto.getRandomBytes(6), (b) => b.toString(16).padStart(2, "0")).join("")}` : undefined;
+    const created: string[] = [];
+    let failed = 0;
+    for (const part of parts) {
+      try {
+        const trade = tradeStore.create({
+          side,
+          listing: part.listing,
+          amountMinor: part.amountMinor,
+          payout: { id: payout.id, name: payout.name, bank: payout.bank, last4: payout.accountLast4 },
+          now: Date.now(),
+          random: Crypto.getRandomBytes,
+          orderId,
+        });
+        created.push(trade.id);
+      } catch {
+        // Each listing is accepted on its own; one being taken meanwhile does not undo the others.
+        failed += 1;
+      }
+    }
+    setPlan([]);
+    if (failed > 0) {
+      Alert.alert(
+        "Some trades were not created",
+        `${failed} of ${parts.length} ${side === "buy" ? "offers were" : "requests were"} taken by someone else. ${created.length > 0 ? "The others went ahead." : "Choose again."}`,
+      );
+    }
+    if (created.length > 0) {
+      router.replace({ pathname: "/trade/[id]", params: { id: created[0] } });
+    }
+  };
+
   return (
     <>
       <SelectMatchScreen
         request={request}
+        plan={plan}
+        remainingOf={(l) => tradeStore.remainingMinor(l)}
         onBack={() => router.back()}
         onCancel={() => router.back()}
-        onTakeListing={(listing, side) => setPicked({ listing, side })}
+        onToggleListing={toggle}
+        onReview={() => setReviewing(true)}
       />
-      {picked ? (
+      {reviewing && plan.length > 0 ? (
         <ConfirmTradeSheet
-          side={picked.side}
+          side={side}
           requestedMinor={request.amountMinor}
-          listing={picked.listing}
+          parts={plan}
           payoutOptions={payoutOptions}
-          onClose={() => setPicked(null)}
+          onClose={() => setReviewing(false)}
           onAddAccount={() => {
-            setPicked(null);
+            setReviewing(false);
             router.push("/profile/add-beneficiary");
           }}
-          onAccept={async (amountMinor, payout) => {
-            const { listing, side } = picked;
-            setPicked(null);
-            const what = `${side === "buy" ? "Buy" : "Sell"} ${formatHundredths(amountMinor)} ${listing.currency} at NGN ${formatHundredths(listing.rateHundredths)}`;
-            if (!(await requestStepUp(what))) return;
-            const trade = tradeStore.create({
-              side,
-              listing,
-              amountMinor,
-              payout: {
-                id: payout.id,
-                name: payout.name,
-                bank: payout.bank,
-                last4: payout.accountLast4,
-              },
-              now: Date.now(),
-              random: Crypto.getRandomBytes,
-            });
-            router.replace({
-              pathname: "/trade/[id]",
-              params: { id: trade.id },
-            });
-          }}
+          onAccept={(parts, payout) => void accept(parts, payout)}
         />
       ) : null}
     </>

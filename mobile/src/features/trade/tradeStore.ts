@@ -64,6 +64,8 @@ export interface Trade {
   readonly extension: 'none' | 'requested' | 'approved';
   /** Listing the trade took its amount from (capacity accounting). */
   readonly listingId: string;
+  /** Set when one request was filled from several listings: the trades of that order. */
+  readonly orderId?: string;
   readonly phaseSince: number;
   readonly rating?: { readonly stars: number; readonly feedback: string };
 }
@@ -110,8 +112,8 @@ function patch(id: string, f: (t: Trade) => Trade): Trade | null {
 const other = (side: Side): string => (side === 'buy' ? 'Seller' : 'Buyer');
 
 export const tradeStore = {
-  all: (): readonly Trade[] => trades,
   get: (id: string): Trade | undefined => trades.find((t) => t.id === id),
+  all: (): readonly Trade[] => trades,
   subscribe(l: () => void): () => void {
     listeners.add(l);
     return () => listeners.delete(l);
@@ -124,8 +126,9 @@ export const tradeStore = {
     payout: PayoutChoice;
     now: number;
     random: RandomBytes;
+    orderId?: string;
   }): Trade {
-    const { side, listing, amountMinor, payout, now, random } = input;
+    const { side, listing, amountMinor, payout, now, random, orderId } = input;
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error('Amount must be a positive integer');
     // Never silently resize: the caller must ask for an amount the listing can fill. What
     // earlier live trades already took from the listing is not available again
@@ -137,6 +140,7 @@ export const tradeStore = {
       reference: reference(random),
       side,
       listingId: listing.id,
+      ...(orderId ? { orderId } : {}),
       currency: listing.currency,
       amountMinor,
       rateHundredths: listing.rateHundredths,
@@ -248,6 +252,12 @@ export function useTrade(id: string): Trade | undefined {
 
 // Cleared on log-out and when a new account is created (ADR-018).
 session.onUserChange(() => tradeStore.reset());
+
+/** Other trades created in the same multi-listing order, oldest first. */
+export function orderSiblings(t: Trade, all: readonly Trade[]): readonly Trade[] {
+  if (!t.orderId) return [];
+  return all.filter((x) => x.orderId === t.orderId && x.id !== t.id).slice().reverse();
+}
 
 export function useTrades(): readonly Trade[] {
   return useSyncExternalStore(tradeStore.subscribe, tradeStore.all, tradeStore.all);

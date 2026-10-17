@@ -7,7 +7,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
@@ -17,6 +16,7 @@ import { RecoveryCodes } from './RecoveryCodes';
 import { otpauthUri } from './totp';
 import { twoFactor, type RandomBytes } from './twoFactorStore';
 import { copySensitive } from './sensitiveClipboard';
+import { useBlockScreenCapture } from './useBlockScreenCapture';
 
 /** `JBSWY3DP…` → `JBSW Y3DP …` for reading aloud/typing. */
 export function groupKey(secret: string): string {
@@ -37,7 +37,7 @@ export function AuthenticatorSetupScreen({
   onDone: () => void;
   now?: () => number;
 }): ReactElement {
-  usePreventScreenCapture('xspeeria-2fa-setup');
+  useBlockScreenCapture('xspeeria-2fa-setup');
   const insets = useSafeAreaInsets();
   const alreadyEnrolled = twoFactor.isEnrolled();
   const [secret] = useState(() => (alreadyEnrolled ? '' : twoFactor.beginEnrolment(random)));
