@@ -45,5 +45,5 @@ feedback only; the server must re-validate.
 
 **Open:** the **Buy/Sell** buttons on listings and the confirm-trade flow (Figma
 `120:990` → `190:1791`) are the next build. Until then they show an honest
-"next screen to be built — nothing has been sent" notice. Bell and ⋮ have no destination
-yet and are disabled. Match potential is a mock heuristic (position inside the band).
+"next screen to be built — nothing has been sent" notice. The bell has no destination
+yet and is disabled. The **⋮ menu** follows the product owner's Figma reference (My Requests (Buy), My Offers (Sell), Disputes, AI Rate Forecasting, Cancel); each item explains it is coming until its screen exists. Match potential is a mock heuristic (position inside the band).

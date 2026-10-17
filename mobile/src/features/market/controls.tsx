@@ -207,6 +207,65 @@ export function CurrencySheet({
   );
 }
 
+/* ------------------------------------------------------------- Action sheet */
+
+export interface SheetAction {
+  readonly key: string;
+  readonly label: string;
+  /** Muted suffix, e.g. "(Buy)". */
+  readonly hint?: string;
+  readonly onPress: () => void;
+}
+
+/** Figma Market ⋮ menu: a rounded group of centred actions and a separate red Cancel. */
+export function ActionSheet({
+  visible,
+  actions,
+  onClose,
+  testID,
+}: {
+  visible: boolean;
+  actions: readonly SheetAction[];
+  onClose: () => void;
+  testID?: string;
+}): ReactElement {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close menu" />
+      <View testID={testID} style={styles.sheet}>
+        <View style={styles.sheetGroup}>
+          {actions.map((a, i) => (
+            <Pressable
+              key={a.key}
+              testID={`${testID ?? 'sheet'}-${a.key}`}
+              accessibilityRole="button"
+              onPress={a.onPress}
+              style={({ pressed }) => [
+                styles.actionRow,
+                i < actions.length - 1 ? styles.actionDivider : null,
+                pressed ? styles.roundPressed : null,
+              ]}
+            >
+              <Text style={styles.actionLabel}>
+                {a.label}
+                {a.hint ? <Text style={styles.actionHint}>{` ${a.hint}`}</Text> : null}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable
+          testID={`${testID ?? 'sheet'}-cancel`}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.sheetCancel}
+        >
+          <Text style={styles.sheetCancelLabel}>Cancel</Text>
+        </Pressable>
+      </View>
+    </Modal>
+  );
+}
+
 /* -------------------------------------------------------------- Listing row */
 
 /** Figma offer row: amount available, rate, meta line, optional "Best" pill, action. */
@@ -359,6 +418,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sheetCancelLabel: { ...typography.body, fontSize: 17, color: color.error.text },
+
+  actionRow: { minHeight: 56, alignItems: 'center', justifyContent: 'center', marginHorizontal: 20 },
+  actionDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
+  actionLabel: { ...typography.body, fontSize: 17, color: color.text.primary },
+  actionHint: { color: color.text.disabled },
 
   listing: {
     flexDirection: 'row',

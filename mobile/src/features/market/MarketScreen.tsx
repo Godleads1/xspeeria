@@ -18,6 +18,7 @@ import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import {
+  ActionSheet,
   BuySellToggle,
   CurrencyChip,
   CurrencySheet,
@@ -49,14 +50,26 @@ export interface TradeRequest {
 
 const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
 
+/** Figma Market ⋮ menu (product-owner reference, 2026-10-17). */
+export type MenuKey = 'requests' | 'offers' | 'disputes' | 'forecast';
+const MENU: readonly { key: MenuKey; label: string; hint?: string }[] = [
+  { key: 'requests', label: 'My Requests', hint: '(Buy)' },
+  { key: 'offers', label: 'My Offers', hint: '(Sell)' },
+  { key: 'disputes', label: 'Disputes' },
+  { key: 'forecast', label: 'AI Rate Forecasting' },
+];
+
 const ADVERT = require('../../../assets/images/market-advert.png');
 
 export function MarketScreen({
   initialSide = 'buy',
   onCreate,
   onTakeListing,
+  onMenu,
 }: {
   initialSide?: Side;
+  /** ⋮ menu destination; until each screen exists the menu explains it is coming. */
+  onMenu?: (key: MenuKey) => void;
   onCreate?: (request: TradeRequest) => void;
   onTakeListing?: (listing: Listing, side: Side) => void;
 }): ReactElement {
@@ -67,6 +80,7 @@ export function MarketScreen({
   const [rate, setRate] = useState('');
   const [sheet, setSheet] = useState(false);
   const [cheapestFirst, setCheapestFirst] = useState(true);
+  const [menu, setMenu] = useState(false);
 
   const foreign = side === 'buy' ? buyCurrency : SELL_CURRENCY;
   const band = foreign ? MARKET_BAND[foreign.code] : undefined;
@@ -147,7 +161,12 @@ export function MarketScreen({
         <View style={styles.headerActions}>
           <CurrencyChip currency={side === 'buy' ? NGN : SELL_CURRENCY} />
           <RoundButton icon="bell" label="Notifications" testID="market-notifications" />
-          <RoundButton icon="more" label="More options" testID="market-more" />
+          <RoundButton
+            icon="more"
+            label="More options"
+            testID="market-more"
+            onPress={() => setMenu(true)}
+          />
         </View>
       </View>
 
@@ -261,6 +280,21 @@ export function MarketScreen({
           />
         </View>
       ) : null}
+
+      <ActionSheet
+        testID="market-menu"
+        visible={menu}
+        onClose={() => setMenu(false)}
+        actions={MENU.map((item) => ({
+          ...item,
+          onPress: () => {
+            setMenu(false);
+            if (onMenu) onMenu(item.key);
+            else
+              Alert.alert(item.label, `${item.label} is one of the next screens to be built.`);
+          },
+        }))}
+      />
 
       <CurrencySheet
         visible={sheet}

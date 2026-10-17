@@ -119,3 +119,17 @@ describe('Select Match (Figma 106:1150)', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Market ⋮ menu', () => {
+  it('opens My Requests, My Offers, Disputes, AI Rate Forecasting and Cancel', async () => {
+    const onMenu = jest.fn();
+    await render(<MarketScreen onCreate={jest.fn()} onMenu={onMenu} />);
+    await fireEvent.press(screen.getByTestId('market-more'));
+    expect(screen.getByText(/My Requests/)).toBeTruthy();
+    expect(screen.getByText(/My Offers/)).toBeTruthy();
+    expect(screen.getByText('Disputes')).toBeTruthy();
+    expect(screen.getByText('AI Rate Forecasting')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('market-menu-disputes'));
+    expect(onMenu).toHaveBeenCalledWith('disputes');
+  });
+});
