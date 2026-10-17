@@ -16,7 +16,8 @@ import { Icon, type IconName } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
-import { KYC_REGIONS, formatRating, longDate } from './data';
+import { formatRating, longDate } from './data';
+import { useKycRegions } from './kycRegions';
 import { ProfileAvatar } from './ProfileAvatar';
 import { useProfile } from './profileStore';
 
@@ -44,6 +45,7 @@ function Detail({ icon, label, value, note }: { icon: IconName; label: string; v
 export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; onEdit?: () => void }): ReactElement {
   const insets = useSafeAreaInsets();
   const user = useProfile();
+  const regions = useKycRegions();
 
   return (
     <View testID="account-details-screen" style={styles.screen}>
@@ -98,7 +100,7 @@ export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; o
 
           <SectionLabel>KYC approved regions</SectionLabel>
           <View>
-            {KYC_REGIONS.map((r) => (
+            {regions.map((r) => (
               <View key={r.name} testID={`kyc-${r.flag}`} style={styles.region}>
                 <RoundFlag code={r.flag} size={24} />
                 <Text style={styles.regionName}>{r.name}</Text>

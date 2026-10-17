@@ -79,5 +79,4 @@ No backend, NIN/identity provider, SMS or email service exists, so:
 - Password vs PIN: Figma mixes "PIN" (log-in) and "Password" (Forgot / Change Password).
 - Full Forgot-PIN reset (needs backend + 2FA).
 - UK (GBP) customers' onboarding: Figma is Nigeria/NIN-only.
-- New-location check (Figma 436:12247 "Trade in Your New Location") and the document-type
-  picker (439:4008) are not built yet.
+- New-location check and document picker: built in ADR-016.

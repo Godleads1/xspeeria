@@ -1,8 +1,10 @@
-import type { ReactElement } from 'react';
-import { useRouter } from 'expo-router';
+import type { ReactElement } from "react";
+import { useRouter } from "expo-router";
 
-import { LoginScreen } from '../../src/features/auth/LoginScreen';
-import { useThemeMode } from '../../src/theme';
+import { LoginScreen } from "../../src/features/auth/LoginScreen";
+import { session } from "../../src/features/auth/session";
+import { kycRegions } from "../../src/features/profile/kycRegions";
+import { useThemeMode } from "../../src/theme";
 
 /** On success the root guard swaps to the signed-in app. */
 export default function LoginRoute(): ReactElement {
@@ -10,9 +12,16 @@ export default function LoginRoute(): ReactElement {
   const router = useRouter();
   return (
     <LoginScreen
-      onDone={() => router.replace('/')}
-      onSignUp={() => router.push('/signup/start')}
-      onForgot={() => router.push('/forgot')}
+      onDone={() =>
+        // A log-in from a region without KYC offers a profile for that region (ADR-016).
+        router.replace(
+          session.get().newRegion === "US" && !kycRegions.has("USD")
+            ? "/region/new"
+            : "/",
+        )
+      }
+      onSignUp={() => router.push("/signup/start")}
+      onForgot={() => router.push("/forgot")}
     />
   );
 }

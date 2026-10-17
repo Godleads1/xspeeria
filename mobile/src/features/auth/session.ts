@@ -32,6 +32,11 @@ interface State {
   readonly lockedUntil: number;
   readonly biometric: boolean;
   readonly remembered: string | null;
+  /**
+   * Region detected at log-in that the user has no KYC for (ADR-016). Server-side this comes
+   * from IP / device signals; the demo sets it with "log in as if from the United States".
+   */
+  readonly newRegion: 'US' | null;
 }
 
 const INITIAL: State = {
@@ -41,6 +46,7 @@ const INITIAL: State = {
   lockedUntil: 0,
   biometric: false,
   remembered: null,
+  newRegion: null,
 };
 
 let state: State = INITIAL;
@@ -104,6 +110,15 @@ export const session = {
   setBiometric(on: boolean): void {
     set({ biometric: on });
     (on ? AsyncStorage.setItem(BIOMETRIC_KEY, '1') : AsyncStorage.removeItem(BIOMETRIC_KEY)).catch(() => undefined);
+  },
+
+  /** Demo only: the next log-in behaves as if it came from this region. */
+  simulateRegion(region: 'US' | null): void {
+    set({ newRegion: region });
+  },
+
+  clearNewRegion(): void {
+    set({ newRegion: null });
   },
 
   logOut(): void {
