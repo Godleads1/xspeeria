@@ -37,6 +37,6 @@ assumed.
 
 ## 3. Open items
 
-- The ⋮ on History has no Figma destination yet and is disabled.
+- The History **⋮ menu** follows the product owner's Figma reference: **Contact support** and **Download Statement**, each explaining it is coming until its screen exists. **Block card** is omitted: Cards is COMING SOON and the approved spec forbids exposing any card functionality until it ships — add it back with the Cards feature.
 - All data is mock (`mobile/src/features/history/data.ts`). Third-party payout accounts
   (DEC-007) remain subject to legal/partner-bank confirmation.

@@ -7,13 +7,13 @@
  */
 
 import { useMemo, useState, type ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { RoundFlag } from '../../components/flags';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
-import { RoundButton } from '../market/controls';
+import { ActionSheet, RoundButton } from '../market/controls';
 import { formatCompact } from '../market/money';
 import {
   HISTORY,
@@ -109,13 +109,26 @@ export function HistoryRow({
   );
 }
 
+/**
+ * Figma History ⋮ menu (product-owner reference, 2026-10-17). "Block card" is omitted:
+ * Cards is COMING SOON and no card functionality may be exposed until it ships (ADR-006).
+ */
+export type HistoryMenuKey = 'support' | 'statement';
+const MENU: readonly { key: HistoryMenuKey; label: string }[] = [
+  { key: 'support', label: 'Contact support' },
+  { key: 'statement', label: 'Download Statement' },
+];
+
 export function HistoryScreen({
   items = HISTORY,
   onOpen,
+  onMenu,
 }: {
   items?: readonly HistoryItem[];
   onOpen?: (item: HistoryItem) => void;
+  onMenu?: (key: HistoryMenuKey) => void;
 }): ReactElement {
+  const [menu, setMenu] = useState(false);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
@@ -136,7 +149,7 @@ export function HistoryScreen({
         <Text accessibilityRole="header" style={styles.title}>
           Transaction History
         </Text>
-        <RoundButton icon="more" label="More options" testID="history-more" />
+        <RoundButton icon="more" label="More options" testID="history-more" onPress={() => setMenu(true)} />
       </View>
 
       <View style={styles.dates}>
@@ -160,6 +173,20 @@ export function HistoryScreen({
           ))}
         </View>
       )}
+
+      <ActionSheet
+        testID="history-menu"
+        visible={menu}
+        onClose={() => setMenu(false)}
+        actions={MENU.map((item) => ({
+          ...item,
+          onPress: () => {
+            setMenu(false);
+            if (onMenu) onMenu(item.key);
+            else Alert.alert(item.label, `${item.label} is one of the next screens to be built.`);
+          },
+        }))}
+      />
     </Screen>
   );
 }

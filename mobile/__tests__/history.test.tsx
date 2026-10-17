@@ -82,3 +82,16 @@ describe('Receipt (Figma 344:6152)', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('History ⋮ menu', () => {
+  it('offers Contact support and Download Statement, and no card action', async () => {
+    const onMenu = jest.fn();
+    await render(<HistoryScreen onMenu={onMenu} />);
+    await fireEvent.press(screen.getByTestId('history-more'));
+    expect(screen.getByText('Contact support')).toBeTruthy();
+    expect(screen.getByText('Download Statement')).toBeTruthy();
+    expect(screen.queryByText(/block card/i)).toBeNull();
+    await fireEvent.press(screen.getByTestId('history-menu-statement'));
+    expect(onMenu).toHaveBeenCalledWith('statement');
+  });
+});
