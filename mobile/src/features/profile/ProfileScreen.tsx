@@ -10,7 +10,8 @@
 import type { ReactElement } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Icon, type IconName } from '../../components/icons';
+import { Icon } from '../../components/icons';
+import { MenuIcon, type MenuIconName } from '../../components/menuIcons';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, typography } from '../../theme';
 import { PROFILE_USER } from './data';
@@ -25,20 +26,20 @@ export type ProfileDestination =
   | 'referral'
   | 'terms';
 
-const ITEMS: readonly { key: ProfileDestination; icon: IconName; title: string; subtitle: string }[] = [
-  { key: 'beneficiaries', icon: 'people', title: 'Manage Beneficiaries', subtitle: 'Manage your account and beneficiaries' },
-  { key: 'kyc', icon: 'idcard', title: 'KYC and limits', subtitle: 'Know your KYC Level and limits.' },
-  { key: 'security', icon: 'lock', title: 'Security', subtitle: 'Protect yourself from intruders' },
+const ITEMS: readonly { key: ProfileDestination; icon: MenuIconName; title: string; subtitle: string }[] = [
+  { key: 'beneficiaries', icon: 'beneficiaries', title: 'Manage Beneficiaries', subtitle: 'Manage your account and beneficiaries' },
+  { key: 'kyc', icon: 'kyc', title: 'KYC and limits', subtitle: 'Know your KYC Level and limits.' },
+  { key: 'security', icon: 'security', title: 'Security', subtitle: 'Protect yourself from intruders' },
   { key: 'faq', icon: 'faq', title: 'FAQ', subtitle: 'Find answers to common questions' },
-  { key: 'support', icon: 'headset', title: 'Contact Support', subtitle: 'Get support or send feedback' },
-  { key: 'referral', icon: 'gift', title: 'Referral Program', subtitle: 'Get paid when your friends join Xspeeria' },
-  { key: 'terms', icon: 'document', title: 'Terms and Conditions', subtitle: 'Learn about our terms and conditions, privacy policies' },
+  { key: 'support', icon: 'support', title: 'Contact Support', subtitle: 'Get support or send feedback' },
+  { key: 'referral', icon: 'referral', title: 'Referral Program', subtitle: 'Get paid when your friends join Xspeeria' },
+  { key: 'terms', icon: 'terms', title: 'Terms and Conditions', subtitle: 'Learn about our terms and conditions, privacy policies' },
 ];
 
-function Badge({ icon }: { icon: IconName }): ReactElement {
+function Badge({ icon }: { icon: MenuIconName }): ReactElement {
   return (
     <View style={styles.badge}>
-      <Icon name={icon} color={color.brand.primary} size={20} />
+      <MenuIcon name={icon} size={26} />
     </View>
   );
 }
@@ -50,7 +51,7 @@ function Row({
   onPress,
   testID,
 }: {
-  icon: IconName;
+  icon: MenuIconName;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -128,7 +129,7 @@ export function ProfileScreen({
         ))}
 
         <View style={styles.row} accessible accessibilityLabel="Switch Mode. Dark mode is coming soon">
-          <Badge icon="moon" />
+          <Badge icon="mode" />
           <View style={styles.rowDivided}>
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>Switch Mode</Text>
@@ -155,7 +156,7 @@ export function ProfileScreen({
 }
 
 const AVATAR = 70;
-const BADGE = 36;
+const BADGE = 40;
 
 const styles = StyleSheet.create({
   header: {
