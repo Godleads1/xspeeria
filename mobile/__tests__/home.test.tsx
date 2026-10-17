@@ -208,8 +208,8 @@ describe('Home best-rate card (DEC-008)', () => {
       <HomeScreen bestRate={BEST_RATE} dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />,
     );
     expect(screen.getByText('Best NGN → USD rate today')).toBeTruthy();
-    expect(screen.getByText('1 USD = 1,603.78 NGN')).toBeTruthy();
-    expect(screen.queryByText('1,603.78')).toBeNull();
+    expect(screen.getByText('1 USD = 1,325.00 NGN')).toBeTruthy();
+    expect(screen.queryByText('1,325.00')).toBeNull();
     expect(screen.queryByText(/balance/i)).toBeNull();
   });
 
@@ -255,7 +255,7 @@ describe('rate formatting', () => {
     expect(groupDigits('1603.78')).toBe('1,603.78');
     expect(groupDigits('1234567')).toBe('1,234,567');
     expect(groupDigits('0.000123')).toBe('0.000123');
-    expect(formatRate(BEST_RATE)).toBe('1 USD = 1,603.78 NGN');
+    expect(formatRate(BEST_RATE)).toBe('1 USD = 1,325.00 NGN');
   });
 
   it('rejects anything that is not a plain decimal string', () => {

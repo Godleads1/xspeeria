@@ -64,14 +64,14 @@ describe('Market screen (ADR-005)', () => {
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
     await fireEvent.changeText(screen.getByTestId('market-amount'), '799');
-    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,644');
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,320');
     await fireEvent.press(screen.getByTestId('market-create'));
 
     expect(onCreate).toHaveBeenCalledWith({
       side: 'buy',
       currency: 'USD',
       amountMinor: 79900,
-      rateHundredths: 164400,
+      rateHundredths: 132000,
     });
   });
 
@@ -80,8 +80,8 @@ describe('Market screen (ADR-005)', () => {
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
     expect(screen.getByTestId('market-listings')).toBeTruthy();
-    expect(screen.getByText(/1,650\.89 - 1,899\.99 NGN = 1 USD/)).toBeTruthy();
-    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,800');
+    expect(screen.getByText(/1,305\.00 - 1,333\.26 NGN = 1 USD/)).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,320');
     expect(screen.getByTestId('market-potential')).toBeTruthy();
   });
 

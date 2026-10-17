@@ -38,7 +38,7 @@ import {
   type Listing,
 } from "./data";
 import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
-import { officialRateFor, rateProblem } from "./rateCeiling";
+import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 
 export type Side = "buy" | "sell";
 
@@ -100,7 +100,7 @@ export function MarketScreen({
     problem === "above-official" && foreign && official !== null
       ? `Your rate can’t be above the official rate of NGN ${formatHundredths(official)} per ${foreign.code}.`
       : problem === "official-unavailable"
-        ? "The official rate isn’t available right now, so offers can’t be created. Try again later."
+        ? `There’s no official rate for ${foreign?.code ?? "this currency"} yet, so you can’t trade it for now.`
         : null;
   // An amount whose NGN value cannot be computed safely is not a valid request (FIN-06).
   const ready =
@@ -279,7 +279,7 @@ export function MarketScreen({
         </OutlinedField>
         {foreign && official !== null ? (
           <Text testID="market-official" style={styles.official}>
-            {`Official rate (demo): NGN ${formatHundredths(official)} per ${foreign.code}. Your rate must be this or lower.`}
+            {`Official rate (CBN, ${OFFICIAL_RATE_AS_OF}): NGN ${formatHundredths(official)} per ${foreign.code}. Your rate must be this or lower.`}
           </Text>
         ) : null}
         {rateError ? (
