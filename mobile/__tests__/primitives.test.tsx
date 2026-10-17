@@ -31,6 +31,13 @@ describe('Amount', () => {
     expect(screen.getByText('-2.50 GBP')).toBeTruthy();
   });
 
+  it('groups thousands without changing the value', async () => {
+    await render(<Amount minor={45000000} currency="NGN" scale={2} />);
+    expect(screen.getByText('450,000.00 NGN')).toBeTruthy();
+    await render(<Amount minor={-123456789} currency="NGN" scale={2} />);
+    expect(screen.getByText('-1,234,567.89 NGN')).toBeTruthy();
+  });
+
   it('refuses a float rather than silently rounding it', async () => {
     await expect(render(<Amount minor={12.34} currency="GBP" scale={2} />)).rejects.toThrow(
       /integer minor units/,

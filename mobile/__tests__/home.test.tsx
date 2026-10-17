@@ -1,10 +1,13 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { HomeScreen } from '../src/features/home/HomeScreen';
 import { isFullyReady } from '../src/features/home/AccountReadiness';
 import { orderActivity } from '../src/features/home/ActivityList';
+import { formatRate, groupDigits } from '../src/features/home/rate';
 import {
   ACTIVITY_ITEMS,
+  BEST_RATE,
+  MARKET_RATES,
   NO_ACTIVITY,
   READINESS_COMPLETE,
   READINESS_INCOMPLETE,
@@ -109,14 +112,24 @@ describe('Account Readiness Region', () => {
     await render(<HomeScreen dimensions={READINESS_INCOMPLETE} activity={ACTIVITY_ITEMS} />);
     expect(screen.getByText('Action required')).toBeTruthy();
     expect(screen.getAllByText('Complete').length).toBeGreaterThan(0);
-    expect(screen.getByText('Pending')).toBeTruthy();
+    // 'Pending' is also a transaction status chip, so it appears more than once.
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
   });
 });
 
 describe('Home structure', () => {
-  it('offers the primary action', async () => {
-    await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />);
-    expect(screen.getByTestId('home-primary-action')).toBeTruthy();
+  it('offers the primary action on the best-rate card', async () => {
+    const onCreateOffer = jest.fn();
+    await render(
+      <HomeScreen
+        bestRate={BEST_RATE}
+        dimensions={READINESS_COMPLETE}
+        activity={ACTIVITY_ITEMS}
+        onCreateOffer={onCreateOffer}
+      />,
+    );
+    fireEvent.press(screen.getByTestId('home-primary-action'));
+    expect(onCreateOffer).toHaveBeenCalledTimes(1);
   });
 
   it('renders activity as discrete items, each with its own amount', async () => {
@@ -124,15 +137,15 @@ describe('Home structure', () => {
     expect(screen.getByTestId('activity-alloc-1')).toBeTruthy();
     expect(screen.getByTestId('activity-offer-1')).toBeTruthy();
     expect(screen.getByTestId('activity-settle-1')).toBeTruthy();
-    expect(screen.getByText('1000.00 GBP')).toBeTruthy();
-    expect(screen.getByText('2500.00 GBP')).toBeTruthy();
-    expect(screen.getByText('750.00 GBP')).toBeTruthy();
+    expect(screen.getByText('450,000.00 NGN')).toBeTruthy();
+    expect(screen.getByText('23,000.00 NGN')).toBeTruthy();
+    expect(screen.getByText('67,000.00 NGN')).toBeTruthy();
   });
 
   it('never renders an aggregate of the activity amounts', async () => {
     await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />);
-    // 1000 + 2500 + 750 = 4250. A hero total is the affordance the product forbids.
-    expect(screen.queryByText(/4250/)).toBeNull();
+    // 450,000 + 23,000 + 67,000 = 540,000. A hero total is the affordance the product forbids.
+    expect(screen.queryByText(/540,?000/)).toBeNull();
   });
 
   it('surfaces the time-critical item first', async () => {
@@ -186,5 +199,68 @@ describe('Home load states', () => {
     );
     expect(screen.getByText('We could not load your account')).toBeTruthy();
     expect(screen.getByTestId('error-retry')).toBeTruthy();
+  });
+});
+
+describe('Home best-rate card (DEC-008)', () => {
+  it('states the rate with both currencies, never as a lone figure', async () => {
+    await render(
+      <HomeScreen bestRate={BEST_RATE} dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />,
+    );
+    expect(screen.getByText('Best NGN → USD rate today')).toBeTruthy();
+    expect(screen.getByText('1 USD = 1,603.78 NGN')).toBeTruthy();
+    expect(screen.queryByText('1,603.78')).toBeNull();
+    expect(screen.queryByText(/balance/i)).toBeNull();
+  });
+
+  it('hides the trade button when nothing is wired to it', async () => {
+    await render(
+      <HomeScreen bestRate={BEST_RATE} dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />,
+    );
+    expect(screen.queryByTestId('home-primary-action')).toBeNull();
+  });
+});
+
+describe('Home market rates and transactions (DEC-008)', () => {
+  it('lists every corridor with its rate', async () => {
+    await render(
+      <HomeScreen rates={MARKET_RATES} dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />,
+    );
+    for (const rate of MARKET_RATES) {
+      expect(screen.getByTestId(`rate-${rate.id}`)).toBeTruthy();
+      expect(screen.getByText(`${rate.base} - ${rate.quote}`)).toBeTruthy();
+    }
+  });
+
+  it('shows date and status on each transaction and links to History', async () => {
+    const onViewAll = jest.fn();
+    await render(
+      <HomeScreen dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} onViewAll={onViewAll} />,
+    );
+    expect(screen.getByText('4:34 AM')).toBeTruthy();
+    expect(screen.getByText('Failed')).toBeTruthy();
+    expect(screen.getByText('Add your payout account')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('home-view-all'));
+    expect(onViewAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no card purchases while Cards is coming soon', async () => {
+    await render(<HomeScreen dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />);
+    expect(screen.queryByText(/shopping/i)).toBeNull();
+  });
+});
+
+describe('rate formatting', () => {
+  it('groups digits on the string, never via a float', () => {
+    expect(groupDigits('1603.78')).toBe('1,603.78');
+    expect(groupDigits('1234567')).toBe('1,234,567');
+    expect(groupDigits('0.000123')).toBe('0.000123');
+    expect(formatRate(BEST_RATE)).toBe('1 USD = 1,603.78 NGN');
+  });
+
+  it('rejects anything that is not a plain decimal string', () => {
+    for (const bad of ['', '1e3', '-5', '1,000', 'NaN', '1.2.3']) {
+      expect(() => groupDigits(bad)).toThrow();
+    }
   });
 });

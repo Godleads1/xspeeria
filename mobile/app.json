@@ -17,7 +17,23 @@
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "../assets/brand/xspeeria-logo.png",
+          "imageWidth": 290,
+          "resizeMode": "contain",
+          "backgroundColor": "#F8F9FD"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Xspeeria uses your photos only when you choose a profile picture, banner or ID document.",
+          "cameraPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

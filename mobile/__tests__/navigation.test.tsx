@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import HomeRoute from '../app/(tabs)/index';
-import MarketplaceRoute from '../app/(tabs)/marketplace';
-import ProfileRoute from '../app/(tabs)/profile';
-import TrackRoute from '../app/(tabs)/track';
-import { ComingSoonScreen } from '../src/features/shared/ComingSoonScreen';
+import HomeRoute from '../app/(app)/(tabs)/index';
+import MarketplaceRoute from '../app/(app)/(tabs)/marketplace';
+import ProfileRoute from '../app/(app)/(tabs)/profile';
+import HistoryRoute from '../app/(app)/(tabs)/history';
+import { Icon } from '../src/components/icons';
+import { Alert } from 'react-native';
+
+import { CARDS_UNAVAILABLE, CARD_DESIGNS, CardsScreen } from '../src/features/cards/CardsScreen';
 import { PlaceholderScreen } from '../src/features/shared/PlaceholderScreen';
 import { TABS } from '../src/navigation/tabs';
 
@@ -20,8 +23,8 @@ describe('bottom navigation', () => {
   it('has exactly the five approved destinations in order', async () => {
     expect(TABS.map((t) => t.title)).toEqual([
       'Home',
-      'Marketplace',
-      'Track',
+      'Market',
+      'History',
       'Cards',
       'Profile',
     ]);
@@ -42,23 +45,37 @@ describe('bottom navigation', () => {
   });
 });
 
-describe('Cards Coming Soon destination', () => {
-  it('renders a real screen rather than a dead tab', async () => {
-    await render(<ComingSoonScreen />);
-    expect(screen.getByTestId('cards-screen')).toBeTruthy();
-    expect(screen.getByTestId('cards-explainer')).toBeTruthy();
-    expect(screen.getByText('Coming soon')).toBeTruthy();
+describe('Cards preview (ADR-012)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('renders the Figma layout: three card designs, actions, Create yours, history', async () => {
+    await render(<CardsScreen />);
+    expect(screen.getByText('Debit Cards')).toBeTruthy();
+    expect(screen.getByTestId('cards-label').props.children.join('')).toBe('USD Card');
+    for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}`)).toBeTruthy();
+    for (const t of ['Details', 'Freeze Card', 'More', 'Transaction History']) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText('Create yours')).toBeTruthy();
   });
 
-  it('exposes no card functionality and no card balance', async () => {
-    await render(<ComingSoonScreen />);
-    for (const forbidden of [/card number/i, /activate/i, /spend/i, /top up/i]) {
-      expect(screen.queryByText(forbidden)).toBeNull();
+  it('Create yours says cards are not available yet', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<CardsScreen />);
+    await fireEvent.press(screen.getByTestId('cards-create'));
+    expect(alert).toHaveBeenCalledWith('Cards are not available', CARDS_UNAVAILABLE);
+  });
+
+  it('card actions are disabled', async () => {
+    await render(<CardsScreen />);
+    for (const id of ['cards-details', 'cards-freeze', 'cards-actions-more']) {
+      expect(screen.getByTestId(id).props.accessibilityState).toEqual({ disabled: true });
     }
   });
 
-  it('states plainly that Xspeeria holds no money', async () => {
-    await render(<ComingSoonScreen />);
+  it('shows no balance, card number, amounts or card transactions', async () => {
+    await render(<CardsScreen />);
+    for (const forbidden of [/\d+\.\d{2}\s?(USD|EUR|NGN)/, /[$€₦]\s?\d/, /\b\d{4}\b/, /activate/i, /spend/i, /top up/i, /card funded/i]) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
     expect(screen.getByText(/never holds your money/i)).toBeTruthy();
   });
 });
@@ -68,7 +85,7 @@ describe('placeholder destinations', () => {
     await render(
       <PlaceholderScreen
         testID="probe"
-        title="Track"
+        title="History"
         message="Nothing in progress yet"
         actionLabel="Browse the marketplace"
         onAction={() => {}}
@@ -82,7 +99,7 @@ describe('placeholder destinations', () => {
     await render(
       <PlaceholderScreen
         testID="probe"
-        title="Track"
+        title="History"
         message="Nothing in progress yet"
         actionLabel="Browse the marketplace"
       />,
@@ -111,22 +128,33 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('sends the Track action to the Marketplace', async () => {
-    await render(<TrackRoute />);
-    fireEvent.press(screen.getByText('Browse the marketplace'));
-    expect(mockPush).toHaveBeenCalledWith('/marketplace');
+  it('opens a History row receipt', async () => {
+    await render(<HistoryRoute />);
+    await fireEvent.press(screen.getByTestId('history-h1'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/history/[id]', params: { id: 'h1' } });
   });
 
-  it('sends the Profile action Home', async () => {
+  it('opens Account details from the Profile header', async () => {
     await render(<ProfileRoute />);
-    fireEvent.press(screen.getByText('Back to home'));
-    expect(mockPush).toHaveBeenCalledWith('/');
+    await fireEvent.press(screen.getByTestId('profile-account'));
+    expect(mockPush).toHaveBeenCalledWith('/profile/account');
   });
 
-  it('offers no filter action on a Marketplace that has no filtering', async () => {
+  it('renders the Market tab screen (ADR-005) without invented filter controls', async () => {
     await render(<MarketplaceRoute />);
     expect(screen.getByTestId('marketplace-screen')).toBeTruthy();
     expect(screen.queryByText('Clear filters')).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
   });
+});
+
+describe('navigation icons', () => {
+  it.each(['home', 'market', 'history', 'cards', 'profile'] as const)(
+    'renders the %s glyph in both states',
+    async (name) => {
+      await render(<Icon name={name} color="#001A6E" />);
+      expect(screen.getByTestId(`icon-${name}`)).toBeTruthy();
+      await render(<Icon name={name} color="#001A6E" filled knockout="#F8F9FD" />);
+      expect(screen.getByTestId(`icon-${name}`)).toBeTruthy();
+    },
+  );
 });

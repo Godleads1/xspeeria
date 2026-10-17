@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { color, font, interaction, radius, space, tokens } from '../index';
+import { color, colorDark, font, interaction, interactionDark, radius, space, tokens } from '../index';
 import * as entryPoint from '../index';
 
 /**
@@ -24,10 +24,7 @@ const DEPRECATED = [
   '#179A43', // old success
   '#E52421', // old alert
   '#F8FAFC', // old supporting surface
-  '#002885', // old hover
-  '#001350', // old pressed
   '#F3F4F6', // old subtle border value (now the disabled fill only)
-  '#001A6E',
   '#208B3B',
   '#F90A09',
   '#FEB700',
@@ -36,15 +33,16 @@ const DEPRECATED = [
 describe('semantic token presence', () => {
   it('exposes every approved semantic group', () => {
     expect(Object.keys(tokens).sort()).toEqual(
-      ['color', 'font', 'interaction', 'radius', 'space'].sort(),
+      // colorDark / interactionDark added by DEC-016 (dark mode, ADR-010).
+      ['color', 'colorDark', 'font', 'interaction', 'interactionDark', 'radius', 'space'].sort(),
     );
   });
 
   it('exposes the approved colour roles', () => {
     expect(Object.keys(color).sort()).toEqual(
-      ['bg', 'border', 'brand', 'error', 'success', 'text', 'warning'].sort(),
+      ['bg', 'border', 'brand', 'decorative', 'error', 'success', 'text', 'trade', 'warning'].sort(),
     );
-    expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'overlay', 'sunken']);
+    expect(Object.keys(color.bg).sort()).toEqual(['canvas', 'inverse', 'overlay', 'sunken']);
     expect(Object.keys(color.text).sort()).toEqual(
       ['disabled', 'onFill', 'primary', 'secondary'].sort(),
     );
@@ -55,6 +53,15 @@ describe('semantic token presence', () => {
     for (const family of [color.success, color.warning, color.error]) {
       expect(Object.keys(family).sort()).toEqual(['border', 'fill', 'surface', 'text']);
     }
+  });
+
+  it('presses darker and hovers lighter than the primary default', () => {
+    expect(luminance(interaction.primary.pressed)).toBeLessThan(
+      luminance(interaction.primary.default),
+    );
+    expect(luminance(interaction.primary.hover)).toBeGreaterThan(
+      luminance(interaction.primary.default),
+    );
   });
 
   it('exposes the full primary interaction ladder', () => {
@@ -70,10 +77,13 @@ describe('semantic token presence', () => {
 });
 
 describe('approved token values', () => {
-  it('keeps the approved brand primary exactly', () => {
-    // Deliberately NOT normalised to the framework default #1E3A8A.
-    expect(color.brand.primary).toBe('#1F3A8A');
-    expect(interaction.primary.default).toBe('#1F3A8A');
+  it('keeps the approved brand primary exactly (DEC-006: logo navy)', () => {
+    expect(color.brand.primary).toBe('#001A6E');
+    expect(interaction.primary.default).toBe('#001A6E');
+  });
+
+  it('no longer uses the superseded application primary #1F3A8A', () => {
+    expect(JSON.stringify(tokens).toUpperCase()).not.toContain('#1F3A8A');
   });
 
   it('keeps the approved surfaces, text and borders', () => {
@@ -109,8 +119,8 @@ describe('approved token values', () => {
   });
 
   it('keeps the approved interaction ladder', () => {
-    expect(interaction.primary.hover).toBe('#1E40AF');
-    expect(interaction.primary.pressed).toBe('#172554');
+    expect(interaction.primary.hover).toBe('#002885');
+    expect(interaction.primary.pressed).toBe('#001350');
     expect(interaction.primary.focus).toBe('#1D4ED8');
   });
 });
@@ -131,10 +141,11 @@ describe('no deprecated palette leakage', () => {
     expect(interaction.primary.disabledFill).toBe('#F3F4F6');
   });
 
-  it('exports no accent/gold semantic token', () => {
+  it('keeps gold decorative only (DEC-009): no accent/gold role, no #F4C21F', () => {
     expect(exported).not.toContain('#F4C21F');
     expect(Object.keys(color)).not.toContain('accent');
     expect(Object.keys(color)).not.toContain('gold');
+    expect(Object.keys(color.decorative).sort()).toEqual(['chipDark', 'chipLight', 'chipLine', 'star']);
   });
 });
 
@@ -157,6 +168,14 @@ describe('contrast assumptions', () => {
   it('text roles pass AA on the canvas', () => {
     expect(contrast(color.text.primary, canvas)).toBeGreaterThanOrEqual(7);
     expect(contrast(color.text.secondary, canvas)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('white on the Sell green passes the large-text threshold (3:1)', () => {
+    expect(contrast(color.text.onFill, color.trade.sell)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('white on the inverse hero surface passes AAA', () => {
+    expect(contrast(color.text.onFill, color.bg.inverse)).toBeGreaterThanOrEqual(7);
   });
 
   it('text roles still pass AA on the sunken surface', () => {
@@ -205,13 +224,69 @@ describe('typography roles', () => {
     expect(Object.keys(font).sort()).toEqual(['brand', 'numeric']);
   });
 
-  it('resolves brand to a system stack, with no Satoshi anywhere', () => {
-    expect(font.brand.family).toBe('system');
-    expect(JSON.stringify(font).toLowerCase()).not.toContain('satoshi');
+  it('resolves brand to Satoshi with a system fallback (DEC-010)', () => {
+    expect(font.brand.family).toBe('Satoshi');
+    expect(font.brand.webStack.startsWith('Satoshi, system-ui')).toBe(true);
   });
 
-  it('carries the approved Inter numeric role with tabular figures', () => {
-    expect(font.numeric.family).toBe('Inter');
+  it('carries the Satoshi numeric role with tabular figures (DEC-010)', () => {
+    expect(font.numeric.family).toBe('Satoshi');
     expect(font.numeric.tabular).toBe(true);
+  });
+});
+
+describe('dark scheme (DEC-016, ADR-010)', () => {
+  const keysOf = (o: Record<string, Record<string, string>>): string[] =>
+    Object.entries(o).flatMap(([g, v]) => Object.keys(v).map((k) => `${g}.${k}`)).sort();
+
+  it('has exactly the same roles as light', () => {
+    expect(keysOf(colorDark)).toEqual(keysOf(color));
+    expect(keysOf(interactionDark)).toEqual(keysOf(interaction));
+  });
+
+  it('every value is a hex colour and differs from light where the surface changes', () => {
+    for (const k of keysOf(colorDark)) {
+      const [g, r] = k.split('.') as [keyof typeof colorDark, string];
+      expect((colorDark[g] as Record<string, string>)[r]).toMatch(/^#[0-9A-F]{6}([0-9A-F]{2})?$/);
+    }
+    expect(colorDark.bg.canvas).not.toBe(color.bg.canvas);
+    expect(colorDark.text.primary).not.toBe(color.text.primary);
+  });
+
+  const canvas = colorDark.bg.canvas;
+  const sunken = colorDark.bg.sunken;
+
+  it('text meets WCAG AA (4.5:1) on canvas and sunken', () => {
+    for (const fg of [colorDark.text.primary, colorDark.text.secondary, colorDark.brand.primary, colorDark.brand.secondaryText]) {
+      expect(contrast(fg, canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(fg, sunken)).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const g of ['success', 'warning', 'error'] as const) {
+      expect(contrast(colorDark[g].text, canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(colorDark[g].text, colorDark[g].surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('white stays readable on dark fills', () => {
+    expect(contrast(colorDark.text.onFill, colorDark.brand.fill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, interactionDark.primary.default)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, interactionDark.primary.pressed)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, colorDark.bg.inverse)).toBeGreaterThanOrEqual(4.5);
+    // Sell button label is 19 pt bold: large-text threshold.
+    expect(contrast(colorDark.text.onFill, colorDark.trade.sell)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('pill and control boundaries stay visible', () => {
+    expect(contrast(colorDark.brand.primary, colorDark.brand.tint)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.border.strong, canvas)).toBeGreaterThanOrEqual(3);
+    expect(contrast(colorDark.border.focus, canvas)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('light keeps brand.fill equal to the logo navy', () => {
+    expect(color.brand.fill).toBe(color.brand.primary);
+  });
+
+  it('is exported on the tokens object', () => {
+    expect(tokens.colorDark).toBe(colorDark);
   });
 });

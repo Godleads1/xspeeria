@@ -185,23 +185,21 @@ jobs:
       - name: Admin tests
         run: npm run test --workspace @xspeeria/admin
 
-      # GREEN as of the Milestone 1 dependency remediation (verified 2026-08-23).
-      # Measured: 0 critical, 0 high, 10 moderate, 0 low across 787 production
-      # dependencies. The Expo SDK 52 -> 57 and Next 14 -> 16.3.2 upgrades cleared the
-      # previous high-severity findings: postcss now 8.5.23 (was 8.4.31, vulnerable at
-      # <=8.5.22) and sharp now 0.35.3 (was 0.34.5, vulnerable at <0.35.0).
+      # Threshold unchanged: every high or critical advisory fails the build.
+      # ADR-017 (2026-10-17): the only way past a high/critical finding is an entry in
+      # .github/npm-audit-exceptions.json naming that exact advisory ID and package,
+      # human-approved, at most 31 days long. scripts/check_npm_audit.py enforces it and
+      # also fails on an expired or stale exception, a severity escalation, or a broken
+      # or empty audit report. Moderates are reported, not blocking (as before).
       #
-      # The 10 remaining moderates are ACCEPTED, not suppressed. All ten trace to one
-      # root advisory - GHSA-w5hq-g745-h8pq, uuid <11.1.1 missing buffer bounds check -
-      # reached only via expo -> @expo/config-plugins -> xcode@3.0.1 -> uuid@7.0.3.
-      # That path is iOS prebuild tooling that edits .pbxproj files at build time; it is
-      # a runtime dependency of `expo` but is not part of the shipped app bundle. npm's
-      # only proposed fix is expo@46.0.21, a major DOWNGRADE from the approved SDK 57,
-      # so no fix is applied. Re-evaluate when Expo ships config-plugins on uuid >=11.1.1.
+      # `|| true` only stops npm's own non-zero exit (it exits 1 whenever any advisory
+      # exists); the gate below makes the pass/fail decision from the JSON report.
       #
-      # The threshold stays at high. Do not lower it to hide a real finding.
-      - name: npm audit (production dependencies)
-        run: npm audit --omit=dev --audit-level=high
+      # Do not lower the threshold or widen an exception to hide a real finding.
+      - name: npm audit (production dependencies, ADR-017 gate)
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/npm-audit.json" || true
+          python3 scripts/check_npm_audit.py "$RUNNER_TEMP/npm-audit.json"
 
   repo-hygiene:
     name: Secret Scanning & Tracked-File Guard

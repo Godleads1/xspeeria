@@ -373,6 +373,10 @@ All 22 MVP screens, grouped by journey. Each spec covers layout, visual hierarch
 
 ### Marketplace
 
+> **AMENDED — ADR-005 (DEC-011), 2026-10-17.** The mobile Market tab follows the Figma Buy/Sell
+> frames (form + available offers/requests + Select Match), not the layout below. See
+> `docs/adr/005-market-screen.md`.
+
 |                        |                                                                                                                                  |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | **Aspect**             | **Specification**                                                                                                                |

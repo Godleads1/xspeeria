@@ -12,7 +12,7 @@
  */
 
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   Caption,
@@ -23,7 +23,7 @@ import {
   type StatusTone,
 } from '../../components/primitives';
 import type { ReadinessDimension, ReadinessState } from '../../fixtures';
-import { color, radius, space, typography } from '../../theme';
+import { color, radius, space, typography, themed } from '../../theme';
 
 const TONE_FOR: Record<ReadinessState, StatusTone> = {
   complete: 'success',
@@ -111,7 +111,7 @@ export function AccountReadiness({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   /** `space.sm` (16) is the frozen card padding (`docs/09-ui-ux/xspeeria-design-bible.md`, page 6). */
   card: { borderRadius: radius.xl, padding: space.sm, gap: space.sm },
   cardHeader: { gap: 2 },
@@ -135,4 +135,4 @@ const styles = StyleSheet.create({
    */
   rowLabel: { ...typography.rowLabel, color: color.text.primary },
   rowText: { flexShrink: 1, gap: 2 },
-});
+}));

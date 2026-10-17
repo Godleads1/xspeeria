@@ -1,99 +1,119 @@
 /**
- * Home header.
+ * Home header (Figma node 39:2882), DEC-008.
  *
- * `docs/09-ui-ux/UI_UX_SCREEN_SPEC.md` specifies avatar, greeting and notification
- * button. The greeting is the screen title and sits below this bar in the `title` role,
- * so the bar itself carries only the two controls — no duplicated "Home" label, which
- * the bottom navigation already states.
+ * Avatar with a "Welcome" caption and the user's name, then help and notifications.
+ * The Figma avatar is a photo: the user's own photo when set (ADR-011), otherwise initials
+ * on the brand fill. The spec's gradient avatar is not used: no gradient runtime is a dependency.
  *
- * The spec calls for a gradient avatar. No gradient runtime is a dependency of this app
- * (`expo-linear-gradient` is not installed) and interpolating one by hand would mint
- * colour values outside the semantic token layer, so the avatar is the flat brand fill
- * here. That is a deliberate, single-component deviation.
- *
- * Nothing in this header renders or implies a balance.
+ * Help and notifications have no destination yet. They stay in the layout but are
+ * disabled and drawn in the disabled colour rather than looking available and doing
+ * nothing when tapped. Nothing in this header renders or implies a balance.
  */
 
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View, Image } from 'react-native';
 
-import { Icon } from '../../components/icons';
-import { brandTextStyle, color, typography } from '../../theme';
+import { Icon, type IconName } from '../../components/icons';
+import { color, typography, themed } from '../../theme';
+
+function HeaderButton({
+  icon,
+  label,
+  testID,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  testID: string;
+  onPress?: () => void;
+}): ReactElement {
+  const available = onPress !== undefined;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !available }}
+      disabled={!available}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [styles.control, pressed ? styles.controlPressed : null]}
+    >
+      <Icon name={icon} color={available ? color.text.primary : color.text.disabled} size={22} />
+    </Pressable>
+  );
+}
 
 export function HomeHeader({
-  initials = 'X',
+  name,
+  initials,
+  avatarUri = null,
+  onHelp,
   onNotifications,
 }: {
-  initials?: string;
+  name: string;
+  initials: string;
+  /** Profile photo (ADR-011); initials when absent. */
+  avatarUri?: string | null;
+  onHelp?: () => void;
   onNotifications?: () => void;
 }): ReactElement {
-  /**
-   * No notification centre exists in this milestone. The control stays in the approved
-   * header layout, but it is disabled and rendered in the disabled colour rather than
-   * left looking available and doing nothing when tapped.
-   */
-  const notificationsAvailable = onNotifications !== undefined;
-
   return (
     <View style={styles.bar}>
-      <View accessible accessibilityLabel="Your account" style={styles.avatar}>
-        <Text style={styles.avatarLabel}>{initials}</Text>
+      <View accessible accessibilityLabel={`Welcome, ${name}`} style={styles.identity}>
+        {avatarUri ? (
+          <Image testID="home-avatar-photo" source={{ uri: avatarUri }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLabel}>{initials}</Text>
+          </View>
+        )}
+        <View>
+          <Text style={styles.welcome}>Welcome</Text>
+          <Text style={styles.name}>{name}</Text>
+        </View>
       </View>
 
-      <Pressable
-        testID="home-notifications"
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
-        accessibilityState={{ disabled: !notificationsAvailable }}
-        disabled={!notificationsAvailable}
-        onPress={onNotifications}
-        style={({ pressed }) => [styles.bell, pressed ? styles.bellPressed : null]}
-      >
-        <Icon
-          name="bell"
-          color={notificationsAvailable ? color.text.primary : color.text.disabled}
-          size={22}
+      <View style={styles.actions}>
+        <HeaderButton icon="help" label="Help" testID="home-help" onPress={onHelp} />
+        <HeaderButton
+          icon="bell"
+          label="Notifications"
+          testID="home-notifications"
+          onPress={onNotifications}
         />
-      </Pressable>
+      </View>
     </View>
   );
 }
 
 const CONTROL = 44;
 
-const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+const styles = themed(() => ({
+  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
   avatar: {
     width: CONTROL,
     height: CONTROL,
     borderRadius: CONTROL / 2,
-    backgroundColor: color.brand.primary,
+    backgroundColor: color.brand.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLabel: {
-    ...typography.headline,
-    ...brandTextStyle,
+    ...typography.rowLabel,
     color: color.text.onFill,
     letterSpacing: 0.2,
   },
-  /**
-   * A hairline circle rather than a filled control: the bell is secondary to everything
-   * below it and must not compete with the primary action.
-   */
-  bell: {
+  welcome: { ...typography.caption, color: color.text.secondary },
+  name: { ...typography.headline, color: color.text.primary },
+  actions: { flexDirection: 'row', gap: 4 },
+  control: {
     width: CONTROL,
     height: CONTROL,
     borderRadius: CONTROL / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border.subtle,
-    backgroundColor: color.bg.canvas,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bellPressed: { backgroundColor: color.bg.sunken },
-});
+  controlPressed: { backgroundColor: color.bg.sunken },
+}));

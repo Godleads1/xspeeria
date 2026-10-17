@@ -1,7 +1,8 @@
 /**
  * SEMANTIC tier — the only tier product applications may consume.
  *
- * Source of truth: `docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22.
+ * Source of truth: `docs/09-ui-ux/DESIGN_SYSTEM.md`, human-approved 2026-08-22, as amended
+ * by DEC-006 (brand primary `#001A6E`, human-approved 2026-10-16).
  * Primitives are intentionally not re-exported from this entry point.
  *
  * Architecture: PRIMITIVE -> SEMANTIC -> COMPONENT.
@@ -19,6 +20,11 @@ export const color = {
      * always pair it with a border, spacing or elevation.
      */
     sunken: palette.blueTintedGrey50,
+    /**
+     * Dark hero surface (Figma Home card `#191919`, DEC-008). Only `text.onFill` goes on
+     * it (17.4:1). Never a screen background, never under body copy in other colours.
+     */
+    inverse: palette.ink900,
     overlay: palette.scrim,
   },
 
@@ -46,8 +52,18 @@ export const color = {
   },
 
   brand: {
-    /** 10.34:1 on canvas; white on it is also 10.34:1. */
-    primary: palette.blue900,
+    /** Logo navy, DEC-006. 15.30:1 on canvas; white on it is also 15.30:1. */
+    primary: palette.navy900,
+    /**
+     * Brand FILL behind `text.onFill` (avatars, FAB, selected day, chat bubble). Equal to
+     * `primary` in light; in dark the two split, because no single blue can be both
+     * readable text on a dark canvas and a fill that keeps white text readable (DEC-016).
+     */
+    fill: palette.navy900,
+    /** Light navy tint behind `brand.primary` text (pills). Navy on it ≈ 10.8:1. */
+    tint: palette.navy100,
+    /** Very light blue card surface (Figma FAQ "Getting Started"). Not a text colour. */
+    secondarySurface: palette.blue50,
     /**
      * 3.68:1 — passes for large text and UI components, FAILS AA for normal-size text.
      * Use `brand.secondaryText` where normal-size text is required.
@@ -83,15 +99,41 @@ export const color = {
     /** 6.47:1 on canvas, 5.91:1 on `error.surface`. `#DC2626` is deliberately unused. */
     text: palette.red700,
   },
+
+  /**
+   * DECORATIVE ONLY (DEC-009, 2026-10-17). Never a status, never text, never the sole
+   * carrier of meaning. `star` marks favourite corridors on Home; `chip*` paint the
+   * illustrative card chip on the Home hero.
+   */
+  decorative: {
+    star: palette.amber500,
+    chipLight: palette.chipGold300,
+    chipDark: palette.chipGold500,
+    chipLine: palette.chipBronze,
+  },
+
+  /**
+   * Market trade sides (Figma Market, ADR-005). Buy actions use the brand primary; Sell
+   * actions use the logo green. White on `sell` is 4.37:1, so labels on it must be large
+   * text (>= 14 pt bold) — the Sell button label is 19 pt bold.
+   */
+  trade: {
+    sell: palette.logoGreen,
+    sellSurface: palette.logoGreen50,
+    advert: palette.advertSky,
+  },
 } as const;
 
 export const interaction = {
   primary: {
-    default: palette.blue900,
-    /** Lighter on hover: the dark navy base has little darkening headroom. 8.72:1. */
-    hover: palette.blue800,
-    /** Darker on press. 14.69:1. */
-    pressed: palette.blue950,
+    default: palette.navy900,
+    /** Lighter on hover: the dark navy base has little darkening headroom. 12.79:1. */
+    hover: palette.navy700,
+    /**
+     * Darker on press. 17.37:1. `blue950` (#172554) is LIGHTER than the navy default and
+     * would read as no feedback at all, so the ladder designed for this navy is used.
+     */
+    pressed: palette.navy950,
     /** NOT `brand.secondary` — that measures 2.81:1 against the primary fill. */
     focus: palette.blue700,
     /** A fill swap, never reduced opacity over an arbitrary background. */
@@ -99,6 +141,82 @@ export const interaction = {
     disabledLabel: palette.grey500,
   },
 } as const;
+
+/** Same keys as `color`, any value. Both schemes must satisfy it. */
+export type ColorScheme = {
+  readonly [G in keyof typeof color]: Readonly<Record<keyof (typeof color)[G], string>>;
+};
+export type InteractionScheme = {
+  readonly [G in keyof typeof interaction]: Readonly<Record<keyof (typeof interaction)[G], string>>;
+};
+
+/**
+ * DARK scheme (DEC-016, 2026-10-17; ADR-010). Same roles as `color`; contrast pairs are
+ * asserted in tokens.test.ts. Decorative and Figma-image colours are unchanged.
+ */
+export const colorDark: ColorScheme = {
+  bg: {
+    canvas: palette.night950,
+    sunken: palette.night900,
+    /** Lifted card surface for the Home hero; white on it 14.9:1. */
+    inverse: palette.night850,
+    overlay: palette.scrimDark,
+  },
+  text: {
+    primary: palette.slate100,
+    secondary: palette.slate300,
+    disabled: palette.slate600,
+    onFill: palette.white,
+  },
+  border: {
+    subtle: palette.night800,
+    strong: palette.slate500,
+    focus: palette.periwinkle300,
+  },
+  brand: {
+    primary: palette.periwinkle300,
+    fill: palette.royal600,
+    tint: palette.night700,
+    secondarySurface: palette.night600,
+    secondary: palette.blue400,
+    secondaryText: palette.blue300,
+  },
+  success: {
+    fill: palette.emerald500,
+    surface: palette.emeraldNight,
+    border: palette.emerald400,
+    text: palette.emerald300,
+  },
+  warning: {
+    fill: palette.amber500,
+    surface: palette.amberNight,
+    border: palette.amber400,
+    text: palette.amber300,
+  },
+  error: {
+    fill: palette.red500,
+    surface: palette.redNight,
+    border: palette.red400,
+    text: palette.red300,
+  },
+  decorative: color.decorative,
+  trade: {
+    sell: palette.logoGreenBright,
+    sellSurface: palette.logoGreenNight,
+    advert: palette.advertSky,
+  },
+};
+
+export const interactionDark: InteractionScheme = {
+  primary: {
+    default: palette.royal600,
+    hover: palette.royal500,
+    pressed: palette.royal700,
+    focus: palette.periwinkle300,
+    disabledFill: palette.slate800,
+    disabledLabel: palette.slate600,
+  },
+};
 
 export const space = {
   xs: scale.s2,
@@ -127,22 +245,28 @@ export const radius = {
  */
 export const font = {
   brand: {
-    family: 'system' as const,
+    /**
+     * Satoshi (DEC-010, 2026-10-17), as in the Figma frames. ITF Free Font License:
+     * embedding in our own apps is allowed; the files must never be redistributed or put
+     * in a public repository or public server.
+     */
+    family: 'Satoshi' as const,
     /** Per-platform stacks; consumers pick the one that applies. */
     webStack:
-      'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      'Satoshi, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   numeric: {
-    family: 'Inter' as const,
+    /** Satoshi, as in the Figma frames (DEC-010); tabular figures requested. */
+    family: 'Satoshi' as const,
     /** Falls back to the platform face, which also supports tabular figures. */
     webStack:
-      'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      'Satoshi, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     /** Financial numerics must retain tabular alignment, including in fallback. */
     tabular: true as const,
   },
 } as const;
 
-export const tokens = { color, interaction, space, radius, font } as const;
+export const tokens = { color, colorDark, interaction, interactionDark, space, radius, font } as const;
 
 export type Tokens = typeof tokens;
 export type ColorTokens = typeof color;

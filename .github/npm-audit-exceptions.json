@@ -1,0 +1,23 @@
+{
+  "_comment": "Time-limited npm audit exceptions (ADR-017). Each entry names one advisory and one package. Max 31 days from approval. Enforced by scripts/check_npm_audit.py.",
+  "exceptions": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "reason": "No patched version exists (all versions affected). Reached via @expo/cli, metro and jest (micromatch) build/test tooling; not in the app bundle. npm's only fix downgrades jest/expo.",
+      "approved_by": "Product owner (Godleads), 2026-10-17, option 1",
+      "approved": "2026-10-17",
+      "expires": "2026-11-16"
+    },
+    {
+      "id": "GHSA-86w9-cpqp-85rv",
+      "package": "node-forge",
+      "severity": "high",
+      "reason": "No patched version exists (<=1.4.0, latest is 1.4.0). Reached via @expo/cli and @expo/code-signing-certificates (CLI-side code signing); not in the app bundle. npm's only fix is expo@44.",
+      "approved_by": "Product owner (Godleads), 2026-10-17, option 1",
+      "approved": "2026-10-17",
+      "expires": "2026-11-16"
+    }
+  ]
+}

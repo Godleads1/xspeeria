@@ -51,6 +51,9 @@ Several documents are designated PRIMARY, each for its own domain. The authority
 |---|---|---|
 | Transaction/settlement state model | `docs/05-financial/Appendix_D_...v1.1.md` §5 · `docs/03-architecture/Xspeeria_Master_Prompt_Python_Backend.md` §8 · `docs/06-banking/07_Banking_Integration_Specification_v1.1.md` §4.3 · `docs/04-api-data/05_API_Contract_Data_Dictionary.md` Settlement/Transaction entities · `docs/03-architecture/02_Technical_Design_Specification.md` §10 | **ADR-001 (DEC-003), approved 2026-08-18** — `docs/adr/001-transaction-state-machine.md` |
 | Financial event and accounting-ledger model | `docs/05-financial/Appendix_D_...v1.1.md` §7/§14 · `docs/04-api-data/05_API_Contract_Data_Dictionary.md` entities · `docs/03-architecture/Xspeeria_Master_Prompt_Python_Backend.md` §7 · `docs/03-architecture/02_Technical_Design_Specification.md` §6 | **ADR-002 (DEC-004), approved 2026-08-18** — `docs/adr/002-financial-event-ledger-architecture.md` |
+| Application brand primary and mobile bottom navigation | `PRODUCT.md` Brand Commitments (B) · `docs/09-ui-ux/DESIGN_SYSTEM.md` · `docs/13-governance/CORRECTIONS_v3.md` §9.1 · `docs/02-product/04_Product_Design_Specification.md` colour tables | **ADR-003 (DEC-005, DEC-006), approved 2026-10-16** — `docs/adr/003-brand-primary-and-bottom-navigation.md` |
+| Home screen layout | `docs/09-ui-ux/UI_UX_SCREEN_SPEC.md` § Home Screen · Figma Home frame `39:2882` | **ADR-004 (DEC-008), approved 2026-10-16** — `docs/adr/004-home-screen-layout.md` |
+| Mobile Market screen | `docs/09-ui-ux/Xspeeria_UIUX_AppFlow_Spec_v2.md` § Marketplace · Figma Market frames `79:399`, `94:557`, `436:7771`, `106:1150` | **ADR-005 (DEC-011), approved 2026-10-17** — `docs/adr/005-market-screen.md` |
 
 ---
 
@@ -70,6 +73,21 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 |---|---|---|
 | `001-transaction-state-machine.md` | Canonical transaction/settlement state machine (DEC-003) | **APPROVED** — 2026-08-18 |
 | `002-financial-event-ledger-architecture.md` | Financial event acceptance and accounting-ledger architecture (DEC-004) | **APPROVED** — 2026-08-18 |
+| `003-brand-primary-and-bottom-navigation.md` | Mobile bottom navigation (DEC-005) and application brand primary `#001A6E` (DEC-006) | **APPROVED** — 2026-10-16 |
+| `004-home-screen-layout.md` | Home screen layout: Figma Home with a best-rate hero (DEC-008) | **APPROVED** — 2026-10-16 |
+| `005-market-screen.md` | Market tab (Figma Buy/Sell) and Select Match (DEC-011) | **APPROVED** — 2026-10-17 |
+| `006-history-screens.md` | History list and transaction receipt (DEC-012) | **APPROVED** — 2026-10-17 |
+| `007-profile-screens.md` | Profile menu and Account details (DEC-013) | **APPROVED** — 2026-10-17 |
+| `008-two-factor-authentication.md` | Two-factor authentication: passkey/authenticator, no SMS, step-up, recovery (DEC-014; resolves the MFA part of Open Decision 2) | **APPROVED** — 2026-10-17 |
+| `009-referral-reward.md` | Referral reward: 10% off the coordination fee for both people; count, not earnings (DEC-015) | **APPROVED** — 2026-10-17 |
+| `010-dark-mode.md` | Dark mode: Switch Mode toggles a dark scheme for every screen; `brand.fill` role; rules for future screens (DEC-016) | **APPROVED** — 2026-10-17 |
+| `011-profile-editing.md` | Profile editing: photo/banner; phone & email changed only after a code to the new address + 2FA; date of birth via ID review (DEC-017) | **APPROVED** — 2026-10-17 |
+| `012-cards-preview.md` | Cards tab as a preview of the Figma design with "Create yours" (cards not available); no balances or card transactions (DEC-018) | **APPROVED** — 2026-10-17 |
+| `013-onboarding-and-login.md` | Onboarding and log-in from Figma in demo mode; protected routes; PIN rules; no account enumeration (DEC-019) | **APPROVED** — 2026-10-17 |
+| `014-confirm-trade-flow.md` | Confirm-trade flow: confirm sheet + 2FA, transaction in progress, completed + rating, trades in History; demo bank (DEC-020) | **APPROVED** — 2026-10-17 |
+| `015-sell-flow.md` | Sell flow: offer matches, green actions, seller fee in sent currency (to be confirmed), sell receipt in Figma layout (DEC-021) | **APPROVED** — 2026-10-17 |
+| `016-new-location-region-kyc.md` | New-location prompt and US identity check (SSN, ID document, selfie) with pending region; demo trigger (DEC-022) | **APPROVED** — 2026-10-17 |
+| `017-npm-audit-time-limited-exceptions.md` | npm audit gate: high threshold kept; exact-advisory exceptions, max 31 days, enforced by `scripts/check_npm_audit.py` (DEC-023) | **APPROVED** — 2026-10-17 |
 
 ### Accounting policy is not architecture
 

@@ -2,6 +2,14 @@
 
 ## Home Screen
 
+> **AMENDED — ADR-004 (DEC-008), human-approved 2026-10-16.** Home follows the Figma Home frame
+> (node `39:2882`): header (avatar, "Welcome" + name, help, notifications) → **best-rate card**
+> (`1 USD = 1,603.78 NGN`, always both currencies, with the single "Trade now" primary action
+> to the Marketplace) → Account Readiness (unchanged) → current market rates → recent
+> transactions with "View all". The no-balance rule below is unchanged. Where the sections
+> below differ on header, primary action or activity layout, ADR-004 governs. See
+> `docs/adr/004-home-screen-layout.md`.
+
 Canvas:
 - iPhone 16 Pro
 - 393×852
@@ -46,7 +54,7 @@ Offer; it maps to the persisted entity "Match" — no separate table exists. See
 DOCUMENT_INDEX.md section 2A.)*
 
 Bottom Navigation:
-Home, Marketplace, Track, Cards, Profile
+Home, Market, History, Cards, Profile *(amended by ADR-003 / DEC-005, 2026-10-16)*
 
 *(HUMAN APPROVED, design-system freeze Phase 1. "Cards" is COMING SOON: the tab
 opens a real destination explaining the future feature — never a dead or

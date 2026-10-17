@@ -830,7 +830,7 @@ implementation, document, or assistant.
 
 | # | Open decision |
 |---|---|
-| 1 | **Decision 2** — auth/session/MFA/password/rate-limit specifics |
+| 1 | **Decision 2** — auth/session/password/rate-limit specifics *(MFA part resolved 2026-10-17 by ADR-008 / DEC-014, human-approved; the rest remains OPEN)* |
 | 2 | **Decision 3** — reference-rate provider, cadence, staleness, unavailable behaviour |
 | 3 | **Decision 4** — regulatory/legal posture |
 | 4 | Idempotency retention / TTL |

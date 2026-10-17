@@ -105,6 +105,11 @@ The design consequence is a standing test, taken from `docs/09-ui-ux/xspeeria-de
 
 - **(A) Logo colour references — still unconfirmed:** approximately `#001A6E` navy blue, `#208B3B` green, `#F90A09` red, and `#FEB700` gold/yellow. These are **logo/brand-asset** values and must still be confirmed against the original vector/brand asset before being frozen. They are **not** application UI tokens and must not be used as such.
 
+  > **AMENDED — ADR-003 (DEC-005, DEC-006), human-approved 2026-10-16.** The application primary is now the
+  > logo navy **`#001A6E`** (hover `#002885`, pressed `#001350`, focus `#1D4ED8` unchanged), and the
+  > bottom navigation is **Home · Market · History · Cards · Profile**. Where this document says
+  > `#1F3A8A`, read `#001A6E`. See `docs/adr/003-brand-primary-and-bottom-navigation.md`.
+
 - **(B) Application UI palette — HUMAN APPROVED, 2026-08-22:** Primary `#1F3A8A`, Secondary
   `#3B82F6`, canvas `#FFFFFF`, supporting soft surface `#F8F9FD`, border/divider `#E5E7EB`,
   headline text `#111827`, body text `#4B5563`, disabled text `#9CA3AF`, success `#10B981`,

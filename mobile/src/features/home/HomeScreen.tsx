@@ -1,57 +1,64 @@
 /**
- * Home.
+ * Home (Figma node 39:2882, as amended by DEC-008 / ADR-004).
  *
- * Approved hierarchy: header -> Account Readiness -> primary action -> active activity
- * -> recent activity. There is no balance region, no wallet identifier and no aggregate
- * currency hero under any condition.
+ * Order follows Figma: header -> best-rate card (the one primary action) -> current
+ * market rates -> recent transactions, then Account Readiness (not in Figma; kept below
+ * so the top of the screen matches the design).
+ *
+ * There is no balance region, no wallet identifier and no aggregate currency figure
+ * under any condition. The hero shows a rate written with both currencies, never a lone
+ * number. Account Readiness, absent from the Figma frame, is kept because it is the only
+ * route to the steps a user must complete before trading.
  */
 
 import type { ReactElement } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import {
-  Body,
-  ErrorState,
-  LoadingState,
-  PrimaryButton,
-  Screen,
-  SectionTitle,
-  Title,
-} from '../../components/primitives';
-import type { ActivityItem, ReadinessDimension } from '../../fixtures';
-import { space } from '../../theme';
+import { ErrorState, LoadingState, Screen } from '../../components/primitives';
+import type { ActivityItem, MarketRate, ReadinessDimension } from '../../fixtures';
+import { space, themed } from '../../theme';
 import { AccountReadiness } from './AccountReadiness';
 import { ActivityList } from './ActivityList';
+import { BestRateCard } from './BestRateCard';
 import { HomeHeader } from './HomeHeader';
+import { MarketRates } from './MarketRates';
 
 export type HomeStatus = 'ready' | 'loading' | 'error';
 
 export function HomeScreen({
-  greeting = 'Good morning',
+  user = { name: 'David Peters', initials: 'DP' },
+  bestRate,
+  rates = [],
   dimensions,
   activity,
   status = 'ready',
   onRetry,
   onCreateOffer,
+  onViewAll,
+  onHelp,
   onNotifications,
 }: {
-  greeting?: string;
+  user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
+  bestRate?: MarketRate;
+  rates?: readonly MarketRate[];
   dimensions: readonly ReadinessDimension[];
   activity: readonly ActivityItem[];
   status?: HomeStatus;
   onRetry?: () => void;
   onCreateOffer?: () => void;
+  onViewAll?: () => void;
+  onHelp?: () => void;
   onNotifications?: () => void;
 }): ReactElement {
   return (
     <Screen testID="home-screen">
-      <View style={styles.top}>
-        <HomeHeader onNotifications={onNotifications} />
-        <View style={styles.greeting}>
-          <Title>{greeting}</Title>
-          <Body>Here is what needs your attention.</Body>
-        </View>
-      </View>
+      <HomeHeader
+        name={user.name}
+        initials={user.initials}
+        avatarUri={user.avatarUri ?? null}
+        onHelp={onHelp}
+        onNotifications={onNotifications}
+      />
 
       {status === 'loading' ? <LoadingState label="Loading your account" /> : null}
       {status === 'error' ? (
@@ -59,26 +66,25 @@ export function HomeScreen({
       ) : null}
 
       {status === 'ready' ? (
-        <>
-          <AccountReadiness dimensions={dimensions} />
-          <PrimaryButton
-            label="Create or browse an offer"
-            onPress={onCreateOffer}
-            testID="home-primary-action"
-          />
-          <View style={styles.section}>
-            <SectionTitle>Active activity</SectionTitle>
-            <ActivityList items={activity} onCreateOffer={onCreateOffer} />
+        <View style={styles.body}>
+          <View>
+            {bestRate ? (
+              <View style={styles.hero}>
+                <BestRateCard rate={bestRate} onTrade={onCreateOffer} />
+              </View>
+            ) : null}
+            {rates.length > 0 ? <MarketRates rates={rates} attached={bestRate !== undefined} /> : null}
           </View>
-        </>
+          <ActivityList items={activity} onCreateOffer={onCreateOffer} onViewAll={onViewAll} />
+          <AccountReadiness dimensions={dimensions} />
+        </View>
       ) : null}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  /** Header bar and greeting are one block; the screen gap below it is `space.md`. */
-  top: { gap: space.md },
-  greeting: { gap: 4 },
-  section: { gap: space.sm },
-});
+const styles = themed(() => ({
+  body: { gap: space.md },
+  /** Keeps the hero card above the rates panel it overlaps. */
+  hero: { zIndex: 1, elevation: 8 },
+}));
