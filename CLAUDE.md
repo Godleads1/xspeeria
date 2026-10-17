@@ -40,6 +40,7 @@ STOP and surface the conflict rather than silently choosing.
 
 ## Security baseline
 Use `docs/07-security/Xspeeria_Security_Master_Audit.md` as the mandatory security baseline.
+Also apply `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` (SEC-001–SEC-040, FX-01–FX-05, release gates), which extends it; where they differ, the stricter applies. Keep `docs/07-security/SECURITY_EVIDENCE_REGISTER.md` current in every PR that touches a requirement.
 
 ## Evidence states
 DOCUMENTED / IMPLEMENTED / VERIFIED / UNKNOWN

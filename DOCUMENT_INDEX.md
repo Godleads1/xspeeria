@@ -327,6 +327,8 @@ Production integration details require evidence from actual provider documentati
 
 This document is mandatory for all security-sensitive implementation.
 
+**Extended by** `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` (product owner, 2026-10-17): 40 requirements (SEC-001–SEC-040) mapped to OWASP ASVS 5.0.0, MASVS v2, API Security Top 10 and NIST SSDF; Xspeeria financial requirements FX-01–FX-05; release gates. Where the two differ, the stricter applies until a human decides (open item C1). Current state per requirement: `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`. Review reports: `docs/07-security/reviews/`.
+
 Use for:
 
 - authentication
