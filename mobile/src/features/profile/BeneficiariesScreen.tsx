@@ -14,8 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, interaction, space, typography } from '../../theme';
+import { beneficiaryStore, useBeneficiaries } from './beneficiaryStore';
 import {
-  BENEFICIARIES,
   BENEFICIARY_FILTERS,
   filterBeneficiaries,
   initialsOf,
@@ -55,7 +55,7 @@ function FilterChip({
 function BeneficiaryRow({ item, onDelete }: { item: Beneficiary; onDelete: () => void }): ReactElement {
   return (
     <View testID={`beneficiary-${item.id}`} style={styles.row}>
-      <View accessible accessibilityLabel={`${item.name}, ${item.currency}, ${item.bank}, account ending ${item.accountLast4}`} style={styles.rowMain}>
+      <View accessible accessibilityLabel={`${item.name}, ${item.currency}, ${item.bank}, account ending ${item.accountLast4}${item.status === 'pending' ? ', awaiting bank verification' : ''}`} style={styles.rowMain}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initialsOf(item.name)}</Text>
           <View style={styles.flagBadge}>
@@ -66,6 +66,9 @@ function BeneficiaryRow({ item, onDelete }: { item: Beneficiary; onDelete: () =>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.meta}>{maskAccount(item.accountLast4)}</Text>
           <Text style={styles.meta}>{item.bank}</Text>
+          {item.status === 'pending' ? (
+            <Text testID={`beneficiary-pending-${item.id}`} style={styles.pending}>Awaiting bank verification</Text>
+          ) : null}
         </View>
       </View>
       <Pressable
@@ -89,7 +92,7 @@ export function BeneficiariesScreen({
   onAdd?: () => void;
 }): ReactElement {
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<readonly Beneficiary[]>(BENEFICIARIES);
+  const items = useBeneficiaries();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<BeneficiaryFilter>('All');
   const shown = useMemo(() => filterBeneficiaries(items, query, filter), [items, query, filter]);
@@ -97,7 +100,7 @@ export function BeneficiariesScreen({
   const confirmDelete = (b: Beneficiary): void =>
     Alert.alert('Delete beneficiary?', `${b.name} (${maskAccount(b.accountLast4)}) will be removed from your saved accounts.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => setItems((prev) => prev.filter((x) => x.id !== b.id)) },
+      { text: 'Delete', style: 'destructive', onPress: () => beneficiaryStore.remove(b.id) },
     ]);
 
   const add = (): void => {
@@ -223,6 +226,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   name: { ...typography.body, ...brandWeight('700'), fontSize: 15, color: color.text.primary },
   meta: { ...typography.caption, fontSize: 12, color: color.text.secondary },
+  pending: { ...typography.caption, fontSize: 11, color: color.warning.text },
   empty: { ...typography.body, color: color.text.secondary, textAlign: 'center', marginTop: space.lg },
   fab: {
     position: 'absolute',

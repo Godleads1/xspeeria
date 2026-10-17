@@ -73,13 +73,15 @@ export interface Beneficiary {
   readonly currency: string;
   readonly bank: string;
   readonly accountLast4: string;
+  /** Banking spec §3.3: saved, then confirmed by the partner's account-name inquiry. */
+  readonly status: 'pending' | 'verified';
 }
 
 export const BENEFICIARY_FILTERS = ['All', 'USD', 'NGN', 'GBP', 'GHS'] as const;
 export type BeneficiaryFilter = (typeof BENEFICIARY_FILTERS)[number];
 
 export const BENEFICIARIES: readonly Beneficiary[] = [
-  { id: 'b1', name: 'Tunde Bakere Olamilekan', currency: 'NGN', bank: 'Access Bank', accountLast4: '9309' },
+  { id: 'b1', name: 'Tunde Bakere Olamilekan', currency: 'NGN', bank: 'Access Bank', accountLast4: '9309', status: 'verified' },
 ];
 
 /** `9309` → `•••• 9309`. */
@@ -131,4 +133,75 @@ export function searchCountries(list: readonly DestinationCountry[], query: stri
   const q = query.trim().toLowerCase();
   if (q === '') return [...list];
   return list.filter((c) => c.name.toLowerCase().includes(q) || c.currency.toLowerCase().includes(q));
+}
+
+/* ------------------------------------------------------------ Account details form */
+
+export type BankFieldKey = 'routingNumber' | 'sortCode' | 'bankName' | 'accountNumber' | 'accountType';
+
+export interface BankField {
+  readonly key: BankFieldKey;
+  readonly label: string;
+  readonly kind: 'digits' | 'text' | 'select';
+  readonly maxLength?: number;
+}
+
+/**
+ * Fields per payout country. Figma draws the US form (routing number, bank, account,
+ * account type); Nigeria (10-digit NUBAN) and the UK (sort code + 8-digit account) use
+ * their own national formats. The account holder's name is never typed: the partner bank
+ * returns it and it must match the user's KYC legal name (Banking spec v1.1 §3.3).
+ */
+export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
+  USD: [
+    { key: 'routingNumber', label: 'Routing Number', kind: 'digits', maxLength: 9 },
+    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 17 },
+    { key: 'accountType', label: 'Account Type', kind: 'select' },
+  ],
+  NGN: [
+    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 10 },
+  ],
+  GBP: [
+    { key: 'sortCode', label: 'Sort Code', kind: 'digits', maxLength: 6 },
+    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 8 },
+  ],
+};
+
+export const ACCOUNT_TYPES = ['Checking', 'Savings'] as const;
+
+export type BankFormValues = Partial<Record<BankFieldKey, string>>;
+
+/** ABA routing number checksum (3-7-1 weights). */
+export function isValidRoutingNumber(v: string): boolean {
+  if (!/^\d{9}$/.test(v)) return false;
+  const d = v.split('').map(Number);
+  const sum = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8]);
+  return sum % 10 === 0;
+}
+
+/** Client-side format checks only; the server and partner bank remain authoritative. */
+export function validateBankForm(currency: string, v: BankFormValues): Partial<Record<BankFieldKey, string>> {
+  const errors: Partial<Record<BankFieldKey, string>> = {};
+  const fields = BANK_FORMS[currency];
+  if (!fields) return errors;
+  for (const f of fields) {
+    const value = (v[f.key] ?? '').trim();
+    if (value === '') {
+      errors[f.key] = `${f.label} is required`;
+      continue;
+    }
+    if (f.key === 'bankName' && value.length < 2) errors.bankName = 'Enter the bank name';
+    if (f.key === 'routingNumber' && !isValidRoutingNumber(value)) errors.routingNumber = 'Enter a valid 9-digit routing number';
+    if (f.key === 'sortCode' && !/^\d{6}$/.test(value)) errors.sortCode = 'Sort code is 6 digits';
+    if (f.key === 'accountType' && !(ACCOUNT_TYPES as readonly string[]).includes(value)) errors.accountType = 'Choose an account type';
+    if (f.key === 'accountNumber') {
+      if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = 'Nigerian account numbers are 10 digits';
+      if (currency === 'GBP' && !/^\d{8}$/.test(value)) errors.accountNumber = 'UK account numbers are 8 digits';
+      if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = 'Enter a valid account number';
+    }
+  }
+  return errors;
 }

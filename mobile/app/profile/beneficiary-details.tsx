@@ -1,0 +1,24 @@
+import type { ReactElement } from 'react';
+import { Alert } from 'react-native';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+
+import { AddBeneficiaryScreen } from '../../src/features/profile/AddBeneficiaryScreen';
+import { DESTINATION_COUNTRIES } from '../../src/features/profile/data';
+
+/** Route params are untrusted: only a live corridor currency opens the form. */
+export default function BeneficiaryDetailsRoute(): ReactElement {
+  const router = useRouter();
+  const { currency } = useLocalSearchParams<{ currency?: string }>();
+  const country = DESTINATION_COUNTRIES.find((c) => c.available && c.currency === currency);
+  if (!country) return <Redirect href="/profile/add-beneficiary" />;
+  return (
+    <AddBeneficiaryScreen
+      currency={country.currency}
+      onBack={() => router.back()}
+      onDone={() => {
+        router.dismissTo('/profile/beneficiaries');
+        Alert.alert('Beneficiary added', 'Your bank will confirm the account name. You can use it once it is verified.');
+      }}
+    />
+  );
+}

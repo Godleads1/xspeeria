@@ -51,11 +51,15 @@ export function FieldInput({
   testID,
   accessibilityLabel,
   trailing,
+  maxLength = 16,
+  inputMode = 'decimal',
 }: {
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
+  maxLength?: number;
+  inputMode?: 'decimal' | 'numeric' | 'text';
   testID?: string;
   accessibilityLabel: string;
   trailing?: ReactNode;
@@ -70,8 +74,8 @@ export function FieldInput({
         placeholder={placeholder}
         placeholderTextColor={color.text.disabled}
         keyboardType={keyboardType}
-        inputMode="decimal"
-        maxLength={16}
+        inputMode={inputMode}
+        maxLength={maxLength}
         style={styles.input}
       />
       {trailing}

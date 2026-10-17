@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
+import { beneficiaryStore } from '../src/features/profile/beneficiaryStore';
 import { BeneficiariesScreen } from '../src/features/profile/BeneficiariesScreen';
 import {
   BENEFICIARIES,
@@ -12,7 +13,7 @@ import {
 
 const LIST: Beneficiary[] = [
   ...BENEFICIARIES,
-  { id: 'x2', name: 'Ama Mensah', currency: 'GHS', bank: 'GCB Bank', accountLast4: '1122' },
+  { id: 'x2', name: 'Ama Mensah', currency: 'GHS', bank: 'GCB Bank', accountLast4: '1122', status: 'pending' },
 ];
 
 describe('beneficiary helpers', () => {
@@ -37,6 +38,7 @@ describe('beneficiary helpers', () => {
 });
 
 describe('Manage Beneficiaries screen', () => {
+  beforeEach(() => beneficiaryStore.reset());
   afterEach(() => jest.restoreAllMocks());
 
   it('renders the Figma content with a masked account', async () => {
