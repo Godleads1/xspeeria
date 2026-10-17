@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
-import { brandWeight, color, interaction, space, typography } from '../../theme';
+import { brandWeight, color, interaction, space, typography, themed } from '../../theme';
 import type { StepUp } from '../security/stepUp';
 import { beneficiaryStore, useBeneficiaries } from './beneficiaryStore';
 import {
@@ -173,7 +173,7 @@ export function BeneficiariesScreen({
 const AVATAR = 48;
 const FAB = 56;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, minHeight: 44 },
   title: { ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     width: FAB,
     height: FAB,
     borderRadius: FAB / 2,
-    backgroundColor: color.brand.primary,
+    backgroundColor: color.brand.fill,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -253,4 +253,4 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   fabPressed: { backgroundColor: interaction.primary.pressed },
-});
+}));

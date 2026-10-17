@@ -1,12 +1,12 @@
 /** Recovery codes, shown once (ADR-008). The user must confirm they saved them. */
 
 import { useState, type ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 
 export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => void }): ReactElement {
   const [saved, setSaved] = useState(false);
@@ -50,7 +50,7 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   wrap: { gap: space.sm },
   heading: { ...typography.headline, ...brandWeight('700'), fontSize: 20, color: color.text.primary },
   body: { ...typography.body, fontSize: 14, color: color.text.secondary },
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
   copyText: { ...typography.body, ...brandWeight('700'), color: color.brand.primary },
   check: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   box: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: color.brand.primary, borderColor: color.brand.primary },
+  boxOn: { backgroundColor: color.brand.fill, borderColor: color.brand.fill },
   checkText: { flex: 1, ...typography.body, fontSize: 14, color: color.text.primary },
-});
+}));

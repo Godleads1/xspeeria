@@ -17,7 +17,7 @@ import {
 
 import { RoundFlag } from '../../components/flags';
 import { Icon, type IconName } from '../../components/icons';
-import { brandWeight, color, numericTextStyle, space, typography } from '../../theme';
+import { brandWeight, color, numericTextStyle, space, typography, themed } from '../../theme';
 import type { Currency, Listing } from './data';
 import { formatCompact, formatHundredths } from './money';
 
@@ -337,7 +337,7 @@ export function ListingRow({
 
 const ROUND = 36;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   field: {
     minHeight: 56,
     borderWidth: 1,
@@ -470,4 +470,4 @@ const styles = StyleSheet.create({
   },
   listingActionSell: { backgroundColor: color.trade.sellSurface },
   listingActionLabel: { ...typography.rowLabel },
-});
+}));

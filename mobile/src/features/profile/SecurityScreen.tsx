@@ -12,7 +12,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { securitySettings, useSecuritySettings } from './securitySettings';
 
 export type SecurityDestination = 'password' | 'twoFactor';
@@ -76,7 +76,7 @@ export function SecurityScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -92,4 +92,4 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: color.bg.sunken },
   label: { ...typography.body, ...brandWeight('500'), fontSize: 15, color: color.text.primary },
-});
+}));

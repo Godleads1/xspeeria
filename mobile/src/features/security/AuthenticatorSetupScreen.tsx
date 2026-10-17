@@ -5,14 +5,14 @@
  */
 
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { QrCode } from './QrCode';
 import { RecoveryCodes } from './RecoveryCodes';
 import { otpauthUri } from './totp';
@@ -136,7 +136,7 @@ export function AuthenticatorSetupScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -161,4 +161,4 @@ const styles = StyleSheet.create({
     ...brandWeight('700'),
   },
   error: { ...typography.caption, color: color.error.text },
-});
+}));

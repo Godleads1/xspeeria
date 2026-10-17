@@ -54,6 +54,12 @@ export const color = {
   brand: {
     /** Logo navy, DEC-006. 15.30:1 on canvas; white on it is also 15.30:1. */
     primary: palette.navy900,
+    /**
+     * Brand FILL behind `text.onFill` (avatars, FAB, selected day, chat bubble). Equal to
+     * `primary` in light; in dark the two split, because no single blue can be both
+     * readable text on a dark canvas and a fill that keeps white text readable (DEC-016).
+     */
+    fill: palette.navy900,
     /** Light navy tint behind `brand.primary` text (pills). Navy on it ≈ 10.8:1. */
     tint: palette.navy100,
     /** Very light blue card surface (Figma FAQ "Getting Started"). Not a text colour. */
@@ -136,6 +142,80 @@ export const interaction = {
   },
 } as const;
 
+/** Same keys as `color`, any value. Both schemes must satisfy it. */
+export type ColorScheme = { readonly [G in keyof typeof color]: { readonly [K in keyof (typeof color)[G]]: string } };
+export type InteractionScheme = {
+  readonly [G in keyof typeof interaction]: { readonly [K in keyof (typeof interaction)[G]]: string };
+};
+
+/**
+ * DARK scheme (DEC-016, 2026-10-17; ADR-010). Same roles as `color`; contrast pairs are
+ * asserted in tokens.test.ts. Decorative and Figma-image colours are unchanged.
+ */
+export const colorDark: ColorScheme = {
+  bg: {
+    canvas: palette.night950,
+    sunken: palette.night900,
+    /** Lifted card surface for the Home hero; white on it 14.9:1. */
+    inverse: palette.night850,
+    overlay: palette.scrimDark,
+  },
+  text: {
+    primary: palette.slate100,
+    secondary: palette.slate300,
+    disabled: palette.slate600,
+    onFill: palette.white,
+  },
+  border: {
+    subtle: palette.night800,
+    strong: palette.slate500,
+    focus: palette.periwinkle300,
+  },
+  brand: {
+    primary: palette.periwinkle300,
+    fill: palette.royal600,
+    tint: palette.night700,
+    secondarySurface: palette.night600,
+    secondary: palette.blue400,
+    secondaryText: palette.blue300,
+  },
+  success: {
+    fill: palette.emerald500,
+    surface: palette.emeraldNight,
+    border: palette.emerald400,
+    text: palette.emerald300,
+  },
+  warning: {
+    fill: palette.amber500,
+    surface: palette.amberNight,
+    border: palette.amber400,
+    text: palette.amber300,
+  },
+  error: {
+    fill: palette.red500,
+    surface: palette.redNight,
+    border: palette.red400,
+    text: palette.red300,
+  },
+  decorative: color.decorative,
+  trade: {
+    sell: palette.logoGreenBright,
+    sellSurface: palette.logoGreenNight,
+    advert: palette.advertSky,
+  },
+};
+
+export const interactionDark: InteractionScheme = {
+  primary: {
+    default: palette.royal600,
+    hover: palette.royal500,
+    pressed: palette.royal700,
+    focus: palette.periwinkle300,
+    disabledFill: palette.slate800,
+    disabledLabel: palette.slate600,
+  },
+};
+
 export const space = {
   xs: scale.s2,
   sm: scale.s3,
@@ -184,7 +264,7 @@ export const font = {
   },
 } as const;
 
-export const tokens = { color, interaction, space, radius, font } as const;
+export const tokens = { color, colorDark, interaction, interactionDark, space, radius, font } as const;
 
 export type Tokens = typeof tokens;
 export type ColorTokens = typeof color;

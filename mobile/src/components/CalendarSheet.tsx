@@ -10,10 +10,10 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 import { Icon } from './icons';
-import { brandWeight, color, typography } from '../theme';
+import { brandWeight, color, typography, themed } from '../theme';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -163,7 +163,7 @@ export function CalendarSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   scrim: { flex: 1, backgroundColor: color.bg.overlay },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 16, padding: 10, gap: 8 },
   card: { backgroundColor: color.bg.canvas, borderRadius: 16, padding: 16, gap: 10 },
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  daySelected: { backgroundColor: color.brand.primary },
+  daySelected: { backgroundColor: color.brand.fill },
   dayText: { ...typography.body, color: color.text.primary },
   dayTextSelected: { ...brandWeight('700'), color: color.text.onFill },
   dayDisabled: { color: color.text.disabled },
@@ -186,4 +186,4 @@ const styles = StyleSheet.create({
   clearText: { ...typography.body, ...brandWeight('500'), color: color.brand.primary },
   cancel: { backgroundColor: color.bg.canvas, borderRadius: 16, minHeight: 56, alignItems: 'center', justifyContent: 'center' },
   cancelText: { ...typography.body, fontSize: 17, color: color.error.text },
-});
+}));

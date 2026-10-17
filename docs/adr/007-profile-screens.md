@@ -61,7 +61,7 @@
 | "Jeremiah Philips", photo avatar | "David Peters", initials avatar | One mock person across Home and Profile; no profile photos yet |
 | Coloured 3D icons per row | Original colour icons in the same style (`src/components/menuIcons.tsx`: gradients, highlight, ground shadow), one per row | The Figma artwork could not be exported (view-only); product owner chose "create yours instead", 2026-10-17. Ours, so no third-party licence needed |
 | FAQ subtitle "Get support or send feedback" (duplicate of Contact Support) | "Find answers to common questions" | Placeholder correction |
-| Working Light/Dark switch | Switch shown **disabled**, subtitle "Dark mode is coming soon" | No dark palette exists yet; a switch that did nothing would mislead |
+| Working Light/Dark switch | ~~Switch shown disabled~~ → **working switch** (ADR-010, DEC-016) | Dark palette added 2026-10-17 |
 | Delete Profile (one tap) | Confirmation dialog that explains consequences; nothing is deleted yet | Irreversible action; account closure must handle open trades and legal record retention |
 | Phone "+238938383838" | `+234 803 838 3838` | Placeholder correction (Nigerian format) |
 | Beneficiary account "920298299309" in full | `•••• 9309` (last 4 only; the device never holds the full number) | Security rule: never show or store full bank account numbers on the client |

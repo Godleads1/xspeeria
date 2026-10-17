@@ -10,10 +10,10 @@
  */
 
 import type { ReactElement } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Body, Card, Caption, Screen, StatusChip, Title } from '../../components/primitives';
-import { space } from '../../theme';
+import { space, themed } from '../../theme';
 
 export function ComingSoonScreen(): ReactElement {
   return (
@@ -35,6 +35,6 @@ export function ComingSoonScreen(): ReactElement {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   header: { gap: space.xs, alignItems: 'flex-start' },
-});
+}));

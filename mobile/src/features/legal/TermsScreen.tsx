@@ -5,11 +5,11 @@
  */
 
 import type { ReactElement } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { PRIVACY_POLICY, type PolicyBlock, type PolicyDocument } from './privacyPolicy';
 
 const EMAIL = /([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/;
@@ -78,7 +78,7 @@ export function TermsScreen({ onBack, doc = PRIVACY_POLICY }: { onBack: () => vo
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -93,4 +93,4 @@ const styles = StyleSheet.create({
   bullet: { flexDirection: 'row', gap: 6 },
   bulletText: { flex: 1 },
   link: { color: color.brand.primary, textDecorationLine: 'underline' },
-});
+}));

@@ -19,7 +19,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { Amount, Caption, Divider, EmptyState } from '../../components/primitives';
 import type { ActivityItem } from '../../fixtures';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from './SectionLabel';
 import { StatusPill } from './StatusPill';
 
@@ -94,7 +94,7 @@ export function ActivityList({
 
 const GLYPH = 44;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   section: { gap: space.sm },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   /** Brand primary as link text, 15.30:1 on canvas. */
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   title: { ...typography.rowLabel, color: color.text.primary },
   side: { alignItems: 'flex-end', gap: space.xs },
   nextAction: { ...typography.caption, ...brandWeight('500'), color: color.brand.secondaryText },
-});
+}));

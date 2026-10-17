@@ -5,18 +5,19 @@
  */
 
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { StatusTone } from '../../components/primitives';
-import { color, typography } from '../../theme';
+import { color, typography, themed } from '../../theme';
 
-const TONE = {
+/** A function, not a constant: colours are read per render (light/dark). */
+const TONE = () => ({
   neutral: { surface: color.bg.sunken, text: color.text.secondary },
   success: { surface: color.success.surface, text: color.success.text },
   warning: { surface: color.warning.surface, text: color.warning.text },
   error: { surface: color.error.surface, text: color.error.text },
-} as const;
+} as const);
 
 function Glyph({ tone, tint }: { tone: StatusTone; tint: string }): ReactElement {
   const s = { stroke: tint, strokeWidth: 1.6, fill: 'none', strokeLinecap: 'round' as const };
@@ -31,7 +32,7 @@ function Glyph({ tone, tint }: { tone: StatusTone; tint: string }): ReactElement
 }
 
 export function StatusPill({ label, tone }: { label: string; tone: StatusTone }): ReactElement {
-  const palette = TONE[tone];
+  const palette = TONE()[tone];
   return (
     <View
       accessible
@@ -46,7 +47,7 @@ export function StatusPill({ label, tone }: { label: string; tone: StatusTone })
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -56,4 +57,4 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   label: { ...typography.caption, fontSize: 11, lineHeight: 14 },
-});
+}));

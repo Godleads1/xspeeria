@@ -24,8 +24,7 @@ import {
   numericTextStyle,
   radius,
   space,
-  typography,
-} from '../../theme';
+  typography, themed } from '../../theme';
 
 /* ------------------------------------------------------------------ Screen */
 
@@ -205,12 +204,13 @@ export function Card({
 
 export type StatusTone = 'neutral' | 'success' | 'warning' | 'error';
 
-const TONE = {
+/** A function, not a constant: colours are read per render (light/dark). */
+const TONE = () => ({
   neutral: { surface: color.bg.sunken, border: color.border.strong, text: color.text.secondary },
   success: { surface: color.success.surface, border: color.success.border, text: color.success.text },
   warning: { surface: color.warning.surface, border: color.warning.border, text: color.warning.text },
   error: { surface: color.error.surface, border: color.error.border, text: color.error.text },
-} as const;
+} as const);
 
 /**
  * Status is always carried by text, never by colour alone. The tone is additional
@@ -223,7 +223,7 @@ export function StatusChip({
   label: string;
   tone?: StatusTone;
 }): ReactElement {
-  const palette = TONE[tone];
+  const palette = TONE()[tone];
   return (
     <View
       accessible
@@ -299,7 +299,7 @@ export function ErrorState({
 
 /* ------------------------------------------------------------------ Styles */
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   screenContent: {
     paddingHorizontal: space.md,
@@ -363,4 +363,4 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: space.sm,
   },
-});
+}));

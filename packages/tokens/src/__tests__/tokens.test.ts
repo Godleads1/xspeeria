@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { color, font, interaction, radius, space, tokens } from '../index';
+import { color, colorDark, font, interaction, interactionDark, radius, space, tokens } from '../index';
 import * as entryPoint from '../index';
 
 /**
@@ -33,7 +33,8 @@ const DEPRECATED = [
 describe('semantic token presence', () => {
   it('exposes every approved semantic group', () => {
     expect(Object.keys(tokens).sort()).toEqual(
-      ['color', 'font', 'interaction', 'radius', 'space'].sort(),
+      // colorDark / interactionDark added by DEC-016 (dark mode, ADR-010).
+      ['color', 'colorDark', 'font', 'interaction', 'interactionDark', 'radius', 'space'].sort(),
     );
   });
 
@@ -231,5 +232,61 @@ describe('typography roles', () => {
   it('carries the Satoshi numeric role with tabular figures (DEC-010)', () => {
     expect(font.numeric.family).toBe('Satoshi');
     expect(font.numeric.tabular).toBe(true);
+  });
+});
+
+describe('dark scheme (DEC-016, ADR-010)', () => {
+  const keysOf = (o: Record<string, Record<string, string>>): string[] =>
+    Object.entries(o).flatMap(([g, v]) => Object.keys(v).map((k) => `${g}.${k}`)).sort();
+
+  it('has exactly the same roles as light', () => {
+    expect(keysOf(colorDark)).toEqual(keysOf(color));
+    expect(keysOf(interactionDark)).toEqual(keysOf(interaction));
+  });
+
+  it('every value is a hex colour and differs from light where the surface changes', () => {
+    for (const k of keysOf(colorDark)) {
+      const [g, r] = k.split('.') as [keyof typeof colorDark, string];
+      expect((colorDark[g] as Record<string, string>)[r]).toMatch(/^#[0-9A-F]{6}([0-9A-F]{2})?$/);
+    }
+    expect(colorDark.bg.canvas).not.toBe(color.bg.canvas);
+    expect(colorDark.text.primary).not.toBe(color.text.primary);
+  });
+
+  const canvas = colorDark.bg.canvas;
+  const sunken = colorDark.bg.sunken;
+
+  it('text meets WCAG AA (4.5:1) on canvas and sunken', () => {
+    for (const fg of [colorDark.text.primary, colorDark.text.secondary, colorDark.brand.primary, colorDark.brand.secondaryText]) {
+      expect(contrast(fg, canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(fg, sunken)).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const g of ['success', 'warning', 'error'] as const) {
+      expect(contrast(colorDark[g].text, canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(colorDark[g].text, colorDark[g].surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('white stays readable on dark fills', () => {
+    expect(contrast(colorDark.text.onFill, colorDark.brand.fill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, interactionDark.primary.default)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, interactionDark.primary.pressed)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.text.onFill, colorDark.bg.inverse)).toBeGreaterThanOrEqual(4.5);
+    // Sell button label is 19 pt bold: large-text threshold.
+    expect(contrast(colorDark.text.onFill, colorDark.trade.sell)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('pill and control boundaries stay visible', () => {
+    expect(contrast(colorDark.brand.primary, colorDark.brand.tint)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colorDark.border.strong, canvas)).toBeGreaterThanOrEqual(3);
+    expect(contrast(colorDark.border.focus, canvas)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('light keeps brand.fill equal to the logo navy', () => {
+    expect(color.brand.fill).toBe(color.brand.primary);
+  });
+
+  it('is exported on the tokens object', () => {
+    expect(tokens.colorDark).toBe(colorDark);
   });
 });

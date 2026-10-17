@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SelectMatchScreen } from '../../src/features/market/SelectMatchScreen';
 import { BUYABLE } from '../../src/features/market/data';
 import type { TradeRequest } from '../../src/features/market/MarketScreen';
+import { useThemeMode } from '../../src/theme';
 
 /**
  * Route params are untrusted input (deep links can set them), so they are re-validated
@@ -32,6 +33,7 @@ function parseParams(params: Record<string, string | string[] | undefined>): Tra
 }
 
 export default function SelectMatchRoute(): ReactElement | null {
+  useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const request = parseParams(useLocalSearchParams());
 

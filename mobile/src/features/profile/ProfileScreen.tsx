@@ -3,7 +3,7 @@
  *
  * Header (avatar, name, "Account details" ›), then the menu: Manage Beneficiaries, KYC and
  * limits, Security, FAQ, Contact Support, Referral Program, Terms and Conditions, the
- * Switch Mode row, and a red "Delete Profile". Rows whose screens are not built yet say so
+ * Switch Mode row (light/dark, ADR-010), and a red "Delete Profile". Rows whose screens are not built yet say so
  * instead of doing nothing. MOCK DATA ONLY.
  */
 
@@ -13,7 +13,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { MenuIcon, type MenuIconName } from '../../components/menuIcons';
 import { Screen } from '../../components/primitives';
-import { brandWeight, color, typography } from '../../theme';
+import { brandWeight, color, setThemeMode, typography, themed, useThemeMode } from '../../theme';
 import { PROFILE_USER } from './data';
 
 export type ProfileDestination =
@@ -84,6 +84,7 @@ export function ProfileScreen({
   onOpen?: (destination: ProfileDestination) => void;
 }): ReactElement {
   const user = PROFILE_USER;
+  const dark = useThemeMode() === 'dark';
 
   const open = (key: ProfileDestination, title: string): void => {
     if (onOpen) onOpen(key);
@@ -128,16 +129,22 @@ export function ProfileScreen({
           />
         ))}
 
-        <View style={styles.row} accessible accessibilityLabel="Switch Mode. Dark mode is coming soon">
+        <View style={styles.row}>
           <Badge icon="mode" />
           <View style={styles.rowDivided}>
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>Switch Mode</Text>
-              <Text style={styles.rowSubtitle}>Dark mode is coming soon</Text>
+              <Text style={styles.rowSubtitle}>Choose a light or dark appearance</Text>
             </View>
-            <Text style={styles.modeLabel}>Light Mode</Text>
-            {/* Disabled until a dark palette exists: a working-looking switch that did nothing would mislead. */}
-            <Switch testID="profile-mode" value={false} disabled />
+            <Text style={styles.modeLabel}>{dark ? 'Dark Mode' : 'Light Mode'}</Text>
+            <Switch
+              testID="profile-mode"
+              accessibilityLabel="Dark mode"
+              value={dark}
+              onValueChange={(on) => setThemeMode(on ? 'dark' : 'light')}
+              trackColor={{ true: color.brand.secondary, false: color.border.strong }}
+              thumbColor={color.text.onFill}
+            />
           </View>
         </View>
       </View>
@@ -158,7 +165,7 @@ export function ProfileScreen({
 const AVATAR = 70;
 const BADGE = 40;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,7 +179,7 @@ const styles = StyleSheet.create({
     width: AVATAR,
     height: AVATAR,
     borderRadius: AVATAR / 2,
-    backgroundColor: color.brand.primary,
+    backgroundColor: color.brand.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -208,4 +215,4 @@ const styles = StyleSheet.create({
   modeLabel: { ...typography.caption, color: color.text.secondary },
   delete: { alignSelf: 'center', paddingVertical: 12 },
   deleteText: { ...typography.body, ...brandWeight('700'), fontSize: 16, color: color.error.text },
-});
+}));

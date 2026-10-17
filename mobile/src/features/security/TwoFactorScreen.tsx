@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '../../components/icons';
 import { MenuIcon } from '../../components/menuIcons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { RecoveryCodes } from './RecoveryCodes';
 import type { StepUp } from './stepUp';
 import { RECOVERY_CODE_COUNT, twoFactor, useTwoFactor, type RandomBytes } from './twoFactorStore';
@@ -146,7 +146,7 @@ export function TwoFactorScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -175,4 +175,4 @@ const styles = StyleSheet.create({
   rules: { marginTop: space.md, gap: 6 },
   rule: { ...typography.caption, fontSize: 12, color: color.text.secondary },
   modalBody: { padding: space.md },
-});
+}));

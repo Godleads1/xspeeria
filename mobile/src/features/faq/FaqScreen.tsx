@@ -11,14 +11,15 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FAQ, FAQ_TOPICS, filterFaq, type FaqItem, type FaqTopic } from './data';
 
-const TOPIC_STYLE: Record<FaqTopic, { icon: IconName; bg: string; fg: string }> = {
+/** A function, not a constant: colours are read per render (light/dark). */
+const TOPIC_STYLE = (): Record<FaqTopic, { icon: IconName; bg: string; fg: string }> => ({
   start: { icon: 'bell', bg: color.brand.secondarySurface, fg: color.brand.secondaryText },
   sell: { icon: 'hexagon', bg: color.success.surface, fg: color.success.text },
   payments: { icon: 'dollar', bg: color.error.surface, fg: color.error.text },
-};
+});
 
 function QuestionCard({ item, open, onToggle }: { item: FaqItem; open: boolean; onToggle: () => void }): ReactElement {
   return (
@@ -89,7 +90,7 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topics}>
           {FAQ_TOPICS.map((t) => {
-            const st = TOPIC_STYLE[t.key];
+            const st = TOPIC_STYLE()[t.key];
             const selected = topic === t.key;
             return (
               <Pressable
@@ -138,7 +139,7 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
 
 const TOPIC_W = 152;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -185,4 +186,4 @@ const styles = StyleSheet.create({
   qRule: { height: StyleSheet.hairlineWidth, backgroundColor: color.border.subtle },
   answer: { ...typography.body, fontSize: 14, lineHeight: 21, color: color.text.secondary },
   empty: { ...typography.body, color: color.text.secondary, textAlign: 'center', marginTop: space.md },
-});
+}));

@@ -12,11 +12,11 @@
  */
 
 import type { ReactElement } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ErrorState, LoadingState, Screen } from '../../components/primitives';
 import type { ActivityItem, MarketRate, ReadinessDimension } from '../../fixtures';
-import { space } from '../../theme';
+import { space, themed } from '../../theme';
 import { AccountReadiness } from './AccountReadiness';
 import { ActivityList } from './ActivityList';
 import { BestRateCard } from './BestRateCard';
@@ -82,8 +82,8 @@ export function HomeScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   body: { gap: space.md },
   /** Keeps the hero card above the rates panel it overlaps. */
   hero: { zIndex: 1, elevation: 8 },
-});
+}));

@@ -7,12 +7,12 @@
  */
 
 import { useMemo, useState, type ReactElement } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { DESTINATION_COUNTRIES, searchCountries, type DestinationCountry } from './data';
 
 export function SelectCountryScreen({
@@ -92,7 +92,7 @@ export function SelectCountryScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -124,4 +124,4 @@ const styles = StyleSheet.create({
   note: { ...typography.caption, fontSize: 12, color: color.text.secondary },
   empty: { ...typography.body, color: color.text.secondary, textAlign: 'center', marginTop: space.lg },
   footnote: { ...typography.caption, color: color.text.secondary, textAlign: 'center', marginTop: space.md },
-});
+}));

@@ -6,13 +6,13 @@
  */
 
 import { useState, type ReactElement } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ReferralArt } from './ReferralArt';
 import { REFERRAL, inviteMessage } from './data';
 
@@ -90,7 +90,7 @@ export function ReferralScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   countLabel: { ...typography.body, fontSize: 15, color: color.text.primary },
   countValue: { fontSize: 18, color: color.text.primary, ...brandWeight('700') },
   footer: { paddingHorizontal: space.md, paddingTop: space.xs },
-});
+}));

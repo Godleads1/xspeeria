@@ -7,12 +7,12 @@
  */
 
 import type { ReactElement } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { CURRENT_KYC_TIER, KYC_TIERS, groupThousands, type KycTier } from './data';
 
 function TierCard({
@@ -84,7 +84,7 @@ export function KycLimitsScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -105,4 +105,4 @@ const styles = StyleSheet.create({
   reqs: { gap: 2 },
   req: { ...typography.caption, fontSize: 11, color: color.text.primary },
   button: { marginTop: space.xs, paddingHorizontal: space.md },
-});
+}));

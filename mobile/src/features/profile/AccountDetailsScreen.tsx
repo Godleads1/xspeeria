@@ -13,7 +13,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { RoundFlag } from '../../components/flags';
 import { Icon, type IconName } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
 import { KYC_REGIONS, PROFILE_USER, formatRating, longDate } from './data';
@@ -102,7 +102,7 @@ export function AccountDetailsScreen({ onBack }: { onBack: () => void }): ReactE
 
 const AVATAR = 132;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   band: { height: 120, backgroundColor: color.border.subtle, paddingHorizontal: space.md },
   back: { width: 36, height: 36, justifyContent: 'center' },
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     borderRadius: AVATAR / 2,
     borderWidth: 4,
     borderColor: color.bg.canvas,
-    backgroundColor: color.brand.primary,
+    backgroundColor: color.brand.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -144,4 +144,4 @@ const styles = StyleSheet.create({
     borderBottomColor: color.border.subtle,
   },
   regionName: { flex: 1, ...typography.body, fontSize: 16, color: color.text.primary },
-});
+}));

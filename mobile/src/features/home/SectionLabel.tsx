@@ -4,9 +4,9 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
-import { color, typography } from '../../theme';
+import { color, typography, themed } from '../../theme';
 
 export function SectionLabel({ children }: { children: ReactNode }): ReactElement {
   return (
@@ -16,11 +16,11 @@ export function SectionLabel({ children }: { children: ReactNode }): ReactElemen
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   label: {
     ...typography.chipLabel,
     color: color.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-});
+}));

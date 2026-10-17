@@ -19,7 +19,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } f
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import type { MarketRate } from '../../fixtures';
-import { brandWeight, color, heroFigureStyle, radius } from '../../theme';
+import { brandWeight, color, heroFigureStyle, radius, themed } from '../../theme';
 import { formatRate, pairLabel } from './rate';
 
 /** The Figma frame every measurement below is taken from. */
@@ -188,7 +188,7 @@ export function BestRateCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   // The hero is the one raised surface on Home, as in Figma; ordinary cards stay flat.
   shadow: {
     borderRadius: radius.md,
@@ -211,4 +211,4 @@ const styles = StyleSheet.create({
   label: { ...brandWeight('700'), color: color.text.onFill },
   marks: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   figure: { ...heroFigureStyle, color: color.text.onFill },
-});
+}));

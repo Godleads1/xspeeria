@@ -9,9 +9,11 @@ import {
   MOCK_USER,
   READINESS_INCOMPLETE,
 } from '../../src/fixtures';
+import { useThemeMode } from '../../src/theme';
 
 /** Mock data only (DEC-008): no API, auth or money flow exists yet. */
 export default function HomeRoute(): ReactElement {
+  useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   return (
     <HomeScreen

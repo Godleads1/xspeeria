@@ -12,7 +12,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { MarketRate } from '../../fixtures';
-import { color, numericTextStyle, radius, space, typography } from '../../theme';
+import { color, numericTextStyle, radius, space, typography, themed } from '../../theme';
 import { groupDigits } from './rate';
 import { SectionLabel } from './SectionLabel';
 
@@ -57,7 +57,7 @@ export function MarketRates({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   // `bg.sunken` is never the sole separator: it is paired with a hairline border here.
   panel: {
     backgroundColor: color.bg.sunken,
@@ -77,4 +77,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 28 },
   pair: { ...typography.body, color: color.text.primary, flex: 1 },
   value: { ...typography.body, ...numericTextStyle, color: color.text.primary, flex: 1 },
-});
+}));

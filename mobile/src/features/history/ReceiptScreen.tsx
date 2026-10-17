@@ -15,7 +15,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { formatCompact, formatHundredths, quoteMinor } from '../market/money';
 import { COORDINATION_FEE_KOBO, type HistoryItem } from './data';
@@ -171,23 +171,22 @@ export function ReceiptScreen({ item, onClose }: { item: HistoryItem; onClose: (
   );
 }
 
-const PANEL = color.bg.sunken;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   topBar: { paddingHorizontal: space.md, paddingBottom: 4 },
   close: { width: 36, height: 36, justifyContent: 'center' },
   content: { paddingHorizontal: space.md, gap: space.md },
   ticket: { borderRadius: 18, overflow: 'hidden' },
-  ticketHead: { backgroundColor: PANEL, paddingVertical: 28, alignItems: 'center', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
+  ticketHead: { backgroundColor: color.bg.sunken, paddingVertical: 28, alignItems: 'center', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
   status: { ...brandWeight('700'), fontSize: 18, color: color.text.primary, letterSpacing: 0.3 },
   statusFailed: { color: color.error.text },
-  tear: { flexDirection: 'row', alignItems: 'center', backgroundColor: PANEL, height: 16 },
+  tear: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.bg.sunken, height: 16 },
   notch: { width: 16, height: 16, borderRadius: 8, backgroundColor: color.bg.canvas },
   notchLeft: { marginLeft: -8 },
   notchRight: { marginRight: -8 },
   dash: { flex: 1, height: 0, borderTopWidth: 1, borderStyle: 'dashed', borderColor: color.border.strong, opacity: 0.4, marginHorizontal: 4 },
-  ticketBody: { backgroundColor: PANEL, paddingHorizontal: space.sm, paddingVertical: space.sm, gap: 14 },
+  ticketBody: { backgroundColor: color.bg.sunken, paddingHorizontal: space.sm, paddingVertical: space.sm, gap: 14 },
   line: { flexDirection: 'row', alignItems: 'center' },
   lineLabel: { ...typography.body, fontSize: 14, color: color.text.secondary, width: 150 },
   lineValue: { ...typography.body, fontSize: 14, color: color.text.primary, flex: 1 },
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
   section: { gap: space.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border.subtle, paddingTop: space.sm },
   account: {
     flexDirection: 'row', alignItems: 'center', padding: space.sm, borderRadius: 8,
-    borderWidth: 1, borderColor: color.border.subtle, backgroundColor: PANEL,
+    borderWidth: 1, borderColor: color.border.subtle, backgroundColor: color.bg.sunken,
   },
   accountMain: { flex: 1, gap: 4 },
   accountName: { ...typography.body, ...brandWeight('500'), fontSize: 14, color: color.text.primary },
@@ -221,4 +220,4 @@ const styles = StyleSheet.create({
   stepLabel: { ...typography.body, fontSize: 15, color: color.text.primary },
   stepPending: { color: color.text.disabled },
   stepAt: { ...typography.caption, fontSize: 11, color: color.text.disabled },
-});
+}));

@@ -16,7 +16,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { Screen } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import {
   ActionSheet,
@@ -318,7 +318,7 @@ export function MarketScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   form: { gap: space.sm },
@@ -381,4 +381,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   advertImage: { width: '100%', height: '100%' },
-});
+}));

@@ -11,7 +11,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { ListingRow, RoundButton } from './controls';
 import { listingsFor, type Listing } from './data';
@@ -107,7 +107,7 @@ export function SelectMatchScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: {
     flexDirection: 'row',
@@ -144,4 +144,4 @@ const styles = StyleSheet.create({
   cancelPressed: { opacity: 0.9 },
   // White on error.fill (#EF4444) is 3.76:1: label is large text (19 pt bold).
   cancelLabel: { ...brandWeight('700'), fontSize: 19, color: color.text.onFill },
-});
+}));

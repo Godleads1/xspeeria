@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Icon } from '../../components/icons';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FAQ } from '../faq/data';
 import { AssistantAvatar } from './AssistantAvatar';
 import { FALLBACK, QUICK_REPLIES, bestAnswer, greeting, sensitiveWarning, type QuickReply } from './assistant';
@@ -218,7 +218,7 @@ export function SupportChatScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   assistantCol: { flex: 1, gap: 8, alignItems: 'flex-start' },
   bubble: { maxWidth: '85%', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20 },
   assistantBubble: { backgroundColor: color.bg.sunken, borderBottomLeftRadius: 6 },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: color.brand.primary, borderBottomRightRadius: 6 },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: color.brand.fill, borderBottomRightRadius: 6 },
   bubbleText: { ...typography.body, fontSize: 14, lineHeight: 21, color: color.text.primary },
   userText: { color: color.text.onFill },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -259,5 +259,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   input: { flex: 1, ...typography.body, fontSize: 14, color: color.text.primary, paddingVertical: 0 },
-  send: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.primary, alignItems: 'center', justifyContent: 'center' },
-});
+  send: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.fill, alignItems: 'center', justifyContent: 'center' },
+}));

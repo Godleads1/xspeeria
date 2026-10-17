@@ -13,7 +13,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { CalendarSheet } from '../../components/CalendarSheet';
 import { RoundFlag } from '../../components/flags';
 import { Screen } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ActionSheet, RoundButton } from '../market/controls';
 import { formatCompact } from '../market/money';
 import {
@@ -191,7 +191,7 @@ export function HistoryScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.xs },
   title: { ...typography.headline, ...brandWeight('700'), fontSize: 19, color: color.text.primary },
   dates: { flexDirection: 'row', gap: space.sm },
@@ -228,4 +228,4 @@ const styles = StyleSheet.create({
   failed: { color: color.error.text },
   rowDate: { ...typography.caption, fontSize: 11, color: color.text.primary },
   empty: { ...typography.body, color: color.text.secondary, textAlign: 'center', paddingVertical: space.lg },
-});
+}));

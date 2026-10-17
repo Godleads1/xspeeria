@@ -8,9 +8,11 @@
  */
 
 import type { TextStyle } from 'react-native';
-import { color, font, interaction, radius, space } from '@xspeeria/tokens';
+import { font, radius, space } from '@xspeeria/tokens';
 
-export { color, interaction, radius, space };
+export { radius, space };
+// Colours are LIVE (light/dark, DEC-016): see ./mode.
+export { color, interaction, themed, useThemeMode, getThemeMode, setThemeMode, loadSavedThemeMode, type ThemeMode } from './mode';
 
 /**
  * Brand face: Satoshi (DEC-010, 2026-10-17), as in the Figma mobile frames. Licensed under

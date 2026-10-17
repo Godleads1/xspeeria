@@ -11,10 +11,10 @@
  */
 
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '../../components/icons';
-import { color, typography } from '../../theme';
+import { color, typography, themed } from '../../theme';
 
 function HeaderButton({
   icon,
@@ -82,14 +82,14 @@ export function HomeHeader({
 
 const CONTROL = 44;
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
   avatar: {
     width: CONTROL,
     height: CONTROL,
     borderRadius: CONTROL / 2,
-    backgroundColor: color.brand.primary,
+    backgroundColor: color.brand.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -109,4 +109,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   controlPressed: { backgroundColor: color.bg.sunken },
-});
+}));

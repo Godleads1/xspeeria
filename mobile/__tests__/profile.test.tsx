@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+
+import { getThemeMode } from '../src/theme';
 import { Alert } from 'react-native';
 
 import { AccountDetailsScreen } from '../src/features/profile/AccountDetailsScreen';
@@ -37,9 +39,14 @@ describe('Profile (Figma 268:6134)', () => {
     }
   });
 
-  it('keeps the dark-mode switch disabled until a dark palette exists', async () => {
+  it('Switch Mode turns dark mode on and off (ADR-010)', async () => {
     await render(<ProfileScreen onOpen={jest.fn()} />);
-    expect(screen.getByTestId('profile-mode').props.disabled).toBe(true);
+    expect(screen.getByTestId('profile-mode').props.value).toBe(false);
+    await act(async () => fireEvent(screen.getByTestId('profile-mode'), 'valueChange', true));
+    expect(getThemeMode()).toBe('dark');
+    expect(screen.getByText('Dark Mode')).toBeTruthy();
+    await act(async () => fireEvent(screen.getByTestId('profile-mode'), 'valueChange', false));
+    expect(getThemeMode()).toBe('light');
   });
 
   it('asks before Delete Profile and never deletes in one tap', async () => {

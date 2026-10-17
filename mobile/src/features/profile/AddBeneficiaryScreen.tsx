@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
 import type { StepUp } from '../security/stepUp';
 import { beneficiaryStore } from './beneficiaryStore';
@@ -154,7 +154,7 @@ export function AddBeneficiaryScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
@@ -177,4 +177,4 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: color.error.text, marginTop: 4 },
   help: { ...typography.caption, color: color.text.secondary, marginTop: 6 },
   footer: { paddingHorizontal: space.md, paddingTop: space.xs },
-});
+}));

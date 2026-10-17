@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 
 import { Icon, type IconName } from '../../src/components/icons';
-import { color, typography } from '../../src/theme';
+import { color, typography, useThemeMode } from '../../src/theme';
 import { TABS, type TabName } from '../../src/navigation/tabs';
 
 /**
@@ -20,10 +20,12 @@ const ICON_FOR: Record<TabName, IconName> = {
 };
 
 export default function TabsLayout(): ReactElement {
+  useThemeMode(); // tab bar repaints on light/dark change (ADR-010)
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: color.bg.canvas },
         tabBarActiveTintColor: color.brand.primary,
         tabBarInactiveTintColor: color.text.secondary,
         // Figma paints the navigation bar on the soft surface, not the canvas.

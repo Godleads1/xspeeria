@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, typography } from '../../theme';
+import { brandWeight, color, space, typography, themed } from '../../theme';
 import { stepUpHostRegistry, usePendingStepUp } from './stepUp';
 import { twoFactor, useTwoFactor } from './twoFactorStore';
 
@@ -111,7 +111,7 @@ export function StepUpHost({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: {
     backgroundColor: color.bg.canvas,
@@ -138,4 +138,4 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: color.error.text },
   cancel: { alignSelf: 'center', paddingVertical: space.xs },
   cancelText: { ...typography.body, ...brandWeight('700'), color: color.error.text },
-});
+}));
