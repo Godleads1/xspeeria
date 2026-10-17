@@ -5,5 +5,5 @@ import { BeneficiariesScreen } from '../../src/features/profile/BeneficiariesScr
 
 export default function BeneficiariesRoute(): ReactElement {
   const router = useRouter();
-  return <BeneficiariesScreen onBack={() => router.back()} />;
+  return <BeneficiariesScreen onBack={() => router.back()} onAdd={() => router.push('/profile/add-beneficiary')} />;
 }

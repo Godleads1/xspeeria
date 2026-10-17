@@ -106,3 +106,29 @@ export function filterBeneficiaries(
     (b) => (filter === 'All' || b.currency === filter) && (q === '' || b.name.toLowerCase().includes(q)),
   );
 }
+
+/**
+ * Destination countries for a new beneficiary. Figma lists every country; payouts are
+ * domestic via a licensed partner in each corridor (Banking spec v1.1 §2), so only the
+ * documented corridors appear: NGN⇄GBP pilot, NGN⇄USD Year 2 (PRD "First Corridor").
+ * Adding a country is a product + compliance decision, not a UI change.
+ */
+export interface DestinationCountry {
+  readonly name: string;
+  readonly currency: string;
+  /** False = documented but not yet live; shown, not selectable. */
+  readonly available: boolean;
+  readonly note?: string;
+}
+
+export const DESTINATION_COUNTRIES: readonly DestinationCountry[] = [
+  { name: 'Nigeria', currency: 'NGN', available: true },
+  { name: 'United Kingdom', currency: 'GBP', available: true },
+  { name: 'United States', currency: 'USD', available: false, note: 'Coming in Year 2' },
+];
+
+export function searchCountries(list: readonly DestinationCountry[], query: string): DestinationCountry[] {
+  const q = query.trim().toLowerCase();
+  if (q === '') return [...list];
+  return list.filter((c) => c.name.toLowerCase().includes(q) || c.currency.toLowerCase().includes(q));
+}

@@ -20,6 +20,9 @@
 - **Manage Beneficiaries** (Profile → Manage Beneficiaries, amendment A1, 2026-10-17): back
   + title, "Search name", currency chips All · USD · NGN · GBP · GHS, saved payout accounts
   (initials avatar with a flag badge, name, account, bank, delete) and a navy "+" button.
+- **Select Destination Country** ("+" on Manage Beneficiaries, amendment A2, 2026-10-17):
+  back + "Manage Beneficiaries", heading, helper text, "Search country", and rows of round
+  flag · country · currency code.
 
 ## 2. Recorded deviations
 
@@ -34,6 +37,7 @@
 | Beneficiary account "920298299309" in full | `•••• 9309` (last 4 only; the device never holds the full number) | Security rule: never show or store full bank account numbers on the client |
 | Chip label "GHC" | "GHS" | The Ghana cedi's ISO 4217 code is GHS (GHC was retired in 2007) |
 | Trash icon deletes on tap | Confirmation dialog (Cancel / Delete) | Destructive action |
+| Destination list = every country (Afghanistan, Albania, … incl. "Antarctica — XCD") | Only documented corridors: Nigeria (NGN), United Kingdom (GBP) selectable; United States (USD) shown as "Coming in Year 2" | **Doc conflict, conservative choice:** PRD "First Corridor" and Banking spec v1.1 allow payouts only via licensed domestic partners in the NGN⇄GBP pilot and NGN⇄USD Year 2 corridors; a world list would offer unsupported and sanctioned destinations. Adding countries needs a product + compliance decision |
 
 ## 3. Open items
 
