@@ -15,6 +15,7 @@ import {
   type KeyboardTypeOptions,
 } from 'react-native';
 
+import { RoundFlag } from '../../components/flags';
 import { Icon, type IconName } from '../../components/icons';
 import { brandWeight, color, numericTextStyle, space, typography } from '../../theme';
 import type { Currency, Listing } from './data';
@@ -158,7 +159,7 @@ export function CurrencyChip({ currency }: { currency: Currency }): ReactElement
       accessibilityLabel={`Paying in ${currency.name}`}
       style={styles.chip}
     >
-      <Text style={styles.flag}>{currency.flag}</Text>
+      <RoundFlag code={currency.code} size={20} />
       <Text style={styles.chipCode}>{currency.code}</Text>
     </View>
   );
@@ -194,7 +195,7 @@ export function CurrencySheet({
               onPress={() => onSelect(c)}
               style={({ pressed }) => [styles.sheetRow, pressed ? styles.roundPressed : null]}
             >
-              <Text style={styles.flag}>{c.flag}</Text>
+              <RoundFlag code={c.code} size={26} />
               <Text style={styles.sheetRowLabel}>{`${c.name} (${c.code})`}</Text>
             </Pressable>
           ))}
@@ -386,7 +387,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.border.subtle,
   },
-  flag: { fontSize: 18 },
   chipCode: { ...typography.caption, ...brandWeight('500'), color: color.text.primary },
 
   scrim: { flex: 1, backgroundColor: color.bg.overlay },

@@ -10,10 +10,10 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { RoundFlag } from '../../components/flags';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
 import { RoundButton } from '../market/controls';
-import { flagFor } from '../market/data';
 import { formatCompact } from '../market/money';
 import {
   HISTORY,
@@ -91,7 +91,8 @@ export function HistoryRow({
       onPress={() => onPress?.(item)}
       style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
     >
-      <Text style={styles.flag}>{flagFor(item.currency)}</Text>
+      <RoundFlag code={item.currency} size={26} />
+      <View style={styles.rowDivided}>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle}>
           {`You ${verb} `}
@@ -103,6 +104,7 @@ export function HistoryRow({
         </Text>
       </View>
       <Text style={styles.rowDate}>{displayDate(item.date)}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -179,17 +181,19 @@ const styles = StyleSheet.create({
   dateInvalid: { borderColor: color.error.border },
   dateInput: { flex: 1, ...typography.body, fontSize: 14, color: color.text.primary, paddingVertical: 8 },
   dateError: { ...typography.caption, color: color.error.text, marginTop: -8 },
-  row: {
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64 },
+  // Figma: the divider starts under the text, not under the flag.
+  rowDivided: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    minHeight: 64,
+    gap: 8,
+    alignSelf: 'stretch',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
   rowPressed: { backgroundColor: color.bg.sunken },
-  flag: { fontSize: 22 },
   rowMain: { flex: 1, gap: 2 },
   rowTitle: { ...typography.body, color: color.text.primary },
   rowAmount: { ...brandWeight('700'), color: color.text.primary },

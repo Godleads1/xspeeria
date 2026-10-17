@@ -13,6 +13,7 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography } from '../../theme';
@@ -143,9 +144,15 @@ export function MarketScreen({
         style={styles.select}
       >
         {side === 'buy' && buyCurrency ? (
-          <Text style={styles.selectValue}>{`${buyCurrency.flag}  ${buyCurrency.code}`}</Text>
+          <View style={styles.selectChoice}>
+            <RoundFlag code={buyCurrency.code} size={28} />
+            <Text style={styles.selectValue}>{buyCurrency.code}</Text>
+          </View>
         ) : side === 'sell' ? (
-          <Text style={styles.selectValue}>{`${receive.flag}  ${receive.code}`}</Text>
+          <View style={styles.selectChoice}>
+            <RoundFlag code={receive.code} size={28} />
+            <Text style={styles.selectValue}>{receive.code}</Text>
+          </View>
         ) : (
           <Text style={styles.selectPlaceholder}> </Text>
         )}
@@ -321,6 +328,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 52,
   },
+  selectChoice: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   selectValue: { ...typography.body, fontSize: 17, color: color.text.primary },
   selectPlaceholder: { ...typography.body },
   trend: { alignItems: 'flex-end', gap: 4, marginTop: -6 },

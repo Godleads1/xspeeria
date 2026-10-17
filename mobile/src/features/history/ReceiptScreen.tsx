@@ -13,10 +13,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
-import { flagFor } from '../market/data';
 import { formatCompact, formatHundredths, quoteMinor } from '../market/money';
 import { COORDINATION_FEE_KOBO, type HistoryItem } from './data';
 
@@ -93,7 +93,7 @@ export function ReceiptScreen({ item, onClose }: { item: HistoryItem; onClose: (
             <Line label="Transaction Reference" value={item.reference} />
             <View style={styles.corridor} accessible accessibilityLabel={`${fromCode} to ${toCode}`}>
               <View style={styles.side}>
-                <Text style={styles.bigFlag}>{flagFor(fromCode)}</Text>
+                <RoundFlag code={fromCode} size={40} />
                 <Text style={styles.code}>{fromCode}</Text>
               </View>
               <View style={styles.track}>
@@ -104,7 +104,7 @@ export function ReceiptScreen({ item, onClose }: { item: HistoryItem; onClose: (
                 <View style={styles.dotted} />
               </View>
               <View style={styles.side}>
-                <Text style={styles.bigFlag}>{flagFor(toCode)}</Text>
+                <RoundFlag code={toCode} size={40} />
                 <Text style={styles.code}>{toCode}</Text>
               </View>
             </View>
@@ -196,7 +196,6 @@ const styles = StyleSheet.create({
   detailsTitle: { ...typography.body, ...brandWeight('500'), fontSize: 17, color: color.text.primary },
   corridor: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   side: { alignItems: 'center', gap: 4, width: 56 },
-  bigFlag: { fontSize: 32 },
   code: { ...brandWeight('700'), fontSize: 16, color: color.text.primary },
   track: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   dotted: { flex: 1, height: 0, borderTopWidth: 1.5, borderStyle: 'dotted', borderColor: color.border.strong, opacity: 0.4 },
