@@ -1,14 +1,13 @@
 /**
  * Welcome (Figma 33:1367), ADR-013. Swipeable intro slides with the four progress bars,
  * "Open a free profile" and "I have a profile". Slide 1 is Figma's copy; slides 2–4 are
- * drawn from the approved model and need marketing/legal review. The Figma stock photo
- * is replaced by the Xspeeria logo with a decorative ring (licence not confirmed).
+ * drawn from the approved model and need marketing/legal review. The Figma photo
+ * artwork is used as exported from the design file; its licence must be confirmed before release.
  */
 
 import { useState, type ReactElement } from 'react';
 import { Image, ScrollView, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
@@ -22,25 +21,10 @@ export const SLIDES = [
 ] as const;
 
 function Hero(): ReactElement {
+  // Figma 55:2061 artwork, taken from the design file at 1× (licence to confirm; ADR-013).
   return (
     <View style={styles.hero} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Svg width={260} height={220} viewBox="0 0 260 220" style={styles.heroArt}>
-        <Defs>
-          <RadialGradient id="w-glow" cx="0.5" cy="0.55" r="0.5">
-            <Stop offset="0" stopColor="#7C3AED" stopOpacity="0.35" />
-            <Stop offset="1" stopColor="#7C3AED" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={130} cy={115} r={105} fill="url(#w-glow)" />
-        <Ellipse cx={130} cy={175} rx={95} ry={18} fill="none" stroke="#A78BFA" strokeWidth={3} opacity={0.7} />
-        <Ellipse cx={130} cy={175} rx={78} ry={12} fill="none" stroke="#C4B5FD" strokeWidth={1.5} opacity={0.6} />
-        <Circle cx={212} cy={58} r={20} fill="#A5F3FC" opacity={0.9} />
-        <Circle cx={232} cy={92} r={10} fill="#CFFAFE" opacity={0.9} />
-      </Svg>
-      {/* White backing keeps the navy logo legible in dark mode (invisible in light). */}
-      <View style={styles.logoBacking}>
-        <Image source={require('../../../../assets/brand/xspeeria-logo.png')} style={styles.logo} resizeMode="contain" />
-      </View>
+      <Image testID="welcome-hero" source={require('../../../assets/images/welcome-hero.png')} style={styles.heroImage} resizeMode="contain" />
     </View>
   );
 }
@@ -83,9 +67,7 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
 const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas, paddingHorizontal: space.md },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 220 },
-  heroArt: { position: 'absolute' },
-  logoBacking: { backgroundColor: '#FFFFFF', borderRadius: 28, paddingHorizontal: 18, paddingVertical: 6 },
-  logo: { width: 170, height: 120 },
+  heroImage: { width: 300, height: 314 },
   slides: { flexGrow: 0 },
   slide: { gap: 10 },
   title: { ...typography.headline, ...brandWeight('700'), fontSize: 22, color: color.text.primary },

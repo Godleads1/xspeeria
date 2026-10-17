@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
 import { StepUpHost } from '../src/features/security/StepUpHost';
+import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { session, useSession } from '../src/features/auth/session';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useThemeMode } from '../src/theme';
 
@@ -27,6 +28,8 @@ export default function RootLayout(): ReactElement | null {
   const ready = fontsReady && modeReady;
   const mode = useThemeMode();
   const { signedIn } = useSession();
+  // Figma's first screen: the logo splash stays briefly after the native one hides.
+  const [launching, setLaunching] = useState(true);
   useApplyScreenCapturePreference();
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export default function RootLayout(): ReactElement | null {
 
   return (
     <>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={mode === 'dark' && !launching ? 'light' : 'dark'} />
       {/* ADR-013: the app is reachable only when signed in; otherwise welcome / log in / sign-up. */}
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas } }}>
         <Stack.Protected guard={signedIn}>
@@ -53,6 +56,7 @@ export default function RootLayout(): ReactElement | null {
       </Stack>
       {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
       {signedIn ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
+      {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}
     </>
   );
 }

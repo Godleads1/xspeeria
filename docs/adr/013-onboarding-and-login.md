@@ -28,6 +28,12 @@ The signed-in app moved into the `(app)` route group (URLs unchanged). The root 
 `Stack.Protected`: signed out → only welcome / log-in / sign-up / public Terms; signed in →
 only the app. Profile gains **Log out** (with confirmation).
 
+## 1a. Launch
+
+The Figma splash (33:1355, logo on `#F8F9FD`) is the first screen: the native splash shows
+while fonts load, then the same picture stays for 1.2 s (`LaunchSplash`) and fades into
+Welcome, or Home when signed in.
+
 ## 2. Demo mode (`src/features/auth/demo.ts`, `DEMO_MODE = true`)
 
 No backend, NIN/identity provider, SMS or email service exists, so:
@@ -58,7 +64,7 @@ No backend, NIN/identity provider, SMS or email service exists, so:
 
 | Figma | Implementation | Why |
 |---|---|---|
-| Stock photo of a woman on Welcome | Xspeeria logo with decorative ring | Photo licence not confirmed |
+| Photo of a woman on Welcome | **Used (2026-10-17, product owner request)**: taken from the Figma frame at 1× (`assets/images/welcome-hero.png`, white background removed). Export at 3× for sharpness. **Licence must be confirmed before release** (likely stock imagery) |
 | One welcome slide, four progress bars | Four slides; slides 2–4 written from the approved model | Bars implied slides; copy needs marketing/legal review |
 | Date of birth "select" with calendar | Typed DD/MM/YYYY | Month-by-month calendar is impractical for birth years |
 | Details: "Babatunde Peter", 14 May 1998 | Sample NIN record (David Peters) | One demo person across the app |

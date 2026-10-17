@@ -19,44 +19,76 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { Icon, type IconName } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { Chip, Contactless } from '../home/BestRateCard';
-import { CardArt, type CardPalette } from './CardArt';
 
 /** Card artwork colours (illustration, like flags.tsx — not UI tokens). */
 interface CardDesign {
   readonly currency: 'USD' | 'EUR' | 'NGN';
   readonly symbol: string;
-  readonly palette: CardPalette;
+  readonly from: string;
+  readonly to: string;
+  readonly glow: string;
 }
 
 export const CARD_DESIGNS: readonly CardDesign[] = [
-  { currency: 'USD', symbol: '$', palette: { base: '#0B3A66', edge: '#04111F', glow: '#38A9F8', hot: '#D6F1FF' } },
-  { currency: 'EUR', symbol: '€', palette: { base: '#0E5A3A', edge: '#03140C', glow: '#2EE59D', hot: '#D9FFF0' } },
-  { currency: 'NGN', symbol: '₦', palette: { base: '#5B2A8C', edge: '#13061F', glow: '#C58BFF', hot: '#F3E6FF' } },
+  { currency: 'USD', symbol: '$', from: '#0B2A4F', to: '#03101F', glow: '#38BDF8' },
+  { currency: 'EUR', symbol: '€', from: '#0E4A2E', to: '#04160D', glow: '#34D399' },
+  { currency: 'NGN', symbol: '₦', from: '#4A1D7A', to: '#160828', glow: '#C084FC' },
 ];
 
 export const CARDS_UNAVAILABLE = 'Xspeeria cards are not available yet. We will let you know when you can create one.';
 
-function Card({ design, width }: { design: CardDesign; width: number }): ReactElement {
-  const height = Math.round(width / 1.59);
+function CardArt({ design, width }: { design: CardDesign; width: number }): ReactElement {
+  const height = Math.round(width * 0.62);
+  const id = `card-${design.currency}`;
+  // Constellation dots around the symbol, echoing the Figma "network" glyph.
+  const dots = Array.from({ length: 18 }, (_, i) => {
+    const a = (i / 18) * Math.PI * 2;
+    const r = 34 + ((i * 7) % 11);
+    return { x: 250 + Math.cos(a) * r, y: 92 + Math.sin(a) * r * 1.15, k: i };
+  });
   return (
-    <View style={[cardStyles.card, { width, height }]}>
-      <CardArt id={`card-${design.currency}`} symbol={design.symbol} palette={design.palette} width={width} height={height} />
-      <View style={cardStyles.layer} pointerEvents="none">
+    <View style={{ width, height, borderRadius: 18, overflow: 'hidden' }}>
+      <Svg width={width} height={height} viewBox="0 0 340 210" preserveAspectRatio="xMidYMid slice">
+        <Defs>
+          <LinearGradient id={`${id}-bg`} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={design.from} />
+            <Stop offset="1" stopColor={design.to} />
+          </LinearGradient>
+          <RadialGradient id={`${id}-glow`} cx="0.73" cy="0.45" r="0.45">
+            <Stop offset="0" stopColor={design.glow} stopOpacity="0.45" />
+            <Stop offset="1" stopColor={design.glow} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Rect width={340} height={210} fill={`url(#${id}-bg)`} />
+        <Rect width={340} height={210} fill={`url(#${id}-glow)`} />
+        {dots.map((d) => (
+          <Circle key={d.k} cx={d.x} cy={d.y} r={1.3} fill={design.glow} opacity={0.8} />
+        ))}
+        <SvgText x={250} y={140} fontSize={130} fontWeight="bold" textAnchor="middle" fill="none" stroke={design.glow} strokeWidth={2.2} opacity={0.95}>
+          {design.symbol}
+        </SvgText>
+        <SvgText x={250} y={140} fontSize={130} fontWeight="bold" textAnchor="middle" fill={design.glow} opacity={0.18}>
+          {design.symbol}
+        </SvgText>
+        <Path d="M215 170h70" stroke={design.glow} strokeWidth={2} opacity={0.6} strokeLinecap="round" />
+      </Svg>
+      <View style={[cardStyles.layer, { padding: 18 }]} pointerEvents="none">
         <Text style={cardStyles.virtual}>Virtual Card</Text>
-        <View style={cardStyles.chip}>
-          <Chip size={Math.round(width * 0.105)} />
+        <View style={cardStyles.marks}>
+          <Chip size={40} />
         </View>
-        <View style={[cardStyles.contactless, { left: width * 0.8, top: height * 0.38 }]}>
-          <Contactless size={Math.round(width * 0.075)} />
+        <View style={cardStyles.contactless}>
+          <Contactless size={34} />
         </View>
         <View style={cardStyles.bottom}>
-          <Text style={cardStyles.number}>**** **** **** ****</Text>
-          <Text style={cardStyles.amount}>Preview · {design.currency}</Text>
+          <Text style={cardStyles.number}>•••• •••• •••• ••••</Text>
+          <Text style={cardStyles.preview}>Preview · {design.currency}</Text>
         </View>
       </View>
     </View>
@@ -115,7 +147,7 @@ export function CardsScreen({ onCreate }: { onCreate?: () => void }): ReactEleme
         >
           {CARD_DESIGNS.map((d) => (
             <View key={d.currency} testID={`card-${d.currency}`} accessible accessibilityLabel={`${d.currency} virtual card design, preview. Cards are not available yet.`}>
-              <Card design={d} width={cardW} />
+              <CardArt design={d} width={cardW} />
             </View>
           ))}
         </ScrollView>
@@ -147,14 +179,13 @@ export function CardsScreen({ onCreate }: { onCreate?: () => void }): ReactEleme
 }
 
 const cardStyles = themed(() => ({
-  card: { borderRadius: 14, overflow: 'hidden', backgroundColor: '#000000' },
-  layer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, paddingHorizontal: 18, paddingVertical: 16 },
+  layer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   virtual: { ...brandWeight('700'), fontSize: 13, color: '#FFFFFF' },
-  chip: { position: 'absolute', left: 18, top: '38%' },
-  contactless: { position: 'absolute' },
-  bottom: { position: 'absolute', left: 18, bottom: 14, gap: 4 },
-  number: { ...brandWeight('500'), fontSize: 12, letterSpacing: 1.2, color: '#FFFFFF', opacity: 0.8 },
-  amount: { ...brandWeight('700'), fontSize: 21, color: '#FFFFFF' },
+  marks: { marginTop: 22 },
+  contactless: { position: 'absolute', right: 16, top: '42%' },
+  bottom: { position: 'absolute', left: 18, bottom: 16, gap: 4 },
+  number: { ...brandWeight('500'), fontSize: 13, letterSpacing: 1.5, color: '#FFFFFF', opacity: 0.85 },
+  preview: { ...brandWeight('700'), fontSize: 20, color: '#FFFFFF' },
 }));
 
 const styles = themed(() => ({
