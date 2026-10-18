@@ -5,10 +5,9 @@ Every route needs a signed-in, 2FA-verified user (``CurrentPrincipal``) and, unt
 provider exists, the local-only KYC bypass (ADR-029 §KYC). Offers are records of intent,
 not money.
 
-No per-address limit here: the sign-in limiter (10 a minute per address, ADR-025) is shared,
-so browsing the market would lock people out of logging in, and many Nigerian mobile users
-share one carrier address. A per-user limit for these routes is still to be decided
-(ADR-030, SEC-011).
+Limits: not the sign-in limiter (10 a minute per address, ADR-025), which is shared with
+log-in and with everyone behind one carrier address (ADR-030 §2), but 60 requests a minute per
+signed-in user (ADR-031).
 """
 
 from __future__ import annotations
@@ -23,24 +22,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth_deps import (
     CurrentPrincipal,
     get_auth_runtime,
+    get_auth_service,
     get_db_session,
 )
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.schemas.offers import (
+    AcceptRequest,
     CreateOfferRequest,
     ListingsResponse,
+    MatchResponse,
     OfferResponse,
     UpdateRateRequest,
 )
-from app.services.auth import AuthRuntime, Principal
+from app.services.auth import AuthRuntime, AuthService, Principal
+from app.services.matches import MatchService
 from app.services.offers import OfferService
 
-__all__ = ["marketplace_router", "router"]
+__all__ = ["marketplace_router", "matches_router", "router"]
 
 marketplace_router = APIRouter(prefix="/api/v1/marketplace", tags=["marketplace"])
 router = APIRouter(prefix="/api/v1/offers", tags=["offers"])
+matches_router = APIRouter(prefix="/api/v1/matches", tags=["matches"])
 
 
 async def get_offer_service(
@@ -51,9 +55,21 @@ async def get_offer_service(
 
 
 async def kyc_approved(
-    principal: CurrentPrincipal, settings: Annotated[Settings, Depends(get_app_settings)]
+    principal: CurrentPrincipal,
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> Principal:
-    """No KYC provider is connected yet, so nobody is approved except under the local bypass."""
+    """Per-user request limit, then KYC.
+
+    No KYC provider is connected yet, so nobody is approved except under the local bypass.
+    """
+    if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
+        raise AppError(
+            "AUTH_429_RATE_LIMITED",
+            "Too many requests. Please wait a moment and try again.",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            details={"retry_after_seconds": 60},
+        )
     if settings.kyc_dev_bypass and settings.app_env == "local":
         return principal
     raise AppError(
@@ -66,6 +82,18 @@ async def kyc_approved(
 Service = Annotated[OfferService, Depends(get_offer_service)]
 Verified = Annotated[Principal, Depends(kyc_approved)]
 IdempotencyKey = Annotated[uuid.UUID, Header(alias="Idempotency-Key")]
+StepUpToken = Annotated[str | None, Header(alias="X-Step-Up-Token", max_length=128)]
+
+
+async def get_match_service(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> MatchService:
+    return MatchService(db, runtime.clock)
+
+
+Matches = Annotated[MatchService, Depends(get_match_service)]
+Auth = Annotated[AuthService, Depends(get_auth_service)]
 
 
 @router.post(
@@ -135,3 +163,38 @@ async def update_rate(
 @router.delete("/{offer_id}", response_model=OfferResponse, summary="Withdraw my offer")
 async def withdraw(offer_id: uuid.UUID, principal: Verified, service: Service) -> Any:
     return await service.withdraw(principal, offer_id)
+
+
+@router.post(
+    "/{offer_id}/accept",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MatchResponse,
+    summary="Take some or all of an offer (needs an authenticator approval for trade.accept)",
+)
+async def accept_offer(
+    offer_id: uuid.UUID,
+    body: AcceptRequest,
+    principal: Verified,
+    matches: Matches,
+    auth: Auth,
+    key: IdempotencyKey,
+    step_up_token: StepUpToken = None,
+) -> Any:
+    """Records a Match; no money moves. Same key + same request returns the first answer."""
+
+    async def confirm() -> None:
+        # Shares this request's database session, so the approval is spent in the same commit.
+        await auth.consume_step_up(principal, "trade.accept", step_up_token)
+
+    result = await matches.accept(principal, offer_id, key, body.accepted_amount, confirm)
+    return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@matches_router.get("/mine", response_model=list[MatchResponse], summary="My matches")
+async def my_matches(principal: Verified, matches: Matches) -> Any:
+    return await matches.mine(principal)
+
+
+@matches_router.get("/{match_id}", response_model=MatchResponse, summary="One match")
+async def get_match(match_id: uuid.UUID, principal: Verified, matches: Matches) -> Any:
+    return await matches.get(principal, match_id)

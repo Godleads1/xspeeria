@@ -10,6 +10,7 @@ from app.domain.offer_rules import (
     MINIMUM_MINOR,
     OFFICIAL_RATE,
     OfferInputError,
+    below_minimum,
     parse_amount_minor,
     parse_pair,
     parse_rate,
@@ -50,6 +51,16 @@ class TestAmount:
     @pytest.mark.parametrize("text", ["10.001", "1e3", "-10", "", " 10", "10.", "1,000", "١٠"])
     def test_malformed_refused_never_rounded(self, text: str) -> None:
         assert _code(parse_amount_minor, text, "USD") == "VALIDATION_ERROR"
+
+
+class TestAcceptAmount:
+    def test_without_minimum_only_positive_is_checked(self) -> None:
+        assert parse_amount_minor("4.00", "USD", minimum=False) == 400
+        assert _code(parse_amount_minor, "0.00", "USD") == "VALIDATION_ERROR"
+
+    def test_below_minimum_names_the_currency(self) -> None:
+        e = below_minimum("NGN")
+        assert e.code == "VAL_422_AMOUNT_BELOW_MINIMUM" and "10,000.00 NGN" in e.message
 
 
 class TestRate:

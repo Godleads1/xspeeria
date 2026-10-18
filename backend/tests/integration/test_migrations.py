@@ -50,11 +50,12 @@ APPROVED_TABLES = {
     "step_up_grants",
     "offers",
     "idempotency_records",
+    "matches",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
 # Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
-# 4.1C offers (ADR-029) -> "0006".
-EXPECTED_HEAD = "0006"
+# 4.1C offers (ADR-029) -> "0006"; 4.1D matches (ADR-031) -> "0007".
+EXPECTED_HEAD = "0007"
 
 
 def _config(database_url: str) -> Config:
@@ -197,7 +198,6 @@ class TestMetadataDriftGuard:
 
     def test_no_domain_table_is_declared_anywhere(self) -> None:
         forbidden = {
-            "matches",
             "transactions",
             "settlements",
             "settlement_legs",
@@ -205,7 +205,9 @@ class TestMetadataDriftGuard:
             "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
-        }  # "users" left with AUTH-1 (ADR-025); "offers", "idempotency_records" with 4.1C (ADR-029)
+        }
+        # "users" left with AUTH-1 (ADR-025); "offers", "idempotency_records" with 4.1C
+        # (ADR-029); "matches" with 4.1D (ADR-031)
         leaked = set(Base.metadata.tables) & forbidden
         assert not leaked, f"domain tables declared before their approved batch: {sorted(leaked)}"
 
@@ -293,14 +295,14 @@ class TestAlembicModelDiscovery:
 
     def test_env_py_import_chain_registers_no_future_table(self) -> None:
         forbidden = {
-            "matches",
             "transactions",
             "settlements",
             "settlement_legs",
             "payout_executions",
             "kyc_cases",
             "kyc_profiles",
-            "beneficiary_accounts",  # users: AUTH-1; offers, idempotency_records: 4.1C
+            # users: AUTH-1; offers, idempotency_records: 4.1C; matches: 4.1D
+            "beneficiary_accounts",
         }
         snippet = (
             f"{self._app_import_lines()}\n"

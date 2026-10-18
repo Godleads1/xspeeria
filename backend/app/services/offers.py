@@ -41,7 +41,7 @@ from app.domain.offer_rules import (
 from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Offer
 from app.services.auth import Principal
 
-__all__ = ["OfferService", "offer_view"]
+__all__ = ["Created", "OfferService", "offer_view", "replay_idempotent"]
 
 _logger = get_logger(__name__)
 CREATE_OPERATION = "offer.create"
@@ -59,11 +59,11 @@ def _not_found() -> AppError:
     return _err("RES_404_NOT_FOUND", "That offer was not found.", status.HTTP_404_NOT_FOUND)
 
 
-def _money_text(minor: int, scale: int) -> str:
+def money_text(minor: int, scale: int) -> str:
     return f"{from_minor(minor, scale):.{scale}f}"
 
 
-def _rate_text(rate: Decimal) -> str:
+def rate_text(rate: Decimal) -> str:
     """At least 2 decimals, at most 6, no trailing zeros beyond 2."""
     text_ = f"{rate:.6f}".rstrip("0")
     whole, _, frac = text_.partition(".")
@@ -77,10 +77,10 @@ def offer_view(offer: Offer, viewer: uuid.UUID) -> dict[str, Any]:
         "offer_id": str(offer.id),
         "source_currency": offer.source_currency,
         "target_currency": offer.target_currency,
-        "source_amount": _money_text(offer.source_amount_minor, offer.scale),
-        "matched_amount": _money_text(offer.matched_amount_minor, offer.scale),
-        "remaining_amount": _money_text(remaining, offer.scale),
-        "desired_rate": _rate_text(offer.desired_rate),
+        "source_amount": money_text(offer.source_amount_minor, offer.scale),
+        "matched_amount": money_text(offer.matched_amount_minor, offer.scale),
+        "remaining_amount": money_text(remaining, offer.scale),
+        "desired_rate": rate_text(offer.desired_rate),
         "status": offer.status,
         "is_own": offer.user_id == viewer,
         "version": offer.version,
@@ -92,6 +92,46 @@ def offer_view(offer: Offer, viewer: uuid.UUID) -> dict[str, Any]:
 class Created:
     status_code: int
     body: dict[str, Any]
+
+
+async def replay_idempotent(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    operation: str,
+    key: uuid.UUID,
+    request_hash: str,
+    now: datetime,
+) -> Created | None:
+    """Look up ``key`` for this user and operation (ADR-029, Standing Standards §7.1 steps 2–3).
+
+    ``None``: a new request (an expired record is forgotten). Same request: the first answer,
+    after rolling back. Different request: ``SYS_409_IDEMPOTENCY_KEY_REUSED``.
+    """
+    row = await db.scalar(
+        select(IdempotencyRecord)
+        .where(
+            IdempotencyRecord.user_id == user_id,
+            IdempotencyRecord.operation == operation,
+            IdempotencyRecord.idempotency_key == key,
+        )
+        .with_for_update()
+    )
+    if row is None:
+        return None
+    if now >= row.expires_at:  # older than 24 hours: forgotten, the key is free again
+        await db.execute(delete(IdempotencyRecord).where(IdempotencyRecord.id == row.id))
+        await db.flush()
+        return None
+    if row.request_hash != request_hash:
+        await db.rollback()
+        raise _err(
+            "SYS_409_IDEMPOTENCY_KEY_REUSED",
+            "This request key was already used for a different request.",
+            status.HTTP_409_CONFLICT,
+        )
+    result = Created(row.response_status, dict(row.response_body))
+    await db.rollback()
+    return result
 
 
 class OfferService:
@@ -128,13 +168,15 @@ class OfferService:
                     "source": pair.source,
                     "target": pair.target,
                     "amount_minor": amount_minor,
-                    "rate": _rate_text(rate),
+                    "rate": rate_text(rate),
                 },
                 sort_keys=True,
             ).encode()
         ).hexdigest()
 
-        replay = await self._replay(principal.user_id, idempotency_key, request_hash, now)
+        replay = await replay_idempotent(
+            self._db, principal.user_id, CREATE_OPERATION, idempotency_key, request_hash, now
+        )
         if replay is not None:
             return replay
 
@@ -191,7 +233,9 @@ class OfferService:
             await self._db.rollback()
             if "uq_idempotency_records_user_operation_key" not in str(exc.orig):
                 raise
-            replay = await self._replay(principal.user_id, idempotency_key, request_hash, now)
+            replay = await replay_idempotent(
+                self._db, principal.user_id, CREATE_OPERATION, idempotency_key, request_hash, now
+            )
             if replay is None:  # pragma: no cover - the winner's row must exist
                 raise
             return replay
@@ -199,35 +243,6 @@ class OfferService:
             "offer_created", extra={"user_id": str(principal.user_id), "offer_id": body["offer_id"]}
         )
         return Created(status.HTTP_201_CREATED, body)
-
-    async def _replay(
-        self, user_id: uuid.UUID, key: uuid.UUID, request_hash: str, now: datetime
-    ) -> Created | None:
-        row = await self._db.scalar(
-            select(IdempotencyRecord)
-            .where(
-                IdempotencyRecord.user_id == user_id,
-                IdempotencyRecord.operation == CREATE_OPERATION,
-                IdempotencyRecord.idempotency_key == key,
-            )
-            .with_for_update()
-        )
-        if row is None:
-            return None
-        if now >= row.expires_at:  # older than 24 hours: forgotten, the key is free again
-            await self._db.execute(delete(IdempotencyRecord).where(IdempotencyRecord.id == row.id))
-            await self._db.flush()
-            return None
-        if row.request_hash != request_hash:
-            await self._db.rollback()
-            raise _err(
-                "SYS_409_IDEMPOTENCY_KEY_REUSED",
-                "This request key was already used for a different offer.",
-                status.HTTP_409_CONFLICT,
-            )
-        result = Created(row.response_status, dict(row.response_body))
-        await self._db.rollback()
-        return result
 
     # --- read ---------------------------------------------------------------------------
 

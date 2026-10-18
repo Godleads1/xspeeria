@@ -5,7 +5,12 @@ Amounts are exact integer minor units bound to ``scale`` and ``currency_def_vers
 and the composite foreign key ties them to a permanent currency definition (CD3), so the
 meaning of a stored amount can never change underneath it.
 
-``IdempotencyRecord`` remembers a request so a retried publish is answered, not repeated.
+``IdempotencyRecord`` remembers a request so a retried publish or acceptance is answered, not
+repeated.
+
+``Match`` (Milestone 4.1D, ADR-031) is one accepted allocation of one Offer by one counterparty:
+a record of who agreed to take how much at what rate. It is information, not money; no funds
+move when it is created.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Identity,
     Index,
     Integer,
     Numeric,
@@ -35,7 +41,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from app.db.money import CURRENCY_DEF_VERSION_LENGTH
 
-__all__ = ["OFFER_STATUSES", "IdempotencyRecord", "Offer"]
+__all__ = ["ACTIVE_STATUSES", "OFFER_STATUSES", "IdempotencyRecord", "Match", "Offer"]
 
 #: Contract (HUMAN-APPROVED 2026-08-25). `expired` is unused: offers do not expire (ADR-029).
 OFFER_STATUSES = ("open", "partially_matched", "fully_matched", "withdrawn", "cancelled", "expired")
@@ -132,3 +138,53 @@ class IdempotencyRecord(Base):
     response_body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Match(Base):
+    """One accepted allocation (data dictionary "Match", ADR-031).
+
+    Rows are immutable to the running app: it may only SELECT and INSERT (migration 0007).
+    Preparation/funding fields, Transaction and Settlement come with later milestones
+    (product owner, 2026-10-18: "Match only").
+    """
+
+    __tablename__ = "matches"
+    __table_args__ = (
+        CheckConstraint("allocated_amount_minor > 0", name="allocated_amount_positive"),
+        CheckConstraint("agreed_rate > 0", name="agreed_rate_positive"),
+        CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_format"),
+        ForeignKeyConstraint(
+            ["currency", "currency_def_version", "scale"],
+            [
+                "currency_definitions.currency",
+                "currency_definitions.currency_def_version",
+                "currency_definitions.scale",
+            ],
+            name="fk_matches_currency_definition",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_matches_offer_order", "offer_id", "accepted_at", "server_order_key"),
+        Index("ix_matches_counterparty_user_id", "counterparty_user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    offer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("offers.id", ondelete="RESTRICT"), nullable=False
+    )
+    counterparty_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    allocated_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False)
+    scale: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    currency_def_version: Mapped[str] = mapped_column(
+        String(CURRENCY_DEF_VERSION_LENGTH), nullable=False
+    )
+    #: DECISION S4-2: server-generated, unique, never client-supplied. Gaps are fine.
+    server_order_key: Mapped[int] = mapped_column(
+        BigInteger, Identity(always=True), nullable=False, unique=True
+    )
+    #: NGN per 1 unit of the foreign currency, locked at acceptance; never re-priced.
+    agreed_rate: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
+    #: Trusted server time; with server_order_key, the acceptance order.
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

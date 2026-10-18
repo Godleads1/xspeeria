@@ -34,9 +34,12 @@ Last updated: 18 Oct 2026.
 - [ ] **Third-party payouts (DEC-007):** decide whether users may pay out to accounts not in their own name.
 - [x] **Authorise Milestone 4.1C** — approved 18 Oct 2026; CD3 lock built (ADR-028); offers built (ADR-029).
 - [ ] **Confirm the offer interface details the contract leaves open** — *You* (ADR-029 §4): `filter[currency_pair]` written `USD/NGN`; page shape `items` + `next_offset`; the extra `GET /offers/mine` and `GET /offers/{id}`; amount filters and other sort orders not built yet.
-- [ ] **Authorise acceptance and `Match`** (the next marketplace milestone) — *You*.
 - [x] **Connect the app's Market screen to the server offers** — *Build* — done 18 Oct 2026 for development builds (ADR-030).
-- [ ] **Offer request limit** — *You*: how many offer/listing requests a minute per user (or per address). Offer routes no longer share the 10-a-minute sign-in limit (ADR-030 §2).
+- [x] **Offer request limit** — decided 18 Oct 2026: 60 a minute per user (ADR-031).
+- [x] **Authorise acceptance and `Match`** — approved 18 Oct 2026; built (ADR-031), Match only.
+- [ ] **Confirm the Match response details** — *You* (ADR-031 §3): `your_role`, `counter_currency`, the extra `GET /matches/mine`.
+- [ ] **Connect the app's "Buy" button to taking an offer** — *Build* (authenticator code, then the Match).
+- [ ] **Next milestone: payout accounts and preparation** — *You* to authorise; needs the preparation stage names and window length (Standing Standards §15 rows 9–10).
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 

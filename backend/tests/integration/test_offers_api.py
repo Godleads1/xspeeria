@@ -489,3 +489,13 @@ async def test_browsing_offers_does_not_use_up_the_sign_in_limit(db_settings: Se
             assert (await user.listings()).status_code == 200
         assert (await user.publish()).status_code == 201
         assert (await env.login()).status_code == 200  # 5th sign-in request: still allowed
+
+
+async def test_market_requests_are_limited_per_user(env: Env, david: User, ada: User) -> None:
+    for _ in range(60):
+        assert (await david.listings()).status_code == 200
+    r = await david.listings()
+    assert r.status_code == 429 and _code(r) == "AUTH_429_RATE_LIMITED"
+    assert (await ada.listings()).status_code == 200  # another user is not affected
+    env.clock.advance(seconds=61)
+    assert (await david.listings()).status_code in (200, 401)  # window over (session may idle)

@@ -101,6 +101,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `028-cd3-enforcement-and-milestone-4-1c.md` | GATE 4.1B-CD3 built: triggers refuse UPDATE/DELETE/TRUNCATE on currency definitions, non-owning runtime role `xspeeria_app`, no routine downgrade; authorizes Milestone 4.1C (offers); "records with amounts are information, not money" (DEC-034) | **APPROVED** — 2026-10-18 |
 | `029-milestone-4-1c-offers.md` | Milestone 4.1C offers: publish (24-hour `Idempotency-Key`), marketplace listings, edit rate, withdraw; minimum ₦10,000 / 10 USD·GBP·EUR; no expiry; KYC refused except local-only dev bypass; ratifies `VAL_422_RATE_ABOVE_CEILING`; resolves idempotency TTL (DEC-035) | **APPROVED** — 2026-10-18 |
 | `030-app-market-server-offers.md` | App Market in server mode: real listings, Create Offer publishes (one Idempotency-Key per offer), My Offers with withdraw; buy requests and taking offers say "coming soon"; offer routes no longer share the sign-in limit (DEC-036) | **PROPOSED** — 2026-10-18 |
+| `031-milestone-4-1d-accept-and-match.md` | Milestone 4.1D: `POST /offers/{id}/accept` creates a Match (information, not money) under the offer row lock with 24-hour idempotency and a `trade.accept` authenticator approval; minimum or exact rest; Match only (no Transaction yet); 60 market requests a minute per user (DEC-037) | **APPROVED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 
