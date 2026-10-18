@@ -31,7 +31,7 @@ GUARD = REPO_ROOT / "scripts" / "check_gitleaks_config.py"
 APPROVED_CONFIG = REPO_ROOT / ".github" / "gitleaks.toml"
 
 TITLE = 'title = "test configuration"\n'
-EXTEND = '\n[extend]\nuseDefault = true\n'
+EXTEND = "\n[extend]\nuseDefault = true\n"
 APPROVED = TITLE + EXTEND
 
 
@@ -75,22 +75,22 @@ class TestSuppressionIsRejected:
         [
             (
                 "[allowlist] global table",
-                APPROVED + '\n[allowlist]\ndescription = "quiet"\nregexes = [\'\'\'.\'\'\']\n',
+                APPROVED + "\n[allowlist]\ndescription = \"quiet\"\nregexes = ['''.''']\n",
             ),
             (
                 "[[allowlists]] global array of tables",
-                APPROVED + '\n[[allowlists]]\ndescription = "quiet"\nregexes = [\'\'\'.\'\'\']\n',
+                APPROVED + "\n[[allowlists]]\ndescription = \"quiet\"\nregexes = ['''.''']\n",
             ),
             (
                 "[[rules.allowlists]] rule-scoped array of tables",
                 APPROVED
-                + '\n[[rules]]\nid = "r"\nregex = \'\'\'x\'\'\'\n'
+                + "\n[[rules]]\nid = \"r\"\nregex = '''x'''\n"
                 + "\n[[rules.allowlists]]\nregexes = ['''.''']\n",
             ),
             (
                 "[rules.allowlist] rule-scoped table",
                 APPROVED
-                + '\n[[rules]]\nid = "r"\nregex = \'\'\'x\'\'\'\n'
+                + "\n[[rules]]\nid = \"r\"\nregex = '''x'''\n"
                 + "\n[rules.allowlist]\nregexes = ['''.''']\n",
             ),
             (
@@ -119,9 +119,7 @@ class TestSuppressionIsRejected:
             ),
         ],
     )
-    def test_suppression_shapes_are_rejected(
-        self, tmp_path: Path, label: str, body: str
-    ) -> None:
+    def test_suppression_shapes_are_rejected(self, tmp_path: Path, label: str, body: str) -> None:
         result = _run(_config(tmp_path, body))
         assert result.returncode == 1, f"{label} was accepted: {result.stdout}"
         assert "suppression key" in result.stderr, f"{label} failed for the wrong reason"
@@ -194,9 +192,7 @@ regex = '''x'''
         result = _run(_config(tmp_path, APPROVED + self.CANARY_SHAPED_OVERRIDE))
         assert result.returncode == 1
 
-    @pytest.mark.parametrize(
-        "rule_id", ["private-key", "aws-access-token", "totally-new-rule"]
-    )
+    @pytest.mark.parametrize("rule_id", ["private-key", "aws-access-token", "totally-new-rule"])
     def test_any_rule_id_is_rejected(self, tmp_path: Path, rule_id: str) -> None:
         """Arbitrary ids too: an added rule is not audited by this guard either."""
         body = APPROVED + self.PRIVATE_KEY_OVERRIDE.replace("private-key", rule_id)

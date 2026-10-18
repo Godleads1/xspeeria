@@ -14,10 +14,21 @@ from app.core.config import SUPPORTED_DATABASE_SCHEME, Settings, get_settings
 #: not the process environment, so without this a developer exporting `JWT_SECRET_KEY`
 #: would fail `test_future_security_keys_are_optional` on their machine and nowhere else.
 SETTINGS_ENV_KEYS = (
-    "APP_NAME", "APP_ENV", "API_V", "LOG_LEVEL", "ENABLE_DOCS", "ENABLE_REDOC",
-    "DATABASE_URL", "REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND",
-    "JWT_SECRET_KEY", "JWT_ALGORITHM", "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
-    "WEBHOOK_SHARED_SECRET", "CORS_ALLOWED_ORIGINS",
+    "APP_NAME",
+    "APP_ENV",
+    "API_V",
+    "LOG_LEVEL",
+    "ENABLE_DOCS",
+    "ENABLE_REDOC",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "CELERY_BROKER_URL",
+    "CELERY_RESULT_BACKEND",
+    "JWT_SECRET_KEY",
+    "JWT_ALGORITHM",
+    "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+    "WEBHOOK_SHARED_SECRET",
+    "CORS_ALLOWED_ORIGINS",
 )
 
 

@@ -183,6 +183,7 @@ async def _rejects(connection: AsyncConnection, table: Table, **values: Any) -> 
 # performs its whole catalogue operation *within* the sync callback and returns plain
 # data -- no `Inspector` escapes.
 
+
 async def _table_names(connection: AsyncConnection) -> set[str]:
     return await connection.run_sync(lambda c: set(inspect(c).get_table_names()))
 
@@ -237,9 +238,7 @@ class TestPhysicalColumnTypes:
         }
 
     @pytest.mark.asyncio
-    async def test_amount_is_not_numeric_or_float(
-        self, money_tables: AsyncConnection
-    ) -> None:
+    async def test_amount_is_not_numeric_or_float(self, money_tables: AsyncConnection) -> None:
         """DECISION S4-1: authoritative money is exact integer minor units. A NUMERIC or
         DOUBLE PRECISION column here would be a silent correctness regression."""
         types = await _column_types(money_tables, PLAIN)
@@ -250,9 +249,7 @@ class TestNullability:
     """3. `nullable=False` is enforced by the database, not merely declared."""
 
     @pytest.mark.asyncio
-    async def test_catalogue_reports_all_four_not_null(
-        self, money_tables: AsyncConnection
-    ) -> None:
+    async def test_catalogue_reports_all_four_not_null(self, money_tables: AsyncConnection) -> None:
         nullability = await _column_nullability(money_tables, PLAIN)
         assert set(nullability) == set(VALID_ROW)
         assert not any(nullability.values())
@@ -346,17 +343,13 @@ class TestVersionNotEmptyConstraint:
         self, money_tables: AsyncConnection, version: str
     ) -> None:
         """No format is prescribed: the identifier is opaque and application-issued."""
-        await _insert(
-            money_tables, plain_table, **{**VALID_ROW, "currency_def_version": version}
-        )
+        await _insert(money_tables, plain_table, **{**VALID_ROW, "currency_def_version": version})
 
     @pytest.mark.asyncio
     async def test_a_version_longer_than_the_column_is_rejected(
         self, money_tables: AsyncConnection
     ) -> None:
-        await _rejects(
-            money_tables, plain_table, **{**VALID_ROW, "currency_def_version": "x" * 33}
-        )
+        await _rejects(money_tables, plain_table, **{**VALID_ROW, "currency_def_version": "x" * 33})
 
 
 class TestPositiveFalse:
@@ -369,9 +362,7 @@ class TestPositiveFalse:
     ) -> None:
         """Positivity is entity policy, not a property of money: a ledger line and a
         reconciliation delta are both legitimately non-positive."""
-        await _insert(
-            money_tables, plain_table, **{**VALID_ROW, "amount_minor": amount_minor}
-        )
+        await _insert(money_tables, plain_table, **{**VALID_ROW, "amount_minor": amount_minor})
 
 
 class TestPositiveTrue:
@@ -382,9 +373,7 @@ class TestPositiveTrue:
     async def test_positive_amounts_are_accepted(
         self, money_tables: AsyncConnection, amount_minor: int
     ) -> None:
-        await _insert(
-            money_tables, positive_table, **{**VALID_ROW, "amount_minor": amount_minor}
-        )
+        await _insert(money_tables, positive_table, **{**VALID_ROW, "amount_minor": amount_minor})
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("amount_minor", [0, -1])
@@ -392,9 +381,7 @@ class TestPositiveTrue:
         self, money_tables: AsyncConnection, amount_minor: int
     ) -> None:
         """Strict `> 0`, never `>= 0`: zero is invalid where positivity applies."""
-        await _rejects(
-            money_tables, positive_table, **{**VALID_ROW, "amount_minor": amount_minor}
-        )
+        await _rejects(money_tables, positive_table, **{**VALID_ROW, "amount_minor": amount_minor})
 
 
 class TestPrefixedColumns:
@@ -423,9 +410,7 @@ class TestPrefixedColumns:
         }
 
     @pytest.mark.asyncio
-    async def test_a_valid_prefixed_row_is_accepted(
-        self, money_tables: AsyncConnection
-    ) -> None:
+    async def test_a_valid_prefixed_row_is_accepted(self, money_tables: AsyncConnection) -> None:
         await _insert(
             money_tables,
             prefixed_table,
@@ -491,9 +476,7 @@ class TestNoForeignKey:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("table", [PLAIN, POSITIVE, PREFIXED])
-    async def test_no_foreign_key_exists(
-        self, money_tables: AsyncConnection, table: str
-    ) -> None:
+    async def test_no_foreign_key_exists(self, money_tables: AsyncConnection, table: str) -> None:
         """The three-column reference to `currency_definitions` is declared by the owning
         model with an explicitly short name; it is not this helper's to emit."""
         assert await _foreign_key_names(money_tables, table) == []

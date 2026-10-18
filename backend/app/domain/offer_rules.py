@@ -15,6 +15,7 @@ __all__ = [
     "FORMAT_ERROR",
     "FOREIGN",
     "IDEMPOTENCY_TTL",
+    "MARKET_REQUESTS_PER_MINUTE",
     "MINIMUM_MINOR",
     "OFFICIAL_RATE",
     "OFFICIAL_RATE_AS_OF",
@@ -22,6 +23,7 @@ __all__ = [
     "SCALE",
     "OfferInputError",
     "Pair",
+    "below_minimum",
     "parse_amount_minor",
     "parse_pair",
     "parse_rate",
@@ -45,6 +47,10 @@ OFFICIAL_RATE_AS_OF = "2026-10-17"
 
 #: ADR-029 — ₦10,000 or 10 units of the foreign currency.
 MINIMUM_MINOR: dict[str, int] = {"NGN": 1_000_000, "USD": 1_000, "GBP": 1_000, "EUR": 1_000}
+
+#: ADR-031 — offer and marketplace requests per signed-in user per minute (product owner,
+#: 2026-10-18: "60 per user per min"). Separate from the sign-in limit.
+MARKET_REQUESTS_PER_MINUTE = 60
 
 #: ADR-029 — remember each Idempotency-Key for 24 hours.
 IDEMPOTENCY_TTL = timedelta(hours=24)
@@ -89,8 +95,12 @@ def parse_pair(source: str, target: str) -> Pair:
     return Pair(s, t)
 
 
-def parse_amount_minor(text: str, currency: str) -> int:
-    """Plain decimal text → exact minor units. Extra decimals are refused, never rounded."""
+def parse_amount_minor(text: str, currency: str, *, minimum: bool = True) -> int:
+    """Plain decimal text → exact minor units. Extra decimals are refused, never rounded.
+
+    With ``minimum=False`` only "more than zero" is checked; the caller applies its own rule
+    (acceptance: the minimum, or exactly what is left — ADR-031).
+    """
     if not _DECIMAL_TEXT.fullmatch(text):
         raise OfferInputError(FORMAT_ERROR, "Enter the amount as a number, e.g. 1000.00.")
     value = Decimal(text)
@@ -101,12 +111,21 @@ def parse_amount_minor(text: str, currency: str) -> int:
             FORMAT_ERROR, f"{currency} amounts have at most {scale} decimal places."
         )
     minor = int(value.scaleb(scale))
-    if minor < MINIMUM_MINOR[currency]:
+    if minor <= 0:
+        raise OfferInputError(FORMAT_ERROR, "The amount must be more than zero.")
+    if minimum and minor < MINIMUM_MINOR[currency]:
         shown = Decimal(MINIMUM_MINOR[currency]).scaleb(-scale)
         raise OfferInputError(
             "VAL_422_AMOUNT_BELOW_MINIMUM", f"The smallest offer is {shown:,.2f} {currency}."
         )
     return minor
+
+
+def below_minimum(currency: str) -> OfferInputError:
+    shown = Decimal(MINIMUM_MINOR[currency]).scaleb(-SCALE[currency])
+    return OfferInputError(
+        "VAL_422_AMOUNT_BELOW_MINIMUM", f"The smallest amount is {shown:,.2f} {currency}."
+    )
 
 
 def parse_rate(text: str) -> Decimal:

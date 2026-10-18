@@ -111,6 +111,7 @@ def create_app(
     application.include_router(auth.router)
     application.include_router(offers.router)
     application.include_router(offers.marketplace_router)
+    application.include_router(offers.matches_router)
 
     get_logger(__name__).info(
         "application_configured",

@@ -41,8 +41,7 @@ market could therefore lock themselves, and everyone behind the same mobile carr
 out of logging in.
 
 The offer routes therefore no longer use it. They still need a signed-in, 2FA-verified
-session. **A separate limit for these routes is a decision for the product owner** (number
-and per-user or per-address). It is recorded in `PENDING_ACTIONS.md` and SEC-011.
+session. **Decided 2026-10-18:** 60 requests a minute per signed-in user (ADR-031).
 
 ## 3. Evidence
 

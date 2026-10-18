@@ -18,7 +18,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from fastapi import status
@@ -69,6 +69,7 @@ from app.domain.auth_rules import (
     normalise_phone,
     pin_problem,
 )
+from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.models.identity import (
     AuthRefreshToken,
     AuthSession,
@@ -206,6 +207,12 @@ class AuthRuntime:
     #: Wrong-PIN counting for identifiers with no account, so they lock exactly like real
     #: accounts and the lock itself does not reveal which identifiers exist.
     unknown_identifier_limiter: SlidingWindowLimiter
+    #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
+    user_limiter: SlidingWindowLimiter = field(
+        default_factory=lambda: SlidingWindowLimiter(
+            limit=MARKET_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
+        )
+    )
 
 
 # --- service ------------------------------------------------------------------------------

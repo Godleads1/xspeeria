@@ -10,7 +10,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = ["CreateOfferRequest", "ListingsResponse", "OfferResponse", "UpdateRateRequest"]
+__all__ = [
+    "AcceptRequest",
+    "CreateOfferRequest",
+    "ListingsResponse",
+    "MatchResponse",
+    "OfferResponse",
+    "UpdateRateRequest",
+]
 
 _CURRENCY = r"^[A-Za-z]{3}$"
 
@@ -52,3 +59,21 @@ class ListingsResponse(BaseModel):
     offset: int
     #: Where the next page starts, or null when there is no more.
     next_offset: int | None
+
+
+class AcceptRequest(_Strict):
+    #: Exact decimal text in the offer's currency. Required: a missing value answers
+    #: VAL_422_MISSING_FIELD and never means "take everything" (contract §3.5).
+    accepted_amount: str | None = Field(default=None, min_length=1, max_length=24)
+
+
+class MatchResponse(BaseModel):
+    match_id: str
+    offer_id: str
+    currency: str
+    counter_currency: str
+    allocated_amount: str
+    agreed_rate: str
+    accepted_at: str
+    server_order_key: str
+    your_role: str

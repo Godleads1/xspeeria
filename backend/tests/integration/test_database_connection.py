@@ -96,8 +96,10 @@ class TestRollback:
         await connection.commit()
 
         ids = (
-            await connection.execute(text(f'SELECT id FROM "{scratch_table}" ORDER BY id'))
-        ).scalars().all()
+            (await connection.execute(text(f'SELECT id FROM "{scratch_table}" ORDER BY id')))
+            .scalars()
+            .all()
+        )
         assert list(ids) == [3]
 
     async def test_failed_statement_rolls_back_cleanly(
