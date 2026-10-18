@@ -10,6 +10,11 @@
 | **Authorizes** | **Milestone AUTH-1** (scope §3). Does **not** authorize Milestone 4.1C or any money-bearing table, and does not discharge GATE 4.1B-CD3. |
 | **Supersedes** | In `docs/04-api-data/05_API_Contract_Data_Dictionary.md` §2–3.2: email + password log-in and its 12-character rule (→ phone or email + 6-digit PIN, ADR-013/024); SMS and email OTP as MFA factors (→ never, ADR-008); 30-day refresh (→ 7-day absolute session, ADR-024); "5 attempts per 15 minutes per IP" (→ §1.2). Backend spec §11 example paths `/auth/sign-up`, `/auth/sign-in` (→ contract names). |
 
+
+> **Update 2026-10-18:** `verify-phone` and `login` now return a 2FA challenge instead of a
+> session; a session exists only after the second factor or a trusted device —
+> `docs/adr/026-auth-2-two-factor.md`.
+
 ## 1. Decisions
 
 1. **PIN storage — Argon2id** (`argon2-cffi`), memory 19 MiB (19,456 KiB), 2 iterations,

@@ -96,6 +96,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `023-figma-exact-home-cards-demo.md` | Exact Figma Home and Cards in development builds: Figma's balance, card figures and transactions as "Demo" display text, gated on DEMO_MODE (release builds unchanged); no "Create yours"; narrow exception to the on-screen no-balance rule (DEC-029) | **APPROVED** — 2026-10-18 |
 | `024-session-pin-sms-limits.md` | Decision 2 (part): 5-minute idle lock, 7-day maximum session, 6-digit PIN, SMS codes capped at 5/hour and 10/day per phone (server-enforced) (DEC-030) | **APPROVED** — 2026-10-18 |
 | `025-auth-1-server-sign-in.md` | Decision 2 resolved (Argon2id PIN hashing, request limits, recovery, S-2 server-side permission checks, S-3 individual accounts, in-house auth, F-16 logging rule); contract API names + verify-phone; authorizes Milestone AUTH-1 (DEC-031) | **APPROVED** — 2026-10-18 |
+| `026-auth-2-two-factor.md` | Server 2FA: required at sign-up, TOTP (encrypted, single-use codes), recovery codes, 30-day trusted devices, single-use 5-minute step-up, 5-wrong-codes lock, 24-hour payout hold; authorizes Milestone AUTH-2 (DEC-032) | **APPROVED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 

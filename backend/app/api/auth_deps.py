@@ -42,8 +42,8 @@ _bearer = HTTPBearer(auto_error=False)
 
 def get_auth_runtime(request: Request) -> AuthRuntime:
     runtime = getattr(request.app.state, "auth", None)
-    if not isinstance(runtime, AuthRuntime) or runtime.keys is None:
-        # No signing key configured: sign-in is switched off, not half-working.
+    if not isinstance(runtime, AuthRuntime) or runtime.keys is None or runtime.secret_box is None:
+        # No signing key or 2FA key configured: sign-in is switched off, not half-working.
         raise sms_unavailable()
     return runtime
 

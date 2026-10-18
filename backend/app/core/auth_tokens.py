@@ -56,6 +56,9 @@ class TokenKeys:
             raise ValueError(f"JWT signing key must be at least {MIN_KEY_LENGTH} characters")
         self._signing = secret.encode()
         self._code_key = hmac.new(self._signing, b"xspeeria/sms-code/v1", hashlib.sha256).digest()
+        self._recovery_key = hmac.new(
+            self._signing, b"xspeeria/recovery-code/v1", hashlib.sha256
+        ).digest()
 
     def __repr__(self) -> str:  # never print key material
         return "TokenKeys(<redacted>)"
@@ -108,8 +111,14 @@ class TokenKeys:
     def code_matches(self, phone: str, code: str, stored_digest: str) -> bool:
         return hmac.compare_digest(self.code_digest(phone, code), stored_digest)
 
+    def recovery_digest(self, user_id: UUID, normalised_code: str) -> str:
+        """Keyed hash of a recovery code (40 bits: a plain hash would be reversible)."""
+        message = f"{user_id}|{normalised_code}".encode()
+        return hmac.new(self._recovery_key, message, hashlib.sha256).hexdigest()
+
 
 def generate_refresh_token() -> str:
+    """256 random bits. Also used for device-trust and step-up tokens."""
     return secrets.token_urlsafe(32)
 
 

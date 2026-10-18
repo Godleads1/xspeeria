@@ -4,7 +4,8 @@ Milestone 1 wires configuration, structured logging, the error envelope and a si
 health route. Milestone AUTH-1 (ADR-025) adds the sign-in and current-user routes and the
 request log. No money-bearing router exists.
 
-Sign-in needs ``JWT_SECRET_KEY`` (at least 32 characters). Without it the auth routes answer
+Sign-in needs ``JWT_SECRET_KEY`` (at least 32 characters) and ``MFA_ENCRYPTION_KEY`` (base64 of
+32 bytes, ADR-026). Without either, the auth routes answer
 ``SYS_503_SERVICE_UNAVAILABLE`` and the rest of the application still boots. No SMS provider
 is connected (ADR-025 §2): tests inject one through ``auth_runtime``.
 """
@@ -20,6 +21,7 @@ from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
 from app.core.logging import configure_logging, get_logger
+from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
@@ -39,9 +41,17 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         and "CHANGE_ME" in settings.jwt_secret_key
     ):
         raise ValueError("JWT_SECRET_KEY is still the .env.example placeholder")
+    if (
+        settings.is_production
+        and settings.mfa_encryption_key
+        and "CHANGE_ME" in settings.mfa_encryption_key
+    ):
+        raise ValueError("MFA_ENCRYPTION_KEY is still the .env.example placeholder")
     keys = TokenKeys(settings.jwt_secret_key) if settings.jwt_secret_key else None
+    box = SecretBox(settings.mfa_encryption_key) if settings.mfa_encryption_key else None
     return AuthRuntime(
         keys=keys,
+        secret_box=box,
         hasher=PinHasher(),
         sms=None,
         clock=lambda: datetime.now(UTC),

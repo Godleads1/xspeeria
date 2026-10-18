@@ -4,7 +4,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | | |
 |---|---|
-| **Assessed at** | `main` after PR #16, 2026-10-17; AUTH-1 rows updated 2026-10-18 (branch `feat/auth-1-server`) |
+| **Assessed at** | `main` after PR #16, 2026-10-17; AUTH-1 and AUTH-2 rows updated 2026-10-18 |
 | **Method** | Read-only inspection of code, configuration, CI and docs; test names cited where they exist. No penetration test, no deployed environment. |
 | **States** | Standing Standards §5. **NOT STARTED** = no code and no specific design. **DOCUMENTED** = designed in an approved doc, no code. **IMPLEMENTED** = code exists (here, almost always the demo app on the device, which the server must repeat). Nothing is marked **VERIFIED**: no production evidence exists yet, and CI success is IMPLEMENTED-class at best. |
 | **Owner** | Every row: **UNASSIGNED** until the product owner names owners (needed for Medium-and-above before release, standard §5). |
@@ -14,21 +14,21 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | State | Count |
 |---|---|
 | VERIFIED | 0 |
-| IMPLEMENTED (partial, demo-only or not deployed) | 19 |
-| DOCUMENTED only | 9 |
+| IMPLEMENTED (partial, demo-only or not deployed) | 20 |
+| DOCUMENTED only | 8 |
 | NOT STARTED | 11 |
 | BLOCKED (needs an account change) | 1 |
-| **Production gate** | **🔴 DO NOT LAUNCH**: server sign-in exists (AUTH-1) but is not deployed, has no 2FA yet (AUTH-2), and there is no money path; most Critical server-side requirements remain open. |
+| **Production gate** | **🔴 DO NOT LAUNCH**: server sign-in and 2FA exist (AUTH-1/2) but are not deployed or wired to the app, and there is no money path; most Critical server-side requirements remain open. |
 
 ## A. Identity and authentication
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
 | SEC-001 | IMPLEMENTED (server, AUTH-1) | Argon2id PIN hashing, 19 MiB / t=2 / p=1, rehash on change (`backend/app/core/pin_hashing.py`); PIN checked only on the server; equal-time path for unknown accounts (`test_auth_primitives.py`, `test_auth_api.py`). ADR-025. | Not deployed; 2FA (AUTH-2) still required before money endpoints. |
-| SEC-002 | IMPLEMENTED (demo, client) | Step-up before beneficiary add/remove, contact change, recovery codes, trade acceptance (`stepUp.ts`, `StepUpHost.tsx`; tests `two-factor.test.tsx`). No admin auth exists. | Server-side step-up tokens (`docs/adr/008-two-factor-authentication.md` §4); staff MFA when admin auth is built. Password change has no step-up yet. |
+| SEC-002 | IMPLEMENTED (server, AUTH-2) | 2FA required at sign-up and on every new device (TOTP, encrypted secrets, single-use codes); single-use step-up bound to user, session and action, 5 minutes; 5 wrong codes → 15-min lock (`backend/tests/integration/test_two_factor_api.py`). ADR-008/026. | Passkeys (native build); staff MFA when admin auth exists; wire step-up into each sensitive endpoint as it is built. |
 | SEC-003 | IMPLEMENTED (server, AUTH-1) | 5 wrong PINs → 15-min lock (also for unknown identifiers); 10 requests/min per address on all auth routes; SMS 5/hour, 10/day, 60 s resend, 5 tries per code, 10-min expiry, durable counts in PostgreSQL (`test_auth_api.py`). ADR-024/025. | Limiter is in-process: needs Redis before more than one instance; trusted-proxy rule for client address. |
 | SEC-004 | IMPLEMENTED (server, AUTH-1) | 15-min HS256 access tokens checked against a live session row on every request; single-use rotating refresh tokens stored as SHA-256; reuse revokes the session; 5-min idle and 7-day absolute limits; log-out and device revocation take effect immediately (`test_auth_api.py`). | Mobile app not yet wired to the server; SecureStore for the refresh token; key in a secret manager. |
-| SEC-005 | DOCUMENTED | Recovery codes + KYC-level support re-verification, no self-service bypass (`docs/adr/008-two-factor-authentication.md` §2). | Support procedure (Compliance); server implementation. |
+| SEC-005 | IMPLEMENTED (server, partial) | 10 single-use recovery codes, keyed hashes, regenerate behind step-up; recovery log-in ends trust everywhere and sets a 24-hour payout hold (`test_recovery_code_logs_in_once_and_triggers_the_hold`). | Support re-verification procedure (Compliance); email alerts need a provider. |
 
 ## B. Authorization and account isolation
 
@@ -68,7 +68,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
 | SEC-023 | DOCUMENTED | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
 | SEC-024 | DOCUMENTED | `docs/adr/002-*`; Appendix D. | Reconciliation jobs and mismatch alerts. |
-| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. |
+| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. Server: `users.payout_hold_until` set for 24 h after recovery or authenticator reset (ADR-026); payout endpoints must enforce it. |
 
 ## F. Data, privacy and secrets
 

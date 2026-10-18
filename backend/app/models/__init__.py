@@ -9,7 +9,9 @@ Registration is the *only* side effect. Importing this package opens no connecti
 issues no DDL and writes no row.
 
 MILESTONE 4.1B: `CurrencyDefinition`. MILESTONE AUTH-1 (ADR-025): the identity tables
-`User`, `AuthSession`, `AuthRefreshToken`, `PhoneVerification` -- none carries money.
+`User`, `AuthSession`, `AuthRefreshToken`, `PhoneVerification`; MILESTONE AUTH-2 (ADR-026):
+`MfaFactor`, `MfaChallenge`, `RecoveryCode`, `TrustedDevice`, `StepUpGrant` -- none carries
+money.
 Offer, Match, Transaction, Settlement, SettlementLeg, PayoutExecution, KycCase,
 BeneficiaryAccount and IdempotencyRecord belong to 4.1C-4.1H and must not be added here
 ahead of their approved batch.
@@ -18,6 +20,27 @@ Layering rule: api -> services -> domain + repositories + providers.
 """
 
 from app.models.currency_definition import CurrencyDefinition
-from app.models.identity import AuthRefreshToken, AuthSession, PhoneVerification, User
+from app.models.identity import (
+    AuthRefreshToken,
+    AuthSession,
+    MfaChallenge,
+    MfaFactor,
+    PhoneVerification,
+    RecoveryCode,
+    StepUpGrant,
+    TrustedDevice,
+    User,
+)
 
-__all__ = ["AuthRefreshToken", "AuthSession", "CurrencyDefinition", "PhoneVerification", "User"]
+__all__ = [
+    "AuthRefreshToken",
+    "AuthSession",
+    "CurrencyDefinition",
+    "MfaChallenge",
+    "MfaFactor",
+    "PhoneVerification",
+    "RecoveryCode",
+    "StepUpGrant",
+    "TrustedDevice",
+    "User",
+]

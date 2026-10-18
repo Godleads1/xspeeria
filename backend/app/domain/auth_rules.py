@@ -11,6 +11,14 @@ from datetime import timedelta
 
 __all__ = [
     "ACCESS_TOKEN_TTL",
+    "ENROL_CHALLENGE_TTL",
+    "LOGIN_CHALLENGE_TTL",
+    "MAX_MFA_TRIES",
+    "MFA_LOCK",
+    "PAYOUT_HOLD",
+    "STEP_UP_ACTIONS",
+    "STEP_UP_TTL",
+    "TRUSTED_DEVICE_TTL",
     "CODE_RESEND_WAIT",
     "CODE_TTL",
     "IDLE_TIMEOUT",
@@ -47,6 +55,26 @@ CODE_TTL = timedelta(minutes=10)
 MAX_CODE_TRIES = 5
 #: ADR-025 §1.2 — per network address, shared by every auth endpoint.
 LOGIN_REQUESTS_PER_MINUTE = 10
+#: ADR-026 — second factor.
+LOGIN_CHALLENGE_TTL = timedelta(minutes=5)  # contract §3.1
+ENROL_CHALLENGE_TTL = timedelta(minutes=10)  # same as the SMS code expiry (ADR-024)
+MAX_MFA_TRIES = 5  # wrong codes before the 2FA lock (ADR-008)
+MFA_LOCK = timedelta(minutes=15)  # ADR-008
+TRUSTED_DEVICE_TTL = timedelta(days=30)  # product owner, 2026-10-18
+STEP_UP_TTL = timedelta(minutes=5)  # one action, within 5 minutes (2026-10-18)
+PAYOUT_HOLD = timedelta(hours=24)  # after recovery or authenticator reset (ADR-008)
+STEP_UP_ACTIONS = frozenset(
+    {
+        "beneficiary.add",
+        "beneficiary.remove",
+        "contact.change",
+        "pin.change",
+        "mfa.change",
+        "recovery_codes.regenerate",
+        "trade.accept",
+        "payout.confirm",
+    }
+)
 
 #: ASCII digits only: in Python, ``\d`` also matches other scripts' digits (e.g. "４").
 _PIN_RE = re.compile(rf"^[0-9]{{{PIN_LENGTH}}}$")

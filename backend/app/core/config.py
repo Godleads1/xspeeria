@@ -128,6 +128,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str | None = None
     jwt_access_token_expire_minutes: int | None = None
     webhook_shared_secret: str | None = None
+    #: AES-256-GCM key for TOTP secrets at rest (ADR-026): base64 of 32 random bytes.
+    #: Without it the sign-in routes are switched off, since no session can exist without 2FA.
+    mfa_encryption_key: str | None = None
 
     cors_allowed_origins: str = ""
 
