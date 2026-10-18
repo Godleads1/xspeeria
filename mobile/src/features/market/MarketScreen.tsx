@@ -6,11 +6,13 @@
  * sell, the currency to receive and your rate → "Create Offer"; below, buy requests you
  * can fill. Xspeeria never holds the money: a match leads to bank escrow, not a balance.
  *
- * MOCK DATA ONLY. All amounts and rates are parsed to integers (`money.ts`); the server
- * must re-validate everything.
+ * Demo builds use mock data. With `server` (a development build pointed at a real server,
+ * ADR-030) Buy lists real offers and Sell's "Create Offer" publishes one; buy requests and
+ * taking an offer are not built on the server yet, and the screen says so. All amounts and
+ * rates are parsed to integers (`money.ts`); the server re-validates everything.
  */
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { RoundFlag } from "../../components/flags";
@@ -39,6 +41,8 @@ import {
 } from "./data";
 import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
 import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
+import type { MarketServer } from "./serverOffers";
+import { messageFor } from "../../api/client";
 
 export type Side = "buy" | "sell";
 
@@ -68,8 +72,14 @@ export function MarketScreen({
   onCreate,
   onTakeListing,
   onMenu,
+  server = null,
+  refreshSignal = 0,
 }: {
+  /** Changes when the screen comes back into view, so server offers are fetched again. */
+  refreshSignal?: number;
   initialSide?: Side;
+  /** Real offers from the server (ADR-030). Null: demo data. */
+  server?: MarketServer | null;
   /** ⋮ menu destination; until each screen exists the menu explains it is coming. */
   onMenu?: (key: MenuKey) => void;
   onCreate?: (request: TradeRequest) => void;
@@ -83,6 +93,14 @@ export function MarketScreen({
   const [sheet, setSheet] = useState(false);
   const [cheapestFirst, setCheapestFirst] = useState(true);
   const [menu, setMenu] = useState(false);
+  // Server mode (ADR-030).
+  const [serverRows, setServerRows] = useState<Listing[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
+  /** One key per offer being published, kept across retries so a retry never doubles it. */
+  const pendingKey = useRef<string | null>(null);
 
   const foreign = side === "buy" ? buyCurrency : SELL_CURRENCY;
   const band = foreign ? MARKET_BAND[foreign.code] : undefined;
@@ -110,27 +128,103 @@ export function MarketScreen({
     problem === null &&
     quoteMinorOrNull(amountMinor, rateHundredths) !== null;
 
+  const foreignCode = foreign?.code ?? null;
+  useEffect(() => {
+    if (!server || side !== "buy" || !foreignCode) return undefined;
+    let live = true;
+    setServerRows(null);
+    setLoadError(null);
+    server
+      .offersFor(foreignCode, Date.now())
+      .then((rows) => {
+        if (live) setServerRows(rows);
+      })
+      .catch((e: unknown) => {
+        if (live) setLoadError(messageFor(e));
+      });
+    return () => {
+      live = false;
+    };
+  }, [server, side, foreignCode, reload, refreshSignal]);
+
   const listings = useMemo(() => {
     if (!foreign) return [];
-    const list = listingsFor(side, foreign.code);
+    const list = server
+      ? side === "buy"
+        ? (serverRows ?? [])
+        : []
+      : listingsFor(side, foreign.code);
     return cheapestFirst ? list : [...list].reverse();
-  }, [side, foreign, cheapestFirst]);
+  }, [side, foreign, cheapestFirst, server, serverRows]);
 
   const switchSide = (next: Side): void => {
     setSide(next);
     setAmount("");
     setRate("");
+    setNotice(null);
+    pendingKey.current = null;
+  };
+
+  const editAmount = (v: string): void => {
+    setAmount(v);
+    pendingKey.current = null;
+  };
+  const editRate = (v: string): void => {
+    setRate(v);
+    pendingKey.current = null;
+  };
+
+  const publish = async (code: string, amt: number, rt: number): Promise<void> => {
+    if (!server) return;
+    pendingKey.current ??= server.newKey();
+    setBusy(true);
+    setNotice(null);
+    try {
+      await server.publishSell(code, amt, rt, pendingKey.current);
+      pendingKey.current = null;
+      setAmount("");
+      setRate("");
+      setNotice({
+        ok: true,
+        text: `Your offer to sell ${formatHundredths(amt)} ${code} at NGN ${formatHundredths(rt)} is live. See it under ⋮ › My Offers.`,
+      });
+    } catch (e) {
+      setNotice({ ok: false, text: messageFor(e) });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const create = (): void => {
     if (!ready || !foreign || amountMinor === null || rateHundredths === null)
       return;
+    if (server) {
+      if (side === "buy") {
+        setNotice({
+          ok: false,
+          text: "Buy requests are coming soon. For now you can see the offers below.",
+        });
+        return;
+      }
+      void publish(foreign.code, amountMinor, rateHundredths);
+      return;
+    }
     onCreate?.({ side, currency: foreign.code, amountMinor, rateHundredths });
   };
 
   const take = (listing: Listing): void => {
+    if (server) {
+      setNotice({
+        ok: false,
+        text: listing.own
+          ? "This is your offer. Manage it under ⋮ › My Offers."
+          : "Taking an offer is coming soon.",
+      });
+      return;
+    }
     onTakeListing?.(listing, side);
   };
+  const canCreate = ready && !busy && (server !== null || onCreate !== undefined);
 
   const trendText =
     band && foreign
@@ -149,7 +243,7 @@ export function MarketScreen({
         testID="market-amount"
         accessibilityLabel={`Amount in ${foreign?.code ?? "USD"}`}
         value={amount}
-        onChangeText={setAmount}
+        onChangeText={editAmount}
       />
     </OutlinedField>
   );
@@ -242,7 +336,7 @@ export function MarketScreen({
             testID="market-rate"
             accessibilityLabel={`Rate in NGN per ${foreign?.code ?? "unit"}`}
             value={rate}
-            onChangeText={setRate}
+            onChangeText={editRate}
             trailing={
               potential !== null ? (
                 <View
@@ -286,8 +380,8 @@ export function MarketScreen({
         <Pressable
           testID="market-create"
           accessibilityRole="button"
-          accessibilityState={{ disabled: !ready || !onCreate }}
-          disabled={!ready || !onCreate}
+          accessibilityState={{ disabled: !canCreate, busy }}
+          disabled={!canCreate}
           onPress={create}
           style={({ pressed }) => [
             styles.create,
@@ -295,14 +389,23 @@ export function MarketScreen({
               backgroundColor:
                 side === "buy" ? color.brand.primary : color.trade.sell,
             },
-            !ready || !onCreate ? styles.createDisabled : null,
+            !canCreate ? styles.createDisabled : null,
             pressed ? styles.createPressed : null,
           ]}
         >
           <Text style={styles.createLabel}>
-            {side === "buy" ? "Create request" : "Create Offer"}
+            {busy ? "Publishing…" : side === "buy" ? "Create request" : "Create Offer"}
           </Text>
         </Pressable>
+        {notice ? (
+          <Text
+            testID="market-notice"
+            accessibilityRole="alert"
+            style={notice.ok ? styles.noticeOk : styles.rateError}
+          >
+            {notice.text}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.listHeader}>
@@ -326,11 +429,31 @@ export function MarketScreen({
         </Pressable>
       </View>
 
-      {listings.length === 0 ? (
+      {server && side === "buy" && foreign && loadError ? (
+        <View style={styles.loadError}>
+          <Text testID="market-load-error" accessibilityRole="alert" style={styles.empty}>
+            {loadError}
+          </Text>
+          <Pressable
+            testID="market-retry"
+            accessibilityRole="button"
+            onPress={() => setReload((n) => n + 1)}
+            hitSlop={8}
+          >
+            <Text style={styles.detailsText}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : server && side === "buy" && foreign && serverRows === null ? (
+        <Text testID="market-loading" style={styles.empty}>
+          Loading offers…
+        </Text>
+      ) : listings.length === 0 ? (
         <Text testID="market-empty" style={styles.empty}>
-          {foreign
-            ? `No ${side === "buy" ? "offers" : "requests"} for ${foreign.code} right now`
-            : "Select a currency to buy to see available offers"}
+          {server && side === "sell"
+            ? "Buy requests are coming soon."
+            : foreign
+              ? `No ${side === "buy" ? "offers" : "requests"} for ${foreign.code} right now`
+              : "Select a currency to buy to see available offers"}
         </Text>
       ) : (
         <View testID="market-listings">
@@ -381,7 +504,10 @@ export function MarketScreen({
         currencies={side === "buy" ? BUYABLE : RECEIVABLE}
         onClose={() => setSheet(false)}
         onSelect={(c) => {
-          if (side === "buy") setBuyCurrency(c);
+          if (side === "buy") {
+            setBuyCurrency(c);
+            setReload((n) => n + 1);
+          }
           else setReceive(c);
           setSheet(false);
         }}
@@ -417,6 +543,8 @@ const styles = themed(() => ({
   detailsText: { ...typography.caption, fontSize: 11, color: color.error.text },
   official: { ...typography.caption, fontSize: 12, color: color.text.secondary, marginTop: -6 },
   rateError: { ...typography.caption, fontSize: 12, color: color.error.text, marginTop: -6 },
+  noticeOk: { ...typography.caption, fontSize: 12, color: color.success.text, marginTop: -6 },
+  loadError: { alignItems: "center", gap: 4 },
   potential: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 },
   potentialGood: { backgroundColor: color.success.surface },
   potentialLow: { backgroundColor: color.error.surface },

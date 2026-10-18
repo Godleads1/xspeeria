@@ -13,7 +13,7 @@ import { TABS } from '../src/navigation/tabs';
 
 /** The router is the boundary under test here: assert where a press sends the user. */
 const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }), useFocusEffect: () => undefined }));
 
 beforeEach(() => {
   mockPush.mockClear();

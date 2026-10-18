@@ -70,6 +70,8 @@ export const serverAuth = {
   },
 
   accessToken: (): string | null => state.access,
+  /** Where requests go (the test server in tests). For other API modules. */
+  apiOptions: (): { fetchImpl?: Fetch; baseUrl?: string } => x(),
   hasChallenge: (): boolean => state.challengeId !== null,
   hasPending: (): boolean => state.pending !== null,
 

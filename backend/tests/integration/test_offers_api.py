@@ -48,7 +48,9 @@ async def currencies(db_settings: Settings, clean: None) -> None:  # noqa: F811
         await engine.dispose()
 
 
-async def _make_env(db_settings: Settings, *, bypass: bool) -> AsyncIterator[Env]:
+async def _make_env(
+    db_settings: Settings, *, bypass: bool, address_limit: int = 10_000
+) -> AsyncIterator[Env]:
     clock = Clock()
     recorder = RecordingSmsSender()
     settings = Settings(  # type: ignore[call-arg]
@@ -57,7 +59,7 @@ async def _make_env(db_settings: Settings, *, bypass: bool) -> AsyncIterator[Env
         app_env="local",
         kyc_dev_bypass=bypass,
     )
-    app = create_app(settings, auth_runtime=_runtime(clock, recorder, 10_000))
+    app = create_app(settings, auth_runtime=_runtime(clock, recorder, address_limit))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield Env(client, clock, recorder)
 
@@ -478,3 +480,12 @@ async def test_currency_definitions_command_is_insert_only(db_settings: Settings
         assert count is not None and count >= 4
     finally:
         await engine.dispose()
+
+
+async def test_browsing_offers_does_not_use_up_the_sign_in_limit(db_settings: Settings) -> None:
+    async for env in _make_env(db_settings, bypass=True, address_limit=6):
+        user = await _user(env)  # 4 sign-in requests
+        for _ in range(15):
+            assert (await user.listings()).status_code == 200
+        assert (await user.publish()).status_code == 201
+        assert (await env.login()).status_code == 200  # 5th sign-in request: still allowed

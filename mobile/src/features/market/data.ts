@@ -49,6 +49,10 @@ export interface Listing {
   /** "Offer Time: 5 mins ago" or "User 9867". */
   readonly meta: string;
   readonly best?: boolean;
+  /** Server offers only: the exact rate text when it has more than two decimals. */
+  readonly rateLabel?: string;
+  /** Server offers only: the signed-in user's own offer. */
+  readonly own?: boolean;
 }
 
 /**
