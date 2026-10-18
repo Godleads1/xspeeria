@@ -457,9 +457,10 @@ const styles = themed(() => ({
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
   },
-  // Figma: 342 × 100, radius 10, 1 pt #9CA3AF border.
+  // Figma: 342 wide, radius 10, 1 pt #9CA3AF border. Height follows the product owner's
+  // 342 × 113 artwork (2026-10-18) so its text is never cropped.
   advert: {
-    aspectRatio: 342 / 100,
+    aspectRatio: 342 / 113,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: color.text.disabled,
