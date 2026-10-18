@@ -136,6 +136,15 @@ class Settings(BaseSettings):
     #: ADR-029: treat signed-in, 2FA-verified users as KYC-approved for offers. No KYC provider
     #: exists yet. Refused unless app_env is "local".
     kyc_dev_bypass: bool = False
+    #: ADR-035: AES-256-GCM key for payout account numbers at rest (base64 of 32 bytes).
+    #: Without it, payout accounts cannot be added. A KMS-managed key replaces it before go-live.
+    beneficiary_encryption_key: str | None = None
+    #: ADR-035: a pretend bank name check that approves every account. No partner bank exists
+    #: yet. Refused unless app_env is "local".
+    bank_check_dev: bool = False
+    #: ADR-035: how often the server looks for deals whose 30 minutes ran out (0 = never;
+    #: expiry then happens only when the offer or deal is next touched).
+    preparation_sweep_seconds: int = 30
 
     cors_allowed_origins: str = ""
 

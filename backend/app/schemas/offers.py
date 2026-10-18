@@ -8,10 +8,16 @@ taken.
 
 from __future__ import annotations
 
+import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "AcceptRequest",
+    "AddPayoutAccountRequest",
+    "ChoosePayoutAccountsRequest",
+    "PayoutAccountResponse",
+    "PayoutChoiceIn",
     "CreateOfferRequest",
     "ListingsResponse",
     "MatchResponse",
@@ -77,3 +83,41 @@ class MatchResponse(BaseModel):
     accepted_at: str
     server_order_key: str
     your_role: str
+    you_receive_currency: str
+    you_receive_amount: str
+    preparation_state: str
+    preparation_deadline: str | None
+    you_chose_payout_accounts: bool
+    other_side_chose_payout_accounts: bool
+
+
+class PayoutChoiceIn(_Strict):
+    payout_account_id: uuid.UUID
+    #: Exact decimal text in the currency you receive.
+    amount: str = Field(min_length=1, max_length=24)
+
+
+class ChoosePayoutAccountsRequest(_Strict):
+    accounts: list[PayoutChoiceIn] = Field(min_length=1, max_length=10)
+
+
+class AddPayoutAccountRequest(_Strict):
+    currency: str = Field(pattern=r"^[A-Za-z]{3}$")
+    bank_name: str = Field(min_length=1, max_length=60)
+    #: Never logged, never returned; only the last 4 digits are kept readable.
+    account_number: str = Field(min_length=1, max_length=17, repr=False)
+    routing_number: str | None = Field(default=None, max_length=9)
+    sort_code: str | None = Field(default=None, max_length=6)
+    account_type: str | None = Field(default=None, max_length=16)
+
+
+class PayoutAccountResponse(BaseModel):
+    payout_account_id: str
+    currency: str
+    bank_name: str
+    account_last4: str
+    account_type: str | None
+    account_name: str | None
+    validation_state: str
+    payout_hold_until: str
+    created_at: str

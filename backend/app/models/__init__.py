@@ -11,10 +11,10 @@ issues no DDL and writes no row.
 MILESTONE 4.1B: `CurrencyDefinition`. MILESTONE AUTH-1 (ADR-025): the identity tables
 `User`, `AuthSession`, `AuthRefreshToken`, `PhoneVerification`; MILESTONE AUTH-2 (ADR-026):
 `MfaFactor`, `MfaChallenge`, `RecoveryCode`, `TrustedDevice`, `StepUpGrant` -- none carries
-money. MILESTONE 4.1C (ADR-029): `Offer`, `IdempotencyRecord`; MILESTONE 4.1D (ADR-031): `Match`
--- records with amounts, not money. Transaction, Settlement, SettlementLeg, PayoutExecution,
-KycCase and BeneficiaryAccount belong to later milestones and must not be added here
-ahead of their approved batch.
+money. MILESTONE 4.1C (ADR-029): `Offer`, `IdempotencyRecord`; MILESTONE 4.1D (ADR-031):
+`Match`; MILESTONE 4.1E (ADR-035): `Beneficiary`, `MatchPayoutSelection` -- records with
+amounts, not money. Transaction, Settlement, SettlementLeg, PayoutExecution and KycCase belong
+to later milestones and must not be added here ahead of their approved batch.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
@@ -32,13 +32,16 @@ from app.models.identity import (
     User,
 )
 from app.models.marketplace import IdempotencyRecord, Match, Offer
+from app.models.payouts import Beneficiary, MatchPayoutSelection
 
 __all__ = [
     "AuthRefreshToken",
     "AuthSession",
+    "Beneficiary",
     "CurrencyDefinition",
     "IdempotencyRecord",
     "Match",
+    "MatchPayoutSelection",
     "Offer",
     "MfaChallenge",
     "MfaFactor",

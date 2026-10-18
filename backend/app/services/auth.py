@@ -81,6 +81,7 @@ from app.models.identity import (
     TrustedDevice,
     User,
 )
+from app.providers.bank_check import NameCheck
 from app.providers.sms import SmsSender
 from app.repositories.identity import IdentityRepository
 
@@ -207,6 +208,10 @@ class AuthRuntime:
     #: Wrong-PIN counting for identifiers with no account, so they lock exactly like real
     #: accounts and the lock itself does not reveal which identifiers exist.
     unknown_identifier_limiter: SlidingWindowLimiter
+    #: ADR-035: seals payout account numbers. None: payout accounts are switched off.
+    beneficiary_box: SecretBox | None = None
+    #: ADR-035: the bank's account name check. None: new accounts stay "pending".
+    name_check: NameCheck | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(

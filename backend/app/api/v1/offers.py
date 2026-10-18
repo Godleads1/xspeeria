@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,21 +30,26 @@ from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.schemas.offers import (
     AcceptRequest,
+    AddPayoutAccountRequest,
+    ChoosePayoutAccountsRequest,
     CreateOfferRequest,
     ListingsResponse,
     MatchResponse,
     OfferResponse,
+    PayoutAccountResponse,
     UpdateRateRequest,
 )
 from app.services.auth import AuthRuntime, AuthService, Principal
-from app.services.matches import MatchService
+from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
+from app.services.payouts import PayoutAccountService
 
-__all__ = ["marketplace_router", "matches_router", "router"]
+__all__ = ["marketplace_router", "matches_router", "payout_accounts_router", "router"]
 
 marketplace_router = APIRouter(prefix="/api/v1/marketplace", tags=["marketplace"])
 router = APIRouter(prefix="/api/v1/offers", tags=["offers"])
 matches_router = APIRouter(prefix="/api/v1/matches", tags=["matches"])
+payout_accounts_router = APIRouter(prefix="/api/v1/payout-accounts", tags=["payout accounts"])
 
 
 async def get_offer_service(
@@ -198,3 +203,92 @@ async def my_matches(principal: Verified, matches: Matches) -> Any:
 @matches_router.get("/{match_id}", response_model=MatchResponse, summary="One match")
 async def get_match(match_id: uuid.UUID, principal: Verified, matches: Matches) -> Any:
     return await matches.get(principal, match_id)
+
+
+# --- payout accounts and per-deal choice (Milestone 4.1E, ADR-035) ------------------------
+
+
+async def get_payout_account_service(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> PayoutAccountService:
+    return PayoutAccountService(db, runtime.clock, runtime.beneficiary_box, runtime.name_check)
+
+
+PayoutAccounts = Annotated[PayoutAccountService, Depends(get_payout_account_service)]
+
+
+@payout_accounts_router.get(
+    "",
+    response_model=list[PayoutAccountResponse],
+    summary="My payout accounts (last 4 digits only)",
+)
+async def my_payout_accounts(principal: Verified, accounts: PayoutAccounts) -> Any:
+    return await accounts.mine(principal)
+
+
+@payout_accounts_router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PayoutAccountResponse,
+    summary="Add one of my own accounts (needs an authenticator approval for beneficiary.add)",
+)
+async def add_payout_account(
+    body: AddPayoutAccountRequest,
+    principal: Verified,
+    accounts: PayoutAccounts,
+    auth: Auth,
+    step_up_token: StepUpToken = None,
+) -> Any:
+    async def confirm() -> None:
+        await auth.consume_step_up(principal, "beneficiary.add", step_up_token)
+
+    return await accounts.add(
+        principal,
+        currency=body.currency,
+        bank_name=body.bank_name,
+        account_number=body.account_number,
+        routing_number=body.routing_number,
+        sort_code=body.sort_code,
+        account_type=body.account_type,
+        confirm_step_up=confirm,
+    )
+
+
+@payout_accounts_router.delete(
+    "/{payout_account_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove one of my payout accounts (needs beneficiary.remove approval)",
+)
+async def remove_payout_account(
+    payout_account_id: uuid.UUID,
+    principal: Verified,
+    accounts: PayoutAccounts,
+    auth: Auth,
+    step_up_token: StepUpToken = None,
+) -> Response:
+    async def confirm() -> None:
+        await auth.consume_step_up(principal, "beneficiary.remove", step_up_token)
+
+    await accounts.remove(principal, payout_account_id, confirm)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@matches_router.put(
+    "/{match_id}/payout-accounts",
+    response_model=MatchResponse,
+    summary="Choose where my side of this deal is paid (needs payout.confirm approval)",
+)
+async def choose_payout_accounts(
+    match_id: uuid.UUID,
+    body: ChoosePayoutAccountsRequest,
+    principal: Verified,
+    matches: Matches,
+    auth: Auth,
+    step_up_token: StepUpToken = None,
+) -> Any:
+    async def confirm() -> None:
+        await auth.consume_step_up(principal, "payout.confirm", step_up_token)
+
+    choices = [PayoutChoice(a.payout_account_id, a.amount) for a in body.accounts]
+    return await matches.choose_payout_accounts(principal, match_id, choices, confirm)

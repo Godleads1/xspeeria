@@ -49,8 +49,9 @@ PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
-    "matches, idempotency_records, offers, step_up_grants, trusted_devices, recovery_codes, "
-    "mfa_challenges, mfa_factors, auth_refresh_tokens, auth_sessions, phone_verifications, users"
+    "match_payout_selections, beneficiaries, matches, idempotency_records, offers, "
+    "step_up_grants, trusted_devices, recovery_codes, mfa_challenges, mfa_factors, "
+    "auth_refresh_tokens, auth_sessions, phone_verifications, users"
 )
 
 

@@ -41,7 +41,11 @@ Last updated: 18 Oct 2026.
 - [x] **Connect the app's "Buy" button to taking an offer** — *Build* — done 18 Oct 2026 for development builds (ADR-032).
 - [x] **My Deals screen** — *Build* — done 18 Oct 2026 for development builds (ADR-033).
 - [x] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build* — done 18 Oct 2026 for development builds (ADR-034).
-- [ ] **Next milestone: payout accounts and preparation** — *You* to authorise; needs the preparation stage names and window length (Standing Standards §15 rows 9–10).
+- [x] **Payout accounts and preparation** — approved 18 Oct 2026 (30 minutes; sealed number, last 4 shown; pretend bank check); server built (ADR-035).
+- [ ] **Confirm ADR-035 §4 details** — *You*: stage names, routes, changing a choice until both sides have chosen, 10 accounts per deal.
+- [ ] **Corrected account after a bank rejection: same deadline or a new one?** — *You* (Standing Standards §15 row 10).
+- [ ] **EUR payout account form** (IBAN/BIC?) — *You*; EUR payout accounts are refused until then.
+- [ ] **App screens for payout accounts and choosing them for a deal** — *Build*.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 
@@ -65,7 +69,7 @@ Last updated: 18 Oct 2026.
 
 - [ ] **Passkeys** (Face ID / fingerprint as the second factor) — needs a native app build and a website domain. (ADR-008 §3)
 - [ ] **Shared rate limiter (Redis)** before running more than one server; trusted-proxy setting for client addresses. (ADR-025 §4)
-- [ ] **Secret manager and key rotation** for `JWT_SECRET_KEY` and `MFA_ENCRYPTION_KEY`. (SEC-027)
+- [ ] **Secret manager and key rotation** for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [ ] **Database row-level security** as a second layer of permission checks. (ADR-025 §1.4)
 - [ ] **PIN reset flow** (requires 2FA) and Support's identity re-verification procedure. (ADR-008, ADR-025 §1.3)
 - [ ] **Email address verification.** (ADR-025 §3)

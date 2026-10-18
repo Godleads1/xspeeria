@@ -68,13 +68,13 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
 | SEC-023 | IMPLEMENTED (partial, offers and acceptance) — persisted 24-hour idempotency on offer publish and acceptance, committed with the Match; offer row lock serializes acceptance; `0 ≤ matched ≤ original` CHECK; app role cannot change matches; concurrency tests (ADR-029, ADR-031) | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
 | SEC-024 | DOCUMENTED | `docs/adr/002-*`; Appendix D. | Reconciliation jobs and mismatch alerts. |
-| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. Server: `users.payout_hold_until` set for 24 h after recovery or authenticator reset (ADR-026); payout endpoints must enforce it. |
+| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. Server: `users.payout_hold_until` set for 24 h after recovery or authenticator reset (ADR-026); payout endpoints must enforce it. Server (ADR-035): `beneficiary.add`/`beneficiary.remove`/`payout.confirm` approvals; own accounts only; bank-confirmed only; 24-hour hold recorded (`test_payouts_api.py`). |
 
 ## F. Data, privacy and secrets
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-026 | NOT STARTED | — | Hosting/KMS decision; TLS everywhere; column-level protection for KYC data. |
+| SEC-026 | IMPLEMENTED (partial) | Payout account numbers sealed with AES-256-GCM bound to the row id; last 4 only returned; never logged (`test_add_account_keeps_only_last4_readable`, ADR-035). | Hosting/KMS decision (KMS-managed data key instead of an app-held key); TLS everywhere; column-level protection for KYC data. |
 | SEC-027 | IMPLEMENTED (partial) | Gitleaks over full history in CI with canary; sensitive-file guard; `.env.example` placeholders only. | Approved secret manager; rotation procedure. |
 | SEC-028 | DOCUMENTED (+ location minimised to country code, ADR-022) | SSN never stored (`RegionScreens.tsx`); retention approach is illustrative (`docs/08-compliance/03_Compliance_Operations_Manual_v1.1.md` §5.3). | Ratified retention periods; access controls on KYC storage. |
 | SEC-029 | IMPLEMENTED | Demo data synthetic (`example.com`, mock NIN record). | Replace demo phone with a confirmed reserved test number (review SEC-13). |
