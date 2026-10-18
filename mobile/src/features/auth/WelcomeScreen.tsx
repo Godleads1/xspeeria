@@ -77,7 +77,8 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
 const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas, paddingHorizontal: space.md },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 220 },
-  heroImage: { width: 300, height: 314 },
+  // Figma pictures are 300×300 pt; the files are 900×900 px (3×) so they stay sharp on phones.
+  heroImage: { width: 300, height: 300 },
   slides: { flexGrow: 0 },
   slide: { gap: 10 },
   title: { ...typography.headline, ...brandWeight('700'), fontSize: 22, color: color.text.primary },
