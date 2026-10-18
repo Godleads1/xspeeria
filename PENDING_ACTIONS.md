@@ -30,6 +30,19 @@ Last updated: 18 Oct 2026.
 - [ ] **Third-party payouts (DEC-007):** decide whether users may pay out to accounts not in their own name.
 - [ ] **Authorise Milestone 4.1C** (first money tables) once GATE 4.1B-CD3's enforcement is approved. (PROGRESS.md)
 
+## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
+
+- [ ] **Partner bank** — escrow and payouts: API documents, test (sandbox) access, webhook security details, settlement and reconciliation files, signed agreement. Unblocks real money movement.
+- [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
+- [ ] **ID checks (KYC) and anti-money-laundering** — verification provider (NIN, BVN, face match; UK/US/EU checks), sanctions screening, a compliance officer to own the rules.
+- [ ] **SMS and email provider accounts.**
+- [ ] **Hosting** — cloud account (database, Redis, servers; separate test and live), domain name, secret manager.
+- [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).
+- [ ] **Admin panel inputs** — staff roles and permissions; who reviews disputes, ID checks and frozen accounts.
+- [ ] **Monitoring** — alerting tool and an on-call person (runbooks can be written by *Build*).
+- [ ] **Security sign-off** — independent penetration tester; GitHub plan upgrade.
+- [ ] **Content** — artwork licences, legal review of app wording, terms of service, privacy policy.
+
 ## 3. Waiting on something else
 
 - [ ] **Sharper Figma artwork** when the Figma daily limit resets (or you export them): Home card texture (51:1720), avatar photo (39:2968), card backgrounds (1036:4840 / 4864 / 4888) at 3×. (ADR-023)
