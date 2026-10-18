@@ -2,7 +2,7 @@
 
 Milestone 1 wires configuration, structured logging, the error envelope and a single
 health route. Milestone AUTH-1 (ADR-025) adds the sign-in and current-user routes and the
-request log. No money-bearing router exists.
+request log. Milestone 4.1C (ADR-029) adds offers: records of intent, never money.
 
 Sign-in needs ``JWT_SECRET_KEY`` (at least 32 characters) and ``MFA_ENCRYPTION_KEY`` (base64 of
 32 bytes, ADR-026). Without either, the auth routes answer
@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, health
+from app.api.v1 import auth, health, offers
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -52,6 +52,8 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         raise ValueError("MFA_ENCRYPTION_KEY is still the .env.example placeholder")
     keys = TokenKeys(settings.jwt_secret_key) if settings.jwt_secret_key else None
     box = SecretBox(settings.mfa_encryption_key) if settings.mfa_encryption_key else None
+    if settings.kyc_dev_bypass and settings.app_env != "local":
+        raise ValueError("KYC_DEV_BYPASS is allowed only with APP_ENV=local (ADR-029)")
     sms: SmsSender | None = None
     if settings.dev_sms:
         if settings.app_env != "local":
@@ -95,12 +97,20 @@ def create_app(
         application.add_middleware(
             CORSMiddleware,
             allow_origins=resolved.cors_origins,
-            allow_methods=["GET", "POST", "DELETE"],
-            allow_headers=["Authorization", "Content-Type", "X-Step-Up-Token", "X-Request-ID"],
+            allow_methods=["GET", "POST", "PATCH", "DELETE"],
+            allow_headers=[
+                "Authorization",
+                "Content-Type",
+                "X-Step-Up-Token",
+                "X-Request-ID",
+                "Idempotency-Key",
+            ],
             allow_credentials=False,
         )
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(offers.router)
+    application.include_router(offers.marketplace_router)
 
     get_logger(__name__).info(
         "application_configured",

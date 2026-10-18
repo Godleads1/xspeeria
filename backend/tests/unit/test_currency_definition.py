@@ -338,12 +338,13 @@ class TestPackageRegistration:
             "recovery_codes",
             "trusted_devices",
             "step_up_grants",
+            "offers",
+            "idempotency_records",
         }
 
     @pytest.mark.parametrize(
         "future_table",
         [
-            "offers",
             "matches",
             "transactions",
             "settlements",
@@ -352,8 +353,7 @@ class TestPackageRegistration:
             "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
-            "idempotency_records",
-        ],  # "users" approved by Milestone AUTH-1 (ADR-025)
+        ],  # users: AUTH-1 (ADR-025); offers, idempotency_records: 4.1C (ADR-029)
     )
     def test_no_future_batch_table_is_registered(self, future_table: str) -> None:
         """4.1C-4.1H entities must not appear ahead of their approved batch."""
@@ -383,8 +383,9 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['auth_refresh_tokens', 'auth_sessions', 'currency_definitions', "
-            "'mfa_challenges', 'mfa_factors', 'phone_verifications', 'recovery_codes', "
-            "'step_up_grants', 'trusted_devices', 'users']"
+            "'idempotency_records', 'mfa_challenges', 'mfa_factors', 'offers', "
+            "'phone_verifications', 'recovery_codes', 'step_up_grants', 'trusted_devices', "
+            "'users']"
         )
 
     def test_registration_opens_no_connection(self) -> None:
@@ -426,4 +427,6 @@ class TestPackageRegistration:
             "0002_currency_definitions.py",
             "0003_identity_tables_auth_1.py",  # Milestone AUTH-1 (ADR-025)
             "0004_two_factor_tables_auth_2.py",  # Milestone AUTH-2 (ADR-026)
+            "0005_cd3_currency_definitions_immutable.py",  # CD3 enforcement (ADR-028)
+            "0006_offers_and_idempotency_records_4_1c.py",  # Milestone 4.1C (ADR-029)
         ]

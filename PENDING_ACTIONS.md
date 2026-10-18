@@ -32,7 +32,10 @@ Last updated: 18 Oct 2026.
 - [ ] **Figma file:** update the PIN screens from 4 to 6 boxes. (ADR-024)
 - [ ] **GitHub plan upgrade** (Pro/Team) so `main` can require reviews and passing checks. (SEC-031, ADR-019 §4)
 - [ ] **Third-party payouts (DEC-007):** decide whether users may pay out to accounts not in their own name.
-- [ ] **Authorise Milestone 4.1C** (first money tables) once GATE 4.1B-CD3's enforcement is approved. (PROGRESS.md)
+- [x] **Authorise Milestone 4.1C** — approved 18 Oct 2026; CD3 lock built (ADR-028); offers built (ADR-029).
+- [ ] **Confirm the offer interface details the contract leaves open** — *You* (ADR-029 §4): `filter[currency_pair]` written `USD/NGN`; page shape `items` + `next_offset`; the extra `GET /offers/mine` and `GET /offers/{id}`; amount filters and other sort orders not built yet.
+- [ ] **Authorise acceptance and `Match`** (the next marketplace milestone) — *You*.
+- [ ] **Connect the app's Market screen to the server offers** — *Build*.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 

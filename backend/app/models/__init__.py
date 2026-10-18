@@ -11,8 +11,8 @@ issues no DDL and writes no row.
 MILESTONE 4.1B: `CurrencyDefinition`. MILESTONE AUTH-1 (ADR-025): the identity tables
 `User`, `AuthSession`, `AuthRefreshToken`, `PhoneVerification`; MILESTONE AUTH-2 (ADR-026):
 `MfaFactor`, `MfaChallenge`, `RecoveryCode`, `TrustedDevice`, `StepUpGrant` -- none carries
-money.
-Offer, Match, Transaction, Settlement, SettlementLeg, PayoutExecution, KycCase,
+money. MILESTONE 4.1C (ADR-029): `Offer`, `IdempotencyRecord` -- records with amounts, not money.
+Match, Transaction, Settlement, SettlementLeg, PayoutExecution, KycCase,
 BeneficiaryAccount and IdempotencyRecord belong to 4.1C-4.1H and must not be added here
 ahead of their approved batch.
 
@@ -31,11 +31,14 @@ from app.models.identity import (
     TrustedDevice,
     User,
 )
+from app.models.marketplace import IdempotencyRecord, Offer
 
 __all__ = [
     "AuthRefreshToken",
     "AuthSession",
     "CurrencyDefinition",
+    "IdempotencyRecord",
+    "Offer",
     "MfaChallenge",
     "MfaFactor",
     "PhoneVerification",
