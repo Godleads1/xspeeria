@@ -37,7 +37,7 @@ feedback only; the server must re-validate.
 
 | Figma | Implementation | Why |
 |---|---|---|
-| Advert slot with a stock photo of a person | The Figma artwork, supplied by the product owner (`mobile/assets/images/market-advert.png`) | **Open:** confirm the stock-photo licence before release; supply a 3× export (current file is 282 × 88 and will look soft) |
+| Advert slot with a stock photo of a person | The Figma artwork, supplied by the product owner (`mobile/assets/images/market-advert.png`) | **Open:** confirm the stock-photo licence before release; supply a 3× export (replaced 2026-10-18 with the product owner's sharper 342 × 113 artwork; slot height now follows it; a 3× file, 1026 × 339, would be sharper still) |
 | "Select Matching buying currency…" | "Select a currency to buy to see available offers" | Typo/placeholder correction |
 | Sell sheet "Currencies you are licensed to sell" | "…licensed to receive" | It lists the currency received |
 | Faded disabled "Create request" | Same, via opacity | Matches Figma; disabled controls are exempt from contrast rules |

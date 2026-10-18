@@ -5,9 +5,11 @@ import { ReferralScreen } from '../src/features/referral/ReferralScreen';
 import { REFERRAL, inviteMessage, referralDiscountMinor } from '../src/features/referral/data';
 
 describe('referral reward (ADR-009)', () => {
-  it('is 10% of the fee in integer minor units, half-up', () => {
+  it('is 10% of the fee in integer minor units, half to even', () => {
     expect(referralDiscountMinor(37500)).toBe(3750);
-    expect(referralDiscountMinor(37505)).toBe(3751);
+    expect(referralDiscountMinor(37505)).toBe(3750); // 3750.5 → 3750 (even)
+    expect(referralDiscountMinor(37515)).toBe(3752); // 3751.5 → 3752 (even)
+    expect(referralDiscountMinor(37506)).toBe(3751);
     expect(referralDiscountMinor(37504)).toBe(3750);
     expect(referralDiscountMinor(0)).toBe(0);
     expect(() => referralDiscountMinor(1.5)).toThrow();

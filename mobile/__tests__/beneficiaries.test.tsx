@@ -56,8 +56,10 @@ describe('Manage Beneficiaries screen', () => {
 
   it('filters with chips and search, showing an empty state', async () => {
     await render(<BeneficiariesScreen onBack={jest.fn()} stepUp={allow} />);
+    await fireEvent.press(screen.getByTestId('beneficiary-filter-GHS'));
+    expect(screen.getByTestId('beneficiaries-empty')).toBeTruthy(); // no GHS accounts
     await fireEvent.press(screen.getByTestId('beneficiary-filter-GBP'));
-    expect(screen.getByTestId('beneficiaries-empty')).toBeTruthy();
+    expect(screen.getByText('•••• 6142')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('beneficiary-filter-All'));
     await fireEvent.changeText(screen.getByTestId('beneficiaries-search'), 'zzz');
     expect(screen.getByTestId('beneficiaries-empty')).toBeTruthy();

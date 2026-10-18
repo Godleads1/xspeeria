@@ -88,6 +88,12 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `015-sell-flow.md` | Sell flow: offer matches, green actions, seller fee in sent currency (to be confirmed), sell receipt in Figma layout (DEC-021) | **APPROVED** — 2026-10-17 |
 | `016-new-location-region-kyc.md` | New-location prompt and US identity check (SSN, ID document, selfie) with pending region; demo trigger (DEC-022) | **APPROVED** — 2026-10-17 |
 | `017-npm-audit-time-limited-exceptions.md` | npm audit gate: high threshold kept; exact-advisory exceptions, max 31 days, enforced by `scripts/check_npm_audit.py` (DEC-023) | **APPROVED** — 2026-10-17 |
+| `018-security-review-remediation.md` | Independent security/QA/financial review: DEMO_MODE from the build, per-user data cleared on log-out, TOTP single-use, strict money input; two rounding/partial-fill conflicts open (DEC-024) | **APPROVED** — 2026-10-17 |
+| `019-review-decisions-and-multi-offer-fill.md` | High-severity release rule relaxed with risk acceptance (C1); rounding half to even; one request filled from several listings, each part explicit (DEC-025) | **APPROVED** — 2026-10-17 |
+| `020-official-rate-ceiling.md` | The official rate is the reference ceiling: `0 < rate ≤ official rate`, hard block above, no floor; source/cadence still open (DEC-026) | **APPROVED** — 2026-10-17 |
+| `021-percentage-fee-and-split-payouts.md` | Coordination fee = 1% of what each side sends (supersedes the flat fee in Business Plan §5 / BRS-04 / CORRECTIONS_v3 §2); per-trade 5-minute windows; payouts split across own accounts, paid by the partner bank, confirmation to both sides (DEC-027) | **APPROVED** — 2026-10-17 |
+| `022-payout-destination-welcome-location.md` | Payout Destination (own-name accounts, last 4 only, 24-hour hold for new accounts, no balance wording), Welcome slides with corrected claims, location → country only for KYC region (DEC-028) | **APPROVED** — 2026-10-18 |
+| `023-figma-exact-home-cards-demo.md` | Exact Figma Home and Cards in development builds: Figma's balance, card figures and transactions as "Demo" display text, gated on DEMO_MODE (release builds unchanged); no "Create yours"; narrow exception to the on-screen no-balance rule (DEC-029) | **APPROVED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 
@@ -325,6 +331,8 @@ Production integration details require evidence from actual provider documentati
 `docs/07-security/Xspeeria_Security_Master_Audit.md`
 
 This document is mandatory for all security-sensitive implementation.
+
+**Extended by** `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` (product owner, 2026-10-17): 40 requirements (SEC-001–SEC-040) mapped to OWASP ASVS 5.0.0, MASVS v2, API Security Top 10 and NIST SSDF; Xspeeria financial requirements FX-01–FX-05; release gates. Where the two differ, the stricter applies until a human decides (open item C1). Current state per requirement: `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`. Review reports: `docs/07-security/reviews/`.
 
 Use for:
 

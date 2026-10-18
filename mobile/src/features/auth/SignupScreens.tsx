@@ -6,8 +6,8 @@
  * DEMO: the NIN lookup, selfie match, SMS and email are simulated and say so on screen.
  */
 
-import { useState, type ReactElement, type ReactNode } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
@@ -18,6 +18,8 @@ import { FieldInput, OutlinedField } from '../market/controls';
 import { formatDobInput } from '../profile/ChangeDobScreen';
 import { longDate } from '../profile/data';
 import {
+  RESEND_AFTER_MS,
+  canResend,
   checkCode,
   maskContact,
   normaliseEmail,
@@ -29,6 +31,7 @@ import {
 } from '../profile/verification';
 import { confirmWithBiometrics, type BiometricOutcome } from './biometrics';
 import { DEMO_MODE, DEMO_NIN_RECORD } from './demo';
+import { detectCountry } from './location';
 import { PIN_LENGTH, pinProblem, sameSecret } from './pin';
 import { signup, useSignup } from './signupStore';
 import { AuthTop, CheckRow, DemoNote, GhostButton, Heading, PhoneInput, PinPad, fullPhone } from './ui';
@@ -58,7 +61,30 @@ function Frame({
 
 /* ------------------------------------------------------------ 1. Let's get started */
 
-export function GetStartedScreen({ onNext, onLogIn, onTerms }: { onNext: () => void; onLogIn: () => void; onTerms: () => void }): ReactElement {
+export function GetStartedScreen({
+  onNext,
+  onLogIn,
+  onTerms,
+  detect = detectCountry,
+}: {
+  onNext: () => void;
+  onLogIn: () => void;
+  onTerms: () => void;
+  /** Location → country for the KYC region (location.ts); never blocks sign-up. */
+  detect?: typeof detectCountry;
+}): ReactElement {
+  // Figma: the location prompt appears as this screen opens. Declining changes nothing here.
+  useEffect(() => {
+    let live = true;
+    detect({ ask: true })
+      .then((r) => {
+        if (live) signup.update({ country: r.status === 'found' ? r.country : null });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [detect]);
   const [local, setLocal] = useState('');
   const [aml, setAml] = useState(false);
   const [terms, setTerms] = useState(false);
@@ -225,18 +251,38 @@ export function CodeScreen({
   const [challenge, setChallenge] = useState<Challenge>(() => sendChallenge(kind, target, now(), random));
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // An expired or used-up code is never replaced automatically: the user asks for a new one,
+  // and only after the resend wait (SEC-06). Otherwise 5 tries per code would be unlimited.
+  const [dead, setDead] = useState(false);
+  const [tick, setTick] = useState(0);
+  const wait = Math.max(0, Math.ceil((challenge.sentAt + RESEND_AFTER_MS - now()) / 1000));
+
+  useEffect(() => {
+    if (canResend(challenge, now())) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [challenge, tick, now]);
 
   const verify = (): void => {
     const r = checkCode(challenge, code, now());
     setCode('');
     if (r.ok) return onVerified();
     setChallenge(r.challenge);
+    const usedUp = r.reason !== 'wrong' || r.challenge.triesLeft <= 0;
+    if (usedUp) setDead(true);
     setError(
-      r.reason === 'wrong'
-        ? `That code is not right. ${r.challenge.triesLeft} ${r.challenge.triesLeft === 1 ? 'try' : 'tries'} left.`
-        : 'This code can’t be used any more. We have sent a new one.',
+      usedUp
+        ? 'This code can’t be used any more. Ask for a new code.'
+        : `That code is not right. ${r.challenge.triesLeft} ${r.challenge.triesLeft === 1 ? 'try' : 'tries'} left.`,
     );
-    if (r.reason !== 'wrong') setChallenge(sendChallenge(kind, target, now(), random));
+  };
+
+  const resend = (): void => {
+    if (!canResend(challenge, now())) return;
+    setChallenge(sendChallenge(kind, target, now(), random));
+    setDead(false);
+    setError(null);
+    setCode('');
   };
 
   const ending = kind === 'phone' ? `number ending with ******${target.slice(-4)}` : maskContact('email', target);
@@ -247,7 +293,7 @@ export function CodeScreen({
       top={<AuthTop onBack={onBack} step={step} />}
       footer={
         <View style={styles.actions}>
-          <PrimaryButton testID={`${testID}-verify`} label={verifyLabel} onPress={verify} disabled={code.length !== 6} />
+          <PrimaryButton testID={`${testID}-verify`} label={verifyLabel} onPress={verify} disabled={code.length !== 6 || dead} />
           {altLabel && onAlt ? <GhostButton testID={`${testID}-alt`} label={altLabel} onPress={onAlt} /> : null}
         </View>
       }
@@ -266,6 +312,11 @@ export function CodeScreen({
         />
       </OutlinedField>
       {error ? <Text testID={`${testID}-error`} style={styles.error}>{error}</Text> : null}
+      <Pressable testID={`${testID}-resend`} accessibilityRole="button" disabled={wait > 0} onPress={resend} style={styles.resend}>
+        <Text style={wait > 0 ? styles.resendWait : styles.resendText}>
+          {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
+        </Text>
+      </Pressable>
       <DemoNote testID={`${testID}-demo`}>
         Demo app: no {kind === 'phone' ? 'SMS' : 'email'} service is connected. Your code is {challenge.code}.
       </DemoNote>
@@ -355,7 +406,7 @@ export function CreatePinScreen({ onNext }: { onNext: () => void }): ReactElemen
         const problem = pinProblem(p);
         if (problem) return setError(problem);
         setError(null);
-        signup.update({ pin: p });
+        signup.update({ pin: p, pinConfirmed: false });
         onNext();
       }}
     />
@@ -371,9 +422,12 @@ export function ConfirmPinScreen({ onNext, onRestart }: { onNext: () => void; on
       title="Confirm PIN"
       error={error}
       onComplete={(p) => {
-        if (draft.pin && sameSecret(p, draft.pin)) return onNext();
+        if (draft.pin && sameSecret(p, draft.pin)) {
+          signup.update({ pinConfirmed: true });
+          return onNext();
+        }
         setError('PINs didn’t match. Create your PIN again.');
-        signup.update({ pin: null });
+        signup.update({ pin: null, pinConfirmed: false });
         setTimeout(onRestart, 900);
       }}
     />
@@ -465,6 +519,9 @@ const styles = themed(() => ({
   actions: { gap: 12 },
   stretch: { alignSelf: 'stretch' },
   error: { ...typography.caption, color: color.error.text },
+  resend: { alignSelf: 'flex-start', paddingVertical: space.xs },
+  resendText: { ...typography.body, ...brandWeight('700'), color: color.brand.primary },
+  resendWait: { ...typography.body, color: color.text.secondary },
   link: { color: color.warning.text, textDecorationLine: 'underline' },
   text: { ...typography.body, fontSize: 14, color: color.text.secondary },
   small: { ...typography.caption, color: color.text.secondary },

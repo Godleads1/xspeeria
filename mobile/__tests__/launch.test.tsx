@@ -29,6 +29,6 @@ describe('launch splash (Figma 33:1355)', () => {
 describe('Welcome (Figma 33:1367)', () => {
   it('shows the Figma hero picture', async () => {
     await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
-    expect(screen.getByTestId('welcome-hero', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('welcome-hero-0', { includeHiddenElements: true })).toBeTruthy();
   });
 });

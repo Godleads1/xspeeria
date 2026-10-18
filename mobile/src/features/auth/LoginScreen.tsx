@@ -109,6 +109,8 @@ export function LoginScreen({
           ? "Enter your phone number"
           : "Enter a valid email address",
       );
+    else if (r.reason === "unavailable")
+      setError("Log-in isn’t available in this version of the app.");
     else if (r.reason === "locked")
       setError(
         `Too many wrong tries. Try again in ${Math.max(1, Math.ceil((r.until - now()) / 60000))} minutes.`,
@@ -120,7 +122,7 @@ export function LoginScreen({
   };
 
   const faceId = async (): Promise<void> => {
-    if (!session.get().biometric) {
+    if (!session.biometricOn()) {
       Alert.alert(
         "Face ID is off",
         "Log in with your PIN first, then turn on Face ID for this phone.",

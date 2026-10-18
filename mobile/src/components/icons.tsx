@@ -54,6 +54,13 @@ export type IconName =
   | 'hexagon'
   | 'dollar'
   | 'minus'
+  | 'close'
+  | 'tag'
+  | 'snowflake'
+  | 'arrowOut'
+  | 'arrowIn'
+  | 'pen'
+  | 'building'
   | 'camera'
   | 'pencil'
   | 'scan';
@@ -312,6 +319,34 @@ export function Icon({
         </>
       ) : null}
       {name === 'minus' ? <Path d="M5 12h14" {...stroke} /> : null}
+      {name === 'tag' ? (
+        <>
+          <Path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9z" {...stroke} />
+          <Path d="M8 7.5a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1z" {...stroke} />
+        </>
+      ) : null}
+      {name === 'snowflake' ? (
+        <Path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10M9 4l3 3 3-3M9 20l3-3 3 3M2.6 10.5l4.1-.4-1.7-3.8M21.4 13.5l-4.1.4 1.7 3.8M2.6 13.5l4.1.4-1.7 3.8M21.4 10.5l-4.1-.4 1.7-3.8" {...stroke} />
+      ) : null}
+      {name === 'arrowOut' ? (
+        <>
+          <Path d="M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4z" {...stroke} />
+          <Path d="M13 12h8M18 9l3 3-3 3" {...stroke} />
+        </>
+      ) : null}
+      {name === 'arrowIn' ? (
+        <>
+          <Path d="M10 6h10v12H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" {...stroke} />
+          <Path d="M2 12h9M8 9l3 3-3 3" {...stroke} />
+        </>
+      ) : null}
+      {name === 'pen' ? (
+        <Path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.6 7.6M11 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" {...stroke} />
+      ) : null}
+      {name === 'building' ? (
+        <Path d="M3 21h18M5 21V5l7-3 7 3v16M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4" {...stroke} />
+      ) : null}
+      {name === 'close' ? <Path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6" {...stroke} /> : null}
       {name === 'plus' ? <Path d="M12 5v14M5 12h14" {...stroke} /> : null}
       {name === 'globe' ? (
         <>

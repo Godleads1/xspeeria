@@ -14,16 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
-import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
+import { OutlinedField } from '../market/controls';
 import type { StepUp } from '../security/stepUp';
 import { beneficiaryStore } from './beneficiaryStore';
+import { BankAccountFields } from './BankAccountFields';
 import {
-  ACCOUNT_TYPES,
-  BANK_FORMS,
   PROFILE_USER,
   validateBankForm,
   type Beneficiary,
-  type BankField,
   type BankFieldKey,
   type BankFormValues,
 } from './data';
@@ -42,17 +40,8 @@ export function AddBeneficiaryScreen({
   stepUp: StepUp;
 }): ReactElement {
   const insets = useSafeAreaInsets();
-  const fields = BANK_FORMS[currency] ?? [];
   const [values, setValues] = useState<BankFormValues>({});
   const [errors, setErrors] = useState<Partial<Record<BankFieldKey, string>>>({});
-  const [typeSheet, setTypeSheet] = useState(false);
-
-  const set = (f: BankField, raw: string): void => {
-    const next = f.kind === 'digits' ? raw.replace(/\D/g, '') : raw;
-    setValues((v) => ({ ...v, [f.key]: next }));
-    if (errors[f.key]) setErrors((e) => ({ ...e, [f.key]: undefined }));
-  };
-
   const submit = async (): Promise<void> => {
     const found = validateBankForm(currency, values);
     setErrors(found);
@@ -86,41 +75,15 @@ export function AddBeneficiaryScreen({
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Text accessibilityRole="header" style={styles.section}>Account Details</Text>
 
-        {fields.map((f) => {
-          const label = `${f.label} *`;
-          const error = errors[f.key];
-          return (
-            <View key={f.key} style={styles.fieldWrap}>
-              <OutlinedField label={label} invalid={Boolean(error)}>
-                {f.kind === 'select' ? (
-                  <Pressable
-                    testID={`field-${f.key}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${f.label}${values[f.key] ? `, ${values[f.key]}` : ''}`}
-                    onPress={() => setTypeSheet(true)}
-                    style={styles.select}
-                  >
-                    <Text style={values[f.key] ? styles.selectValue : styles.selectPlaceholder}>{values[f.key] ?? 'select'}</Text>
-                    <Icon name="chevron" color={color.text.secondary} size={14} weight={2} />
-                  </Pressable>
-                ) : (
-                  <FieldInput
-                    testID={`field-${f.key}`}
-                    accessibilityLabel={f.label}
-                    value={values[f.key] ?? ''}
-                    onChangeText={(t) => set(f, t)}
-                    keyboardType={f.kind === 'digits' ? 'number-pad' : 'default'}
-                    inputMode={f.kind === 'digits' ? 'numeric' : 'text'}
-                    maxLength={f.maxLength}
-                  />
-                )}
-              </OutlinedField>
-              {error ? (
-                <Text testID={`error-${f.key}`} style={styles.error}>{error}</Text>
-              ) : null}
-            </View>
-          );
-        })}
+        <BankAccountFields
+          currency={currency}
+          values={values}
+          errors={errors}
+          onChange={(key, value) => {
+            setValues((v) => ({ ...v, [key]: value }));
+            if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
+          }}
+        />
 
         <View style={styles.fieldWrap}>
           <OutlinedField label="Account Name">
@@ -136,20 +99,6 @@ export function AddBeneficiaryScreen({
         <PrimaryButton testID="add-beneficiary-submit" label="Add Beneficiary" onPress={() => void submit()} />
       </View>
 
-      <ActionSheet
-        testID="account-type-sheet"
-        visible={typeSheet}
-        onClose={() => setTypeSheet(false)}
-        actions={ACCOUNT_TYPES.map((t) => ({
-          key: t,
-          label: t,
-          onPress: () => {
-            setValues((v) => ({ ...v, accountType: t }));
-            setErrors((e) => ({ ...e, accountType: undefined }));
-            setTypeSheet(false);
-          },
-        }))}
-      />
     </KeyboardAvoidingView>
   );
 }

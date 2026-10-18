@@ -155,15 +155,25 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Accepts the current step and ±1 step for clock drift (ADR-008). */
-export function verifyTotp(key: Uint8Array, code: string, nowMs: number): boolean {
-  if (!/^\d{6}$/.test(code)) return false;
+/**
+ * Returns the time step the code belongs to (current step or ±1 for clock drift, ADR-008),
+ * or null. All three steps are always compared, so timing does not reveal which matched.
+ * Callers that accept a code must refuse any step at or before the last one accepted
+ * (RFC 6238 §5.2: one use per code).
+ */
+export function matchTotpStep(key: Uint8Array, code: string, nowMs: number): number | null {
+  if (!/^\d{6}$/.test(code)) return null;
   const step = Math.floor(nowMs / 1000 / TOTP_PERIOD_S);
-  let ok = false;
+  let matched: number | null = null;
   for (const s of [step - 1, step, step + 1]) {
-    if (safeEqual(hotp(key, s), code)) ok = true;
+    if (safeEqual(hotp(key, s), code) && matched === null) matched = s;
   }
-  return ok;
+  return matched;
+}
+
+/** Accepts the current step and ±1 step for clock drift. Does not prevent reuse: see matchTotpStep. */
+export function verifyTotp(key: Uint8Array, code: string, nowMs: number): boolean {
+  return matchTotpStep(key, code, nowMs) !== null;
 }
 
 export function otpauthUri(secretB32: string, account: string, issuer = 'Xspeeria'): string {

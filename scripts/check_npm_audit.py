@@ -15,7 +15,10 @@ Rules:
   * A high/critical advisory not in the exceptions file fails.
   * An exception matches only the same advisory ID **and** package. If npm now reports a
     higher severity than the exception approved, it fails.
-  * An expired exception fails. An exception may run at most 31 days from approval.
+  * An expired exception fails. An exception may run at most 31 days from approval, and an
+    approval dated in the future fails (it would stretch the 31-day limit).
+  * An advisory whose severity is missing or unknown counts as blocking (fail closed), and
+    npm's own high/critical package count must agree with the advisories found.
   * An exception that no longer matches any finding fails, so resolved entries are
     removed instead of lingering as a silent future allowance.
   * Moderate and low advisories are reported but never fail (same as before).
@@ -38,10 +41,12 @@ MAX_DAYS = 31
 REQUIRED = ("id", "package", "severity", "reason", "approved_by", "approved", "expires")
 
 
-def _advisories(report: dict[str, Any]) -> dict[tuple[str, str], str]:
+def _advisories(vulns: dict[str, Any]) -> dict[tuple[str, str], str]:
     """(advisory id, package) -> severity, from the leaf advisory objects in `via`."""
     found: dict[tuple[str, str], str] = {}
-    for vuln in report.get("vulnerabilities", {}).values():
+    for vuln in vulns.values():
+        if not isinstance(vuln, dict):
+            continue
         for via in vuln.get("via", []):
             if isinstance(via, dict):
                 adv_id = str(via.get("url", "")).rstrip("/").rsplit("/", 1)[-1]
@@ -62,8 +67,13 @@ def check(report: dict[str, Any], exceptions: list[dict[str, Any]], today: dt.da
 
     if "error" in report or report.get("auditReportVersion") != 2:
         return ["npm audit did not produce a valid v2 report; refusing to pass"]
-    total = report.get("metadata", {}).get("dependencies", {}).get("total", 0)
-    if not isinstance(total, int) or total <= 0:
+    metadata = report.get("metadata")
+    vulns = report.get("vulnerabilities", {})
+    if not isinstance(metadata, dict) or not isinstance(vulns, dict):
+        return ["npm audit report has an unexpected shape; refusing to pass"]
+    deps = metadata.get("dependencies", {})
+    total = deps.get("total", 0) if isinstance(deps, dict) else 0
+    if isinstance(total, bool) or not isinstance(total, int) or total <= 0:
         return ["npm audit report lists no dependencies; refusing to pass"]
 
     allowed: dict[tuple[str, str], dict[str, Any]] = {}
@@ -77,6 +87,8 @@ def check(report: dict[str, Any], exceptions: list[dict[str, Any]], today: dt.da
         expires = _date(exc["expires"], "expires", errors, where)
         if approved is None or expires is None:
             continue
+        if approved > today:
+            errors.append(f"{where}: approval date {approved.isoformat()} is in the future")
         if (expires - approved).days > MAX_DAYS:
             errors.append(f"{where}: runs more than {MAX_DAYS} days from approval")
         if today > expires:
@@ -85,11 +97,18 @@ def check(report: dict[str, Any], exceptions: list[dict[str, Any]], today: dt.da
             errors.append(f"{where}: unknown severity '{exc['severity']}'")
         allowed[(str(exc["id"]), str(exc["package"]))] = exc
 
-    found = _advisories(report)
+    found = _advisories(vulns)
+    blocking_found = 0
     for (adv_id, pkg), sev in sorted(found.items()):
+        if sev not in RANK:
+            errors.append(
+                f"advisory {adv_id} in {pkg} has unknown severity '{sev}'; treated as blocking"
+            )
+            continue
         if sev not in BLOCKING:
             print(f"note: {sev} {pkg} {adv_id} (below the high threshold)")
             continue
+        blocking_found += 1
         match = allowed.get((adv_id, pkg))
         if match is None:
             errors.append(f"{sev} advisory {adv_id} in {pkg} is not an approved exception")
@@ -97,6 +116,15 @@ def check(report: dict[str, Any], exceptions: list[dict[str, Any]], today: dt.da
             errors.append(f"{adv_id} in {pkg} is now {sev}; exception approved {match['severity']}")
         else:
             print(f"accepted until {match['expires']}: {sev} {pkg} {adv_id}")
+
+    counts = metadata.get("vulnerabilities", {})
+    if isinstance(counts, dict):
+        npm_blocking = sum(v for k, v in counts.items() if k in BLOCKING and isinstance(v, int))
+        if npm_blocking > 0 and blocking_found == 0:
+            errors.append(
+                f"npm reports {npm_blocking} high/critical packages but no advisory "
+                "was found; refusing to pass"
+            )
 
     for key in allowed:
         if key not in found:

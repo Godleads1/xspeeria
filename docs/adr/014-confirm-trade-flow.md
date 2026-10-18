@@ -7,6 +7,10 @@
 | **Decision ID** | DEC-020 |
 | **Authority** | Product owner, 2026-10-17: "ok. start" on the recommended confirm-trade flow (Figma 120:990 → 190:1791) — `DOCUMENT_INDEX.md` §1 rank 2 |
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). Totals include the 1% fee.
+
 ## 1. Flow
 
 | Step | Figma | Implementation |
@@ -21,7 +25,7 @@
 
 Phases (user level of ADR-001): awaiting payment → confirming → awaiting counterparty →
 releasing → completed; or expired / cancelled. Money is integer minor units; the buyer
-transfers `amount × rate` (half-up, BigInt) **plus** the flat coordination fee, matching the
+transfers `amount × rate` (half to even since `docs/adr/019-review-decisions-and-multi-offer-fill.md`; BigInt) **plus** the flat coordination fee, matching the
 receipt. Cancelling is allowed only before "I have paid".
 
 ## 2. Rules that mirror the server
@@ -30,8 +34,10 @@ receipt. Cancelling is allowed only before "I have paid".
 - Payouts go only to the user's **own, verified** account in the currency they receive
   (Banking spec §3.3; ALLOCATION_FUNDING_READY). Without one, Accept is disabled and the
   sheet offers "Add account".
-- If a match can fill less than requested, the sheet says so and shows the smaller amount;
-  the store refuses any amount over what the listing has (no silent resize, API contract).
+- If the selected listings fill less than requested, the sheet says so; each part's amount
+  was picked explicitly on Select Match, and the store refuses any amount over what a
+  listing has left (no silent resize). Several listings can fill one request — see
+  `docs/adr/019-review-decisions-and-multi-offer-fill.md` §3.
 - "I have paid" asks for confirmation that the exact amount was sent from an account in
   the user's name. Paying after the window is refused; the trade expires.
 - One extension per trade.

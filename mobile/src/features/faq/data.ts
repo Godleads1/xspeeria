@@ -64,7 +64,7 @@ export const FAQ: readonly FaqItem[] = [
     topic: 'sell',
     question: 'Can I set my own rate?',
     answer:
-      'Yes. You choose your rate. It must be above zero and cannot be higher than the current market limit; offers above it cannot be published.',
+      'Yes. You choose your rate. It must be above zero and cannot be higher than the official rate for that currency, which is shown on the Market screen; a higher rate cannot be used.',
   },
   {
     id: 'no-fund',
@@ -86,7 +86,7 @@ export const FAQ: readonly FaqItem[] = [
     topic: 'payments',
     question: 'How much does it cost?',
     answer:
-      'Xspeeria charges a small flat coordination fee on each side of a matched exchange, in your local currency. It is not a percentage of your amount, and there is no hidden margin in the rate. The fee is shown before you confirm.',
+      'Xspeeria charges a coordination fee of 1% of the money each side sends, in the currency that side sends. There is no hidden margin in the rate, and the fee is shown before you confirm.',
   },
   {
     id: 'when-paid',

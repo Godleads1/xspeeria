@@ -66,7 +66,7 @@ export const PRIVACY_POLICY: PolicyDocument = {
         sub('B. Information We Collect Automatically'),
         b('Device Data — IP address, browser type, device model, OS version, unique device identifiers.'),
         b('Usage Data — Login times, features used, clicks, and navigation patterns.'),
-        b('Location Data — Approximate geolocation based on IP (for compliance and fraud prevention).'),
+        b('Location Data — Your country, worked out from your network (IP) and, if you allow it, your phone’s approximate location when you sign up (for compliance and fraud prevention). Your exact position is not stored.'),
         sub('C. Information from Third Parties'),
         b('Verification data from KYC API providers, government registries, and sanctions lists.'),
         b('Transaction settlement data from partner banks and financial institutions.'),

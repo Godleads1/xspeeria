@@ -30,6 +30,11 @@ UK-specific compliance research, which doesn't yet exist in this suite.
 
 ## 2. Revenue model: percentage transaction fee → flat coordination fee
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). This correction is reversed by a later human decision.
+
+
 The Investor & Board Strategy Book and BRS previously modeled Xspeeria's own
 revenue as a **percentage fee** (illustrative 0.5–1.5% of transaction value,
 ~1.0% take rate, ~$7.50 per $750 transaction). The 5-Year Business Plan

@@ -317,6 +317,7 @@ export function VerifyRegionScreen({
             inputMode="numeric"
             maxLength={11}
             secure
+            noAutofill
             placeholder="enter"
           />
         </OutlinedField>

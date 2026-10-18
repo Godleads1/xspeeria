@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { usePreventScreenCapture } from 'expo-screen-capture';
+import { preventScreenCaptureAsync } from 'expo-screen-capture';
 
 import { AuthenticatorSetupScreen, groupKey } from '../src/features/security/AuthenticatorSetupScreen';
 import { StepUpHost } from '../src/features/security/StepUpHost';
@@ -14,7 +14,9 @@ const fakeRandom: RandomBytes = (n) => Uint8Array.from({ length: n }, () => (see
 
 function enrol(): { secret: string; codes: readonly string[] } {
   const secret = twoFactor.beginEnrolment(fakeRandom);
-  const codes = twoFactor.confirmEnrolment(totp(base32Decode(secret), NOW), NOW, fakeRandom);
+  // Enrol one time step before NOW, so the code at NOW has not been used yet (no replay).
+  const at = NOW - 30_000;
+  const codes = twoFactor.confirmEnrolment(totp(base32Decode(secret), at), at, fakeRandom);
   if (!codes) throw new Error('enrolment failed');
   return { secret, codes };
 }
@@ -70,7 +72,7 @@ describe('Authenticator setup screen', () => {
   it('blocks screenshots, shows QR + key, verifies and shows recovery codes once', async () => {
     const onDone = jest.fn();
     await render(<AuthenticatorSetupScreen account="d@example.com" random={fakeRandom} onBack={jest.fn()} onDone={onDone} now={() => NOW} />);
-    expect(usePreventScreenCapture).toHaveBeenCalledWith('xspeeria-2fa-setup');
+    expect(preventScreenCaptureAsync).toHaveBeenCalledWith('xspeeria-2fa-setup');
     expect(screen.getByTestId('authenticator-qr')).toBeTruthy();
     const secret = twoFactor.get().pendingSecret as string;
     expect(screen.getByTestId('authenticator-key').props.children).toBe(groupKey(secret));

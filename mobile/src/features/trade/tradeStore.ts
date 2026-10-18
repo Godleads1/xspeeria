@@ -11,10 +11,14 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { COORDINATION_FEE_KOBO, type HistoryItem } from '../history/data';
+import { coordinationFeeMinor, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
-import { quoteMinor } from '../market/money';
+import { formatHundredths, quoteMinor } from '../market/money';
+import { splitProblem, type PayoutShare } from './payoutSplit';
+import { rateProblem } from '../market/rateCeiling';
+import { DEMO_MODE } from '../auth/demo';
+import { session } from '../auth/session';
 
 export const FUNDING_WINDOW_MS = 5 * 60 * 1000;
 export const EXTENSION_MS = 5 * 60 * 1000;
@@ -50,16 +54,22 @@ export interface Trade {
   /** Foreign amount, minor units of `currency`. */
   readonly amountMinor: number;
   readonly rateHundredths: number;
-  /** What the user transfers into escrow, minor units of `payCurrency` (fee included on the NGN side). */
+  /** What the user transfers into escrow, minor units of `payCurrency`, fee included. */
   readonly transferMinor: number;
   readonly payCurrency: string;
-  readonly feeKobo: number;
+  /** The user's coordination fee (1%), minor units of `payCurrency` (ADR-021). */
+  readonly feeMinor: number;
   readonly counterparty: string;
-  readonly payout: PayoutChoice;
+  /** Own accounts the partner bank pays, with the amount each gets (ADR-021). */
+  readonly payouts: readonly PayoutShare[];
   readonly phase: Phase;
   readonly events: readonly TradeEvent[];
   readonly deadline: number;
   readonly extension: 'none' | 'requested' | 'approved';
+  /** Listing the trade took its amount from (capacity accounting). */
+  readonly listingId: string;
+  /** Set when one request was filled from several listings: the trades of that order. */
+  readonly orderId?: string;
   readonly phaseSince: number;
   readonly rating?: { readonly stars: number; readonly feedback: string };
 }
@@ -78,11 +88,45 @@ export function ngnFor(amountMinor: number, rateHundredths: number): number {
   return quoteMinor(amountMinor, rateHundredths);
 }
 
-/** What the user must transfer: NGN + fee when buying; the foreign amount when selling. */
-export function transferFor(side: Side, currency: string, amountMinor: number, rateHundredths: number): { minor: number; currency: string } {
-  return side === 'buy'
-    ? { minor: ngnFor(amountMinor, rateHundredths) + COORDINATION_FEE_KOBO, currency: 'NGN' }
-    : { minor: amountMinor, currency };
+/** A trade id not already in use (a repeat is astronomically unlikely, but never trusted). */
+function uniqueId(random: RandomBytes): string {
+  for (let i = 0; i < 5; i++) {
+    const id = `t-${reference(random).toLowerCase()}`;
+    if (!trades.some((t) => t.id === id)) return id;
+  }
+  throw new Error('Could not create a unique trade id');
+}
+
+/** What the user receives from escrow: the foreign amount when buying, NGN when selling. */
+export function receiveFor(side: Side, amountMinor: number, rateHundredths: number): number {
+  return side === 'buy' ? amountMinor : ngnFor(amountMinor, rateHundredths);
+}
+
+/** Event text for one payout, with the amount when the money was split. */
+function paidLabel(t: Trade, p: PayoutShare): string {
+  const cur = t.side === 'buy' ? t.currency : 'NGN';
+  // ADR-008: a newly added account is paid only after a 24-hour security hold.
+  if (p.isNew) return `${formatHundredths(p.amountMinor)} ${cur} for your new account ending ${p.last4}: held 24 hours, then paid`;
+  return t.payouts.length > 1
+    ? `Paid ${formatHundredths(p.amountMinor)} ${cur} to your account ending ${p.last4}`
+    : `Paid to your account ending ${p.last4}`;
+}
+
+/**
+ * What the user must transfer into escrow, fee included (ADR-021): buying, the NGN amount
+ * plus 1% of it in NGN; selling, the foreign amount plus 1% of it in that currency.
+ */
+export function transferFor(
+  side: Side,
+  currency: string,
+  amountMinor: number,
+  rateHundredths: number,
+): { minor: number; currency: string; feeMinor: number } {
+  const sent = side === 'buy' ? ngnFor(amountMinor, rateHundredths) : amountMinor;
+  const feeMinor = coordinationFeeMinor(sent);
+  const minor = sent + feeMinor;
+  if (!Number.isSafeInteger(minor)) throw new Error('Amount to pay is out of range');
+  return { minor, currency: side === 'buy' ? 'NGN' : currency, feeMinor };
 }
 
 let trades: readonly Trade[] = [];
@@ -106,8 +150,8 @@ function patch(id: string, f: (t: Trade) => Trade): Trade | null {
 const other = (side: Side): string => (side === 'buy' ? 'Seller' : 'Buyer');
 
 export const tradeStore = {
-  all: (): readonly Trade[] => trades,
   get: (id: string): Trade | undefined => trades.find((t) => t.id === id),
+  all: (): readonly Trade[] => trades,
   subscribe(l: () => void): () => void {
     listeners.add(l);
     return () => listeners.delete(l);
@@ -117,27 +161,41 @@ export const tradeStore = {
     side: Side;
     listing: Listing;
     amountMinor: number;
-    payout: PayoutChoice;
+    /** One account that receives everything, or `payouts` to split (ADR-021). */
+    payout?: PayoutChoice;
+    payouts?: readonly PayoutShare[];
     now: number;
     random: RandomBytes;
+    orderId?: string;
   }): Trade {
-    const { side, listing, amountMinor, payout, now, random } = input;
+    const { side, listing, amountMinor, payout, now, random, orderId } = input;
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error('Amount must be a positive integer');
-    // Never silently resize: the caller must ask for an amount the listing can fill.
-    if (amountMinor > listing.availableMinor) throw new Error('Amount is more than this listing has available');
+    // Never silently resize: the caller must ask for an amount the listing can fill. What
+    // earlier live trades already took from the listing is not available again
+    // (Standing Standards §7.1: original = matched + remaining).
+    if (amountMinor > tradeStore.remainingMinor(listing)) throw new Error('Amount is more than this listing has available');
+    // Re-checked at acceptance: a listing above the official rate cannot be taken (§7.2).
+    if (rateProblem(listing.currency, listing.rateHundredths) !== null) throw new Error('This rate is above the official rate');
     const t = transferFor(side, listing.currency, amountMinor, listing.rateHundredths);
+    // What the user receives: the foreign amount when buying, the NGN amount when selling.
+    const receiveMinor = receiveFor(side, amountMinor, listing.rateHundredths);
+    const payouts: readonly PayoutShare[] =
+      input.payouts ?? (payout ? [{ ...payout, amountMinor: receiveMinor }] : []);
+    if (splitProblem(receiveMinor, payouts) !== null) throw new Error('Payout accounts must add up to the amount received');
     const trade: Trade = {
-      id: `t-${reference(random).toLowerCase()}`,
+      id: uniqueId(random),
       reference: reference(random),
       side,
+      listingId: listing.id,
+      ...(orderId ? { orderId } : {}),
       currency: listing.currency,
       amountMinor,
       rateHundredths: listing.rateHundredths,
       transferMinor: t.minor,
       payCurrency: t.currency,
-      feeKobo: COORDINATION_FEE_KOBO,
+      feeMinor: t.feeMinor,
       counterparty: other(side),
-      payout,
+      payouts,
       phase: 'awaiting_payment',
       events: [
         { label: side === 'buy' ? 'You accepted the offer' : 'You accepted the request', at: now },
@@ -152,6 +210,14 @@ export const tradeStore = {
     return trade;
   },
 
+  /** What is left on a listing after live and completed trades took their share. */
+  remainingMinor(listing: Listing): number {
+    const taken = trades
+      .filter((t) => t.listingId === listing.id && t.phase !== 'expired' && t.phase !== 'cancelled')
+      .reduce((sum, t) => sum + t.amountMinor, 0);
+    return Math.max(0, listing.availableMinor - taken);
+  },
+
   requestExtension(id: string, now: number): boolean {
     const t = tradeStore.get(id);
     if (!t || t.phase !== 'awaiting_payment' || t.extension !== 'none' || now > t.deadline) return false;
@@ -162,14 +228,16 @@ export const tradeStore = {
   markPaid(id: string, now: number): boolean {
     const t = tradeStore.get(id);
     if (!t || t.phase !== 'awaiting_payment' || now > t.deadline) return false;
-    patch(id, (x) => ({ ...x, phase: 'confirming', phaseSince: now }));
+    // Paying ends any pending extension request: it is no longer needed.
+    patch(id, (x) => ({ ...x, phase: 'confirming', phaseSince: now, extension: x.extension === 'requested' ? 'none' : x.extension }));
     return true;
   },
 
   /** Only before the user has said they paid. */
   cancel(id: string, now: number): boolean {
     const t = tradeStore.get(id);
-    if (!t || t.phase !== 'awaiting_payment') return false;
+    // After the deadline the trade has expired (tick records that); it cannot be "cancelled".
+    if (!t || t.phase !== 'awaiting_payment' || now > t.deadline) return false;
     patch(id, (x) => ({ ...x, phase: 'cancelled', phaseSince: now, events: [...x.events, { label: 'You cancelled the trade', at: now }] }));
     return true;
   },
@@ -181,14 +249,20 @@ export const tradeStore = {
     const due = now - t.phaseSince >= DEMO_STEP_MS;
     const add = (x: Trade, label: string): TradeEvent[] => [...x.events, { label, at: now }];
     if (t.phase === 'awaiting_payment') {
-      if (t.extension === 'requested' && due) {
-        patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, `Extension approved by ${x.counterparty}`) }));
+      // A request made before the deadline holds expiry until it is answered (FIN-08); the
+      // extension runs from the original deadline. Demo only: the counterparty "answers".
+      if (t.extension === 'requested') {
+        if (due && DEMO_MODE) {
+          patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, `Extension approved by ${x.counterparty}`) }));
+        }
       } else if (now > t.deadline) {
         patch(id, (x) => ({ ...x, phase: 'expired', phaseSince: now, events: add(x, 'Time ran out: the trade was cancelled') }));
       }
       return;
     }
-    if (!due) return;
+    // The partner bank's steps advance on their own only in the demo (ADR-018). A real build
+    // moves a trade only on bank evidence from the server, never on the user's "I have paid".
+    if (!due || !DEMO_MODE) return;
     if (t.phase === 'confirming') {
       patch(id, (x) => ({ ...x, phase: 'awaiting_counterparty', phaseSince: now, events: add(x, 'Payment made to escrow by you') }));
     } else if (t.phase === 'awaiting_counterparty') {
@@ -198,17 +272,24 @@ export const tradeStore = {
         ...x,
         phase: 'completed',
         phaseSince: now,
-        events: [...add(x, 'Partner bank released the funds'), { label: `Paid to your account ending ${x.payout.last4}`, at: now }],
+        events: [
+          ...add(x, 'Partner bank released the funds'),
+          ...x.payouts.map((p) => ({ label: paidLabel(x, p), at: now })),
+          { label: `Confirmation sent to you and the ${x.counterparty}`, at: now },
+        ],
       }));
     }
   },
 
+  /** One rating per completed trade. */
   rate(id: string, stars: number, feedback: string): boolean {
     if (!Number.isInteger(stars) || stars < 1 || stars > 5) return false;
+    const t = tradeStore.get(id);
+    if (!t || t.phase !== 'completed' || t.rating) return false;
     return patch(id, (x) => ({ ...x, rating: { stars, feedback: feedback.trim().slice(0, 500) } })) !== null;
   },
 
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     trades = [];
     emit();
@@ -217,6 +298,16 @@ export const tradeStore = {
 
 export function useTrade(id: string): Trade | undefined {
   return useSyncExternalStore(tradeStore.subscribe, () => tradeStore.get(id), () => tradeStore.get(id));
+}
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => tradeStore.reset());
+
+/** Other trades created in the same multi-listing order, oldest first. */
+export function orderSiblings(t: Trade, all: readonly Trade[]): readonly Trade[] {
+  if (!t.orderId) return [];
+  return all.filter((x) => x.orderId === t.orderId && x.id !== t.id).slice().reverse();
 }
 
 export function useTrades(): readonly Trade[] {
@@ -236,7 +327,8 @@ export function pendingSteps(t: Trade): string[] {
     'Payment made to escrow by you',
     `Payment made to escrow by ${t.counterparty}`,
     'Partner bank released the funds',
-    `Paid to your account ending ${t.payout.last4}`,
+    ...t.payouts.map((p) => paidLabel(t, p)),
+    `Confirmation sent to you and the ${t.counterparty}`,
   ];
   const done = new Set(t.events.map((e) => e.label));
   if (t.phase === 'expired' || t.phase === 'cancelled') return [];
@@ -260,7 +352,8 @@ export function toHistoryItem(t: Trade): HistoryItem {
     date: iso,
     status: t.phase === 'completed' ? 'completed' : t.phase === 'expired' || t.phase === 'cancelled' ? 'failed' : 'pending',
     reference: t.reference,
-    payouts: t.phase === 'completed' ? [{ name: t.payout.name, bank: t.payout.bank, last4: t.payout.last4, amountMinor: t.side === 'buy' ? t.amountMinor : ngnFor(t.amountMinor, t.rateHundredths) }] : [],
+    payouts: t.phase === 'completed' ? t.payouts.map((p) => ({ name: p.name, bank: p.bank, last4: p.last4, amountMinor: p.amountMinor })) : [],
     progress: progressFor(t),
+    recorded: { transferMinor: t.transferMinor, payCurrency: t.payCurrency, feeMinor: t.feeMinor },
   };
 }

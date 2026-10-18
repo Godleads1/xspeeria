@@ -64,14 +64,14 @@ describe('Market screen (ADR-005)', () => {
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
     await fireEvent.changeText(screen.getByTestId('market-amount'), '799');
-    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,644');
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,320');
     await fireEvent.press(screen.getByTestId('market-create'));
 
     expect(onCreate).toHaveBeenCalledWith({
       side: 'buy',
       currency: 'USD',
       amountMinor: 79900,
-      rateHundredths: 164400,
+      rateHundredths: 132000,
     });
   });
 
@@ -80,8 +80,8 @@ describe('Market screen (ADR-005)', () => {
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
     expect(screen.getByTestId('market-listings')).toBeTruthy();
-    expect(screen.getByText(/1,650\.89 - 1,899\.99 NGN = 1 USD/)).toBeTruthy();
-    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,800');
+    expect(screen.getByText(/1,305\.00 - 1,333\.26 NGN = 1 USD/)).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1,320');
     expect(screen.getByTestId('market-potential')).toBeTruthy();
   });
 
@@ -104,7 +104,7 @@ describe('Select Match (Figma 106:1150)', () => {
 
   it('summarises the request with the exact amount to pay', async () => {
     await render(
-      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={jest.fn()} onTakeListing={jest.fn()} />,
+      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={jest.fn()} onToggleListing={jest.fn()} onReview={jest.fn()} />,
     );
     expect(screen.getByText('1,313,556.00 NGN')).toBeTruthy();
     expect(screen.getAllByTestId(/^listing-o\d$/).length).toBe(listingsFor('buy', 'USD').length);
@@ -113,7 +113,7 @@ describe('Select Match (Figma 106:1150)', () => {
   it('cancels back to Market', async () => {
     const onCancel = jest.fn();
     await render(
-      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={onCancel} onTakeListing={jest.fn()} />,
+      <SelectMatchScreen request={request} onBack={jest.fn()} onCancel={onCancel} onToggleListing={jest.fn()} onReview={jest.fn()} />,
     );
     await fireEvent.press(screen.getByTestId('select-match-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);

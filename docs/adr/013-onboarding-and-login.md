@@ -34,7 +34,7 @@ The Figma splash (33:1355, logo on `#F8F9FD`) is the first screen: the native sp
 while fonts load, then the same picture stays for 1.2 s (`LaunchSplash`) and fades into
 Welcome, or Home when signed in.
 
-## 2. Demo mode (`src/features/auth/demo.ts`, `DEMO_MODE = true`)
+## 2. Demo mode (`src/features/auth/demo.ts`, `DEMO_MODE = __DEV__` since ADR-018)
 
 No backend, NIN/identity provider, SMS or email service exists, so:
 - **Demo account:** `+2348038383838` or `davidpeters@example.com`, PIN `4826`. The log-in
@@ -42,8 +42,9 @@ No backend, NIN/identity provider, SMS or email service exists, so:
 - Any valid Nigerian number maps to one sample NIN record (David Peters, 12/07/1997).
 - The selfie match is simulated after the date of birth matches the record; the dialog
   says so. OTP and email codes are generated on the device and shown in a yellow demo note.
-- Every simulated step is labelled on screen. **`DEMO_MODE` must be `false` before any
-  release**, together with the real services.
+- Every simulated step is labelled on screen. **Amended by ADR-018:** `DEMO_MODE` is no
+  longer hand-set; it is true only in development builds, and a release build refuses every
+  demo path and shows "Not available yet".
 - The session is in memory: reloading the app signs you out. Only "Remember me" (phone or
   email, never the PIN) and the Face ID choice are saved on the device.
 

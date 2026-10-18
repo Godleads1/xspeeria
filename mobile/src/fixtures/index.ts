@@ -140,14 +140,14 @@ export interface MarketRate {
   readonly rate: string;
 }
 
+/** Best marketplace rates (mock), matching the Market listings, at or below the CBN official rate (ADR-020). */
 export const MARKET_RATES: readonly MarketRate[] = [
-  { id: 'ngn-usd', base: 'NGN', quote: 'USD', rate: '1603.78' },
-  { id: 'ngn-cad', base: 'NGN', quote: 'CAD', rate: '1148.20' },
-  { id: 'ngn-eur', base: 'NGN', quote: 'EUR', rate: '1742.35' },
-  { id: 'ngn-aud', base: 'NGN', quote: 'AUD', rate: '1051.60' },
+  { id: 'ngn-usd', base: 'NGN', quote: 'USD', rate: '1325.00' },
+  { id: 'ngn-gbp', base: 'NGN', quote: 'GBP', rate: '1760.00' },
+  { id: 'ngn-eur', base: 'NGN', quote: 'EUR', rate: '1488.00' },
 ];
 
-/** The best NGN → USD rate currently offered on the marketplace (mock). */
-export const BEST_RATE: MarketRate = { id: 'best-ngn-usd', base: 'NGN', quote: 'USD', rate: '1603.78' };
+/** The best NGN → USD rate currently offered on the marketplace (mock): the cheapest USD offer. */
+export const BEST_RATE: MarketRate = { id: 'best-ngn-usd', base: 'NGN', quote: 'USD', rate: '1325.00' };
 
 export const MOCK_USER = { name: 'David Peters', initials: 'DP' } as const;

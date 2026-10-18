@@ -1,14 +1,17 @@
 /**
  * 2FA state for the mock app (ADR-008). In memory only; lost on reload.
  *
- * Mirrors the server rules so the flows can be exercised: TOTP ±1 step, 5 wrong codes →
+ * Mirrors the server rules so the flows can be exercised: TOTP ±1 step, each code usable
+ * once (RFC 6238 §5.2), 5 wrong codes →
  * 15-minute lock, 10 single-use recovery codes, 2FA cannot be switched off. In production
  * every one of these is enforced server-side and the device never keeps the secret.
  */
 
 import { useSyncExternalStore } from 'react';
 
-import { base32Encode, verifyTotp, base32Decode } from './totp';
+import { base32Decode, base32Encode, matchTotpStep } from './totp';
+
+import { session } from '../auth/session';
 
 export const MAX_ATTEMPTS = 5;
 export const LOCK_MS = 15 * 60 * 1000;
@@ -24,6 +27,8 @@ interface State {
   readonly recoveryCodes: readonly string[];
   readonly failedAttempts: number;
   readonly lockedUntil: number;
+  /** Last TOTP time step accepted; a code from this step or earlier is refused (no replay). */
+  readonly lastUsedStep: number;
 }
 
 const INITIAL: State = {
@@ -32,6 +37,7 @@ const INITIAL: State = {
   recoveryCodes: [],
   failedAttempts: 0,
   lockedUntil: 0,
+  lastUsedStep: -1,
 };
 
 let state: State = INITIAL;
@@ -74,12 +80,18 @@ export const twoFactor = {
     return secret;
   },
 
-  /** Confirms enrolment with a code from the app; returns new recovery codes on success. */
+  /**
+   * Confirms first-time enrolment with a code from the app; returns new recovery codes on
+   * success. Refused once enrolled: replacing a factor is a separate, step-up-gated flow
+   * (ADR-008), so this can never overwrite the secret or clear a lock.
+   */
   confirmEnrolment(code: string, nowMs: number, random: RandomBytes): readonly string[] | null {
     const pending = state.pendingSecret;
-    if (!pending || !verifyTotp(base32Decode(pending), code, nowMs)) return null;
+    if (!pending || state.authenticatorSecret !== null) return null;
+    const step = matchTotpStep(base32Decode(pending), code, nowMs);
+    if (step === null) return null;
     const codes = Array.from({ length: RECOVERY_CODE_COUNT }, () => randomRecoveryCode(random));
-    set({ authenticatorSecret: pending, pendingSecret: null, recoveryCodes: codes, failedAttempts: 0, lockedUntil: 0 });
+    set({ authenticatorSecret: pending, pendingSecret: null, recoveryCodes: codes, lastUsedStep: step });
     return codes;
   },
 
@@ -94,8 +106,11 @@ export const twoFactor = {
       return { ok: false, reason: 'locked', attemptsLeft: 0, lockedUntil: state.lockedUntil };
     }
     const code = input.trim().toUpperCase();
-    if (verifyTotp(base32Decode(state.authenticatorSecret), code, nowMs)) {
-      set({ failedAttempts: 0, lockedUntil: 0 });
+    const digits = code.replace(/\s/g, '');
+    const step = matchTotpStep(base32Decode(state.authenticatorSecret), digits, nowMs);
+    // A code already used (same or earlier step) counts as a wrong attempt.
+    if (step !== null && step > state.lastUsedStep) {
+      set({ failedAttempts: 0, lockedUntil: 0, lastUsedStep: step });
       return { ok: true, usedRecoveryCode: false };
     }
     const normalised = code.replace(/[^0-9A-Z]/g, '');
@@ -121,12 +136,16 @@ export const twoFactor = {
     return codes;
   },
 
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     state = INITIAL;
     for (const l of listeners) l();
   },
 };
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => twoFactor.reset());
 
 export function useTwoFactor(): State {
   return useSyncExternalStore(twoFactor.subscribe, twoFactor.get, twoFactor.get);

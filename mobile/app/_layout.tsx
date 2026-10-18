@@ -6,7 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 
 import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
 import { StepUpHost } from '../src/features/security/StepUpHost';
+import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
+import { UnavailableBuild } from '../src/features/auth/ui';
 import { session, useSession } from '../src/features/auth/session';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useThemeMode } from '../src/theme';
 
@@ -41,6 +43,8 @@ export default function RootLayout(): ReactElement | null {
   }, [ready]);
 
   if (!ready) return null;
+  // ADR-018: a release build has no demo services and no real ones yet, so nothing is reachable.
+  if (!DEMO_MODE) return <UnavailableBuild />;
 
   return (
     <>

@@ -208,8 +208,8 @@ describe('Home best-rate card (DEC-008)', () => {
       <HomeScreen bestRate={BEST_RATE} dimensions={READINESS_COMPLETE} activity={ACTIVITY_ITEMS} />,
     );
     expect(screen.getByText('Best NGN → USD rate today')).toBeTruthy();
-    expect(screen.getByText('1 USD = 1,603.78 NGN')).toBeTruthy();
-    expect(screen.queryByText('1,603.78')).toBeNull();
+    expect(screen.getByText('1 USD = 1,325.00 NGN')).toBeTruthy();
+    expect(screen.queryByText('1,325.00')).toBeNull();
     expect(screen.queryByText(/balance/i)).toBeNull();
   });
 
@@ -255,12 +255,53 @@ describe('rate formatting', () => {
     expect(groupDigits('1603.78')).toBe('1,603.78');
     expect(groupDigits('1234567')).toBe('1,234,567');
     expect(groupDigits('0.000123')).toBe('0.000123');
-    expect(formatRate(BEST_RATE)).toBe('1 USD = 1,603.78 NGN');
+    expect(formatRate(BEST_RATE)).toBe('1 USD = 1,325.00 NGN');
   });
 
   it('rejects anything that is not a plain decimal string', () => {
     for (const bad of ['', '1e3', '-5', '1,000', 'NaN', '1.2.3']) {
       expect(() => groupDigits(bad)).toThrow();
     }
+  });
+});
+
+describe('exact-Figma Home demo (ADR-023)', () => {
+  // Imported here so the rest of the file stays independent of the demo module.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const demo = require('../src/features/demo/figmaDemo') as typeof import('../src/features/demo/figmaDemo');
+
+  it('renders Figma balance card marked Demo, the five Figma rows in order, and no readiness', async () => {
+    await render(
+      <HomeScreen
+        dimensions={READINESS_INCOMPLETE}
+        activity={ACTIVITY_ITEMS}
+        bestRate={BEST_RATE}
+        rates={MARKET_RATES}
+        demoHero={demo.DEMO_HOME_BALANCE}
+        demoActivity={demo.DEMO_HOME_ACTIVITY}
+        showReadiness={false}
+        onViewAll={() => {}}
+      />,
+    );
+    expect(screen.getByText('Available Balance')).toBeTruthy();
+    expect(screen.getByText('$500.89')).toBeTruthy();
+    expect(screen.getByTestId('home-demo-balance-badge')).toBeTruthy();
+    expect(screen.queryByTestId('home-best-rate')).toBeNull();
+    const titles = demo.DEMO_HOME_ACTIVITY.map((a) => screen.getByTestId(`figma-activity-${a.id}`).props.accessibilityLabel as string);
+    expect(titles.map((t) => t.split(',')[0])).toEqual(['NGN - USD', 'NGN - CAD', 'Shopping', 'NGN - EUR', 'NGN - AUD']);
+    for (const t of titles) expect(t).toMatch(/Demo$/);
+    expect(screen.queryByTestId('activity-list')).toBeNull();
+    expect(screen.queryByTestId('readiness-expanded')).toBeNull();
+  });
+
+  it('release rendering (no demo props): best-rate card, real activity list and readiness', async () => {
+    await render(
+      <HomeScreen dimensions={READINESS_INCOMPLETE} activity={ACTIVITY_ITEMS} bestRate={BEST_RATE} rates={MARKET_RATES} />,
+    );
+    expect(screen.getByTestId('home-best-rate')).toBeTruthy();
+    expect(screen.queryByTestId('home-demo-balance')).toBeNull();
+    expect(screen.queryByText(/available balance/i)).toBeNull();
+    expect(screen.queryByTestId('home-figma-activity')).toBeNull();
+    expect(screen.getByTestId('readiness-expanded')).toBeTruthy();
   });
 });

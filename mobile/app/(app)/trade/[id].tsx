@@ -19,6 +19,7 @@ export default function TradeRoute(): ReactElement {
       onReceipt={() => router.push({ pathname: '/history/[id]', params: { id: trade.id } })}
       onFinish={() => router.replace('/history')}
       onSupport={() => router.push('/profile/support')}
+      onOpenTrade={(other) => router.push({ pathname: '/trade/[id]', params: { id: other } })}
     />
   );
 }

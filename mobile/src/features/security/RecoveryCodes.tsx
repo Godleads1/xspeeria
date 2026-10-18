@@ -1,16 +1,22 @@
-/** Recovery codes, shown once (ADR-008). The user must confirm they saved them. */
+/**
+ * Recovery codes, shown once (ADR-008). The user must confirm they saved them. Screenshots
+ * and recording are blocked while they are on screen (SEC-09), whatever the user's general
+ * screenshot preference, and a copy is cleared from the clipboard after a minute (SEC-04).
+ */
 
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
+import { copySensitive } from './sensitiveClipboard';
+import { useBlockScreenCapture } from './useBlockScreenCapture';
 
 export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => void }): ReactElement {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  useBlockScreenCapture('recovery-codes');
   return (
     <View testID="recovery-codes" style={styles.wrap}>
       <Text accessibilityRole="header" style={styles.heading}>Save your recovery codes</Text>
@@ -27,11 +33,11 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
         testID="recovery-copy"
         accessibilityRole="button"
         onPress={() => {
-          Clipboard.setStringAsync(codes.join('\n')).then(() => setCopied(true), () => setCopied(false));
+          copySensitive(codes.join('\n')).then(() => setCopied(true), () => setCopied(false));
         }}
         style={styles.copy}
       >
-        <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy codes'}</Text>
+        <Text style={styles.copyText}>{copied ? 'Copied: paste them now. They clear in 1 minute.' : 'Copy codes'}</Text>
       </Pressable>
       <Pressable
         testID="recovery-saved"

@@ -4,6 +4,10 @@
  * Xspeeria has no wallet and no stored customer balance. This scans customer-facing
  * mobile source for the specific copy and affordances that reintroduce that concept.
  *
+ * One exception (ADR-023): `src/features/demo/` holds Figma's placeholder balances for exact
+ * design review. Every value there must be gated on DEMO_MODE (development builds only);
+ * the tests below prove that, so no balance can reach a release build.
+ *
  * It deliberately does NOT block the word "balance" outright: legitimate technical uses
  * exist elsewhere (accounting reconciliation, balanced double-entry). The guard is
  * scoped to mobile product source and to phrases that assert a customer balance.
@@ -45,7 +49,10 @@ function collectSourceFiles(dir: string, found: string[] = []): string[] {
   return found;
 }
 
-const sourceFiles = SCANNED_DIRS.flatMap((dir) => collectSourceFiles(join(MOBILE_ROOT, dir)));
+const DEMO_DIR = join(MOBILE_ROOT, 'src', 'features', 'demo');
+const allFiles = SCANNED_DIRS.flatMap((dir) => collectSourceFiles(join(MOBILE_ROOT, dir)));
+const demoFiles = allFiles.filter((f) => f.startsWith(DEMO_DIR));
+const sourceFiles = allFiles.filter((f) => !f.startsWith(DEMO_DIR));
 
 describe('no-wallet / no-stored-balance product rule', () => {
   it('finds mobile source to scan', () => {
@@ -67,6 +74,35 @@ describe('no-wallet / no-stored-balance product rule', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('demo figures exist only behind DEMO_MODE (ADR-023)', () => {
+    expect(demoFiles.length).toBeGreaterThan(0);
+    for (const file of demoFiles) {
+      const src = readFileSync(file, 'utf8');
+      expect(src).toMatch(/import \{ DEMO_MODE \} from '\.\.\/auth\/demo';/);
+      // Every exported value, except the badge text, is chosen by DEMO_MODE.
+      const exported = src.split(/^export const /m).slice(1);
+      for (const decl of exported) {
+        const name = decl.split(/[\s:=]/)[0];
+        if (name === 'DEMO_BADGE') continue;
+        const statement = decl.slice(0, decl.search(/;\s*$/m) + 1);
+        expect([name, statement.includes('DEMO_MODE')]).toEqual([name, true]);
+      }
+    }
+  });
+
+  it('in a release build every demo figure is empty', () => {
+    jest.isolateModules(() => {
+      jest.doMock('../src/features/auth/demo', () => ({ ...jest.requireActual('../src/features/auth/demo'), DEMO_MODE: false }));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const demo = require('../src/features/demo/figmaDemo') as typeof import('../src/features/demo/figmaDemo');
+      expect(demo.DEMO_HOME_BALANCE).toBeNull();
+      expect(demo.DEMO_CARD_TEXT).toBeNull();
+      expect(demo.DEMO_CARD_TRANSACTIONS).toEqual([]);
+      expect(demo.DEMO_HOME_ACTIVITY).toEqual([]);
+      jest.dontMock('../src/features/auth/demo');
+    });
   });
 
   it('renders no currency hero outside the Amount primitive', () => {

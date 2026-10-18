@@ -86,6 +86,10 @@ export const BENEFICIARIES: readonly Beneficiary[] = [
   { id: 'b2', name: 'David Peters', currency: 'NGN', bank: 'GTBank', accountLast4: '5521', status: 'verified' },
   { id: 'b3', name: 'David Peters', currency: 'USD', bank: 'Chase', accountLast4: '4410', status: 'verified' },
   { id: 'b4', name: 'David Peters', currency: 'EUR', bank: 'Revolut', accountLast4: '2207', status: 'verified' },
+  // Second own accounts so a payout can be split (ADR-021). Mock.
+  { id: 'b5', name: 'David Peters', currency: 'USD', bank: 'Bank of America', accountLast4: '7781', status: 'verified' },
+  { id: 'b6', name: 'David Peters', currency: 'NGN', bank: 'Zenith Bank', accountLast4: '3390', status: 'verified' },
+  { id: 'b7', name: 'David Peters', currency: 'GBP', bank: 'Monzo', accountLast4: '6142', status: 'verified' },
 ];
 
 /** `9309` → `•••• 9309`. */
@@ -178,9 +182,16 @@ export const ACCOUNT_TYPES = ['Checking', 'Savings'] as const;
 
 export type BankFormValues = Partial<Record<BankFieldKey, string>>;
 
-/** ABA routing number checksum (3-7-1 weights). */
+/**
+ * ABA routing number: 9 ASCII digits, a first-two-digit prefix the Federal Reserve assigns
+ * (00 US government, 01–12 banks, 21–32 thrifts, 61–72 electronic, 80 traveller's cheques),
+ * not all zeros, and the 3-7-1 checksum. Format check only; the bank confirms the account.
+ */
 export function isValidRoutingNumber(v: string): boolean {
-  if (!/^\d{9}$/.test(v)) return false;
+  if (!/^[0-9]{9}$/.test(v) || v === '000000000') return false;
+  const prefix = Number(v.slice(0, 2));
+  const prefixOk = prefix <= 12 || (prefix >= 21 && prefix <= 32) || (prefix >= 61 && prefix <= 72) || prefix === 80;
+  if (!prefixOk) return false;
   const d = v.split('').map(Number);
   const sum = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8]);
   return sum % 10 === 0;

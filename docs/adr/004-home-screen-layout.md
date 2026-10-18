@@ -11,6 +11,11 @@
 
 ---
 
+
+> **Update 2026-10-18:** in development builds only, Home shows Figma's demo balance card,
+> Figma's five transaction rows and no Account Readiness, all marked "Demo"; release builds
+> keep this ADR unchanged — `docs/adr/023-figma-exact-home-cards-demo.md`.
+
 ## 1. Context
 
 The only Home design in Figma (file `5ayAjPFxxHmEQIrEjauHTB`, node `39:2882`) shows an

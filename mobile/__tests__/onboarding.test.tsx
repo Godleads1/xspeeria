@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -93,6 +93,39 @@ describe('Welcome', () => {
     await fireEvent.press(screen.getByTestId('welcome-login'));
     expect(onSignUp).toHaveBeenCalled();
     expect(onLogIn).toHaveBeenCalled();
+  });
+
+  it('uses Figma titles and makes no claim Xspeeria cannot back (ADR-022)', () => {
+    expect(SLIDES.map((x) => x.title)).toEqual([
+      'Welcome to Xspeeria',
+      'Exchange Money Peer-to-Peer',
+      'Safe. Verified. Secure.',
+      'Go Global, Seamlessly',
+    ]);
+    const text = SLIDES.map((x) => x.body).join(' ');
+    expect(text).not.toMatch(/end-to-end encryption|prepaid card|instantly|guarantee|wallet|balance/i);
+    expect(text).not.toMatch(/funds across borders/i);
+    expect(text).toMatch(/no money crosses the border/);
+  });
+
+  it('each slide carries its own picture and text, so both swipe together', async () => {
+    await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
+    const sources = SLIDES.map((_, i) => screen.getByTestId(`welcome-hero-${i}`, { includeHiddenElements: true }).props.source);
+    expect(new Set(sources).size).toBe(SLIDES.length);
+    SLIDES.forEach((x, i) => {
+      expect(within(screen.getByTestId(`welcome-slide-${i}`)).getByText(x.title)).toBeTruthy();
+    });
+  });
+
+  it('progress bars follow the swipe and jump to a slide when tapped', async () => {
+    await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
+    const selected = (i: number): boolean | undefined => screen.getByTestId(`welcome-bar-${i}`).props.accessibilityState?.selected;
+    expect(selected(0)).toBe(true);
+    await fireEvent(screen.getByTestId('welcome-slides'), 'scroll', { nativeEvent: { contentOffset: { x: 10_000, y: 0 } } });
+    expect(selected(3)).toBe(true);
+    await fireEvent.press(screen.getByTestId('welcome-bar-1'));
+    expect(selected(1)).toBe(true);
+    expect(selected(3)).toBe(false);
   });
 });
 

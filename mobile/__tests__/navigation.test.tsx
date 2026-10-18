@@ -45,37 +45,45 @@ describe('bottom navigation', () => {
   });
 });
 
-describe('Cards preview (ADR-012)', () => {
+describe('Cards (ADR-012, exact Figma demo ADR-023)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('renders the Figma layout: three card designs, actions, Create yours, history', async () => {
+  it('renders the Figma layout: three card designs, actions and history, no Create yours', async () => {
     await render(<CardsScreen />);
     expect(screen.getByText('Debit Cards')).toBeTruthy();
     expect(screen.getByTestId('cards-label').props.children.join('')).toBe('USD Card');
     for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}`)).toBeTruthy();
     for (const t of ['Details', 'Freeze Card', 'More', 'Transaction History']) expect(screen.getByText(t)).toBeTruthy();
-    expect(screen.getByText('Create yours')).toBeTruthy();
+    expect(screen.queryByText('Create yours')).toBeNull();
   });
 
-  it('Create yours says cards are not available yet', async () => {
+  it('development build: Figma card figures and transactions, each marked Demo', async () => {
+    await render(<CardsScreen />);
+    expect(screen.getByText('500.08 USD')).toBeTruthy();
+    expect(screen.getByText('40.23 EUR')).toBeTruthy();
+    expect(screen.getByText('45,783.83 NGN')).toBeTruthy();
+    for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}-badge`)).toBeTruthy();
+    for (const t of ['Transfer to Adebayo', 'Airbnb', 'Figma', 'Card funded']) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByTestId('cards-tx-c1').props.accessibilityLabel).toMatch(/Demo$/);
+    expect(screen.queryByTestId('cards-history-empty')).toBeNull();
+  });
+
+  it('every card action says cards are not available yet', async () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<CardsScreen />);
-    await fireEvent.press(screen.getByTestId('cards-create'));
-    expect(alert).toHaveBeenCalledWith('Cards are not available', CARDS_UNAVAILABLE);
-  });
-
-  it('card actions are disabled', async () => {
-    await render(<CardsScreen />);
-    for (const id of ['cards-details', 'cards-freeze', 'cards-actions-more']) {
-      expect(screen.getByTestId(id).props.accessibilityState).toEqual({ disabled: true });
+    for (const id of ['cards-details', 'cards-freeze', 'cards-actions-more', 'cards-more']) {
+      await fireEvent.press(screen.getByTestId(id));
     }
+    expect(alert).toHaveBeenCalledTimes(4);
+    for (const call of alert.mock.calls) expect(call).toEqual(['Cards are not available', CARDS_UNAVAILABLE]);
   });
 
-  it('shows no balance, card number, amounts or card transactions', async () => {
-    await render(<CardsScreen />);
-    for (const forbidden of [/\d+\.\d{2}\s?(USD|EUR|NGN)/, /[$€₦]\s?\d/, /\b\d{4}\b/, /activate/i, /spend/i, /top up/i, /card funded/i]) {
+  it('release rendering: no balance, card number, amounts or card transactions', async () => {
+    await render(<CardsScreen demoText={null} demoTransactions={[]} />);
+    for (const forbidden of [/\d+\.\d{2}\s?(USD|EUR|NGN)/, /[$€₦]\s?\d/, /\b\d{4}\b/, /activate/i, /spend/i, /top up/i, /card funded/i, /^Demo$/]) {
       expect(screen.queryByText(forbidden)).toBeNull();
     }
+    expect(screen.getByTestId('cards-history-empty')).toBeTruthy();
     expect(screen.getByText(/never holds your money/i)).toBeTruthy();
   });
 });
@@ -114,10 +122,20 @@ describe('placeholder destinations', () => {
  * fails here rather than in the user's hands.
  */
 describe('Phase 1 screen actions', () => {
-  it('sends the Home primary action to the Marketplace', async () => {
+  it('development build: Home shows the Figma demo balance, rows and no readiness (ADR-023)', async () => {
     await render(<HomeRoute />);
-    fireEvent.press(screen.getByTestId('home-primary-action'));
-    expect(mockPush).toHaveBeenCalledWith('/marketplace');
+    expect(screen.getByTestId('home-demo-balance')).toBeTruthy();
+    expect(screen.getByTestId('home-demo-balance-badge')).toBeTruthy();
+    expect(screen.getByText('$500.89')).toBeTruthy();
+    expect(screen.getByTestId('home-figma-activity')).toBeTruthy();
+    expect(screen.queryByTestId('readiness-expanded')).toBeNull();
+    expect(screen.queryByTestId('home-primary-action')).toBeNull();
+  });
+
+  it('sends Home "View All" to History', async () => {
+    await render(<HomeRoute />);
+    await fireEvent.press(screen.getByTestId('home-view-all'));
+    expect(mockPush).toHaveBeenCalledWith('/history');
   });
 
   it('leaves the Home notification control disabled while no notification centre exists', async () => {

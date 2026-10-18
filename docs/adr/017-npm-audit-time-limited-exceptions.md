@@ -38,6 +38,15 @@ approved SDK 57 stack.
 - Renewing or adding an exception needs explicit human approval, recorded in the file and
   in this ADR's log.
 
+### Compensating controls (required by `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` §5)
+
+- Both packages run only in build, bundling and test tooling on developer machines and
+  ephemeral CI runners; neither is in the app bundle users install.
+- `expo-updates` (over-the-air updates, the user of Expo code signing) is not installed, so
+  the node-forge signature-verification path is not used by Xspeeria.
+- CI runners have read-only repository permissions and no deployment credentials.
+- Every new high/critical advisory still fails CI; these two expire on 2026-11-16.
+
 ## 3. Moderates (non-blocking, unchanged policy)
 
 | Advisory | Package | Path | Note |
@@ -51,6 +60,7 @@ approved SDK 57 stack.
 | Date | Change | By |
 |---|---|---|
 | 2026-10-17 | Created; braces and node-forge accepted until 2026-11-16 | Product owner (option 1) |
+| 2026-10-17 | Gate hardened after review (ADR-018): future-dated approvals, unknown severities and npm count mismatches now fail | Independent review |
 
 ## 5. Consequences
 

@@ -1,10 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
-import { COORDINATION_FEE_KOBO } from '../src/features/history/data';
 import { ReceiptScreen } from '../src/features/history/ReceiptScreen';
 import { OFFERS, REQUESTS } from '../src/features/market/data';
-import { BENEFICIARIES } from '../src/features/profile/data';
 import { ConfirmTradeSheet } from '../src/features/trade/ConfirmTradeSheet';
 import { TradeScreen, countdown } from '../src/features/trade/TradeScreen';
 import {
@@ -22,7 +20,7 @@ const T0 = new Date(2026, 9, 17, 12, 9).getTime();
 let seed = 5;
 const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, () => (seed = (seed * 37 + 11) % 256));
 const PAYOUT = { id: 'b3', name: 'David Peters', bank: 'Chase', last4: '4410' };
-const offer = OFFERS[0]; // 200.00 USD at 1,893.00
+const offer = OFFERS[0]; // 200.00 USD at 1,325.00 (repriced under the CBN official rate, ADR-020)
 
 beforeEach(() => {
   seed = 5;
@@ -34,10 +32,10 @@ const make = (side: 'buy' | 'sell' = 'buy', amountMinor = 20000) =>
   tradeStore.create({ side, listing: side === 'buy' ? offer : REQUESTS[0], amountMinor, payout: PAYOUT, now: T0, random: rnd });
 
 describe('trade money (integers only)', () => {
-  it('buyer transfers NGN at the offer rate plus the flat fee', () => {
-    expect(ngnFor(20000, 189300)).toBe(37860000); // 200.00 USD × 1,893.00 = 378,600.00 NGN
-    expect(transferFor('buy', 'USD', 20000, 189300)).toEqual({ minor: 37860000 + COORDINATION_FEE_KOBO, currency: 'NGN' });
-    expect(transferFor('sell', 'USD', 20000, 189300)).toEqual({ minor: 20000, currency: 'USD' });
+  it('each side transfers its amount plus a 1% fee in its own currency (ADR-021)', () => {
+    expect(ngnFor(20000, 189300)).toBe(37860000); // 200.00 USD × 1,893.00 = 378,600.00 NGN (pure arithmetic)
+    expect(transferFor('buy', 'USD', 20000, 189300)).toEqual({ minor: 37860000 + 378600, currency: 'NGN', feeMinor: 378600 }); // + 1%
+    expect(transferFor('sell', 'USD', 20000, 189300)).toEqual({ minor: 20200, currency: 'USD', feeMinor: 200 });
   });
 
   it('never resizes an amount silently and refuses bad amounts', () => {
@@ -65,6 +63,7 @@ describe('trade phases', () => {
       'Payment made to escrow by Seller',
       'Partner bank released the funds',
       'Paid to your account ending 4410',
+      'Confirmation sent to you and the Seller',
     ]);
     expect(done && toHistoryItem(done)).toMatchObject({ status: 'completed', payouts: [{ last4: '4410', amountMinor: 20000 }] });
   });
@@ -96,12 +95,14 @@ describe('trade phases', () => {
 
   it('sell side: matched with Buyer, user transfers the foreign currency', () => {
     const t = make('sell');
-    expect(t).toMatchObject({ payCurrency: 'USD', transferMinor: 20000, counterparty: 'Buyer' });
+    expect(t).toMatchObject({ payCurrency: 'USD', transferMinor: 20200, feeMinor: 200, counterparty: 'Buyer' });
     expect(t.events[0].label).toBe('You accepted the request');
   });
 
   it('rating is 1–5 stars and feedback is capped', () => {
     const t = make();
+    tradeStore.markPaid(t.id, T0);
+    for (let i = 1; i <= 3; i++) tradeStore.tick(t.id, T0 + i * DEMO_STEP_MS);
     expect(tradeStore.rate(t.id, 0, '')).toBe(false);
     expect(tradeStore.rate(t.id, 5, 'x'.repeat(900))).toBe(true);
     expect(tradeStore.get(t.id)?.rating?.feedback).toHaveLength(500);
@@ -113,30 +114,26 @@ describe('trade phases', () => {
 });
 
 describe('Confirm trade sheet', () => {
-  const own = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency === 'USD');
 
   it('shows amount, rate, fee and total before accepting', async () => {
     const onAccept = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} listing={offer} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    expect(screen.getByText('200.00 USD')).toBeTruthy();
-    expect(screen.getByText('375.00 NGN')).toBeTruthy();
-    expect(screen.getByText('378,975.00 NGN')).toBeTruthy();
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} parts={[{ listing: offer, amountMinor: 20000 }]} onAccept={onAccept} onClose={jest.fn()} />);
+    expect(screen.getAllByText('200.00 USD')).toHaveLength(2); // you buy, you receive
+    expect(screen.getByText('2,650.00 NGN')).toBeTruthy(); // 1% of 265,000.00
+    expect(screen.getByText('267,650.00 NGN')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(20000, own[0]);
+    expect(onAccept).toHaveBeenCalledWith([{ listing: offer, amountMinor: 20000 }]); // payout accounts are chosen next (ADR-022)
   });
 
   it('says plainly when the match fills less than asked', async () => {
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={79900} listing={offer} payoutOptions={own} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 799.00 USD.*200.00 USD/);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={79900} parts={[{ listing: offer, amountMinor: 20000 }]} onAccept={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 799.00 USD.*This offer fills.*200.00 USD/);
   });
 
-  it('cannot accept without an own payout account', async () => {
-    const onAccept = jest.fn();
-    const onAdd = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} listing={offer} payoutOptions={[]} onAccept={onAccept} onClose={jest.fn()} onAddAccount={onAdd} />);
-    expect(screen.getByTestId('confirm-accept').props.accessibilityState.disabled).toBe(true);
-    await fireEvent.press(screen.getByTestId('confirm-add-account'));
-    expect(onAdd).toHaveBeenCalled();
+  it('shows what the user receives and leads to choosing payout accounts', async () => {
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={20000} parts={[{ listing: offer, amountMinor: 20000 }]} onAccept={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByTestId('confirm-receive')).toBeTruthy();
+    expect(screen.getByText('Continue')).toBeTruthy();
   });
 });
 
@@ -149,7 +146,7 @@ describe('Transaction screens', () => {
     await render(<TradeScreen id={t.id} onBack={jest.fn()} onReceipt={jest.fn()} onFinish={jest.fn()} onSupport={jest.fn()} now={() => now} />);
     expect(screen.getByText('Transaction In Progress')).toBeTruthy();
     expect(screen.getByText('Please Note:')).toBeTruthy();
-    expect(screen.getByTestId('trade-amount').props.children).toBe('NGN 378,975.00');
+    expect(screen.getByTestId('trade-amount').props.children).toBe('NGN 267,650.00');
     expect(screen.getByText(/Do not send real money/)).toBeTruthy();
     expect(screen.getByTestId('trade-expires').props.children.join('')).toBe('Expires in 05:00 mins');
 
@@ -189,14 +186,12 @@ describe('Transaction screens', () => {
 });
 
 describe('Sell flow (ADR-015)', () => {
-  const ownNgn = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency === 'NGN');
 
-  it('confirm sheet: seller fee is in the sent currency and not invented', async () => {
-    await render(<ConfirmTradeSheet side="sell" requestedMinor={20000} listing={REQUESTS[0]} payoutOptions={ownNgn} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    expect(screen.getByText('To be confirmed (USD)')).toBeTruthy();
-    expect(screen.queryByText('375.00 NGN')).toBeNull();
-    expect(screen.getByText('378,600.00 NGN')).toBeTruthy();
-    expect(screen.getByTestId('confirm-fee-tbd')).toBeTruthy();
+  it('confirm sheet: the seller pays 1% in the currency they send', async () => {
+    await render(<ConfirmTradeSheet side="sell" requestedMinor={20000} parts={[{ listing: REQUESTS[0], amountMinor: 20000 }]} onAccept={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByText('2.00 USD')).toBeTruthy(); // 1% of 200.00 USD
+    expect(screen.getByText('202.00 USD')).toBeTruthy();
+    expect(screen.getByText('266,000.00 NGN')).toBeTruthy();
   });
 
   it('sell receipt follows Figma: amount to receive in NGN, amount to pay in USD', async () => {
@@ -205,10 +200,11 @@ describe('Sell flow (ADR-015)', () => {
     for (let i = 1; i <= 3; i++) tradeStore.tick(t.id, T0 + i * DEMO_STEP_MS);
     await render(<ReceiptScreen item={toHistoryItem(tradeStore.get(t.id)!)} onClose={jest.fn()} />);
     expect(screen.getByText('Amount to receive')).toBeTruthy();
-    expect(screen.getByText('378,600.00 NGN')).toBeTruthy();
+    expect(screen.getByText('266,000.00 NGN')).toBeTruthy();
     expect(screen.getByText('Amount to pay')).toBeTruthy();
-    expect(screen.getAllByText('200.00 USD')).toHaveLength(2); // amount and amount to pay (fee not set)
-    expect(screen.getByText('To be confirmed')).toBeTruthy();
-    expect(screen.getByText(/378,600 NGN/)).toBeTruthy(); // payout to the NGN account
+    expect(screen.getByText('200.00 USD')).toBeTruthy(); // transaction amount
+    expect(screen.getByText('2.00 USD')).toBeTruthy(); // 1% fee in USD
+    expect(screen.getByText('202.00 USD')).toBeTruthy(); // amount to pay, fee included
+    expect(screen.getByText(/266,000 NGN/)).toBeTruthy(); // payout to the NGN account
   });
 });

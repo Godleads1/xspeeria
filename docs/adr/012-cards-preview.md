@@ -8,6 +8,12 @@
 | **Authority** | Product owner, 2026-10-17: Figma "Debit Cards" frames plus "add button that reads create yours and when users clicks that, it should says, the cards are not available now" — `DOCUMENT_INDEX.md` §1 rank 2 |
 | **Replaces** | The Cards "Coming soon" placeholder (DEC-005). The tab stays marked coming soon. |
 
+
+> **Update 2026-10-18:** "Create yours" is removed to match Figma exactly, the actions are
+> tappable and say cards are not available, and development builds show Figma's card figures
+> and four card transactions marked "Demo"; release builds show none of them —
+> `docs/adr/023-figma-exact-home-cards-demo.md`.
+
 ## 1. Decision
 
 The Cards tab shows the Figma layout as a **preview**: "Debit Cards" header, a swipeable

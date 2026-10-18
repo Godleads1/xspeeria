@@ -7,6 +7,10 @@
 | **Decision ID** | DEC-021 |
 | **Authority** | Product owner, 2026-10-17: "go" on the Sell flow (Figma 436:7652 → 436:9175) — `DOCUMENT_INDEX.md` §1 rank 2 |
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). The seller fee is 1% of the foreign amount, in that currency.
+
 ## 1. What the Sell side does
 
 The seller sends the foreign currency (e.g. USD) into the partner bank's local escrow and

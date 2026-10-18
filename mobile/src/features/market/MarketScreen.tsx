@@ -37,7 +37,8 @@ import {
   type Currency,
   type Listing,
 } from "./data";
-import { formatHundredths, matchPotential, parseToHundredths } from "./money";
+import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
+import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 
 export type Side = "buy" | "sell";
 
@@ -88,11 +89,26 @@ export function MarketScreen({
   const amountMinor = parseToHundredths(amount);
   const rateHundredths = parseToHundredths(rate);
   const potential =
-    band && rateHundredths !== null
+    band && rateHundredths !== null && (!foreign || rateProblem(foreign.code, rateHundredths) === null)
       ? matchPotential(side, rateHundredths, band)
       : null;
+  // The official rate is the maximum (rateCeiling.ts, Standing Standards §7.2).
+  const official = foreign ? officialRateFor(foreign.code) : null;
+  const problem =
+    foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths) : null;
+  const rateError =
+    problem === "above-official" && foreign && official !== null
+      ? `Your rate can’t be above the official rate of NGN ${formatHundredths(official)} per ${foreign.code}.`
+      : problem === "official-unavailable"
+        ? `There’s no official rate for ${foreign?.code ?? "this currency"} yet, so you can’t trade it for now.`
+        : null;
+  // An amount whose NGN value cannot be computed safely is not a valid request (FIN-06).
   const ready =
-    foreign !== null && amountMinor !== null && rateHundredths !== null;
+    foreign !== null &&
+    amountMinor !== null &&
+    rateHundredths !== null &&
+    problem === null &&
+    quoteMinorOrNull(amountMinor, rateHundredths) !== null;
 
   const listings = useMemo(() => {
     if (!foreign) return [];
@@ -113,12 +129,7 @@ export function MarketScreen({
   };
 
   const take = (listing: Listing): void => {
-    if (onTakeListing) onTakeListing(listing, side);
-    else
-      Alert.alert(
-        side === "buy" ? "Buy this offer" : "Fill this request",
-        "Confirming a trade is the next screen to be built. Nothing has been sent.",
-      );
+    onTakeListing?.(listing, side);
   };
 
   const trendText =
@@ -226,7 +237,7 @@ export function MarketScreen({
           ) : null}
         </View>
 
-        <OutlinedField label="Rate *">
+        <OutlinedField label="Rate *" invalid={rateError !== null}>
           <FieldInput
             testID="market-rate"
             accessibilityLabel={`Rate in NGN per ${foreign?.code ?? "unit"}`}
@@ -261,6 +272,16 @@ export function MarketScreen({
             }
           />
         </OutlinedField>
+        {foreign && official !== null ? (
+          <Text testID="market-official" style={styles.official}>
+            {`Official rate (CBN, ${OFFICIAL_RATE_AS_OF}): NGN ${formatHundredths(official)} per ${foreign.code}. Your rate must be this or lower.`}
+          </Text>
+        ) : null}
+        {rateError ? (
+          <Text testID="market-rate-error" accessibilityRole="alert" style={styles.rateError}>
+            {rateError}
+          </Text>
+        ) : null}
 
         <Pressable
           testID="market-create"
@@ -394,6 +415,8 @@ const styles = themed(() => ({
   },
   details: { flexDirection: "row", alignItems: "center", gap: 4 },
   detailsText: { ...typography.caption, fontSize: 11, color: color.error.text },
+  official: { ...typography.caption, fontSize: 12, color: color.text.secondary, marginTop: -6 },
+  rateError: { ...typography.caption, fontSize: 12, color: color.error.text, marginTop: -6 },
   potential: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 },
   potentialGood: { backgroundColor: color.success.surface },
   potentialLow: { backgroundColor: color.error.surface },
@@ -434,9 +457,10 @@ const styles = themed(() => ({
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
   },
-  // Figma: 342 × 100, radius 10, 1 pt #9CA3AF border.
+  // Figma: 342 wide, radius 10, 1 pt #9CA3AF border. Height follows the product owner's
+  // 342 × 113 artwork (2026-10-18) so its text is never cropped.
   advert: {
-    aspectRatio: 342 / 100,
+    aspectRatio: 342 / 113,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: color.text.disabled,

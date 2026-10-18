@@ -4,10 +4,13 @@ import { FaqScreen } from '../src/features/faq/FaqScreen';
 import { FAQ, filterFaq } from '../src/features/faq/data';
 
 describe('FAQ content', () => {
-  it('has no placeholder text, other product names, fee figures or licence claims', () => {
+  it('has no placeholder text, other product names, money figures or licence claims', () => {
     const text = JSON.stringify(FAQ);
     expect(text).not.toMatch(/lorem|ipsum|tradebase/i);
-    expect(text).not.toMatch(/₦\s?\d|£\s?\d|\$\s?\d|\d+\s?%/);
+    expect(text).not.toMatch(/₦\s?\d|£\s?\d|\$\s?\d/);
+    // The only percentage allowed is the approved 1% coordination fee (ADR-021).
+    expect(text.match(/\d+(\.\d+)?\s?%/g)).toEqual(['1%']);
+    expect(FAQ.find((i) => i.id === 'cost')?.answer).toMatch(/1% of the money each side sends/);
     expect(text).not.toMatch(/licen[cs]ed|regulated|guarantee/i);
     expect(text).not.toMatch(/wallet balance|your balance/i);
   });

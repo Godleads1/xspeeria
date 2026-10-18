@@ -8,6 +8,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { BENEFICIARIES, type Beneficiary } from './data';
+import { session } from '../auth/session';
 
 let items: readonly Beneficiary[] = BENEFICIARIES;
 let nextId = 1;
@@ -40,13 +41,17 @@ export const beneficiaryStore = {
     items = items.filter((b) => b.id !== id);
     emit();
   },
-  /** Tests only. */
+  /** Back to the initial state (log-out / new account, and tests). */
   reset(): void {
     items = BENEFICIARIES;
     nextId = 1;
     emit();
   },
 };
+
+
+// Cleared on log-out and when a new account is created (ADR-018).
+session.onUserChange(() => beneficiaryStore.reset());
 
 export function useBeneficiaries(): readonly Beneficiary[] {
   return useSyncExternalStore(beneficiaryStore.subscribe, beneficiaryStore.get, beneficiaryStore.get);

@@ -129,6 +129,11 @@ Xspeeria matches a verified user who holds Currency A and wants Currency B with 
 
 # 5. Pricing Model & Cost Advantage vs. Incumbents
 
+> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
+> each side sends**, in that side's currency, not a flat fee
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). The flat-fee text and the cost comparison in this section are kept as history and no longer describe Xspeeria's pricing; the narrative needs a rewrite.
+
+
 ## 5.1 The Pricing Principle
 
 Xspeeria charges a flat coordination fee on each side of a matched transaction, in local currency, calculated as a multiple of the standard local instant-transfer cost in that country — rather than a percentage of the transaction amount, and rather than a margin embedded inside the exchange rate. The proposed benchmark multiple is 7.5x the prevailing local domestic instant-transfer fee, with a minimum floor fee applied in corridors where domestic transfers are priced near zero, to keep the model commercially sustainable.
