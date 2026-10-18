@@ -62,7 +62,7 @@ describe('SEC-01: demo behaviour exists only in development builds', () => {
       expect(s.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, NOW, false)).toEqual({ ok: false, reason: 'unavailable' });
       s.setBiometric(true);
       expect(s.logInWithBiometrics(NOW)).toBe(false);
-      expect(() => s.completeSignUp({ phone: '+2348031112222', email: 'a@example.com', pin: '7391' })).toThrow();
+      expect(() => s.completeSignUp({ phone: '+2348031112222', email: 'a@example.com', pin: '739152' })).toThrow();
       expect(s.get().signedIn).toBe(false);
 
       const t = ts.create({ side: 'buy', listing: offer, amountMinor: 10000, payout: PAYOUT, now: NOW, random: rnd });
@@ -106,17 +106,18 @@ describe('SEC-03 / QA-02: log-out and a new account clear the previous user', ()
   it('a new sign-up never inherits the earlier user, and Face ID is on only if chosen', () => {
     session.setBiometric(true); // the earlier account had Face ID on
     fillUserData();
-    session.completeSignUp({ phone: '+2348031112222', email: 'new@example.com', pin: '7391' });
+    session.completeSignUp({ phone: '+2348031112222', email: 'new@example.com', pin: '739152' });
     expectCleared();
     expect(session.biometricOn()).toBe(false);
-    session.completeSignUp({ phone: '+2348031113333', email: 'n2@example.com', pin: '7391' }, { biometric: true });
+    session.completeSignUp({ phone: '+2348031113333', email: 'n2@example.com', pin: '739152' }, { biometric: true });
     expect(session.biometricOn()).toBe(true);
   });
 
   it('biometric log-in is bound to the account it was turned on for', () => {
+    expect(session.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, NOW, false)).toEqual({ ok: true });
     session.setBiometric(true);
     expect(session.logInWithBiometrics(NOW)).toBe(true);
-    session.completeSignUp({ phone: '+2348031112222', email: 'new@example.com', pin: '7391' });
+    session.completeSignUp({ phone: '+2348031112222', email: 'new@example.com', pin: '739152' });
     session.logOut();
     expect(session.logInWithBiometrics(NOW)).toBe(false);
   });
@@ -251,9 +252,9 @@ describe('QA-07: ABA routing numbers', () => {
 
 describe('SEC-05 / QA-06: support chat blocks secrets in any form, not amounts', () => {
   it.each([
-    'my pin 4826',
-    'pin: 4826',
-    '4826 is my pin',
+    'my pin 482613',
+    'pin: 482613',
+    '482613 is my pin',
     'my password is hunter2',
     'ab3k-7xyz',
     'AB3K7XYZ',

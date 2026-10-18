@@ -94,13 +94,20 @@ def install_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """Only where and why a field failed -- never the submitted value.
+
+        Pydantic's error entries carry ``input`` (the value the client sent) and ``ctx``
+        (which can hold a raw exception). Echoing ``input`` would reflect a PIN, code or
+        token straight back into a response, a proxy log or a crash report (ADR-025 §1.8),
+        and ``ctx`` is not even JSON-serialisable when it holds an exception.
+        """
+        safe = [
+            {"type": e.get("type"), "loc": list(e.get("loc", ())), "msg": e.get("msg")}
+            for e in exc.errors()
+        ]
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=error_body(
-                "VALIDATION_ERROR",
-                "Request failed validation.",
-                {"errors": exc.errors()},
-            ),
+            content=error_body("VALIDATION_ERROR", "Request failed validation.", {"errors": safe}),
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -132,9 +139,12 @@ def install_exception_handlers(app: FastAPI) -> None:
         This is a deliberate Phase 1 trade: losing the stack trace costs diagnostic
         depth. Richer production diagnostics -- traceback capture, structured error
         reporting, sampled payloads -- require the **F-16 logging / redaction /
-        observability policy** to exist first, and that policy is **OPEN** under
-        Decision 2. It must land before any route accepts a credential, a KYC field or a
-        monetary amount. Until then, no exception content leaves this handler.
+        observability policy** to exist first. Its core rule was decided on 2026-10-18
+        (ADR-025 §1.8): never log bodies, headers, PINs, codes, tokens or full phone/email;
+        only route, method, status, duration, request ID, user ID and at most the last 4
+        phone digits. That rule is what allowed the AUTH-1 routes to accept a PIN. Richer
+        diagnostics must follow it; until a tool that does is approved, no exception
+        content leaves this handler.
         """
         _logger.error(
             "unhandled_exception",

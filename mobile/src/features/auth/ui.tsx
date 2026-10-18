@@ -138,7 +138,7 @@ export function DemoNote({ children, testID }: { children: ReactNode; testID?: s
 }
 
 /** Figma PIN screens: dots and a 3×4 keypad (no letters), "<" deletes. */
-export function PinPad({ value, onChange, length = 4 }: { value: string; onChange: (v: string) => void; length?: number }): ReactElement {
+export function PinPad({ value, onChange, length = 6 }: { value: string; onChange: (v: string) => void; length?: number }): ReactElement {
   const press = (k: string): void => {
     if (k === 'del') onChange(value.slice(0, -1));
     else if (value.length < length) onChange(value + k);

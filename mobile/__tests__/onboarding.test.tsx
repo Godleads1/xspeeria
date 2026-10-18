@@ -6,7 +6,7 @@ import { DEMO_ACCOUNT, DEMO_MODE } from '../src/features/auth/demo';
 import { ForgotScreen } from '../src/features/auth/ForgotScreen';
 import { LoginScreen } from '../src/features/auth/LoginScreen';
 import { pinProblem } from '../src/features/auth/pin';
-import { MAX_PIN_TRIES, PIN_LOCK_MS, session } from '../src/features/auth/session';
+import { IDLE_LOCK_MS, MAX_PIN_TRIES, PIN_LOCK_MS, session } from '../src/features/auth/session';
 import {
   CodeScreen,
   ConfirmPinScreen,
@@ -36,13 +36,14 @@ const typePin = async (pin: string): Promise<void> => {
 };
 
 describe('PIN rules', () => {
-  it('needs 4 digits and refuses obvious PINs', () => {
-    expect(pinProblem('4826')).toBeNull();
-    expect(pinProblem('123')).toMatch(/4 digits/);
-    expect(pinProblem('1111')).toMatch(/same digit/);
-    expect(pinProblem('1234')).toMatch(/sequences/);
-    expect(pinProblem('4321')).toMatch(/sequences/);
-    expect(pinProblem('8901')).toMatch(/sequences/);
+  it('needs 6 digits (ADR-024) and refuses obvious PINs', () => {
+    expect(pinProblem('482613')).toBeNull();
+    expect(pinProblem('123')).toMatch(/6 digits/);
+    expect(pinProblem('4826')).toMatch(/6 digits/);
+    expect(pinProblem('111111')).toMatch(/same digit/);
+    expect(pinProblem('123456')).toMatch(/sequences/);
+    expect(pinProblem('654321')).toMatch(/sequences/);
+    expect(pinProblem('890123')).toMatch(/sequences/);
   });
 });
 
@@ -60,13 +61,13 @@ describe('session', () => {
   it('gives the same answer for a wrong PIN and an unknown account', () => {
     const a = session.logIn('+2348000000001', DEMO_ACCOUNT.pin, T0, false);
     session.reset();
-    const b = session.logIn(DEMO_ACCOUNT.phone, '0000', T0, false);
+    const b = session.logIn(DEMO_ACCOUNT.phone, '000000', T0, false);
     expect(a).toEqual(b);
   });
 
   it('locks for 15 minutes after 5 wrong tries, even with the right PIN', () => {
-    for (let i = 1; i < MAX_PIN_TRIES; i++) expect(session.logIn(DEMO_ACCOUNT.phone, '0000', T0, false)).toMatchObject({ reason: 'wrong' });
-    expect(session.logIn(DEMO_ACCOUNT.phone, '0000', T0, false)).toMatchObject({ reason: 'locked' });
+    for (let i = 1; i < MAX_PIN_TRIES; i++) expect(session.logIn(DEMO_ACCOUNT.phone, '000000', T0, false)).toMatchObject({ reason: 'wrong' });
+    expect(session.logIn(DEMO_ACCOUNT.phone, '000000', T0, false)).toMatchObject({ reason: 'locked' });
     expect(session.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, T0 + 60_000, false)).toMatchObject({ reason: 'locked' });
     expect(session.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, T0 + PIN_LOCK_MS + 1, false)).toEqual({ ok: true });
   });
@@ -74,7 +75,11 @@ describe('session', () => {
   it('biometric log-in only where it was turned on', () => {
     expect(session.logInWithBiometrics(T0)).toBe(false);
     session.setBiometric(true);
-    expect(session.logInWithBiometrics(T0)).toBe(true);
+    // ADR-024: biometrics unlock a session that began with the PIN.
+    expect(session.logInWithBiometrics(T0)).toBe(false);
+    expect(session.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, T0, false)).toEqual({ ok: true });
+    session.enforceTimeouts(T0 + IDLE_LOCK_MS);
+    expect(session.logInWithBiometrics(T0 + IDLE_LOCK_MS)).toBe(true);
   });
 
   it('demo mode is on and clearly labelled', () => {
@@ -145,7 +150,7 @@ describe('Login screen', () => {
     await render(<LoginScreen onDone={onDone} onSignUp={jest.fn()} onForgot={jest.fn()} now={() => T0} />);
     await fireEvent.press(screen.getByTestId('login-tab-email'));
     await fireEvent.changeText(screen.getByTestId('login-email'), 'someone@example.com');
-    await fireEvent.changeText(screen.getByTestId('login-pin'), '9999');
+    await fireEvent.changeText(screen.getByTestId('login-pin'), '999999');
     await fireEvent.press(screen.getByTestId('login-submit'));
     expect(screen.getByTestId('login-error').props.children).toMatch(/don’t match an account/);
     expect(screen.getByTestId('login-pin').props.value).toBe('');
@@ -160,7 +165,12 @@ describe('Login screen', () => {
     await act(async () => fireEvent.press(screen.getByTestId('login-faceid')));
     expect(alert).toHaveBeenCalledWith('Face ID is off', expect.any(String));
     expect(bio).not.toHaveBeenCalled();
-    await act(async () => session.setBiometric(true));
+    await act(async () => {
+      // ADR-024: Face ID unlocks a session that began with the PIN (here, after an idle lock).
+      session.logIn(DEMO_ACCOUNT.phone, DEMO_ACCOUNT.pin, Date.now(), false);
+      session.setBiometric(true);
+      session.enforceTimeouts(Date.now() + IDLE_LOCK_MS);
+    });
     await act(async () => fireEvent.press(screen.getByTestId('login-faceid')));
     expect(onDone).toHaveBeenCalled();
   });
@@ -238,27 +248,27 @@ describe('Sign-up', () => {
   it('create PIN refuses weak PINs; confirm must match', async () => {
     const onNext = jest.fn();
     await render(<CreatePinScreen onNext={onNext} />);
-    await typePin('1234');
+    await typePin('123456');
     expect(screen.getByTestId('signup-create-pin-error')).toBeTruthy();
     expect(onNext).not.toHaveBeenCalled();
-    await typePin('4826');
-    expect(signup.get().pin).toBe('4826');
+    await typePin('482613');
+    expect(signup.get().pin).toBe('482613');
     expect(onNext).toHaveBeenCalled();
 
     const ok = jest.fn();
     const restart = jest.fn();
     await render(<ConfirmPinScreen onNext={ok} onRestart={restart} />);
-    await typePin('4826');
+    await typePin('482613');
     expect(ok).toHaveBeenCalled();
   });
 
   it('confirm PIN mismatch clears the PIN and restarts', async () => {
     jest.useFakeTimers();
-    signup.update({ pin: '4826' });
+    signup.update({ pin: '482613' });
     const ok = jest.fn();
     const restart = jest.fn();
     await render(<ConfirmPinScreen onNext={ok} onRestart={restart} />);
-    await typePin('4827');
+    await typePin('482614');
     expect(ok).not.toHaveBeenCalled();
     expect(signup.get().pin).toBeNull();
     await act(async () => jest.advanceTimersByTime(1000));

@@ -833,7 +833,7 @@ implementation, document, or assistant.
 
 | # | Open decision |
 |---|---|
-| 1 | **Decision 2** — auth/session/password/rate-limit specifics *(MFA part resolved 2026-10-17 by ADR-008 / DEC-014, human-approved; the rest remains OPEN)* |
+| 1 | ~~**Decision 2**~~ — **RESOLVED 2026-10-18** (human-approved): MFA by ADR-008 / DEC-014; session lifetime, 6-digit PIN and SMS caps by ADR-024 / DEC-030; PIN hashing, request limits, recovery, S-2, S-3 (individual accounts for now), in-house auth and the logging rule by ADR-025 / DEC-031 |
 | 2 | **Decision 3** — reference-rate provider, cadence, staleness, unavailable behaviour |
 | 3 | **Decision 4** — regulatory/legal posture |
 | 4 | Idempotency retention / TTL |

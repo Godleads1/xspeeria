@@ -131,7 +131,9 @@ def migrated_from_clean(database_url: str) -> Iterator[str]:
     before the function-scoped async fixtures that the tests use.
     """
     command.downgrade(_config(database_url), "base")
-    command.upgrade(_config(database_url), "head")
+    # Upgrade to the pinned revision, not "head": since Milestone AUTH-1 added 0003, "head"
+    # is no longer 0002, and Step 9 is a claim about 0002's result only (see EXPECTED_HEAD).
+    command.upgrade(_config(database_url), EXPECTED_HEAD)
     yield database_url
 
 

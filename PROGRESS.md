@@ -26,13 +26,14 @@ governance gates** ahead of Milestone 4.1C.
 | **Step 9** — PostgreSQL behavioural verification of `currency_definitions` | **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** — PR #10, `5445d6155746a5e6ae65ce9a438be41784a97860`, 2026-08-31 |
 | **GATE 4.1B-CD3** — currency-definition immutability | **HUMAN DECISION APPROVED — IMPLEMENTATION NOT YET AUTHORIZED** — 2026-09-01 |
 | **Milestone 4.1C** | **NOT STARTED — NOT AUTHORIZED** |
+| **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
 
 Application implementation may begin **only** inside an approved milestone. Domain persistence is
 limited to the Milestone 4.1B approved scope — the `currency_definitions` table and the reusable
 money column primitives. **No money-bearing domain table, no authoritative money-bearing foreign
 key, no partner integration and no live financial behaviour is authorized.**
 
-Two governance gates block Milestone 4.1C — **GATE 4.1B-CD3** and **Decision 2**. See
+Two governance gates block Milestone 4.1C — **GATE 4.1B-CD3** and **Decision 2** *(Decision 2 resolved 2026-10-18 by ADR-025; CD3 still blocks, and 4.1C still needs its own authorization)*. See
 **Current Blockers**. CD3's **policy and architecture are HUMAN-APPROVED (2026-09-01)**, but its
 enforcement mechanism is **not implemented and not authorized**, so the gate continues to block.
 **Step 9 is COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** and no longer blocks. Neither
@@ -100,7 +101,7 @@ Python + FastAPI
       §9.6 and §10.
 - [ ] Versioning decision for `docs/references/figma/Xspeeria.fig` (~70.1 MB) — human-provided design source,
       untracked pending decision. Not staged, gitignored or LFS-tracked.
-- [ ] Decision 2 — security baseline authority
+- [x] Decision 2 — security baseline authority — **RESOLVED 2026-10-18** (ADR-008, ADR-024, ADR-025)
 - [ ] Decision 3 — corridor substrate (NGN⇄GBP pilot)
 - [ ] Decision 4 — regulatory posture confirmation
 - [x] Architecture approved for controlled implementation — Phase 1 GO, 2026-08-22

@@ -105,7 +105,12 @@ def emit_unexpected_exception() -> tuple[str, list[str]]:
     client = TestClient(app, raise_server_exceptions=False)
     with captured_json_logs() as buffer:
         response = client.get("/_test/unexpected")
-    return response.text, [line for line in buffer.getvalue().splitlines() if line.strip()]
+    lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
+    # The AUTH-1 access log (ADR-025 §1.8) adds one "request" line per request; it is checked
+    # separately below and excluded here so these tests still count exception records.
+    access = [line for line in lines if json.loads(line).get("logger") == "app.access"]
+    assert len(access) == 1 and MESSAGE_MARKER not in access[0] and SECRET_MARKER not in access[0]
+    return response.text, [line for line in lines if line not in access]
 
 
 @pytest.fixture
@@ -194,9 +199,18 @@ class TestJsonFormatterEscaping:
     #: A path carrying a complete forged JSON record plus every character that could
     #: plausibly break a JSON-lines sink.
     HOSTILE = (
-        "/x" + NEWLINE
-        + '{"level":"CRITICAL","message":"FORGED"}' + CARRIAGE_RETURN + NEWLINE
-        + QUOTE + "quote" + QUOTE + BACKSLASH + "backslash" + TAB + "tab"
+        "/x"
+        + NEWLINE
+        + '{"level":"CRITICAL","message":"FORGED"}'
+        + CARRIAGE_RETURN
+        + NEWLINE
+        + QUOTE
+        + "quote"
+        + QUOTE
+        + BACKSLASH
+        + "backslash"
+        + TAB
+        + "tab"
     )
 
     def _render(self, **extra: str) -> str:

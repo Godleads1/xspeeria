@@ -23,6 +23,7 @@ import { brandWeight, color, space, themed, typography } from "../../theme";
 import { ActionSheet, FieldInput, OutlinedField } from "../market/controls";
 import { confirmWithBiometrics, type BiometricOutcome } from "./biometrics";
 import { DEMO_ACCOUNT } from "./demo";
+import { PIN_LENGTH } from "./pin";
 import { session, useSession } from "./session";
 import {
   AuthTop,
@@ -203,7 +204,7 @@ export function LoginScreen({
             onChangeText={(t) => setPin(t.replace(/\D/g, ""))}
             keyboardType="number-pad"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PIN_LENGTH}
             secure
           />
         </OutlinedField>
@@ -239,6 +240,13 @@ export function LoginScreen({
           <Text style={styles.faceText}>Use face ID</Text>
         </Pressable>
 
+        {s.endedBy ? (
+          <Text testID="login-ended" style={styles.ended} accessibilityLiveRegion="polite">
+            {s.endedBy === "idle"
+              ? "For your security, we locked the app after 5 minutes without use. Log in again to continue."
+              : "Your session has ended after 7 days. Please log in with your PIN."}
+          </Text>
+        ) : null}
         <DemoNote testID="login-demo">
           Demo app: log in with {DEMO_ACCOUNT.phone} or {DEMO_ACCOUNT.email},
           PIN {DEMO_ACCOUNT.pin}.{" "}
@@ -267,7 +275,7 @@ export function LoginScreen({
             testID="login-submit"
             label="Login"
             onPress={submit}
-            disabled={pin.length !== 4}
+            disabled={pin.length !== PIN_LENGTH}
           />
           <GhostButton
             testID="login-signup"
@@ -307,6 +315,7 @@ export function LoginScreen({
 }
 
 const styles = themed(() => ({
+  ended: { ...typography.body, fontSize: 14, color: color.text.secondary, marginTop: space.sm },
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   body: { paddingHorizontal: space.md, gap: space.sm },
   tabs: {

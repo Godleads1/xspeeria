@@ -8,13 +8,16 @@ schema it would silently propose dropping.
 Registration is the *only* side effect. Importing this package opens no connection,
 issues no DDL and writes no row.
 
-MILESTONE 4.1B: `CurrencyDefinition` only. Offer, Match, Transaction, Settlement,
-SettlementLeg, PayoutExecution, KycCase, BeneficiaryAccount and IdempotencyRecord belong
-to 4.1C-4.1H and must not be added here ahead of their approved batch.
+MILESTONE 4.1B: `CurrencyDefinition`. MILESTONE AUTH-1 (ADR-025): the identity tables
+`User`, `AuthSession`, `AuthRefreshToken`, `PhoneVerification` -- none carries money.
+Offer, Match, Transaction, Settlement, SettlementLeg, PayoutExecution, KycCase,
+BeneficiaryAccount and IdempotencyRecord belong to 4.1C-4.1H and must not be added here
+ahead of their approved batch.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
 
 from app.models.currency_definition import CurrencyDefinition
+from app.models.identity import AuthRefreshToken, AuthSession, PhoneVerification, User
 
-__all__ = ["CurrencyDefinition"]
+__all__ = ["AuthRefreshToken", "AuthSession", "CurrencyDefinition", "PhoneVerification", "User"]

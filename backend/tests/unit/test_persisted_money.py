@@ -61,9 +61,7 @@ class TestConstruction:
         with pytest.raises(FrozenInstanceError):
             persisted.amount_minor = 1  # type: ignore[misc]
 
-    def test_equality_is_by_value_across_all_four_elements(
-        self, persisted: PersistedMoney
-    ) -> None:
+    def test_equality_is_by_value_across_all_four_elements(self, persisted: PersistedMoney) -> None:
         same = PersistedMoney(AMOUNT_MINOR, CURRENCY, SCALE, VERSION)
         assert persisted == same
 
@@ -206,8 +204,17 @@ class TestNoArithmeticSurface:
     def test_no_arithmetic_method_is_defined(self) -> None:
         """A blanket guard: catches an operator added later without a matching test."""
         arithmetic = {
-            "__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__",
-            "__neg__", "__abs__", "__truediv__", "__floordiv__", "times",
+            "__add__",
+            "__radd__",
+            "__sub__",
+            "__rsub__",
+            "__mul__",
+            "__rmul__",
+            "__neg__",
+            "__abs__",
+            "__truediv__",
+            "__floordiv__",
+            "times",
         }
         assert not (arithmetic & set(vars(PersistedMoney)))
 
@@ -286,9 +293,7 @@ class TestMoneyCheckConstraints:
 
     @staticmethod
     def _by_name(prefix: str = "", positive: bool = False) -> dict[str, str]:
-        return {
-            str(c.name): str(c.sqltext) for c in money_check_constraints(prefix, positive)
-        }
+        return {str(c.name): str(c.sqltext) for c in money_check_constraints(prefix, positive)}
 
     def test_default_set_is_exactly_three(self) -> None:
         assert len(money_check_constraints()) == 3
@@ -401,6 +406,4 @@ class TestMoneyCheckConstraints:
 
     def test_returns_only_check_constraints(self) -> None:
         """No foreign key, index or other schema object is smuggled in."""
-        assert all(
-            isinstance(c, CheckConstraint) for c in money_check_constraints(positive=True)
-        )
+        assert all(isinstance(c, CheckConstraint) for c in money_check_constraints(positive=True))
