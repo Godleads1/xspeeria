@@ -4,6 +4,11 @@ Routes only translate HTTP to the service; every rule lives in ``app.services.of
 Every route needs a signed-in, 2FA-verified user (``CurrentPrincipal``) and, until a KYC
 provider exists, the local-only KYC bypass (ADR-029 §KYC). Offers are records of intent,
 not money.
+
+No per-address limit here: the sign-in limiter (10 a minute per address, ADR-025) is shared,
+so browsing the market would lock people out of logging in, and many Nigerian mobile users
+share one carrier address. A per-user limit for these routes is still to be decided
+(ADR-030, SEC-011).
 """
 
 from __future__ import annotations
@@ -19,7 +24,6 @@ from app.api.auth_deps import (
     CurrentPrincipal,
     get_auth_runtime,
     get_db_session,
-    limit_by_address,
 )
 from app.api.deps import get_app_settings
 from app.core.config import Settings
@@ -35,12 +39,8 @@ from app.services.offers import OfferService
 
 __all__ = ["marketplace_router", "router"]
 
-marketplace_router = APIRouter(
-    prefix="/api/v1/marketplace", tags=["marketplace"], dependencies=[Depends(limit_by_address)]
-)
-router = APIRouter(
-    prefix="/api/v1/offers", tags=["offers"], dependencies=[Depends(limit_by_address)]
-)
+marketplace_router = APIRouter(prefix="/api/v1/marketplace", tags=["marketplace"])
+router = APIRouter(prefix="/api/v1/offers", tags=["offers"])
 
 
 async def get_offer_service(

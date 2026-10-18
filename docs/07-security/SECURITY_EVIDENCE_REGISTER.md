@@ -44,7 +44,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
 | SEC-010 | IMPLEMENTED (partial) | Money module rejects floats/NaN, HALF_EVEN (`backend/tests/unit/test_money.py`); SQLAlchemy ORM; mobile strict input parsing (`security-review.test.tsx`). | Request validation for every endpoint when built. |
-| SEC-011 | NOT STARTED | — | Body-size limits, timeouts, rate limits (Redis where required). |
+| SEC-011 | IMPLEMENTED (partial) | Sign-in routes: 10 requests a minute per address (ADR-025). Offer routes deliberately not on that shared counter (ADR-030 §2, `test_browsing_offers_does_not_use_up_the_sign_in_limit`). | Per-user limit for offer routes (product decision pending); body-size limits, timeouts; Redis before more than one server. |
 | SEC-012 | NOT STARTED | No cookie auth, no outbound requests, no redirects yet. | Decide token vs cookie; CSRF if cookies; SSRF allow-list for partner calls. |
 | SEC-013 | IMPLEMENTED (partial) | Admin security headers (`admin/next.config.ts`, checked as served locally 2026-10-17); backend CORS empty by default (`backend/app/core/config.py`); docs/OpenAPI off in production. | CSP script-src with nonces; TLS config UNKNOWN (no deployment). |
 | SEC-014 | NOT STARTED | `/health` returns the environment name (review SEC-14). | API inventory document; trim health output. |

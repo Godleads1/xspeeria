@@ -385,7 +385,7 @@ export function ListingRow({
             {"Rate: "}
             <Text style={styles.listingMuted}>NGN </Text>
             <Text style={styles.listingRate}>
-              {formatCompact(listing.rateHundredths)}
+              {listing.rateLabel ?? formatCompact(listing.rateHundredths)}
             </Text>
             <Text style={styles.listingMuted}>{` /${listing.currency}`}</Text>
           </Text>
@@ -409,8 +409,8 @@ export function ListingRow({
         accessibilityRole="button"
         accessibilityLabel={
           selected
-            ? `Remove ${formatHundredths(takingMinor)} ${listing.currency} at ${formatHundredths(listing.rateHundredths)} NGN from your selection`
-            : `${action} ${formatHundredths(availableMinor)} ${listing.currency} at ${formatHundredths(listing.rateHundredths)} NGN`
+            ? `Remove ${formatHundredths(takingMinor)} ${listing.currency} at ${listing.rateLabel ?? formatHundredths(listing.rateHundredths)} NGN from your selection`
+            : `${action} ${formatHundredths(availableMinor)} ${listing.currency} at ${listing.rateLabel ?? formatHundredths(listing.rateHundredths)} NGN`
         }
         accessibilityState={{ selected, disabled: taken }}
         disabled={taken}

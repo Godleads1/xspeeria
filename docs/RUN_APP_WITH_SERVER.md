@@ -63,3 +63,17 @@ Open it in Expo Go. The log-in screen says "Development build connected to …".
 
 Your phone is now trusted for 30 days: logging in needs only the PIN. On another phone the app
 asks for the authenticator code.
+
+## 6. Try the Market (offers)
+
+Needs `KYC_DEV_BYPASS=true` in `.env` and the currency command from step 3.
+
+1. **Market › Sell**: enter an amount in USD (at least 10) and a rate no higher than the
+   official rate, then tap **Create Offer**. The app says your offer is live.
+2. **Market › Buy › USD**: your offer is listed as "Your offer". Offers from other accounts
+   show without any name.
+3. **⋮ › My Offers**: see your offers and **Withdraw** one (tap twice).
+
+Buy requests and taking an offer are not built yet; the app says "coming soon". An offer is a
+record of what you want to exchange. No money moves.
+

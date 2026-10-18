@@ -1,7 +1,10 @@
-import type { ReactElement } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState, type ReactElement } from 'react';
+import { Alert } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 
+import { SERVER_MODE } from '../../../src/api/config';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
+import { marketServer } from '../../../src/features/market/serverOffers';
 import { tradeStore } from '../../../src/features/trade/tradeStore';
 import { useThemeMode } from '../../../src/theme';
 
@@ -9,12 +12,28 @@ import { useThemeMode } from '../../../src/theme';
  * Market tab (ADR-005). Mock data only. "Create" opens Select Match for the request typed;
  * tapping a listed offer opens Select Match for that offer's remaining amount at its own
  * rate, so it goes through the same confirm sheet, 2FA check and rate ceiling.
+ *
+ * Pointed at a real server (ADR-030): real offers, "Create Offer" publishes, and ⋮ › My
+ * Offers lists and withdraws them. Other menu items keep their demo behaviour.
  */
 export default function MarketplaceRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
+  // Fetch server offers again whenever the tab comes back into view (e.g. after My Offers).
+  const [refresh, setRefresh] = useState(0);
+  useFocusEffect(useCallback(() => setRefresh((n) => n + 1), []));
   return (
     <MarketScreen
+      server={SERVER_MODE ? marketServer : null}
+      refreshSignal={refresh}
+      onMenu={
+        SERVER_MODE
+          ? (key) => {
+              if (key === 'offers') router.push('/market/my-offers');
+              else Alert.alert('Coming soon', 'This is one of the next screens to be built.');
+            }
+          : undefined
+      }
       onTakeListing={(listing, side) => {
         const amount = tradeStore.remainingMinor(listing);
         if (amount <= 0) return;
