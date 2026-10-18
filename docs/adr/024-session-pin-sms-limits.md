@@ -15,9 +15,9 @@
 | Parameter | Value | Notes |
 |---|---|---|
 | Idle lock | **5 minutes** without use | The app asks for the PIN or biometrics again. The user's data is kept (same person). |
-| Maximum session | **7 days** after a full log-in | Then a full log-in is required. Biometric unlock does **not** extend it. In production the full log-in includes an SMS code (ADR-008); the demo has none at log-in. |
+| Maximum session | **7 days** after a full log-in | Then a full log-in is required (PIN, plus 2FA on a new device per ADR-008). Biometric unlock does **not** extend it. SMS codes are **not** a log-in factor (ADR-008); they only prove phone ownership. |
 | PIN | **6 digits** | Replaces Figma's 4 (1,000,000 combinations instead of 10,000). Weak PINs still refused: all one digit, straight runs (123456, 654321, wrapping 890123). |
-| SMS codes | **5 per hour, 10 per day** per phone number | Covers sign-up, log-in, contact change and recovery codes sent by SMS. **Server-enforced only**: a limit in the app is not a control, so the demo app does not imitate it. |
+| SMS codes | **5 per hour, 10 per day** per phone number | Covers every SMS code sent to a number (phone verification at sign-up and on a phone change). **Server-enforced only**: a limit in the app is not a control, so the demo app does not imitate it. |
 
 Unchanged: 5 wrong PINs → 15-minute lock (ADR-008/013); 60-second resend wait; codes
 expire after 10 minutes.
