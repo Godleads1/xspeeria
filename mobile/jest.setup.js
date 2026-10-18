@@ -17,6 +17,14 @@ jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resol
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+// Location: declined by default; tests that need a country pass their own `detect`.
+jest.mock('expo-location', () => ({
+  Accuracy: { Lowest: 1 },
+  getForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false, canAskAgain: true })),
+  requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false })),
+  getCurrentPositionAsync: jest.fn(() => Promise.reject(new Error('not in tests'))),
+  reverseGeocodeAsync: jest.fn(() => Promise.resolve([])),
+}));
 jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: jest.fn(() => Promise.resolve(true)),
   isEnrolledAsync: jest.fn(() => Promise.resolve(true)),

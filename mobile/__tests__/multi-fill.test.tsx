@@ -7,7 +7,6 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Listing } from '../src/features/market/data';
 import { SelectMatchScreen } from '../src/features/market/SelectMatchScreen';
-import { BENEFICIARIES } from '../src/features/profile/data';
 import { ConfirmTradeSheet } from '../src/features/trade/ConfirmTradeSheet';
 import { addToPlan, planTotals, plannedMinor, removeFromPlan, type FillPlan } from '../src/features/trade/fillPlan';
 import { TradeScreen } from '../src/features/trade/TradeScreen';
@@ -16,7 +15,6 @@ import { tradeStore } from '../src/features/trade/tradeStore';
 const NOW = 1_760_000_000_000;
 let seed = 9;
 const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, () => (seed = (seed * 29 + 13) % 256));
-const own = BENEFICIARIES.filter((b) => b.name === 'David Peters' && b.currency === 'USD');
 const PAYOUT = { id: 'b3', name: 'David Peters', bank: 'Chase', last4: '4410' };
 
 // Four sellers with 250.00 USD each, at slightly different rates.
@@ -110,20 +108,20 @@ describe('Confirm sheet for several trades', () => {
   it('lists each part, a fee per trade and the total, then accepts them together', async () => {
     const onAccept = jest.fn();
     const plan = fourParts();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} onAccept={onAccept} onClose={jest.fn()} />);
     expect(screen.getByText('Confirm 4 trades')).toBeTruthy();
-    expect(screen.getByText('1,000.00 USD')).toBeTruthy();
+    expect(screen.getAllByText('1,000.00 USD')).toHaveLength(2); // you buy, you receive
     expect(screen.getByText('Coordination fee (1%)')).toBeTruthy();
     expect(screen.getByText('13,288.15 NGN')).toBeTruthy();
     expect(screen.getByText('1,342,103.15 NGN')).toBeTruthy(); // 1,328,815.00 + 1%
     expect(screen.queryByTestId('confirm-partial')).toBeNull();
     await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(plan, [{ id: own[0].id, name: own[0].name, bank: own[0].bank, last4: own[0].accountLast4, amountMinor: 100000 }]);
+    expect(onAccept).toHaveBeenCalledWith(plan);
   });
 
   it('says plainly when the parts fill less than asked', async () => {
     const plan = fourParts().slice(0, 3);
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} payoutOptions={own} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} onAccept={jest.fn()} onClose={jest.fn()} />);
     expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 1,000.00 USD.*These 3 offers fill.*750.00 USD/);
   });
 
@@ -131,7 +129,7 @@ describe('Confirm sheet for several trades', () => {
     const plan = fourParts();
     tradeStore.create({ side: 'buy', listing: SELLERS[2], amountMinor: 10000, payout: PAYOUT, now: NOW, random: rnd });
     const onAccept = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} payoutOptions={own} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
+    await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} onAccept={onAccept} onClose={jest.fn()} />);
     expect(screen.getByTestId('confirm-stale')).toBeTruthy();
     expect(screen.getByTestId('confirm-accept').props.accessibilityState.disabled).toBe(true);
   });

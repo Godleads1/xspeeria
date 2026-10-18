@@ -129,12 +129,7 @@ export function MarketScreen({
   };
 
   const take = (listing: Listing): void => {
-    if (onTakeListing) onTakeListing(listing, side);
-    else
-      Alert.alert(
-        side === "buy" ? "Buy this offer" : "Fill this request",
-        "Confirming a trade is the next screen to be built. Nothing has been sent.",
-      );
+    onTakeListing?.(listing, side);
   };
 
   const trendText =

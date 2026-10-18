@@ -31,6 +31,7 @@ import {
 } from '../profile/verification';
 import { confirmWithBiometrics, type BiometricOutcome } from './biometrics';
 import { DEMO_MODE, DEMO_NIN_RECORD } from './demo';
+import { detectCountry } from './location';
 import { PIN_LENGTH, pinProblem, sameSecret } from './pin';
 import { signup, useSignup } from './signupStore';
 import { AuthTop, CheckRow, DemoNote, GhostButton, Heading, PhoneInput, PinPad, fullPhone } from './ui';
@@ -60,7 +61,30 @@ function Frame({
 
 /* ------------------------------------------------------------ 1. Let's get started */
 
-export function GetStartedScreen({ onNext, onLogIn, onTerms }: { onNext: () => void; onLogIn: () => void; onTerms: () => void }): ReactElement {
+export function GetStartedScreen({
+  onNext,
+  onLogIn,
+  onTerms,
+  detect = detectCountry,
+}: {
+  onNext: () => void;
+  onLogIn: () => void;
+  onTerms: () => void;
+  /** Location → country for the KYC region (location.ts); never blocks sign-up. */
+  detect?: typeof detectCountry;
+}): ReactElement {
+  // Figma: the location prompt appears as this screen opens. Declining changes nothing here.
+  useEffect(() => {
+    let live = true;
+    detect({ ask: true })
+      .then((r) => {
+        if (live) signup.update({ country: r.status === 'found' ? r.country : null });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [detect]);
   const [local, setLocal] = useState('');
   const [aml, setAml] = useState(false);
   const [terms, setTerms] = useState(false);

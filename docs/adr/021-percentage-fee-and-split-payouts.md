@@ -49,6 +49,10 @@ multi-offer order. The window length remains configurable policy (Appendix D).
 - Accounts are the user's **own verified** accounts only (Banking spec §3.3). Payouts to
   other people remain pending DEC-007.
 
+> **Update 2026-10-18:** choosing accounts and amounts moved from the confirm sheet to the
+> Payout Destination screen, which can also add a new own-name account (24-hour hold) —
+> `docs/adr/022-payout-destination-welcome-location.md`.
+
 ## 4. Implementation
 
 `mobile/src/features/history/data.ts` (`coordinationFeeMinor`), `trade/tradeStore.ts`

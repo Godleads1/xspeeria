@@ -92,6 +92,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `019-review-decisions-and-multi-offer-fill.md` | High-severity release rule relaxed with risk acceptance (C1); rounding half to even; one request filled from several listings, each part explicit (DEC-025) | **APPROVED** — 2026-10-17 |
 | `020-official-rate-ceiling.md` | The official rate is the reference ceiling: `0 < rate ≤ official rate`, hard block above, no floor; source/cadence still open (DEC-026) | **APPROVED** — 2026-10-17 |
 | `021-percentage-fee-and-split-payouts.md` | Coordination fee = 1% of what each side sends (supersedes the flat fee in Business Plan §5 / BRS-04 / CORRECTIONS_v3 §2); per-trade 5-minute windows; payouts split across own accounts, paid by the partner bank, confirmation to both sides (DEC-027) | **APPROVED** — 2026-10-17 |
+| `022-payout-destination-welcome-location.md` | Payout Destination (own-name accounts, last 4 only, 24-hour hold for new accounts, no balance wording), Welcome slides with corrected claims, location → country only for KYC region (DEC-028) | **APPROVED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 

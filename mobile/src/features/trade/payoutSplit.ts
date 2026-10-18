@@ -17,6 +17,11 @@ export interface PayoutShare {
   readonly last4: string;
   /** Minor units of the currency received. */
   readonly amountMinor: number;
+  /**
+   * A new account added for this payout (not yet verified by the bank). Payouts to a new
+   * account are held for 24 hours (`docs/adr/008-two-factor-authentication.md`).
+   */
+  readonly isNew?: boolean;
 }
 
 export type SplitProblem = 'none-selected' | 'empty-amount' | 'over' | 'under' | 'duplicate';

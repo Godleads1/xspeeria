@@ -88,6 +88,15 @@ export function ngnFor(amountMinor: number, rateHundredths: number): number {
   return quoteMinor(amountMinor, rateHundredths);
 }
 
+/** A trade id not already in use (a repeat is astronomically unlikely, but never trusted). */
+function uniqueId(random: RandomBytes): string {
+  for (let i = 0; i < 5; i++) {
+    const id = `t-${reference(random).toLowerCase()}`;
+    if (!trades.some((t) => t.id === id)) return id;
+  }
+  throw new Error('Could not create a unique trade id');
+}
+
 /** What the user receives from escrow: the foreign amount when buying, NGN when selling. */
 export function receiveFor(side: Side, amountMinor: number, rateHundredths: number): number {
   return side === 'buy' ? amountMinor : ngnFor(amountMinor, rateHundredths);
@@ -96,6 +105,8 @@ export function receiveFor(side: Side, amountMinor: number, rateHundredths: numb
 /** Event text for one payout, with the amount when the money was split. */
 function paidLabel(t: Trade, p: PayoutShare): string {
   const cur = t.side === 'buy' ? t.currency : 'NGN';
+  // ADR-008: a newly added account is paid only after a 24-hour security hold.
+  if (p.isNew) return `${formatHundredths(p.amountMinor)} ${cur} for your new account ending ${p.last4}: held 24 hours, then paid`;
   return t.payouts.length > 1
     ? `Paid ${formatHundredths(p.amountMinor)} ${cur} to your account ending ${p.last4}`
     : `Paid to your account ending ${p.last4}`;
@@ -172,7 +183,7 @@ export const tradeStore = {
       input.payouts ?? (payout ? [{ ...payout, amountMinor: receiveMinor }] : []);
     if (splitProblem(receiveMinor, payouts) !== null) throw new Error('Payout accounts must add up to the amount received');
     const trade: Trade = {
-      id: `t-${reference(random).toLowerCase()}`,
+      id: uniqueId(random),
       reference: reference(random),
       side,
       listingId: listing.id,

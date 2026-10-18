@@ -13,9 +13,14 @@ export interface SignupDraft {
   readonly pinConfirmed: boolean;
   /** Face ID chosen during sign-up; applied when the account is created. */
   readonly biometric: boolean;
+  /**
+   * Country the phone reported (ISO 3166 alpha-2), or null if location was declined or
+   * unavailable. A hint for the server's region check (ADR-016/022); never trusted alone.
+   */
+  readonly country: string | null;
 }
 
-const EMPTY: SignupDraft = { phone: null, identityVerified: false, email: null, emailVerified: false, newsletter: false, pin: null, pinConfirmed: false, biometric: false };
+const EMPTY: SignupDraft = { phone: null, identityVerified: false, email: null, emailVerified: false, newsletter: false, pin: null, pinConfirmed: false, biometric: false, country: null };
 let draft: SignupDraft = EMPTY;
 const listeners = new Set<() => void>();
 

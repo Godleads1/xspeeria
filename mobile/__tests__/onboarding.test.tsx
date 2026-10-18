@@ -94,6 +94,29 @@ describe('Welcome', () => {
     expect(onSignUp).toHaveBeenCalled();
     expect(onLogIn).toHaveBeenCalled();
   });
+
+  it('uses Figma titles and makes no claim Xspeeria cannot back (ADR-022)', () => {
+    expect(SLIDES.map((x) => x.title)).toEqual([
+      'Welcome to Xspeeria',
+      'Exchange Money Peer-to-Peer',
+      'Safe. Verified. Secure.',
+      'Go Global, Seamlessly',
+    ]);
+    const text = SLIDES.map((x) => x.body).join(' ');
+    expect(text).not.toMatch(/end-to-end encryption|prepaid card|instantly|guarantee|wallet|balance/i);
+    expect(text).not.toMatch(/funds across borders/i);
+    expect(text).toMatch(/no money crosses the border/);
+  });
+
+  it('shows a different picture for each slide', async () => {
+    await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
+    const hero = (): unknown => screen.getByTestId('welcome-hero', { includeHiddenElements: true }).props.source;
+    const first = hero();
+    await fireEvent(screen.getByTestId('welcome-slides'), 'momentumScrollEnd', {
+      nativeEvent: { contentOffset: { x: 10_000, y: 0 } },
+    });
+    expect(hero()).not.toEqual(first);
+  });
 });
 
 describe('Login screen', () => {

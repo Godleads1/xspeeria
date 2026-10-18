@@ -10,7 +10,7 @@
  * shrinks a part silently (Standing Standards §7.3).
  */
 
-import { useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 
 import { Icon } from "../../components/icons";
@@ -18,13 +18,9 @@ import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import type { Side } from "../market/MarketScreen";
 import { formatHundredths } from "../market/money";
-import type { Beneficiary } from "../profile/data";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_LABEL } from "../history/data";
-import { FieldInput, OutlinedField } from "../market/controls";
-import { parseToHundredths } from "../market/money";
-import { splitProblem, type PayoutShare } from "./payoutSplit";
 
 function Row({
   label,
@@ -51,21 +47,16 @@ export function ConfirmTradeSheet({
   side,
   requestedMinor,
   parts,
-  payoutOptions,
   onAccept,
   onClose,
-  onAddAccount,
 }: {
   side: Side;
   requestedMinor: number;
   /** Listings the user picked and the amount taken from each (fillPlan.ts). */
   parts: FillPlan;
-  /** The user's own verified accounts in the currency they will receive. */
-  payoutOptions: readonly Beneficiary[];
-  /** The accounts the partner bank pays and the amount each gets (they add up exactly). */
-  onAccept: (parts: FillPlan, shares: readonly PayoutShare[]) => void;
+  /** Next: choose the payout accounts (Payout Destination, ADR-022). */
+  onAccept: (parts: FillPlan) => void;
   onClose: () => void;
-  onAddAccount: () => void;
 }): ReactElement {
   useTrades(); // re-check what is left when trades change
   // A listing may have been taken since it was picked: never shrink a part silently.
@@ -75,44 +66,10 @@ export function ConfirmTradeSheet({
   const several = parts.length > 1;
   const short = totals.foreignMinor < requestedMinor;
   const receiveCur = side === "buy" ? cur : "NGN";
-  // What the user receives, to be paid into one or more of their own accounts (ADR-021).
   const receiveMinor = side === "buy" ? totals.foreignMinor : totals.ngnMinor;
-  // Selected account id → amount typed (ignored while only one account is selected).
-  const [chosen, setChosen] = useState<Record<string, string>>(() =>
-    payoutOptions[0] ? { [payoutOptions[0].id]: "" } : {},
-  );
-  const chosenIds = payoutOptions.map((b) => b.id).filter((id) => id in chosen);
-  const splitting = chosenIds.length > 1;
-  const draft = chosenIds.map((id) => ({
-    id,
-    amountMinor: splitting ? parseToHundredths(chosen[id]) : receiveMinor,
-  }));
-  const problem = splitProblem(receiveMinor, draft);
-  const assigned = draft.reduce((sum, d) => sum + (d.amountMinor ?? 0), 0);
-  const shares: PayoutShare[] =
-    problem === null
-      ? draft.map((d) => {
-          const b = payoutOptions.find((x) => x.id === d.id) as Beneficiary;
-          return { id: b.id, name: b.name, bank: b.bank, last4: b.accountLast4, amountMinor: d.amountMinor as number };
-        })
-      : [];
-  const toggle = (id: string): void => {
-    setChosen((c) => {
-      const next = { ...c };
-      if (id in next) delete next[id];
-      else next[id] = "";
-      return next;
-    });
-  };
   const minutes = Math.round(FUNDING_WINDOW_MS / 60000);
   const noun = side === "buy" ? "offer" : "request";
-  const canAccept = problem === null && !stale && parts.length > 0;
-  const splitMessage =
-    problem === "over"
-      ? `That is ${formatHundredths(assigned - receiveMinor)} ${receiveCur} more than you receive.`
-      : problem === "under" || problem === "empty-amount"
-        ? `Left to assign: ${formatHundredths(Math.max(0, receiveMinor - assigned))} ${receiveCur}.`
-        : null;
+  const canAccept = !stale && parts.length > 0;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -197,68 +154,14 @@ export function ConfirmTradeSheet({
             )}
           </View>
 
-          <Text style={styles.section}>Receive into</Text>
-          {payoutOptions.length === 0 ? (
-            <View testID="confirm-no-account" style={styles.empty}>
-              <Text style={styles.emptyText}>
-                Add a {receiveCur} account in your name to receive the money.
-              </Text>
-              <Pressable
-                testID="confirm-add-account"
-                accessibilityRole="button"
-                onPress={onAddAccount}
-              >
-                <Text style={styles.link}>Add account</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              {payoutOptions.length > 1 ? (
-                <Text style={styles.feeNote}>
-                  {`You can split the ${formatHundredths(receiveMinor)} ${receiveCur} across several of your accounts. The partner bank pays each one.`}
-                </Text>
-              ) : null}
-              {payoutOptions.map((b) => {
-                const on = b.id in chosen;
-                return (
-                  <View key={b.id} style={[styles.option, on ? styles.optionOn : null]}>
-                    <Pressable
-                      testID={`confirm-payout-${b.id}`}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: on }}
-                      accessibilityLabel={`${b.bank} account ending ${b.accountLast4}`}
-                      onPress={() => toggle(b.id)}
-                      style={styles.optionMain}
-                    >
-                      <View style={[styles.box, on ? styles.boxOn : null]}>
-                        {on ? <Icon name="check" color={color.text.onFill} size={12} weight={2.5} /> : null}
-                      </View>
-                      <Text style={styles.optionText}>
-                        {b.bank} •••• {b.accountLast4}
-                      </Text>
-                    </Pressable>
-                    {on && splitting ? (
-                      <View style={styles.shareField}>
-                        <OutlinedField label={`Amount (${receiveCur})`}>
-                          <FieldInput
-                            testID={`confirm-share-${b.id}`}
-                            accessibilityLabel={`Amount for account ending ${b.accountLast4}, ${receiveCur}`}
-                            value={chosen[b.id]}
-                            onChangeText={(t) => setChosen((c) => ({ ...c, [b.id]: t }))}
-                          />
-                        </OutlinedField>
-                      </View>
-                    ) : on ? (
-                      <Text style={styles.shareAll}>{`All ${formatHundredths(receiveMinor)} ${receiveCur}`}</Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-              {splitting && splitMessage ? (
-                <Text testID="confirm-split-error" style={styles.splitError}>{splitMessage}</Text>
-              ) : null}
-            </>
-          )}
+          <View testID="confirm-receive" style={styles.card}>
+            {side === "buy" ? (
+              <Row label="You receive" value={`${formatHundredths(receiveMinor)} ${receiveCur}`} strong />
+            ) : null}
+            <Text style={styles.feeNote}>
+              Next, choose the accounts in your name that the partner bank pays.
+            </Text>
+          </View>
 
           <View style={styles.hint}>
             <Icon name="info" color={color.text.secondary} size={16} />
@@ -273,8 +176,8 @@ export function ConfirmTradeSheet({
         <View style={styles.actions}>
           <PrimaryButton
             testID="confirm-accept"
-            label={several ? `Accept ${parts.length} ${noun}s` : side === "buy" ? "Accept offer" : "Accept request"}
-            onPress={canAccept ? () => onAccept(parts, shares) : undefined}
+            label="Continue"
+            onPress={canAccept ? () => onAccept(parts) : undefined}
             disabled={!canAccept}
             tone={side === "sell" ? "sell" : "primary"}
           />

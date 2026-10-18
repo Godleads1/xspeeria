@@ -1,8 +1,11 @@
 /**
  * Welcome (Figma 33:1367), ADR-013. Swipeable intro slides with the four progress bars,
- * "Open a free profile" and "I have a profile". Slide 1 is Figma's copy; slides 2–4 are
- * drawn from the approved model and need marketing/legal review. The Figma photo
- * artwork is used as exported from the design file; its licence must be confirmed before release.
+ * "Open a free profile" and "I have a profile". One picture per slide (Figma component
+ * 55:2057, variants 55:2056/2054/2055/2053). Titles are Figma's; slide text is Figma's
+ * except three claims that are not true or not verified for Xspeeria (ADR-022): "end-to-end
+ * encryption" (not verified), "send and receive funds across borders" (no money crosses the
+ * border) and "spend via prepaid card" (cards are not available, ADR-012). Copy needs
+ * marketing/legal review. The photo artwork's licence must be confirmed before release.
  */
 
 import { useState, type ReactElement } from 'react';
@@ -15,16 +18,23 @@ import { AuthTop, GhostButton } from './ui';
 
 export const SLIDES = [
   { title: 'Welcome to Xspeeria', body: 'Experience fast, secure, and low-fee currency exchange — anytime, anywhere.' },
-  { title: 'Your money stays yours', body: 'Xspeeria never holds your money. Each side pays into a partner bank account in their own country.' },
-  { title: 'One clear fee', body: '1% of what you send, and no hidden margin in the rate. You see the fee before you confirm.' },
-  { title: 'Real, verified people', body: 'Everyone confirms their identity before they trade, so you always deal with real people.' },
+  { title: 'Exchange Money Peer-to-Peer', body: 'Set your own rate and match with verified people. One clear 1% fee, with no hidden margin in the rate.' },
+  { title: 'Safe. Verified. Secure.', body: 'Everyone is identity-checked. Your money goes to a partner bank’s escrow, never to Xspeeria, until both sides have paid.' },
+  { title: 'Go Global, Seamlessly', body: 'Exchange naira with people abroad. Each side is paid by local transfer in their own country — no money crosses the border.' },
 ] as const;
 
-function Hero(): ReactElement {
-  // Figma 55:2061 artwork, taken from the design file at 1× (licence to confirm; ADR-013).
+/** Decorative artwork, one per slide (Figma; licence to confirm, ADR-013). */
+const HERO_IMAGES = [
+  require('../../../assets/images/welcome-hero.png'),
+  require('../../../assets/images/welcome-slide2.png'),
+  require('../../../assets/images/welcome-slide3.png'),
+  require('../../../assets/images/welcome-slide4.png'),
+] as const;
+
+function Hero({ index }: { index: number }): ReactElement {
   return (
     <View style={styles.hero} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Image testID="welcome-hero" source={require('../../../assets/images/welcome-hero.png')} style={styles.heroImage} resizeMode="contain" />
+      <Image testID="welcome-hero" source={HERO_IMAGES[index]} style={styles.heroImage} resizeMode="contain" />
     </View>
   );
 }
@@ -42,7 +52,7 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
   return (
     <View testID="welcome-screen" style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + space.sm }]}>
       <AuthTop />
-      <Hero />
+      <Hero index={index} />
       <ScrollView testID="welcome-slides" horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd} style={styles.slides}>
         {SLIDES.map((s) => (
           <View key={s.title} style={[styles.slide, { width: slideW }]}>

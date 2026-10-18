@@ -4,7 +4,7 @@
  * on this screen whatever the user's preference, because it shows the secret.
  */
 
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,7 +40,15 @@ export function AuthenticatorSetupScreen({
   useBlockScreenCapture('xspeeria-2fa-setup');
   const insets = useSafeAreaInsets();
   const alreadyEnrolled = twoFactor.isEnrolled();
-  const [secret] = useState(() => (alreadyEnrolled ? '' : twoFactor.beginEnrolment(random)));
+  // Started in an effect, never during render: beginning enrolment updates the 2FA store,
+  // and a store update while React is drawing another component is an error.
+  const [secret, setSecret] = useState('');
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || alreadyEnrolled) return;
+    started.current = true; // once per visit, even if `random` is a new function each render
+    setSecret(twoFactor.beginEnrolment(random));
+  }, [alreadyEnrolled, random]);
   const uri = useMemo(() => (secret ? otpauthUri(secret, account) : ''), [secret, account]);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +99,7 @@ export function AuthenticatorSetupScreen({
               Use Google Authenticator, Microsoft Authenticator, Authy or similar. Never share this code or key.
             </Text>
             <View style={styles.qr}>
-              <QrCode testID="authenticator-qr" value={uri} />
+              {uri ? <QrCode testID="authenticator-qr" value={uri} /> : null}
             </View>
             <Text style={styles.text}>{"Can't scan? Enter this key instead:"}</Text>
             <View style={styles.keyRow}>

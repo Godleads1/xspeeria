@@ -1,17 +1,12 @@
 import { useEffect, useState, type ReactElement } from "react";
-import { Alert } from "react-native";
-import * as Crypto from "expo-crypto";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { SelectMatchScreen } from "../../../src/features/market/SelectMatchScreen";
 import { BUYABLE } from "../../../src/features/market/data";
 import type { Listing } from "../../../src/features/market/data";
 import type { TradeRequest } from "../../../src/features/market/MarketScreen";
-import { formatHundredths, parsePositiveInt, quoteMinorOrNull } from "../../../src/features/market/money";
+import { parsePositiveInt, quoteMinorOrNull } from "../../../src/features/market/money";
 import { rateProblem } from "../../../src/features/market/rateCeiling";
-import { useBeneficiaries } from "../../../src/features/profile/beneficiaryStore";
-import { useProfile } from "../../../src/features/profile/profileStore";
-import { requestStepUp } from "../../../src/features/security/stepUp";
 import { ConfirmTradeSheet } from "../../../src/features/trade/ConfirmTradeSheet";
 import {
   addToPlan,
@@ -20,8 +15,8 @@ import {
   removeFromPlan,
   type FillPlan,
 } from "../../../src/features/trade/fillPlan";
-import { allocatePayouts, type PayoutShare } from "../../../src/features/trade/payoutSplit";
-import { receiveFor, tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
+import { orderDraft } from "../../../src/features/trade/orderDraft";
+import { tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
 import { useThemeMode } from "../../../src/theme";
 
 /**
@@ -65,8 +60,6 @@ export default function SelectMatchRoute(): ReactElement | null {
   // Listings picked so far and the amount from each (ADR-019).
   const [plan, setPlan] = useState<FillPlan>([]);
   const [reviewing, setReviewing] = useState(false);
-  const beneficiaries = useBeneficiaries();
-  const profile = useProfile();
   useTrades(); // remaining amounts change as trades are created
 
   useEffect(() => {
@@ -75,16 +68,6 @@ export default function SelectMatchRoute(): ReactElement | null {
 
   if (!request) return null;
   const { side } = request;
-
-  // Payouts go only to the user's own verified accounts in the currency they receive
-  // (Banking spec §3.3, ADR-014).
-  const receive = side === "buy" ? request.currency : "NGN";
-  const payoutOptions = beneficiaries.filter(
-    (b) =>
-      b.status === "verified" &&
-      b.currency === receive &&
-      b.name === profile.fullName,
-  );
 
   const toggle = (listing: Listing): void => {
     if (inPlan(plan, listing.id)) {
@@ -97,49 +80,12 @@ export default function SelectMatchRoute(): ReactElement | null {
     if (next !== plan && plannedMinor(next) >= request.amountMinor) setReviewing(true);
   };
 
-  const accept = async (parts: FillPlan, shares: readonly PayoutShare[]): Promise<void> => {
+  // Confirmed: next, the user chooses where the money is paid (Payout Destination, ADR-022).
+  const accept = (parts: FillPlan): void => {
     setReviewing(false);
-    const what =
-      parts.length === 1
-        ? `${side === "buy" ? "Buy" : "Sell"} ${formatHundredths(parts[0].amountMinor)} ${parts[0].listing.currency} at NGN ${formatHundredths(parts[0].listing.rateHundredths)}`
-        : `${side === "buy" ? "Buy" : "Sell"} ${formatHundredths(plannedMinor(parts))} ${parts[0].listing.currency} in ${parts.length} trades`;
-    // One 2 FA check covers the whole order the user just reviewed (ADR-008, ADR-019).
-    if (!(await requestStepUp(what))) return;
-    const orderId = parts.length > 1 ? `o-${Array.from(Crypto.getRandomBytes(6), (b) => b.toString(16).padStart(2, "0")).join("")}` : undefined;
-    // The user's split across their accounts, spread over the trades of the order (ADR-021).
-    const perTrade = allocatePayouts(
-      parts.map((p) => receiveFor(side, p.amountMinor, p.listing.rateHundredths)),
-      shares,
-    );
-    const created: string[] = [];
-    let failed = 0;
-    for (const [i, part] of parts.entries()) {
-      try {
-        const trade = tradeStore.create({
-          side,
-          listing: part.listing,
-          amountMinor: part.amountMinor,
-          payouts: perTrade[i],
-          now: Date.now(),
-          random: Crypto.getRandomBytes,
-          orderId,
-        });
-        created.push(trade.id);
-      } catch {
-        // Each listing is accepted on its own; one being taken meanwhile does not undo the others.
-        failed += 1;
-      }
-    }
+    orderDraft.set({ side, requestedMinor: request.amountMinor, parts });
     setPlan([]);
-    if (failed > 0) {
-      Alert.alert(
-        "Some trades were not created",
-        `${failed} of ${parts.length} ${side === "buy" ? "offers were" : "requests were"} taken by someone else. ${created.length > 0 ? "The others went ahead." : "Choose again."}`,
-      );
-    }
-    if (created.length > 0) {
-      router.replace({ pathname: "/trade/[id]", params: { id: created[0] } });
-    }
+    router.push("/market/payout");
   };
 
   return (
@@ -158,13 +104,8 @@ export default function SelectMatchRoute(): ReactElement | null {
           side={side}
           requestedMinor={request.amountMinor}
           parts={plan}
-          payoutOptions={payoutOptions}
           onClose={() => setReviewing(false)}
-          onAddAccount={() => {
-            setReviewing(false);
-            router.push("/profile/add-beneficiary");
-          }}
-          onAccept={(parts, payout) => void accept(parts, payout)}
+          onAccept={accept}
         />
       ) : null}
     </>

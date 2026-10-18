@@ -68,7 +68,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
 | SEC-023 | DOCUMENTED | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
 | SEC-024 | DOCUMENTED | `docs/adr/002-*`; Appendix D. | Reconciliation jobs and mismatch alerts. |
-| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes; own-name payout accounts only; TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. |
+| SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. |
 
 ## F. Data, privacy and secrets
 
@@ -76,7 +76,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 |---|---|---|---|
 | SEC-026 | NOT STARTED | — | Hosting/KMS decision; TLS everywhere; column-level protection for KYC data. |
 | SEC-027 | IMPLEMENTED (partial) | Gitleaks over full history in CI with canary; sensitive-file guard; `.env.example` placeholders only. | Approved secret manager; rotation procedure. |
-| SEC-028 | DOCUMENTED | SSN never stored (`RegionScreens.tsx`); retention approach is illustrative (`docs/08-compliance/03_Compliance_Operations_Manual_v1.1.md` §5.3). | Ratified retention periods; access controls on KYC storage. |
+| SEC-028 | DOCUMENTED (+ location minimised to country code, ADR-022) | SSN never stored (`RegionScreens.tsx`); retention approach is illustrative (`docs/08-compliance/03_Compliance_Operations_Manual_v1.1.md` §5.3). | Ratified retention periods; access controls on KYC storage. |
 | SEC-029 | IMPLEMENTED | Demo data synthetic (`example.com`, mock NIN record). | Replace demo phone with a confirmed reserved test number (review SEC-13). |
 | SEC-030 | DOCUMENTED | Security Master Audit §38.5. | Backups + a recorded restore exercise. |
 

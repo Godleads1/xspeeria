@@ -2,20 +2,14 @@
  * 1% coordination fee and split payouts (product owner, 2026-10-17; ADR-021).
  */
 
-import { fireEvent, render, screen } from '@testing-library/react-native';
-
 import { coordinationFeeMinor } from '../src/features/history/data';
 import { OFFERS, REQUESTS } from '../src/features/market/data';
-import type { Beneficiary } from '../src/features/profile/data';
-import { ConfirmTradeSheet } from '../src/features/trade/ConfirmTradeSheet';
 import { allocatePayouts, splitProblem, type PayoutShare } from '../src/features/trade/payoutSplit';
 import { DEMO_STEP_MS, FUNDING_WINDOW_MS, toHistoryItem, tradeStore, transferFor } from '../src/features/trade/tradeStore';
 
 const NOW = 1_760_000_000_000;
-const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, (_, i) => (i * 61 + 3) % 256);
-const ACC = (id: string, last4: string, currency = 'USD'): Beneficiary => ({
-  id, name: 'David Peters', currency, bank: `Bank ${id}`, accountLast4: last4, status: 'verified',
-});
+let seed = 3;
+const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, () => (seed = (seed * 61 + 17) % 256));
 const share = (id: string, amountMinor: number): PayoutShare => ({ id, name: 'David Peters', bank: `Bank ${id}`, last4: id.padStart(4, '0'), amountMinor });
 
 beforeEach(() => tradeStore.reset());
@@ -82,43 +76,5 @@ describe('split payouts', () => {
       'Confirmation sent to you and the Buyer',
     ]));
     expect(toHistoryItem(tradeStore.get(t.id)!).payouts.map((p) => p.amountMinor)).toEqual([16000000, 10600000]);
-  });
-});
-
-describe('Confirm sheet: receive into several accounts', () => {
-  const accounts = [ACC('a', '1111'), ACC('b', '2222')];
-  const parts = [{ listing: OFFERS[3], amountMinor: 50000 }]; // 500.00 USD
-
-  it('one account gets everything by default', async () => {
-    const onAccept = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={50000} parts={parts} payoutOptions={accounts} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    expect(screen.getByText('All 500.00 USD')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(parts, [expect.objectContaining({ id: 'a', last4: '1111', amountMinor: 50000 })]);
-  });
-
-  it('a split must add up before Accept works', async () => {
-    const onAccept = jest.fn();
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={50000} parts={parts} payoutOptions={accounts} onAccept={onAccept} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    await fireEvent.press(screen.getByTestId('confirm-payout-b'));
-    await fireEvent.changeText(screen.getByTestId('confirm-share-a'), '300');
-    await fireEvent.changeText(screen.getByTestId('confirm-share-b'), '150');
-    expect(screen.getByTestId('confirm-split-error').props.children).toBe('Left to assign: 50.00 USD.');
-    expect(screen.getByTestId('confirm-accept').props.accessibilityState.disabled).toBe(true);
-    await fireEvent.changeText(screen.getByTestId('confirm-share-b'), '250');
-    expect(screen.getByTestId('confirm-split-error').props.children).toBe('That is 50.00 USD more than you receive.');
-    await fireEvent.changeText(screen.getByTestId('confirm-share-b'), '200');
-    expect(screen.queryByTestId('confirm-split-error')).toBeNull();
-    await fireEvent.press(screen.getByTestId('confirm-accept'));
-    expect(onAccept).toHaveBeenCalledWith(parts, [
-      expect.objectContaining({ id: 'a', amountMinor: 30000 }),
-      expect.objectContaining({ id: 'b', amountMinor: 20000 }),
-    ]);
-  });
-
-  it('no account selected: cannot accept', async () => {
-    await render(<ConfirmTradeSheet side="buy" requestedMinor={50000} parts={parts} payoutOptions={accounts} onAccept={jest.fn()} onClose={jest.fn()} onAddAccount={jest.fn()} />);
-    await fireEvent.press(screen.getByTestId('confirm-payout-a'));
-    expect(screen.getByTestId('confirm-accept').props.accessibilityState.disabled).toBe(true);
   });
 });
