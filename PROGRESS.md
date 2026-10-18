@@ -26,7 +26,8 @@ governance gates** ahead of Milestone 4.1C.
 | **Step 9** — PostgreSQL behavioural verification of `currency_definitions` | **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** — PR #10, `5445d6155746a5e6ae65ce9a438be41784a97860`, 2026-08-31 |
 | **GATE 4.1B-CD3** — currency-definition immutability | **HUMAN DECISION APPROVED — IMPLEMENTATION NOT YET AUTHORIZED** — 2026-09-01 |
 | **Milestone 4.1C** | **NOT STARTED — NOT AUTHORIZED** |
-| **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
+| **Milestone AUTH-2** — server 2FA (TOTP, recovery codes, trusted devices, step-up; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/026-auth-2-two-factor.md` (DEC-032) |
+| **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **COMPLETE** — PR #18; **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
 
 Application implementation may begin **only** inside an approved milestone. Domain persistence is
 limited to the Milestone 4.1B approved scope — the `currency_definitions` table and the reusable

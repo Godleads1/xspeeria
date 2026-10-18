@@ -10,6 +10,8 @@ import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { UnavailableBuild } from '../src/features/auth/ui';
 import { session, useSession } from '../src/features/auth/session';
+import { SERVER_MODE } from '../src/api/config';
+import { serverAuth } from '../src/features/auth/serverAuth';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useThemeMode } from '../src/theme';
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
@@ -25,7 +27,10 @@ export default function RootLayout(): ReactElement | null {
   // Restore the saved light/dark choice before the splash hides, so nothing flashes.
   const [modeReady, setModeReady] = useState(false);
   useEffect(() => {
-    Promise.all([loadSavedThemeMode(), session.restore()]).finally(() => setModeReady(true));
+    Promise.all([loadSavedThemeMode(), session.restore()])
+      // Server mode (ADR-027): resume the server session if it is still alive.
+      .then(() => (SERVER_MODE ? serverAuth.restore(Date.now()) : undefined))
+      .finally(() => setModeReady(true));
   }, []);
   const ready = fontsReady && modeReady;
   const mode = useThemeMode();

@@ -13,10 +13,20 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.identity import AuthRefreshToken, AuthSession, PhoneVerification, User
+from app.models.identity import (
+    AuthRefreshToken,
+    AuthSession,
+    MfaChallenge,
+    MfaFactor,
+    PhoneVerification,
+    RecoveryCode,
+    StepUpGrant,
+    TrustedDevice,
+    User,
+)
 
 __all__ = ["IdentityRepository"]
 
@@ -102,3 +112,97 @@ class IdentityRepository:
             .order_by(AuthSession.last_active_at.desc())
         )
         return list((await self._db.execute(stmt)).scalars())
+
+    # --- second factor (AUTH-2) ------------------------------------------------------
+
+    async def user_for_update(self, user_id: uuid.UUID) -> User | None:
+        stmt = select(User).where(User.id == user_id).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def active_factor(self, user_id: uuid.UUID, *, lock: bool = False) -> MfaFactor | None:
+        stmt = select(MfaFactor).where(
+            MfaFactor.user_id == user_id,
+            MfaFactor.confirmed_at.is_not(None),
+            MfaFactor.revoked_at.is_(None),
+        )
+        if lock:
+            stmt = stmt.with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def factor_by_id(self, factor_id: uuid.UUID) -> MfaFactor | None:
+        stmt = select(MfaFactor).where(MfaFactor.id == factor_id).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def latest_pending_factor(self, user_id: uuid.UUID, since: datetime) -> MfaFactor | None:
+        stmt = (
+            select(MfaFactor)
+            .where(
+                MfaFactor.user_id == user_id,
+                MfaFactor.confirmed_at.is_(None),
+                MfaFactor.revoked_at.is_(None),
+                MfaFactor.created_at > since,
+            )
+            .order_by(MfaFactor.created_at.desc())
+            .limit(1)
+            .with_for_update()
+        )
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def challenge(self, challenge_id: uuid.UUID) -> MfaChallenge | None:
+        stmt = select(MfaChallenge).where(MfaChallenge.id == challenge_id).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def unused_recovery_code(self, user_id: uuid.UUID, digest: str) -> RecoveryCode | None:
+        stmt = (
+            select(RecoveryCode)
+            .where(
+                RecoveryCode.user_id == user_id,
+                RecoveryCode.code_digest == digest,
+                RecoveryCode.used_at.is_(None),
+                RecoveryCode.revoked_at.is_(None),
+            )
+            .with_for_update()
+        )
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def revoke_recovery_codes(self, user_id: uuid.UUID, now: datetime) -> None:
+        await self._db.execute(
+            update(RecoveryCode)
+            .where(
+                RecoveryCode.user_id == user_id,
+                RecoveryCode.used_at.is_(None),
+                RecoveryCode.revoked_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+
+    async def trusted_device(self, token_hash: str) -> TrustedDevice | None:
+        stmt = select(TrustedDevice).where(TrustedDevice.token_hash == token_hash).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def trusted_device_by_id(self, device_id: uuid.UUID) -> TrustedDevice | None:
+        stmt = select(TrustedDevice).where(TrustedDevice.id == device_id).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def live_trusted_devices(self, user_id: uuid.UUID, now: datetime) -> list[TrustedDevice]:
+        stmt = (
+            select(TrustedDevice)
+            .where(
+                TrustedDevice.user_id == user_id,
+                TrustedDevice.revoked_at.is_(None),
+                TrustedDevice.expires_at > now,
+            )
+            .order_by(TrustedDevice.created_at.desc())
+        )
+        return list((await self._db.execute(stmt)).scalars())
+
+    async def revoke_trusted_devices(self, user_id: uuid.UUID, now: datetime) -> None:
+        await self._db.execute(
+            update(TrustedDevice)
+            .where(TrustedDevice.user_id == user_id, TrustedDevice.revoked_at.is_(None))
+            .values(revoked_at=now)
+        )
+
+    async def step_up_grant(self, token_hash: str) -> StepUpGrant | None:
+        stmt = select(StepUpGrant).where(StepUpGrant.token_hash == token_hash).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()

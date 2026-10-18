@@ -15,10 +15,12 @@ from datetime import datetime
 
 from sqlalchemy import (
     CHAR,
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     text,
@@ -31,7 +33,12 @@ from app.db.base import Base
 __all__ = [
     "AuthRefreshToken",
     "AuthSession",
+    "MfaChallenge",
+    "MfaFactor",
     "PhoneVerification",
+    "RecoveryCode",
+    "StepUpGrant",
+    "TrustedDevice",
     "REVOKE_REASONS",
     "USER_STATUSES",
     "User",
@@ -77,6 +84,14 @@ class User(Base):
         SmallInteger, nullable=False, server_default=text("0")
     )
     pin_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-026: wrong 2FA codes across challenges and step-ups; 5 → 15-minute lock.
+    mfa_failed_attempts: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default=text("0")
+    )
+    mfa_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-008: set for 24 hours after a recovery-code log-in or an authenticator reset.
+    #: Future payout endpoints must refuse while it is in the future.
+    payout_hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -154,3 +169,143 @@ class PhoneVerification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# --- AUTH-2: second factor (ADR-008, ADR-026) ------------------------------------------------
+
+
+class MfaFactor(Base):
+    """An authenticator-app secret, AES-256-GCM sealed and bound to the user ID.
+
+    ``confirmed_at`` is set once the first code has been checked. A user has at most one
+    confirmed, unrevoked factor; replacing it revokes the old row in the same transaction.
+    """
+
+    __tablename__ = "mfa_factors"
+    __table_args__ = (
+        CheckConstraint("kind = 'totp'", name="kind_allowed"),
+        CheckConstraint("last_used_step IS NULL OR last_used_step >= 0", name="step_non_negative"),
+        Index("ix_mfa_factors_user_id", "user_id"),
+        Index(
+            "uq_mfa_factors_one_active_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("confirmed_at IS NOT NULL AND revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    secret_sealed: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    #: The last 30-second step accepted; codes at or before it are refused (replay).
+    last_used_step: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MfaChallenge(Base):
+    """Issued after the first factor; exchanged for a session once the second is shown."""
+
+    __tablename__ = "mfa_challenges"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('login', 'enrol')", name="purpose_allowed"),
+        CheckConstraint("attempts BETWEEN 0 AND 5", name="attempts_range"),
+        CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        Index("ix_mfa_challenges_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(8), nullable=False)
+    #: For an enrolment challenge: the pending factor being set up.
+    factor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mfa_factors.id", ondelete="RESTRICT")
+    )
+    device_id: Mapped[str | None] = mapped_column(String(128))
+    user_agent: Mapped[str | None] = mapped_column(String(256))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+    attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default=text("0"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RecoveryCode(Base):
+    """Single-use recovery code, stored only as a keyed hash bound to the user."""
+
+    __tablename__ = "recovery_codes"
+    __table_args__ = (
+        CheckConstraint("code_digest ~ '^[0-9a-f]{64}$'", name="code_digest_format"),
+        Index("ix_recovery_codes_user_id", "user_id"),
+        Index("uq_recovery_codes_code_digest", "code_digest", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    code_digest: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrustedDevice(Base):
+    """A device that passed 2FA: PIN-only log-in there for 30 days (ADR-026)."""
+
+    __tablename__ = "trusted_devices"
+    __table_args__ = (
+        CheckConstraint("token_hash ~ '^[0-9a-f]{64}$'", name="token_hash_format"),
+        CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        Index("ix_trusted_devices_user_id", "user_id"),
+        Index("uq_trusted_devices_token_hash", "token_hash", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    #: The client's own label for the device; never grants anything.
+    device_id: Mapped[str | None] = mapped_column(String(128))
+    user_agent: Mapped[str | None] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StepUpGrant(Base):
+    """One approval for one sensitive action, bound to user, session and action (ADR-026)."""
+
+    __tablename__ = "step_up_grants"
+    __table_args__ = (
+        CheckConstraint("token_hash ~ '^[0-9a-f]{64}$'", name="token_hash_format"),
+        CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        CheckConstraint(
+            "action IN ('beneficiary.add', 'beneficiary.remove', 'contact.change', "
+            "'pin.change', 'mfa.change', 'recovery_codes.regenerate', 'trade.accept', "
+            "'payout.confirm')",
+            name="action_allowed",
+        ),
+        Index("uq_step_up_grants_token_hash", "token_hash", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    token_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

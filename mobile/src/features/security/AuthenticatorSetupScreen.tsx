@@ -18,6 +18,19 @@ import { twoFactor, type RandomBytes } from './twoFactorStore';
 import { copySensitive } from './sensitiveClipboard';
 import { useBlockScreenCapture } from './useBlockScreenCapture';
 
+/**
+ * Where the secret comes from and where the first code is checked. The default is the demo
+ * store on the phone; server mode (ADR-027) passes the server's sign-up enrolment, where the
+ * secret is made and checked on the server and only shown here once.
+ */
+export interface EnrolmentEngine {
+  begin: () => Promise<{ secret: string; uri: string }>;
+  /** Recovery codes on success; throws (with a user message) otherwise. */
+  confirm: (code: string) => Promise<readonly string[]>;
+  /** Shown instead of the generic hint when `confirm` throws. */
+  messageFor: (error: unknown) => string;
+}
+
 /** `JBSWY3DP…` → `JBSW Y3DP …` for reading aloud/typing. */
 export function groupKey(secret: string): string {
   return secret.replace(/(.{4})(?=.)/g, '$1 ');
@@ -29,6 +42,7 @@ export function AuthenticatorSetupScreen({
   onBack,
   onDone,
   now = Date.now,
+  engine,
 }: {
   /** Shown in the authenticator app next to the code (the user's own email). */
   account: string;
@@ -36,31 +50,63 @@ export function AuthenticatorSetupScreen({
   onBack: () => void;
   onDone: () => void;
   now?: () => number;
+  engine?: EnrolmentEngine;
 }): ReactElement {
   useBlockScreenCapture('xspeeria-2fa-setup');
   const insets = useSafeAreaInsets();
-  const alreadyEnrolled = twoFactor.isEnrolled();
+  const alreadyEnrolled = engine ? false : twoFactor.isEnrolled();
   // Started in an effect, never during render: beginning enrolment updates the 2FA store,
   // and a store update while React is drawing another component is an error.
   const [secret, setSecret] = useState('');
+  const [serverUri, setServerUri] = useState('');
+  const [busy, setBusy] = useState(false);
   const started = useRef(false);
   useEffect(() => {
     if (started.current || alreadyEnrolled) return;
     started.current = true; // once per visit, even if `random` is a new function each render
-    setSecret(twoFactor.beginEnrolment(random));
-  }, [alreadyEnrolled, random]);
-  const uri = useMemo(() => (secret ? otpauthUri(secret, account) : ''), [secret, account]);
+    if (!engine) {
+      setSecret(twoFactor.beginEnrolment(random));
+      return;
+    }
+    engine.begin().then(
+      (r) => {
+        setSecret(r.secret);
+        setServerUri(r.uri);
+      },
+      (e: unknown) => setError(engine.messageFor(e)),
+    );
+  }, [alreadyEnrolled, random, engine]);
+  const uri = useMemo(
+    () => (engine ? serverUri : secret ? otpauthUri(secret, account) : ''),
+    [engine, serverUri, secret, account],
+  );
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [codes, setCodes] = useState<readonly string[] | null>(null);
 
-  // Leaving before finishing discards the unconfirmed secret.
+  // Leaving before finishing discards the unconfirmed secret (the server drops its own).
   useEffect(() => () => {
-    if (!twoFactor.isEnrolled()) twoFactor.cancelEnrolment();
-  }, []);
+    if (!engine && !twoFactor.isEnrolled()) twoFactor.cancelEnrolment();
+  }, [engine]);
 
   const verify = (): void => {
+    if (engine) {
+      const typed = code;
+      setCode('');
+      setBusy(true);
+      engine
+        .confirm(typed)
+        .then(
+          (result) => {
+            setCodes(result);
+            setError(null);
+          },
+          (e: unknown) => setError(engine.messageFor(e)),
+        )
+        .finally(() => setBusy(false));
+      return;
+    }
     const result = twoFactor.confirmEnrolment(code, now(), random);
     if (result) {
       setCodes(result);
@@ -136,7 +182,7 @@ export function AuthenticatorSetupScreen({
               style={styles.input}
             />
             {error ? <Text testID="authenticator-error" style={styles.error}>{error}</Text> : null}
-            <PrimaryButton testID="authenticator-verify" label="Verify and turn on" onPress={verify} disabled={code.length !== 6} />
+            <PrimaryButton testID="authenticator-verify" label="Verify and turn on" onPress={verify} disabled={code.length !== 6 || busy || !secret} />
           </>
         )}
       </ScrollView>

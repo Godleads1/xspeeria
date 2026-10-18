@@ -1,4 +1,8 @@
-"""Milestone AUTH-1 end to end, over HTTP, against PostgreSQL (ADR-024, ADR-025).
+"""Milestones AUTH-1 and AUTH-2 end to end, over HTTP, against PostgreSQL (ADR-024/025/026).
+
+Since AUTH-2 every sign-up ends by adding an authenticator; ``Env.sign_up`` does that and
+keeps the device token, so later log-ins in these tests are on a trusted device unless a
+test says otherwise. Second-factor cases live in ``test_two_factor_api.py``.
 
 Normal, failure and abuse cases for sign-up, log-in, refresh, idle and 7-day limits,
 log-out, device sessions, rate limits and the logging rule. The clock is injected, the SMS
@@ -8,11 +12,13 @@ production parameters are asserted in the unit suite).
 
 from __future__ import annotations
 
+import base64
 import logging
 from collections.abc import AsyncIterator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import pyotp
 import pytest
 import pytest_asyncio
 from alembic import command
@@ -22,6 +28,7 @@ from sqlalchemy import text
 
 from app.core.auth_tokens import TokenKeys
 from app.core.config import Settings
+from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.db.session import build_engine, dispose_engine
@@ -36,10 +43,15 @@ pytestmark = pytest.mark.integration
 T0 = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
 #: A throwaway signing key made at import time (no secret-shaped literal in the repo).
 KEY = "t" * 48
+#: Throwaway 2FA sealing key, built at import time.
+MFA_KEY = base64.b64encode(bytes(range(32))).decode()
 PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
-TABLES = "auth_refresh_tokens, auth_sessions, phone_verifications, users"
+TABLES = (
+    "step_up_grants, trusted_devices, recovery_codes, mfa_challenges, mfa_factors, "
+    "auth_refresh_tokens, auth_sessions, phone_verifications, users"
+)
 
 
 class Clock:
@@ -77,6 +89,7 @@ async def clean(db_settings: Settings) -> AsyncIterator[None]:
 def _runtime(clock: Clock, sms: RecordingSmsSender | None, address_limit: int) -> AuthRuntime:
     return AuthRuntime(
         keys=TokenKeys(KEY),
+        secret_box=SecretBox(MFA_KEY),
         hasher=PinHasher(memory_kib=1024, iterations=1),
         sms=sms,
         clock=clock,
@@ -88,6 +101,16 @@ def _runtime(clock: Clock, sms: RecordingSmsSender | None, address_limit: int) -
 class Env:
     def __init__(self, client: AsyncClient, clock: Clock, sms: RecordingSmsSender) -> None:
         self.client, self.clock, self.sms = client, clock, sms
+        #: Per account (phone and email): authenticator secret and trusted-device token.
+        self.secrets: dict[str, str] = {}
+        self.device_tokens: dict[str, str] = {}
+
+    @staticmethod
+    def _key(identifier: str) -> str:
+        return identifier.replace(" ", "").lower()
+
+    def totp(self, identifier: str = PHONE, *, at: datetime | None = None) -> str:
+        return pyotp.TOTP(self.secrets[self._key(identifier)]).at(at or self.clock.now)
 
     async def post(
         self, path: str, body: dict[str, Any] | None = None, token: str | None = None
@@ -108,15 +131,38 @@ class Env:
         assert code is not None
         r = await self.post("/auth/verify-phone", {"phone": phone, "code": code})
         assert r.status_code == 200, r.text
+        challenge = r.json()
+        assert challenge["mfa_required"] is True and challenge["enrolment_required"] is True
+        cid = challenge["mfa_challenge_id"]
+        r = await self.post("/auth/mfa/enrol/start", {"mfa_challenge_id": cid})
+        assert r.status_code == 200, r.text
+        secret = r.json()["secret"]
+        for key in (self._key(phone), self._key(email)):
+            self.secrets[key] = secret
+        r = await self.post(
+            "/auth/mfa/enrol/confirm", {"mfa_challenge_id": cid, "otp_code": self.totp(phone)}
+        )
+        assert r.status_code == 200, r.text
         body: dict[str, Any] = r.json()
+        for key in (self._key(phone), self._key(email)):
+            self.device_tokens[key] = body["device_token"]
         return body
 
     async def login(
-        self, identifier: str = PHONE, pin: str = PIN, device: str | None = None
+        self,
+        identifier: str = PHONE,
+        pin: str = PIN,
+        device: str | None = None,
+        *,
+        trusted: bool = True,
     ) -> Response:
+        """Log in; on a trusted device (the default) this returns tokens directly."""
         body: dict[str, Any] = {"identifier": identifier, "pin": pin}
         if device:
             body["device_id"] = device
+        token = self.device_tokens.get(self._key(identifier))
+        if trusted and token:
+            body["device_token"] = token
         return await self.post("/auth/login", body)
 
 
@@ -554,7 +600,18 @@ async def test_logs_never_carry_pins_codes_tokens_or_full_numbers(
     await env.post("/auth/refresh", token=t["refresh_token"])
     text_out = " ".join(f"{r.getMessage()} {r.__dict__}" for r in caplog.records)
     code = env.sms.last_code_for(PHONE) or "never"
-    for secret in [PIN, "739152", code, t["access_token"], t["refresh_token"], PHONE, EMAIL]:
+    for secret in [
+        PIN,
+        "739152",
+        code,
+        t["access_token"],
+        t["refresh_token"],
+        t["device_token"],
+        env.secrets[PHONE],
+        *t["recovery_codes"],
+        PHONE,
+        EMAIL,
+    ]:
         assert secret not in text_out, "a secret or full identifier reached the logs"
     assert "***3838" in text_out  # the allowed form
     assert any(getattr(r, "route", None) == "/api/v1/users/me" for r in caplog.records)

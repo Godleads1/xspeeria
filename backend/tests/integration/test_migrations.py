@@ -36,17 +36,22 @@ ALEMBIC_INI = REPO_ROOT / "alembic.ini"
 MIGRATIONS_DIR = REPO_ROOT / "migrations"
 # The first revision in the chain -- a historical fact, and always parentless.
 BASELINE_REVISION = "0001_baseline"
-#: Exact set of approved tables: 4.1B plus Milestone AUTH-1 (ADR-025). No money table.
+#: Exact set of approved tables: 4.1B plus Milestones AUTH-1/AUTH-2 (ADR-025/026). No money.
 APPROVED_TABLES = {
     "currency_definitions",
     "users",
     "auth_sessions",
     "auth_refresh_tokens",
     "phone_verifications",
+    "mfa_factors",
+    "mfa_challenges",
+    "recovery_codes",
+    "trusted_devices",
+    "step_up_grants",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
-# Milestone AUTH-1 (ADR-025) -> "0003".
-EXPECTED_HEAD = "0003"
+# Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004".
+EXPECTED_HEAD = "0004"
 
 
 def _config(database_url: str) -> Config:

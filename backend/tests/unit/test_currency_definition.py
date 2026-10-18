@@ -333,6 +333,11 @@ class TestPackageRegistration:
             "auth_sessions",
             "auth_refresh_tokens",
             "phone_verifications",
+            "mfa_factors",
+            "mfa_challenges",
+            "recovery_codes",
+            "trusted_devices",
+            "step_up_grants",
         }
 
     @pytest.mark.parametrize(
@@ -378,7 +383,8 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['auth_refresh_tokens', 'auth_sessions', 'currency_definitions', "
-            "'phone_verifications', 'users']"
+            "'mfa_challenges', 'mfa_factors', 'phone_verifications', 'recovery_codes', "
+            "'step_up_grants', 'trusted_devices', 'users']"
         )
 
     def test_registration_opens_no_connection(self) -> None:
@@ -419,4 +425,5 @@ class TestPackageRegistration:
             "0001_baseline.py",
             "0002_currency_definitions.py",
             "0003_identity_tables_auth_1.py",  # Milestone AUTH-1 (ADR-025)
+            "0004_two_factor_tables_auth_2.py",  # Milestone AUTH-2 (ADR-026)
         ]

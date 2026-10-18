@@ -10,6 +10,11 @@
 
 ---
 
+
+> **Update 2026-10-18:** the open settings were decided and the server side is built in
+> Milestone AUTH-2 — 2FA at sign-up, single-use 5-minute step-up, 30-day trusted devices —
+> `docs/adr/026-auth-2-two-factor.md`.
+
 ## 1. Context
 
 Standing Standards §7.7 makes *qualifying MFA* part of `TRANSACTION_ELIGIBLE`, and the

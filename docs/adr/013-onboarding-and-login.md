@@ -11,6 +11,10 @@
 > **Update 2026-10-18:** the PIN is now **6 digits** (demo PIN `482613`), with a 5-minute
 > idle lock and a 7-day maximum session — `docs/adr/024-session-pin-sms-limits.md`.
 
+
+> **Update 2026-10-18:** when the app is connected to the server, sign-up runs phone → email →
+> PIN → SMS code → authenticator → recovery codes — `docs/adr/027-app-server-connection.md`.
+
 ## 1. Decision
 
 Built from the Figma onboarding frames:

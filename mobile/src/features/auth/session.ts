@@ -82,6 +82,7 @@ const INITIAL: State = {
 let lastActiveAt = 0;
 
 let state: State = INITIAL;
+const signOutHandlers = new Set<() => void>();
 const listeners = new Set<() => void>();
 const userChangeHandlers = new Set<() => void>();
 
@@ -213,10 +214,13 @@ export const session = {
       set({ signedIn: false, newRegion: null, signedInAt: 0, endedBy: 'expired' });
       storePinLoginAt(0);
       clearUserData();
+      for (const h of signOutHandlers) h();
       return 'expired';
     }
     if (now - lastActiveAt >= IDLE_LOCK_MS) {
       set({ signedIn: false, endedBy: 'idle' });
+      // The server's own 5-minute idle limit has ended its session too (ADR-024).
+      for (const h of signOutHandlers) h();
       return 'idle';
     }
     return null;
@@ -231,11 +235,49 @@ export const session = {
     set({ newRegion: null });
   },
 
+  /**
+   * A real server accepted the log-in or sign-up (ADR-027). The server owns the session;
+   * this mirrors it so the screens and the idle lock work as before. No PIN is kept.
+   */
+  serverSignIn(account: { phone: string; email: string }, now: number, options: { newAccount?: boolean } = {}): void {
+    if (options.newAccount || account.phone !== state.account.phone) clearUserData();
+    lastActiveAt = now;
+    set({
+      account: { phone: account.phone, email: account.email, pin: '' },
+      signedIn: true,
+      failed: 0,
+      lockedUntil: 0,
+      signedInAt: now,
+      endedBy: null,
+      newRegion: null,
+    });
+  },
+
+  /** The server ended the session (refresh refused): same as reaching the 7-day limit. */
+  serverEnded(): void {
+    if (!state.signedIn) return;
+    set({ signedIn: false, signedInAt: 0, endedBy: 'expired' });
+    for (const h of signOutHandlers) h();
+  },
+
+  /** Remember (or forget) the phone/email on this device. Never the PIN. */
+  setRemembered(value: string | null): void {
+    set({ remembered: value });
+    (value ? AsyncStorage.setItem(REMEMBER_KEY, value) : AsyncStorage.removeItem(REMEMBER_KEY)).catch(() => undefined);
+  },
+
+  /** Runs on log-out and when the session ends (server mode drops its tokens here). */
+  onSignOut(handler: () => void): () => void {
+    signOutHandlers.add(handler);
+    return () => signOutHandlers.delete(handler);
+  },
+
   /** Signs out and clears the user's data from memory (ADR-018). */
   logOut(): void {
     set({ signedIn: false, newRegion: null, signedInAt: 0, endedBy: null });
     storePinLoginAt(0);
     clearUserData();
+    for (const h of signOutHandlers) h();
   },
 
   async restore(): Promise<void> {
