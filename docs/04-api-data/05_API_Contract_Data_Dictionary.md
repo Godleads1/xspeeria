@@ -113,6 +113,15 @@ What changed is the list of operations. The previous wording named *"match confi
 
 2\. Authentication
 
+> **Superseded in part — 2026-10-18, `docs/adr/025-auth-1-server-sign-in.md` (DEC-031), with
+> ADR-008, ADR-013 and ADR-024.** Log-in is phone or email + **6-digit PIN** (not email +
+> password); SMS and email codes are **never** an MFA factor (TOTP / passkeys only); the
+> session ends **7 days** after the PIN log-in (not a 30-day refresh) and after **5 minutes**
+> idle; log-in is limited to 10 requests per minute per address plus a 5-wrong-PIN / 15-minute
+> lock. Routes are served under `/api/v1/…`, and `POST /api/v1/auth/verify-phone` is added.
+> The rest of §2–3.2 (token rotation, reuse detection, device sessions, error identifiers)
+> stands.
+
 2.1 JWT Structure
 
 |               |                   |                                                     |                                                                                                               |

@@ -128,13 +128,13 @@ class TestMoney:
 
 
 class TestMoneyProperties:
-    @given(minor=st.integers(min_value=-10**12, max_value=10**12), scale=st.integers(0, 8))
+    @given(minor=st.integers(min_value=-(10**12), max_value=10**12), scale=st.integers(0, 8))
     def test_minor_decimal_round_trip(self, minor: int, scale: int) -> None:
         assert to_minor(from_minor(minor, scale), scale) == minor
 
     @given(
-        a=st.integers(min_value=-10**9, max_value=10**9),
-        b=st.integers(min_value=-10**9, max_value=10**9),
+        a=st.integers(min_value=-(10**9), max_value=10**9),
+        b=st.integers(min_value=-(10**9), max_value=10**9),
     )
     def test_addition_is_associative_in_minor_units(self, a: int, b: int) -> None:
         x = Money(a, "GBP", 2)
@@ -176,9 +176,7 @@ class TestConversionOverflowBoundary:
             (Decimal("-1E+30"), 2),
         ],
     )
-    def test_oversized_amount_raises_money_error(
-        self, amount: Decimal | str, scale: int
-    ) -> None:
+    def test_oversized_amount_raises_money_error(self, amount: Decimal | str, scale: int) -> None:
         with pytest.raises(MoneyError, match="not exactly representable"):
             to_minor(amount, scale)
 

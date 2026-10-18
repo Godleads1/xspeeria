@@ -67,11 +67,7 @@ def _check(short_name: str) -> CheckConstraint:
     `ck_<table>_<short_name>`.
     """
     name = f"ck_currency_definitions_{short_name}"
-    matches = [
-        c
-        for c in TABLE.constraints
-        if isinstance(c, CheckConstraint) and c.name == name
-    ]
+    matches = [c for c in TABLE.constraints if isinstance(c, CheckConstraint) and c.name == name]
     if not matches:
         found = sorted(str(c.name) for c in TABLE.constraints)
         raise AssertionError(f"no CHECK named {name!r}; found {found}")
@@ -298,9 +294,7 @@ class TestNoSeedDataOrEnums:
 
 class TestRepr:
     def test_repr_identifies_the_definition(self) -> None:
-        definition = CurrencyDefinition(
-            currency="GBP", currency_def_version="v1", scale=2
-        )
+        definition = CurrencyDefinition(currency="GBP", currency_def_version="v1", scale=2)
         rendered = repr(definition)
         assert "CurrencyDefinition" in rendered
         assert "GBP" in rendered
@@ -332,7 +326,14 @@ class TestPackageRegistration:
     def test_metadata_contains_exactly_the_approved_tables(self) -> None:
         import app.models  # noqa: F401  -- imported for its registration side effect
 
-        assert set(Base.metadata.tables) == {"currency_definitions"}
+        # 4.1B plus the AUTH-1 identity tables (ADR-025); still an exact set.
+        assert set(Base.metadata.tables) == {
+            "currency_definitions",
+            "users",
+            "auth_sessions",
+            "auth_refresh_tokens",
+            "phone_verifications",
+        }
 
     @pytest.mark.parametrize(
         "future_table",
@@ -347,8 +348,7 @@ class TestPackageRegistration:
             "kyc_profiles",
             "beneficiary_accounts",
             "idempotency_records",
-            "users",
-        ],
+        ],  # "users" approved by Milestone AUTH-1 (ADR-025)
     )
     def test_no_future_batch_table_is_registered(self, future_table: str) -> None:
         """4.1C-4.1H entities must not appear ahead of their approved batch."""
@@ -375,7 +375,11 @@ class TestPackageRegistration:
             env={**os.environ, "PYTHONPATH": str(backend_root)},
         )
         assert result.returncode == 0, result.stderr
-        assert result.stdout.strip() == "['currency_definitions']"
+        # 4.1B plus the AUTH-1 identity tables (ADR-025).
+        assert result.stdout.strip() == (
+            "['auth_refresh_tokens', 'auth_sessions', 'currency_definitions', "
+            "'phone_verifications', 'users']"
+        )
 
     def test_registration_opens_no_connection(self) -> None:
         """Metadata registration only. If importing models built an engine, the
@@ -414,4 +418,5 @@ class TestPackageRegistration:
         assert versions == [
             "0001_baseline.py",
             "0002_currency_definitions.py",
+            "0003_identity_tables_auth_1.py",  # Milestone AUTH-1 (ADR-025)
         ]

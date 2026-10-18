@@ -4,7 +4,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | | |
 |---|---|
-| **Assessed at** | `main` after PR #16 (branch `fix/security-review-findings`, commit `e1d1197`), 2026-10-17 |
+| **Assessed at** | `main` after PR #16, 2026-10-17; AUTH-1 rows updated 2026-10-18 (branch `feat/auth-1-server`) |
 | **Method** | Read-only inspection of code, configuration, CI and docs; test names cited where they exist. No penetration test, no deployed environment. |
 | **States** | Standing Standards §5. **NOT STARTED** = no code and no specific design. **DOCUMENTED** = designed in an approved doc, no code. **IMPLEMENTED** = code exists (here, almost always the demo app on the device, which the server must repeat). Nothing is marked **VERIFIED**: no production evidence exists yet, and CI success is IMPLEMENTED-class at best. |
 | **Owner** | Every row: **UNASSIGNED** until the product owner names owners (needed for Medium-and-above before release, standard §5). |
@@ -14,30 +14,30 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | State | Count |
 |---|---|
 | VERIFIED | 0 |
-| IMPLEMENTED (partial or demo-only) | 14 |
+| IMPLEMENTED (partial, demo-only or not deployed) | 19 |
 | DOCUMENTED only | 9 |
-| NOT STARTED | 16 |
+| NOT STARTED | 11 |
 | BLOCKED (needs an account change) | 1 |
-| **Production gate** | **🔴 DO NOT LAUNCH**: there is no backend authentication, authorization or money path yet, so every Critical server-side requirement is open. This is expected at this stage. |
+| **Production gate** | **🔴 DO NOT LAUNCH**: server sign-in exists (AUTH-1) but is not deployed, has no 2FA yet (AUTH-2), and there is no money path; most Critical server-side requirements remain open. |
 
 ## A. Identity and authentication
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-001 | NOT STARTED | No server auth. Demo PIN compared in memory on the device (`mobile/src/features/auth/session.ts`), refused outside dev builds (`docs/adr/018-security-review-remediation.md`). | Backend auth slice: password/PIN hashing (algorithm and parameters to be proposed for approval). |
+| SEC-001 | IMPLEMENTED (server, AUTH-1) | Argon2id PIN hashing, 19 MiB / t=2 / p=1, rehash on change (`backend/app/core/pin_hashing.py`); PIN checked only on the server; equal-time path for unknown accounts (`test_auth_primitives.py`, `test_auth_api.py`). ADR-025. | Not deployed; 2FA (AUTH-2) still required before money endpoints. |
 | SEC-002 | IMPLEMENTED (demo, client) | Step-up before beneficiary add/remove, contact change, recovery codes, trade acceptance (`stepUp.ts`, `StepUpHost.tsx`; tests `two-factor.test.tsx`). No admin auth exists. | Server-side step-up tokens (`docs/adr/008-two-factor-authentication.md` §4); staff MFA when admin auth is built. Password change has no step-up yet. |
-| SEC-003 | IMPLEMENTED (demo, client) | 5 tries / 15-min lock, OTP TTL + 60 s resend, TOTP single-use (`security-review.test.tsx` "QA-03", "SEC-06"). | All server-side. SMS caps decided: 5/hour, 10/day per phone (ADR-024), server-enforced, not built. |
-| SEC-004 | IMPLEMENTED (demo, client) | Lifetimes decided (ADR-024): 5-minute idle lock and 7-day maximum, enforced on the device (`session.ts`, `useIdleLock.ts`; `session-timeouts.test.tsx`). No tokens yet. | Server tokens: rotating refresh within the 7-day limit, revocation, SecureStore. |
+| SEC-003 | IMPLEMENTED (server, AUTH-1) | 5 wrong PINs → 15-min lock (also for unknown identifiers); 10 requests/min per address on all auth routes; SMS 5/hour, 10/day, 60 s resend, 5 tries per code, 10-min expiry, durable counts in PostgreSQL (`test_auth_api.py`). ADR-024/025. | Limiter is in-process: needs Redis before more than one instance; trusted-proxy rule for client address. |
+| SEC-004 | IMPLEMENTED (server, AUTH-1) | 15-min HS256 access tokens checked against a live session row on every request; single-use rotating refresh tokens stored as SHA-256; reuse revokes the session; 5-min idle and 7-day absolute limits; log-out and device revocation take effect immediately (`test_auth_api.py`). | Mobile app not yet wired to the server; SecureStore for the refresh token; key in a secret manager. |
 | SEC-005 | DOCUMENTED | Recovery codes + KYC-level support re-verification, no self-service bypass (`docs/adr/008-two-factor-authentication.md` §2). | Support procedure (Compliance); server implementation. |
 
 ## B. Authorization and account isolation
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-006 | NOT STARTED | No domain endpoints (`backend/app/main.py` registers health only). | Default-deny dependency on every router; tests per endpoint. |
-| SEC-007 | NOT STARTED | — | Owner-scoped queries; cross-user BOLA tests (release gate). |
+| SEC-006 | IMPLEMENTED (partial, AUTH-1) | Authenticated routes get the caller only from `current_principal` (token + live session), never from the request (`backend/app/api/auth_deps.py`). S-2 decided: server-side checks, deny by default (ADR-025). | Apply to every future router; RLS as second layer. |
+| SEC-007 | IMPLEMENTED (partial, AUTH-1) | Sessions are owner-scoped; another user's session answers 404 like a missing one (`test_cannot_see_or_revoke_another_users_session`). | Cross-user tests for every future resource. |
 | SEC-008 | DOCUMENTED | Roles and matrix required by Security Master Audit §38.3. | Write the authorization matrix before admin features. |
-| SEC-009 | NOT STARTED | Pydantic in stack; no request schemas yet. | Explicit input schemas; forbid extra fields; tests. |
+| SEC-009 | IMPLEMENTED (partial, AUTH-1) | Auth request schemas forbid unknown fields; validation errors no longer echo submitted values (`backend/app/core/exceptions.py`, `test_register_validation`, `test_validation_errors_do_not_echo_the_pin`). | Same for every future endpoint. |
 
 ## C. API and backend protection
 
@@ -94,7 +94,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-036 | IMPLEMENTED (partial) | JSON structured logging with timestamps (`backend/app/core/logging.py`); no secrets in config errors. | Correlation/request IDs, actor context, redaction rules. |
+| SEC-036 | IMPLEMENTED (partial) | JSON logs; request ID (sanitised) and one access line per request with route template, status, duration and user ID only; logging rule F-16 decided (ADR-025 §1.8); test that PINs, codes, tokens and full phone/email never reach logs (`test_logs_never_carry_pins_codes_tokens_or_full_numbers`). | Alerting (SEC-037); log sink and retention. |
 | SEC-037 | NOT STARTED | — | Alerting on auth failures, privilege changes, transaction and webhook anomalies. |
 | SEC-038 | NOT STARTED | — | Incident response runbook. |
 | SEC-039 | NOT STARTED | — | DR test; "kill switch" to disable transaction flows. |

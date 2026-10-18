@@ -26,7 +26,8 @@ class TestHealth:
 
     def test_leaks_no_secret_or_infrastructure_detail(self) -> None:
         response = _client(
-            jwt_secret_key="super-secret",
+            # At least 32 characters: shorter keys are refused at start-up (ADR-025).
+            jwt_secret_key="super-secret-signing-key-for-health-test",
             database_url="postgresql+asyncpg://user:pw@host/db",
             webhook_shared_secret="whsec",
         ).get("/health")

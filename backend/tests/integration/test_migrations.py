@@ -36,8 +36,17 @@ ALEMBIC_INI = REPO_ROOT / "alembic.ini"
 MIGRATIONS_DIR = REPO_ROOT / "migrations"
 # The first revision in the chain -- a historical fact, and always parentless.
 BASELINE_REVISION = "0001_baseline"
-# The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002".
-EXPECTED_HEAD = "0002"
+#: Exact set of approved tables: 4.1B plus Milestone AUTH-1 (ADR-025). No money table.
+APPROVED_TABLES = {
+    "currency_definitions",
+    "users",
+    "auth_sessions",
+    "auth_refresh_tokens",
+    "phone_verifications",
+}
+# The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
+# Milestone AUTH-1 (ADR-025) -> "0003".
+EXPECTED_HEAD = "0003"
 
 
 def _config(database_url: str) -> Config:
@@ -170,17 +179,24 @@ class TestMetadataDriftGuard:
         """
         import app.models  # noqa: F401  -- registration side effect, as `env.py` does it
 
-        assert set(Base.metadata.tables) == {"currency_definitions"}, (
-            "Milestone 4.1B approves only `currency_definitions`, but Base.metadata "
-            f"carries: {sorted(Base.metadata.tables)}"
+        assert set(Base.metadata.tables) == APPROVED_TABLES, (
+            "Approved: `currency_definitions` (4.1B) and the AUTH-1 identity tables "
+            f"(ADR-025), but Base.metadata carries: {sorted(Base.metadata.tables)}"
         )
 
     def test_no_domain_table_is_declared_anywhere(self) -> None:
         forbidden = {
-            "offers", "matches", "transactions", "settlements", "settlement_legs",
-            "payout_executions", "kyc_cases", "kyc_profiles", "beneficiary_accounts",
-            "idempotency_records", "users",
-        }
+            "offers",
+            "matches",
+            "transactions",
+            "settlements",
+            "settlement_legs",
+            "payout_executions",
+            "kyc_cases",
+            "kyc_profiles",
+            "beneficiary_accounts",
+            "idempotency_records",
+        }  # "users" left this list with Milestone AUTH-1 (ADR-025)
         leaked = set(Base.metadata.tables) & forbidden
         assert not leaked, f"domain tables declared before their approved batch: {sorted(leaked)}"
 
@@ -196,7 +212,7 @@ class TestMetadataDriftGuard:
         command.upgrade(_config(database_url), "head")
         migrated = [t for t in _public_tables(database_url) if t != "alembic_version"]
         declared = sorted(Base.metadata.tables)
-        assert migrated == declared == ["currency_definitions"], (
+        assert migrated == declared == sorted(APPROVED_TABLES), (
             f"drift: migrated schema {migrated} vs declared metadata {declared}"
         )
 
@@ -223,7 +239,7 @@ class TestAlembicModelDiscovery:
     make an empty chain look populated.
     """
 
-    EXPECTED_TABLES = ["currency_definitions"]
+    EXPECTED_TABLES = sorted(APPROVED_TABLES)
 
     @staticmethod
     def _app_import_lines() -> str:
@@ -268,9 +284,16 @@ class TestAlembicModelDiscovery:
 
     def test_env_py_import_chain_registers_no_future_table(self) -> None:
         forbidden = {
-            "offers", "matches", "transactions", "settlements", "settlement_legs",
-            "payout_executions", "kyc_cases", "kyc_profiles", "beneficiary_accounts",
-            "idempotency_records", "users",
+            "offers",
+            "matches",
+            "transactions",
+            "settlements",
+            "settlement_legs",
+            "payout_executions",
+            "kyc_cases",
+            "kyc_profiles",
+            "beneficiary_accounts",
+            "idempotency_records",  # "users": approved by AUTH-1 (ADR-025)
         }
         snippet = (
             f"{self._app_import_lines()}\n"
