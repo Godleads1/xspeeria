@@ -48,7 +48,37 @@ export function dealHeadline(m: ServerMatch): string {
   return m.your_role === "taker" ? `You get ${amount}${other}` : `You give ${amount}${other}`;
 }
 
-export function MyDealsScreen({ source, onBack }: { source: MyDealsSource; onBack: () => void }): ReactElement {
+/** Where the deal stands in the 30-minute payout-account step (ADR-035/036). */
+export function dealStep(m: ServerMatch, now: number): { text: string; canChoose: boolean } {
+  switch (m.preparation_state) {
+    case 'funding_ready':
+      return { text: 'Payout accounts chosen by both sides. Next: paying into escrow — coming soon.', canChoose: false };
+    case 'expired':
+      return { text: 'Cancelled: payout accounts were not chosen within 30 minutes. Nothing was paid.', canChoose: false };
+    case 'awaiting_payout_accounts': {
+      const ms = m.preparation_deadline ? Date.parse(m.preparation_deadline) - now : 0;
+      const left = ms > 60_000 ? `${Math.floor(ms / 60_000)} min left` : 'less than a minute left';
+      return m.you_chose_payout_accounts
+        ? { text: `You chose your payout account. Waiting for the other side — ${left}.`, canChoose: true }
+        : { text: `Choose your payout account — ${left}.`, canChoose: true };
+    }
+    default:
+      return { text: 'Next: payout account and escrow payment — coming soon.', canChoose: false };
+  }
+}
+
+export function MyDealsScreen({
+  source,
+  onBack,
+  onChoose,
+  refreshSignal = 0,
+}: {
+  source: MyDealsSource;
+  onBack: () => void;
+  /** Opens "choose payout accounts" for a deal (ADR-036). */
+  onChoose?: (matchId: string) => void;
+  refreshSignal?: number;
+}): ReactElement {
   const [deals, setDeals] = useState<ServerMatch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +90,7 @@ export function MyDealsScreen({ source, onBack }: { source: MyDealsSource; onBac
       .then(setDeals)
       .catch((e: unknown) => setError(messageFor(e)));
   }, [source]);
-  useEffect(load, [load]);
+  useEffect(load, [load, refreshSignal]);
 
   return (
     <Screen testID="my-deals-screen">
@@ -92,7 +122,27 @@ export function MyDealsScreen({ source, onBack }: { source: MyDealsSource; onBac
               <Text style={styles.line}>
                 {`${m.your_role === "taker" ? "You took an offer" : "Someone took your offer"} · ${when(m.accepted_at)}`}
               </Text>
-              <Text style={styles.next}>Next: payout account and escrow payment — coming soon.</Text>
+              {(() => {
+                const step = dealStep(m, Date.now());
+                return (
+                  <>
+                    <Text testID={`deal-${m.match_id}-step`} style={styles.next}>{step.text}</Text>
+                    {step.canChoose && onChoose ? (
+                      <Pressable
+                        testID={`deal-${m.match_id}-choose`}
+                        accessibilityRole="button"
+                        onPress={() => onChoose(m.match_id)}
+                        hitSlop={8}
+                        style={styles.choose}
+                      >
+                        <Text style={styles.chooseText}>
+                          {m.you_chose_payout_accounts ? 'Change payout account' : 'Choose payout account'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </>
+                );
+              })()}
             </View>
           ))}
         </View>
@@ -116,5 +166,15 @@ const styles = themed(() => ({
   rowTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   strong: { ...typography.body, ...brandWeight("700"), color: color.text.primary, flexShrink: 1 },
   line: { ...typography.caption, fontSize: 13, color: color.text.secondary },
-  next: { ...typography.caption, fontSize: 12, color: color.text.disabled },
+  next: { ...typography.caption, fontSize: 12, color: color.text.secondary },
+  choose: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: color.brand.primary,
+    justifyContent: "center",
+  },
+  chooseText: { ...typography.caption, ...brandWeight("700"), fontSize: 14, color: color.text.onFill },
 }));

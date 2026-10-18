@@ -45,7 +45,7 @@ Last updated: 18 Oct 2026.
 - [ ] **Confirm ADR-035 §4 details** — *You*: stage names, routes, changing a choice until both sides have chosen, 10 accounts per deal.
 - [ ] **Corrected account after a bank rejection: same deadline or a new one?** — *You* (Standing Standards §15 row 10).
 - [ ] **EUR payout account form** (IBAN/BIC?) — *You*; EUR payout accounts are refused until then.
-- [ ] **App screens for payout accounts and choosing them for a deal** — *Build*.
+- [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 
