@@ -26,8 +26,8 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 |---|---|---|---|
 | SEC-001 | NOT STARTED | No server auth. Demo PIN compared in memory on the device (`mobile/src/features/auth/session.ts`), refused outside dev builds (`docs/adr/018-security-review-remediation.md`). | Backend auth slice: password/PIN hashing (algorithm and parameters to be proposed for approval). |
 | SEC-002 | IMPLEMENTED (demo, client) | Step-up before beneficiary add/remove, contact change, recovery codes, trade acceptance (`stepUp.ts`, `StepUpHost.tsx`; tests `two-factor.test.tsx`). No admin auth exists. | Server-side step-up tokens (`docs/adr/008-two-factor-authentication.md` §4); staff MFA when admin auth is built. Password change has no step-up yet. |
-| SEC-003 | IMPLEMENTED (demo, client) | 5 tries / 15-min lock, OTP TTL + 60 s resend, TOTP single-use (`security-review.test.tsx` "QA-03", "SEC-06"). | All server-side; per-day caps are Open Decision 2. |
-| SEC-004 | NOT STARTED | Session in memory only; no tokens. | Open Decision 2 (lifetimes), SecureStore, rotation, revocation. |
+| SEC-003 | IMPLEMENTED (demo, client) | 5 tries / 15-min lock, OTP TTL + 60 s resend, TOTP single-use (`security-review.test.tsx` "QA-03", "SEC-06"). | All server-side. SMS caps decided: 5/hour, 10/day per phone (ADR-024), server-enforced, not built. |
+| SEC-004 | IMPLEMENTED (demo, client) | Lifetimes decided (ADR-024): 5-minute idle lock and 7-day maximum, enforced on the device (`session.ts`, `useIdleLock.ts`; `session-timeouts.test.tsx`). No tokens yet. | Server tokens: rotating refresh within the 7-day limit, revocation, SecureStore. |
 | SEC-005 | DOCUMENTED | Recovery codes + KYC-level support re-verification, no self-service bypass (`docs/adr/008-two-factor-authentication.md` §2). | Support procedure (Compliance); server implementation. |
 
 ## B. Authorization and account isolation

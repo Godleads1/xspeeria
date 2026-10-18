@@ -25,7 +25,7 @@ export const DEMO_MODE: boolean = isDemoBuild(typeof __DEV__ === 'undefined' ? u
 export const DEMO_ACCOUNT = {
   phone: '+2348038383838',
   email: 'davidpeters@example.com',
-  pin: '4826',
+  pin: '482613',
 } as const;
 
 /** What a NIN lookup would return for the demo phone (mock identity record). */

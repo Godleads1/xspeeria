@@ -7,6 +7,10 @@
 | **Decision ID** | DEC-019 |
 | **Authority** | Product owner, 2026-10-17: "lets do onboarding, but we will use demo data to login" — `DOCUMENT_INDEX.md` §1 rank 2 |
 
+
+> **Update 2026-10-18:** the PIN is now **6 digits** (demo PIN `482613`), with a 5-minute
+> idle lock and a 7-day maximum session — `docs/adr/024-session-pin-sms-limits.md`.
+
 ## 1. Decision
 
 Built from the Figma onboarding frames:

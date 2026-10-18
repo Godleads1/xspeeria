@@ -94,6 +94,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `021-percentage-fee-and-split-payouts.md` | Coordination fee = 1% of what each side sends (supersedes the flat fee in Business Plan §5 / BRS-04 / CORRECTIONS_v3 §2); per-trade 5-minute windows; payouts split across own accounts, paid by the partner bank, confirmation to both sides (DEC-027) | **APPROVED** — 2026-10-17 |
 | `022-payout-destination-welcome-location.md` | Payout Destination (own-name accounts, last 4 only, 24-hour hold for new accounts, no balance wording), Welcome slides with corrected claims, location → country only for KYC region (DEC-028) | **APPROVED** — 2026-10-18 |
 | `023-figma-exact-home-cards-demo.md` | Exact Figma Home and Cards in development builds: Figma's balance, card figures and transactions as "Demo" display text, gated on DEMO_MODE (release builds unchanged); no "Create yours"; narrow exception to the on-screen no-balance rule (DEC-029) | **APPROVED** — 2026-10-18 |
+| `024-session-pin-sms-limits.md` | Decision 2 (part): 5-minute idle lock, 7-day maximum session, 6-digit PIN, SMS codes capped at 5/hour and 10/day per phone (server-enforced) (DEC-030) | **APPROVED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 

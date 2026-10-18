@@ -1,10 +1,10 @@
 /**
- * PIN rules (ADR-013). 4 digits, as in Figma. Weak PINs (all the same digit, or a straight
- * run like 1234 / 4321) are refused — a proposed default pending Open Decision 2. In
- * production the PIN is verified server-side and stored only as a slow salted hash.
+ * PIN rules. 6 digits (product owner, 2026-10-18, ADR-024; Figma drew 4). Weak PINs (all
+ * the same digit, or a straight run like 123456 / 654321) are refused. In production the
+ * PIN is verified server-side and stored only as a slow salted hash.
  */
 
-export const PIN_LENGTH = 4;
+export const PIN_LENGTH = 6;
 
 export function pinProblem(pin: string): string | null {
   if (!new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin)) return `Enter ${PIN_LENGTH} digits`;
