@@ -264,3 +264,44 @@ describe('rate formatting', () => {
     }
   });
 });
+
+describe('exact-Figma Home demo (ADR-023)', () => {
+  // Imported here so the rest of the file stays independent of the demo module.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const demo = require('../src/features/demo/figmaDemo') as typeof import('../src/features/demo/figmaDemo');
+
+  it('renders Figma balance card marked Demo, the five Figma rows in order, and no readiness', async () => {
+    await render(
+      <HomeScreen
+        dimensions={READINESS_INCOMPLETE}
+        activity={ACTIVITY_ITEMS}
+        bestRate={BEST_RATE}
+        rates={MARKET_RATES}
+        demoHero={demo.DEMO_HOME_BALANCE}
+        demoActivity={demo.DEMO_HOME_ACTIVITY}
+        showReadiness={false}
+        onViewAll={() => {}}
+      />,
+    );
+    expect(screen.getByText('Available Balance')).toBeTruthy();
+    expect(screen.getByText('$500.89')).toBeTruthy();
+    expect(screen.getByTestId('home-demo-balance-badge')).toBeTruthy();
+    expect(screen.queryByTestId('home-best-rate')).toBeNull();
+    const titles = demo.DEMO_HOME_ACTIVITY.map((a) => screen.getByTestId(`figma-activity-${a.id}`).props.accessibilityLabel as string);
+    expect(titles.map((t) => t.split(',')[0])).toEqual(['NGN - USD', 'NGN - CAD', 'Shopping', 'NGN - EUR', 'NGN - AUD']);
+    for (const t of titles) expect(t).toMatch(/Demo$/);
+    expect(screen.queryByTestId('activity-list')).toBeNull();
+    expect(screen.queryByTestId('readiness-expanded')).toBeNull();
+  });
+
+  it('release rendering (no demo props): best-rate card, real activity list and readiness', async () => {
+    await render(
+      <HomeScreen dimensions={READINESS_INCOMPLETE} activity={ACTIVITY_ITEMS} bestRate={BEST_RATE} rates={MARKET_RATES} />,
+    );
+    expect(screen.getByTestId('home-best-rate')).toBeTruthy();
+    expect(screen.queryByTestId('home-demo-balance')).toBeNull();
+    expect(screen.queryByText(/available balance/i)).toBeNull();
+    expect(screen.queryByTestId('home-figma-activity')).toBeNull();
+    expect(screen.getByTestId('readiness-expanded')).toBeTruthy();
+  });
+});

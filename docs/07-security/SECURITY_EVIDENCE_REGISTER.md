@@ -108,4 +108,4 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | FX-02 | DOCUMENTED | Banking Integration Spec; webhook verification not built. |
 | FX-03 | DOCUMENTED | 24-hour payout hold in `docs/adr/008-two-factor-authentication.md`; freeze/escalation not designed. |
 | FX-04 | DOCUMENTED | `docs/adr/002-financial-event-ledger-architecture.md`. |
-| FX-05 | IMPLEMENTED | No balance/wallet wording guard test in the app (`no-balance.test.ts`); custody truth in Standing Standards §2. |
+| FX-05 | IMPLEMENTED | No balance/wallet wording guard test in the app (`no-balance.test.ts`); custody truth in Standing Standards §2. Approved exception: Figma demo figures in development builds only, marked "Demo", tested empty when `DEMO_MODE` is false (`docs/adr/023-figma-exact-home-cards-demo.md`). |

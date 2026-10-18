@@ -9,6 +9,10 @@
  * under any condition. The hero shows a rate written with both currencies, never a lone
  * number. Account Readiness, absent from the Figma frame, is kept because it is the only
  * route to the steps a user must complete before trading.
+ *
+ * Exact-Figma demo (ADR-023, development builds only): the route can pass Figma's balance
+ * card and transaction rows from `src/features/demo/figmaDemo.ts`, marked "Demo", and hide
+ * Account Readiness so the screen matches the design. Release builds never receive them.
  */
 
 import type { ReactElement } from 'react';
@@ -19,7 +23,10 @@ import type { ActivityItem, MarketRate, ReadinessDimension } from '../../fixture
 import { space, themed } from '../../theme';
 import { AccountReadiness } from './AccountReadiness';
 import { ActivityList } from './ActivityList';
-import { BestRateCard } from './BestRateCard';
+import type { DemoHeroFigure, DemoHomeActivity } from '../demo/figmaDemo';
+import { DEMO_BADGE } from '../demo/figmaDemo';
+import { BestRateCard, HeroCard } from './BestRateCard';
+import { FigmaActivityList } from './FigmaActivityList';
 import { HomeHeader } from './HomeHeader';
 import { MarketRates } from './MarketRates';
 
@@ -37,6 +44,9 @@ export function HomeScreen({
   onViewAll,
   onHelp,
   onNotifications,
+  demoHero = null,
+  demoActivity = [],
+  showReadiness = true,
 }: {
   user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
   bestRate?: MarketRate;
@@ -49,6 +59,11 @@ export function HomeScreen({
   onViewAll?: () => void;
   onHelp?: () => void;
   onNotifications?: () => void;
+  /** Figma's demo balance card (development builds only, ADR-023). */
+  demoHero?: DemoHeroFigure | null;
+  /** Figma's demo transaction rows (development builds only, ADR-023). */
+  demoActivity?: readonly DemoHomeActivity[];
+  showReadiness?: boolean;
 }): ReactElement {
   return (
     <Screen testID="home-screen">
@@ -68,15 +83,29 @@ export function HomeScreen({
       {status === 'ready' ? (
         <View style={styles.body}>
           <View>
-            {bestRate ? (
+            {demoHero ? (
+              <View style={styles.hero}>
+                <HeroCard
+                  testID="home-demo-balance"
+                  label={demoHero.label}
+                  figure={demoHero.figure}
+                  badge={DEMO_BADGE}
+                  accessibilityLabel={`${demoHero.label}: ${demoHero.figure}. Demo figure, not real money`}
+                />
+              </View>
+            ) : bestRate ? (
               <View style={styles.hero}>
                 <BestRateCard rate={bestRate} onTrade={onCreateOffer} />
               </View>
             ) : null}
-            {rates.length > 0 ? <MarketRates rates={rates} attached={bestRate !== undefined} /> : null}
+            {rates.length > 0 ? <MarketRates rates={rates} attached={demoHero !== null || bestRate !== undefined} /> : null}
           </View>
-          <ActivityList items={activity} onCreateOffer={onCreateOffer} onViewAll={onViewAll} />
-          <AccountReadiness dimensions={dimensions} />
+          {demoActivity.length > 0 ? (
+            <FigmaActivityList items={demoActivity} onViewAll={onViewAll} />
+          ) : (
+            <ActivityList items={activity} onCreateOffer={onCreateOffer} onViewAll={onViewAll} />
+          )}
+          {showReadiness ? <AccountReadiness dimensions={dimensions} /> : null}
         </View>
       ) : null}
     </Screen>

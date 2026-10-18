@@ -1,10 +1,14 @@
 /**
- * Cards (Figma "Debit Cards"), ADR-012 — PREVIEW ONLY.
+ * Cards (Figma "Debit Cards" 266:5584), ADR-012 + ADR-023.
  *
- * Swipeable USD / EUR / NGN virtual cards using the Figma card artwork, page dots, the Details / Freeze Card /
- * More actions, a "Create yours" button and the Transaction History heading. Cards are not
- * available: "Create yours" says so, the actions are disabled, and no balance, card number
- * or card transaction is shown — Xspeeria holds no money (PRODUCT.md, no-balance rule).
+ * Swipeable USD / EUR / NGN virtual cards on the Figma artwork, page dots, the Details /
+ * Freeze Card / More actions and Transaction History, laid out exactly as the design.
+ * Cards are not available: every action says so.
+ *
+ * Development builds show Figma's own placeholder card text and four card transactions,
+ * marked "Demo" (`src/features/demo/figmaDemo.ts`, ADR-023). Release builds get none of it:
+ * the cards read "Preview", the number is masked, and history is empty, because Xspeeria
+ * holds no money (Standing Standards §2).
  */
 
 import { useState, type ReactElement } from "react";
@@ -13,6 +17,7 @@ import {
   ImageBackground,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
   useWindowDimensions,
@@ -23,9 +28,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "../../components/icons";
-import { PrimaryButton } from "../../components/primitives";
-import { brandWeight, color, space, themed, typography } from "../../theme";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { brandWeight, color, numericTextStyle, space, themed, typography } from "../../theme";
+import {
+  DEMO_BADGE,
+  DEMO_CARD_TEXT,
+  DEMO_CARD_TRANSACTIONS,
+  type DemoCardTransaction,
+} from "../demo/figmaDemo";
 
 import { Chip, Contactless } from "../home/BestRateCard";
 
@@ -62,124 +71,131 @@ export const CARDS_UNAVAILABLE =
 function CardArt({
   design,
   width,
+  demoText,
 }: {
   design: CardDesign;
   width: number;
+  demoText: DemoCardTexts;
 }): ReactElement {
   const k = width / 342;
   const height = Math.round(216 * k);
+  const demo = demoText?.[design.currency] ?? null;
   return (
-    <View style={[cardStyles.shadow, { width, height, borderRadius: 14 * k }]}>
-      <ImageBackground
-        source={design.art}
-        resizeMode="cover"
-        style={{ width, height }}
-        imageStyle={{ borderRadius: 14 * k }}
-      >
-        {/* Gloss: a soft light sweep from the top-left and a thin bright edge, like a real card. */}
-        <Svg
-          width={width}
-          height={height}
-          style={cardStyles.layer}
-          pointerEvents="none"
-        >
-          <Defs>
-            <LinearGradient
-              id={`sheen-${design.currency}`}
-              x1="0"
-              y1="0"
-              x2="0.9"
-              y2="1"
-            >
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.14" />
-              <Stop offset="0.38" stopColor="#FFFFFF" stopOpacity="0.03" />
-              <Stop offset="0.6" stopColor="#FFFFFF" stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Rect
-            width={width}
-            height={height}
-            rx={14 * k}
-            fill={`url(#sheen-${design.currency})`}
-          />
-          <Rect
-            x={0.5}
-            y={0.5}
-            width={width - 1}
-            height={height - 1}
-            rx={14 * k}
-            fill="none"
-            stroke="#FFFFFF"
-            strokeOpacity={0.16}
-          />
-        </Svg>
-        <View
-          style={[cardStyles.layer, { padding: 17 * k }]}
-          pointerEvents="none"
-        >
-          <Text style={[cardStyles.virtual, { fontSize: 13 * k }]}>
-            Virtual Card
-          </Text>
-          <View style={[cardStyles.mark, { left: 17 * k, top: 72 * k }]}>
-            <Chip size={Math.round(39 * k)} />
-          </View>
-          <View style={[cardStyles.mark, { left: 286 * k, top: 72 * k }]}>
-            <Contactless size={Math.round(39 * k)} />
-          </View>
-          <View style={[cardStyles.bottom, { left: 17 * k, top: 151 * k }]}>
-            <Text style={[cardStyles.number, { fontSize: 12 * k }]}>
-              **** **** **** ****
-            </Text>
-            <Text style={[cardStyles.preview, { fontSize: 21 * k }]}>
-              Preview · {design.currency}
-            </Text>
-          </View>
+    <ImageBackground
+      source={design.art}
+      resizeMode="cover"
+      style={{ width, height, borderRadius: 14 * k, overflow: "hidden" }}
+      imageStyle={{ borderRadius: 14 * k }}
+    >
+      <View style={[cardStyles.layer, { padding: 17 * k }]} pointerEvents="none">
+        <View style={cardStyles.topRow}>
+          <Text style={[cardStyles.virtual, { fontSize: 13 * k }]}>Virtual Card</Text>
+          {demo ? (
+            <View testID={`card-${design.currency}-badge`} style={cardStyles.badge}>
+              <Text style={cardStyles.badgeText}>{DEMO_BADGE}</Text>
+            </View>
+          ) : null}
         </View>
-      </ImageBackground>
-    </View>
+        <View style={[cardStyles.mark, { left: 17 * k, top: 72 * k }]}>
+          <Chip size={Math.round(39 * k)} />
+        </View>
+        <View style={[cardStyles.mark, { left: 286 * k, top: 72 * k }]}>
+          <Contactless size={Math.round(39 * k)} />
+        </View>
+        <View style={[cardStyles.bottom, { left: 17 * k, top: 151 * k }]}>
+          <Text style={[cardStyles.number, { fontSize: 12 * k }]}>
+            {demo ? demo.number : "**** **** **** ****"}
+          </Text>
+          <Text style={[cardStyles.amount, { fontSize: 21 * k }]}>
+            {demo ? demo.amount : `Preview · ${design.currency}`}
+          </Text>
+        </View>
+      </View>
+    </ImageBackground>
   );
 }
 
+/** Figma action buttons (y=386): Details filled navy, Freeze Card and More outlined. */
 function Action({
   icon,
   label,
   testID,
+  filled = false,
+  onPress,
 }: {
   icon: IconName;
   label: string;
   testID: string;
+  filled?: boolean;
+  onPress: () => void;
 }): ReactElement {
   return (
-    <View
+    <Pressable
       style={styles.action}
-      accessible
       accessibilityRole="button"
-      accessibilityState={{ disabled: true }}
-      accessibilityLabel={`${label}, not available yet`}
+      accessibilityLabel={label}
+      accessibilityHint="Cards are not available yet"
       testID={testID}
+      onPress={onPress}
+      hitSlop={6}
     >
-      <View style={styles.actionCircle}>
-        <Icon name={icon} color={color.text.disabled} size={20} />
+      <View style={[styles.actionCircle, filled ? styles.actionFilled : null]}>
+        <Icon name={icon} color={filled ? color.text.onFill : color.text.primary} size={18} />
       </View>
       <Text style={styles.actionLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const TX_ICON: Record<DemoCardTransaction["icon"], IconName> = {
+  transfer: "arrowOut",
+  stay: "building",
+  design: "pen",
+  funded: "arrowIn",
+};
+
+/** Figma history row (1019:12764): 24px icon, title over date, signed amount on the right. */
+function TransactionRow({ tx }: { tx: DemoCardTransaction }): ReactElement {
+  return (
+    <View
+      testID={`cards-tx-${tx.id}`}
+      style={styles.txRow}
+      accessible
+      accessibilityLabel={`${tx.title}, ${tx.date}, ${tx.amount}. Demo`}
+    >
+      <Icon name={TX_ICON[tx.icon]} color={color.text.primary} size={24} />
+      <View style={styles.txMain}>
+        <Text style={styles.txTitle}>{tx.title}</Text>
+        <Text style={styles.txDate}>{tx.date}</Text>
+      </View>
+      <Text style={[styles.txAmount, tx.direction === "out" ? styles.txOut : styles.txIn]}>
+        {tx.amount}
+      </Text>
     </View>
   );
 }
 
+type DemoCardTexts = typeof DEMO_CARD_TEXT;
+
+/**
+ * The demo props default to the DEMO_MODE-gated figures, so release builds get none; tests
+ * pass `null` / `[]` to check the release rendering.
+ */
 export function CardsScreen({
-  onCreate,
+  demoText = DEMO_CARD_TEXT,
+  demoTransactions = DEMO_CARD_TRANSACTIONS,
 }: {
-  onCreate?: () => void;
-}): ReactElement {
+  demoText?: DemoCardTexts;
+  demoTransactions?: readonly DemoCardTransaction[];
+} = {}): ReactElement {
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const cardW = screenW - space.md * 2;
   const [index, setIndex] = useState(0);
   const design = CARD_DESIGNS[index];
 
-  const create = (): void => {
-    if (onCreate) onCreate();
-    else Alert.alert("Cards are not available", CARDS_UNAVAILABLE);
+  const unavailable = (): void => {
+    Alert.alert("Cards are not available", CARDS_UNAVAILABLE);
   };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>): void => {
@@ -201,7 +217,7 @@ export function CardsScreen({
             testID="cards-more"
             accessibilityRole="button"
             accessibilityLabel="More"
-            onPress={create}
+            onPress={unavailable}
             style={styles.round}
           >
             <Icon name="more" color={color.text.primary} size={18} />
@@ -227,9 +243,13 @@ export function CardsScreen({
               key={d.currency}
               testID={`card-${d.currency}`}
               accessible
-              accessibilityLabel={`${d.currency} virtual card design, preview. Cards are not available yet.`}
+              accessibilityLabel={
+                demoText
+                  ? `${d.currency} virtual card, demo figures. Cards are not available yet.`
+                  : `${d.currency} virtual card design, preview. Cards are not available yet.`
+              }
             >
-              <CardArt design={d} width={cardW} />
+              <CardArt design={d} width={cardW} demoText={demoText} />
             </View>
           ))}
         </ScrollView>
@@ -248,20 +268,25 @@ export function CardsScreen({
         </View>
 
         <View style={styles.actions}>
-          <Action testID="cards-details" icon="info" label="Details" />
-          <Action testID="cards-freeze" icon="lock" label="Freeze Card" />
-          <Action testID="cards-actions-more" icon="more" label="More" />
+          <Action testID="cards-details" icon="info" label="Details" filled onPress={unavailable} />
+          <Action testID="cards-freeze" icon="snowflake" label="Freeze Card" onPress={unavailable} />
+          <Action testID="cards-actions-more" icon="more" label="More" onPress={unavailable} />
         </View>
 
-        <View style={styles.create}>
-          <PrimaryButton
-            testID="cards-create"
-            label="Create yours"
-            onPress={create}
-          />
+        <View style={styles.sectionRow}>
+          <Text style={styles.section}>Transaction History</Text>
+          {demoTransactions.length > 0 ? <Text style={styles.demo}>{DEMO_BADGE}</Text> : null}
         </View>
-
-        <Text style={styles.section}>Transaction History</Text>
+        {demoTransactions.length > 0 ? (
+          <View testID="cards-history-demo" style={styles.txList}>
+            {demoTransactions.map((tx, i) => (
+              <View key={tx.id}>
+                {i > 0 ? <View style={styles.rule} /> : null}
+                <TransactionRow tx={tx} />
+              </View>
+            ))}
+          </View>
+        ) : (
         <View testID="cards-history-empty" style={styles.empty}>
           <Text style={styles.emptyText}>
             Card transactions will appear here once Xspeeria cards are
@@ -271,6 +296,7 @@ export function CardsScreen({
             Xspeeria never holds your money, so there is no balance to show.
           </Text>
         </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -278,31 +304,19 @@ export function CardsScreen({
 
 const cardStyles = themed(() => ({
   layer: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
-  shadow: {
-    backgroundColor: "#05080F",
-    shadowColor: "#000000",
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   virtual: { ...brandWeight("700"), color: "#FFFFFF" },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  badgeText: { ...brandWeight("700"), fontSize: 10, color: "#FFFFFF" },
   mark: { position: "absolute" },
   bottom: { position: "absolute", gap: 6 },
-  number: {
-    ...brandWeight("500"),
-    letterSpacing: 1.5,
-    color: "#FFFFFF",
-    opacity: 0.85,
-  },
-  preview: {
-    ...brandWeight("700"),
-    color: "#FFFFFF",
-    letterSpacing: 0.3,
-    textShadowColor: "rgba(0,0,0,0.35)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+  number: { ...brandWeight("500"), ...numericTextStyle, letterSpacing: 1.5, color: "#FFFFFF" },
+  amount: { ...brandWeight("700"), ...numericTextStyle, color: "#FFFFFF", letterSpacing: 0.3 },
 }));
 
 const styles = themed(() => ({
@@ -350,37 +364,52 @@ const styles = themed(() => ({
     borderRadius: 3,
     backgroundColor: color.border.subtle,
   },
-  dotOn: { width: 16, backgroundColor: color.brand.primary },
+  dotOn: { width: 14, backgroundColor: color.brand.primary },
   actions: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 28,
-    marginTop: space.sm,
+    gap: 36,
+    marginTop: space.md,
   },
-  action: { alignItems: "center", gap: 6 },
+  action: { alignItems: "center", gap: 6, minWidth: 56 },
   actionCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: color.border.subtle,
-    backgroundColor: color.bg.sunken,
+    backgroundColor: color.bg.canvas,
     alignItems: "center",
     justifyContent: "center",
   },
+  actionFilled: { backgroundColor: color.brand.fill, borderColor: color.brand.fill },
   actionLabel: {
     ...typography.caption,
     fontSize: 11,
-    color: color.text.disabled,
+    color: color.text.primary,
   },
-  create: { paddingHorizontal: space.md, marginTop: space.md },
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: space.md,
+    marginTop: space.md,
+  },
+  demo: { ...typography.caption, fontSize: 10, ...brandWeight("700"), color: color.text.secondary },
+  txList: { paddingHorizontal: space.md, marginTop: space.xs },
+  txRow: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 56 },
+  txMain: { flex: 1, gap: 4 },
+  txTitle: { ...typography.body, ...brandWeight("500"), fontSize: 15, color: color.text.primary },
+  txDate: { ...typography.caption, color: color.text.secondary },
+  txAmount: { ...typography.body, ...brandWeight("700"), ...numericTextStyle, fontSize: 15 },
+  txOut: { color: color.error.text },
+  txIn: { color: color.success.text },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.border.subtle, marginLeft: 38 },
   section: {
     ...typography.headline,
     ...brandWeight("500"),
     fontSize: 17,
     color: color.text.primary,
-    paddingHorizontal: space.md,
-    marginTop: space.md,
   },
   empty: {
     marginHorizontal: space.md,

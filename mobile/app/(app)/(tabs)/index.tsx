@@ -8,6 +8,7 @@ import {
   MARKET_RATES,
   READINESS_INCOMPLETE,
 } from '../../../src/fixtures';
+import { DEMO_HOME_ACTIVITY, DEMO_HOME_BALANCE } from '../../../src/features/demo/figmaDemo';
 import { useProfile } from '../../../src/features/profile/profileStore';
 import { useThemeMode } from '../../../src/theme';
 
@@ -25,6 +26,10 @@ export default function HomeRoute(): ReactElement {
       activity={ACTIVITY_ITEMS}
       onCreateOffer={() => router.push('/marketplace')}
       onViewAll={() => router.push('/history')}
+      // Exact Figma for design review (ADR-023): demo figures exist only in development builds.
+      demoHero={DEMO_HOME_BALANCE}
+      demoActivity={DEMO_HOME_ACTIVITY}
+      showReadiness={DEMO_HOME_BALANCE === null}
     />
   );
 }

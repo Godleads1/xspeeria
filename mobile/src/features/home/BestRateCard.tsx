@@ -115,16 +115,28 @@ export function Contactless({ size }: { size: number }): ReactElement {
   );
 }
 
-export function BestRateCard({
-  rate,
-  onTrade,
+/**
+ * The Figma card shell (node 51:1719): texture, label, chip and contactless marks, figure.
+ * Used by the best-rate card and, in development builds only, by the Figma demo balance
+ * card (`src/features/demo`, ADR-023), which passes a "Demo" badge.
+ */
+export function HeroCard({
+  label,
+  figure,
+  accessibilityLabel,
+  onPress,
+  accessibilityHint,
+  badge,
+  testID,
 }: {
-  rate: MarketRate;
-  onTrade?: () => void;
+  label: string;
+  figure: string;
+  accessibilityLabel: string;
+  onPress?: () => void;
+  accessibilityHint?: string;
+  badge?: string;
+  testID: string;
 }): ReactElement {
-  const rendered = formatRate(rate);
-  const label = `Best ${pairLabel(rate)} rate today`;
-
   // Scale every Figma measurement by the card's real width.
   const [width, setWidth] = useState<number>(FIGMA.width);
   const k = width / FIGMA.width;
@@ -148,43 +160,71 @@ export function BestRateCard({
   const body = (
     <>
       <Texture />
-      <Text style={[styles.label, labelStyle]}>{label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={[styles.label, labelStyle]}>{label}</Text>
+        {badge ? (
+          <View testID={`${testID}-badge`} style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.marks}>
         <Chip size={mark} />
         <Contactless size={mark} />
       </View>
       <Text
-        accessibilityLabel={`${label}: ${rendered}`}
+        accessibilityLabel={accessibilityLabel}
         adjustsFontSizeToFit
         numberOfLines={1}
         style={[styles.figure, figureStyle]}
       >
-        {rendered}
+        {figure}
       </Text>
     </>
   );
 
-  if (!onTrade) {
+  if (!onPress) {
     return (
-      <View testID="home-best-rate" onLayout={onLayout} style={[styles.card, frame]}>
-        {body}
+      <View testID={testID} onLayout={onLayout} style={styles.shadow}>
+        <View style={[styles.card, frame]}>{body}</View>
       </View>
     );
   }
 
   return (
-    <View testID="home-best-rate" onLayout={onLayout} style={styles.shadow}>
+    <View testID={testID} onLayout={onLayout} style={styles.shadow}>
       <Pressable
         testID="home-primary-action"
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${rendered}. Trade now`}
-        accessibilityHint="Opens the marketplace"
-        onPress={onTrade}
+        accessibilityLabel={`${accessibilityLabel}. Trade now`}
+        accessibilityHint={accessibilityHint}
+        onPress={onPress}
         style={({ pressed }) => [styles.card, frame, pressed ? styles.pressed : null]}
       >
         {body}
       </Pressable>
     </View>
+  );
+}
+
+export function BestRateCard({
+  rate,
+  onTrade,
+}: {
+  rate: MarketRate;
+  onTrade?: () => void;
+}): ReactElement {
+  const rendered = formatRate(rate);
+  const label = `Best ${pairLabel(rate)} rate today`;
+  return (
+    <HeroCard
+      testID="home-best-rate"
+      label={label}
+      figure={rendered}
+      accessibilityLabel={`${label}: ${rendered}`}
+      accessibilityHint="Opens the marketplace"
+      onPress={onTrade}
+    />
   );
 }
 
@@ -209,6 +249,9 @@ const styles = themed(() => ({
   },
   pressed: { opacity: 0.92 },
   label: { ...brandWeight('700'), color: color.text.onFill },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.18)' },
+  badgeText: { ...brandWeight('700'), fontSize: 9, letterSpacing: 0.4, color: color.text.onFill },
   marks: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   figure: { ...heroFigureStyle, color: color.text.onFill },
 }));
