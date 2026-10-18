@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -108,14 +108,24 @@ describe('Welcome', () => {
     expect(text).toMatch(/no money crosses the border/);
   });
 
-  it('shows a different picture for each slide', async () => {
+  it('each slide carries its own picture and text, so both swipe together', async () => {
     await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
-    const hero = (): unknown => screen.getByTestId('welcome-hero', { includeHiddenElements: true }).props.source;
-    const first = hero();
-    await fireEvent(screen.getByTestId('welcome-slides'), 'momentumScrollEnd', {
-      nativeEvent: { contentOffset: { x: 10_000, y: 0 } },
+    const sources = SLIDES.map((_, i) => screen.getByTestId(`welcome-hero-${i}`, { includeHiddenElements: true }).props.source);
+    expect(new Set(sources).size).toBe(SLIDES.length);
+    SLIDES.forEach((x, i) => {
+      expect(within(screen.getByTestId(`welcome-slide-${i}`)).getByText(x.title)).toBeTruthy();
     });
-    expect(hero()).not.toEqual(first);
+  });
+
+  it('progress bars follow the swipe and jump to a slide when tapped', async () => {
+    await render(<WelcomeScreen onSignUp={jest.fn()} onLogIn={jest.fn()} />);
+    const selected = (i: number): boolean | undefined => screen.getByTestId(`welcome-bar-${i}`).props.accessibilityState?.selected;
+    expect(selected(0)).toBe(true);
+    await fireEvent(screen.getByTestId('welcome-slides'), 'scroll', { nativeEvent: { contentOffset: { x: 10_000, y: 0 } } });
+    expect(selected(3)).toBe(true);
+    await fireEvent.press(screen.getByTestId('welcome-bar-1'));
+    expect(selected(1)).toBe(true);
+    expect(selected(3)).toBe(false);
   });
 });
 

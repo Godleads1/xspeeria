@@ -70,3 +70,7 @@ Copy needs marketing/legal review; artwork licence to confirm (ADR-013).
 
 `payout-destination.test.tsx`, `location.test.tsx`, `bugfixes.test.tsx`, updated onboarding,
 trade and multi-fill tests.
+
+> **Update 2026-10-18:** each Welcome slide's picture and text now swipe together in one
+> horizontal pager (product owner: "the welcome pictures should be horizontally scrollable
+> and text too"); the progress bars follow the swipe and can be tapped to jump to a slide.
