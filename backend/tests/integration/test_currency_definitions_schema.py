@@ -115,6 +115,7 @@ def _config(database_url: str) -> Config:
     config.attributes["database_url"] = database_url
     # Round-trip tests remove CD3 on their own throwaway database (ADR-028, H9).
     config.attributes["cd3_downgrade"] = "authorized"
+    config.attributes["records_downgrade"] = "authorized"
     return config
 
 

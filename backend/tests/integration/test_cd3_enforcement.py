@@ -29,12 +29,16 @@ APP_ROLE = "xspeeria_app"
 ROW = {"currency": "NGN", "v": "cd3-test-v1", "scale": 2}
 
 
-def _config(database_url: str, *, authorized: bool) -> Config:
+def _config(database_url: str, *, authorized: bool, records: bool = True) -> Config:
+    """``authorized`` is the CD3 (H9) switch under test. Removing the 0006 offer tables on
+    the way down has its own switch, on by default here so these tests isolate CD3."""
     config = Config(str(ALEMBIC_INI))
     config.set_main_option("script_location", str(MIGRATIONS_DIR))
     config.attributes["database_url"] = database_url
     if authorized:
         config.attributes["cd3_downgrade"] = "authorized"
+    if records:
+        config.attributes["records_downgrade"] = "authorized"
     return config
 
 
@@ -102,9 +106,17 @@ async def test_update_and_delete_are_refused(conn: AsyncConnection, sql: str) ->
 
 @pytest.mark.asyncio
 async def test_truncate_is_refused_by_its_own_trigger(conn: AsyncConnection) -> None:
-    err = await _refused(conn, "TRUNCATE currency_definitions")
+    # Since 0006, offers reference this table, so a plain TRUNCATE is stopped by PostgreSQL
+    # (0A000) before the trigger runs; CASCADE gets past that check and must hit CD3.
+    err = await _refused(conn, "TRUNCATE currency_definitions CASCADE")
     assert _sqlstate(err) == "XS001"
     assert "TRUNCATE refused" in str(err.orig)
+
+
+@pytest.mark.asyncio
+async def test_plain_truncate_is_refused(conn: AsyncConnection) -> None:
+    err = await _refused(conn, "TRUNCATE currency_definitions")
+    assert _sqlstate(err) in {"XS001", "0A000"}
 
 
 @pytest.mark.asyncio
@@ -264,6 +276,12 @@ def test_downgrade_refuses_without_explicit_authorization(database_url: str) -> 
     with pytest.raises(RuntimeError, match="H9"):
         command.downgrade(_config(database_url, authorized=False), "0004")
     command.upgrade(_config(database_url, authorized=False), "head")  # still at head
+
+
+def test_offer_records_downgrade_needs_its_own_authorization(database_url: str) -> None:
+    with pytest.raises(RuntimeError, match="records_downgrade"):
+        command.downgrade(_config(database_url, authorized=True, records=False), "0005")
+    command.upgrade(_config(database_url, authorized=False), "head")
 
 
 def test_authorized_round_trip_restores_the_protection(database_url: str) -> None:

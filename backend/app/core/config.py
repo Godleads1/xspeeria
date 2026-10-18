@@ -133,6 +133,9 @@ class Settings(BaseSettings):
     mfa_encryption_key: str | None = None
     #: ADR-027: print SMS codes to the server terminal. Refused unless app_env is "local".
     dev_sms: bool = False
+    #: ADR-029: treat signed-in, 2FA-verified users as KYC-approved for offers. No KYC provider
+    #: exists yet. Refused unless app_env is "local".
+    kyc_dev_bypass: bool = False
 
     cors_allowed_origins: str = ""
 

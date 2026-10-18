@@ -1,0 +1,137 @@
+"""Offer endpoints — Milestone 4.1C (ADR-029).
+
+Routes only translate HTTP to the service; every rule lives in ``app.services.offers``.
+Every route needs a signed-in, 2FA-verified user (``CurrentPrincipal``) and, until a KYC
+provider exists, the local-only KYC bypass (ADR-029 §KYC). Offers are records of intent,
+not money.
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import Annotated, Any, Literal
+
+from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.auth_deps import (
+    CurrentPrincipal,
+    get_auth_runtime,
+    get_db_session,
+    limit_by_address,
+)
+from app.api.deps import get_app_settings
+from app.core.config import Settings
+from app.core.exceptions import AppError
+from app.schemas.offers import (
+    CreateOfferRequest,
+    ListingsResponse,
+    OfferResponse,
+    UpdateRateRequest,
+)
+from app.services.auth import AuthRuntime, Principal
+from app.services.offers import OfferService
+
+__all__ = ["marketplace_router", "router"]
+
+marketplace_router = APIRouter(
+    prefix="/api/v1/marketplace", tags=["marketplace"], dependencies=[Depends(limit_by_address)]
+)
+router = APIRouter(
+    prefix="/api/v1/offers", tags=["offers"], dependencies=[Depends(limit_by_address)]
+)
+
+
+async def get_offer_service(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> OfferService:
+    return OfferService(db, runtime.clock)
+
+
+async def kyc_approved(
+    principal: CurrentPrincipal, settings: Annotated[Settings, Depends(get_app_settings)]
+) -> Principal:
+    """No KYC provider is connected yet, so nobody is approved except under the local bypass."""
+    if settings.kyc_dev_bypass and settings.app_env == "local":
+        return principal
+    raise AppError(
+        "AUTH_403_KYC_REQUIRED",
+        "Please complete identity verification before using the marketplace.",
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
+Service = Annotated[OfferService, Depends(get_offer_service)]
+Verified = Annotated[Principal, Depends(kyc_approved)]
+IdempotencyKey = Annotated[uuid.UUID, Header(alias="Idempotency-Key")]
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=OfferResponse,
+    summary="Publish an offer (repeat-safe with Idempotency-Key)",
+)
+async def create_offer(
+    body: CreateOfferRequest, principal: Verified, service: Service, key: IdempotencyKey
+) -> Any:
+    result = await service.create(
+        principal,
+        key,
+        body.source_currency,
+        body.target_currency,
+        body.source_amount,
+        body.desired_rate,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@marketplace_router.get(
+    "/listings",
+    response_model=ListingsResponse,
+    summary="Marketplace-active offers for one currency pair, best rate first",
+)
+async def listings(
+    principal: Verified,
+    service: Service,
+    currency_pair: Annotated[
+        str, Query(alias="filter[currency_pair]", pattern=r"^[A-Za-z]{3}/[A-Za-z]{3}$")
+    ],
+    listing_type: Annotated[Literal["offer"], Query(alias="filter[type]")] = "offer",
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    offset: Annotated[int, Query(ge=0, le=10_000)] = 0,
+) -> Any:
+    """Requests (``filter[type]=request``) do not exist yet; only offers are listed."""
+    source, target = currency_pair.split("/")
+    items = await service.marketplace(principal, source, target, limit + 1, offset)
+    more = len(items) > limit
+    return {
+        "items": items[:limit],
+        "limit": limit,
+        "offset": offset,
+        "next_offset": offset + limit if more else None,
+    }
+
+
+@router.get("/mine", response_model=list[OfferResponse], summary="My offers, open ones first")
+async def my_offers(principal: Verified, service: Service) -> Any:
+    return await service.mine(principal)
+
+
+@router.get("/{offer_id}", response_model=OfferResponse, summary="One offer")
+async def get_offer(offer_id: uuid.UUID, principal: Verified, service: Service) -> Any:
+    return await service.get(principal, offer_id)
+
+
+@router.patch("/{offer_id}", response_model=OfferResponse, summary="Change my offer's rate")
+async def update_rate(
+    offer_id: uuid.UUID, body: UpdateRateRequest, principal: Verified, service: Service
+) -> Any:
+    return await service.update_rate(principal, offer_id, body.desired_rate)
+
+
+@router.delete("/{offer_id}", response_model=OfferResponse, summary="Withdraw my offer")
+async def withdraw(offer_id: uuid.UUID, principal: Verified, service: Service) -> Any:
+    return await service.withdraw(principal, offer_id)

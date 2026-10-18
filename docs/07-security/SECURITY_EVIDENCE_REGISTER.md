@@ -34,10 +34,10 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-006 | IMPLEMENTED (partial, AUTH-1) | Authenticated routes get the caller only from `current_principal` (token + live session), never from the request (`backend/app/api/auth_deps.py`). S-2 decided: server-side checks, deny by default (ADR-025). | Apply to every future router; RLS as second layer. |
+| SEC-006 | IMPLEMENTED (partial, AUTH-1) | Authenticated routes get the caller only from `current_principal` (token + live session), never from the request (`backend/app/api/auth_deps.py`). S-2 decided: server-side checks, deny by default (ADR-025). | Apply to every future router; RLS as second layer. 4.1C offers: owner-only edit/withdraw (`AUTH_403_NOT_OWNER`), owner id never returned (`is_own` flag), others' closed offers answer 404 (`test_offers_api.py`). |
 | SEC-007 | IMPLEMENTED (partial, AUTH-1) | Sessions are owner-scoped; another user's session answers 404 like a missing one (`test_cannot_see_or_revoke_another_users_session`). | Cross-user tests for every future resource. |
 | SEC-008 | DOCUMENTED | Roles and matrix required by Security Master Audit §38.3. | Write the authorization matrix before admin features. |
-| SEC-009 | IMPLEMENTED (partial, AUTH-1) | Auth request schemas forbid unknown fields; validation errors no longer echo submitted values (`backend/app/core/exceptions.py`, `test_register_validation`, `test_validation_errors_do_not_echo_the_pin`). | Same for every future endpoint. |
+| SEC-009 | IMPLEMENTED (partial, AUTH-1) | Auth request schemas forbid unknown fields; validation errors no longer echo submitted values (`backend/app/core/exceptions.py`, `test_register_validation`, `test_validation_errors_do_not_echo_the_pin`). | Same for every future endpoint. Offer schemas forbid unknown fields (no client `user_id`/`status`/`matched_amount`/`version`); amounts and rates are strings, extra decimals refused not rounded (`test_client_cannot_set_server_fields`, `test_offer_rules.py`). |
 
 ## C. API and backend protection
 
@@ -63,10 +63,10 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-020 | DOCUMENTED (+ demo ceiling IMPLEMENTED, `docs/adr/020-official-rate-ceiling.md`) | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding decided: half to even (`docs/adr/019-review-decisions-and-multi-offer-fill.md`). |
+| SEC-020 | DOCUMENTED (+ ceiling IMPLEMENTED in the app and, for offers, on the server — ADR-020/029, `test_offers_api.py`) | Standing Standards §7.2 rate rules; `docs/adr/001-*` state machine. | Trades API slice. Rounding decided: half to even (`docs/adr/019-review-decisions-and-multi-offer-fill.md`). |
 | SEC-021 | DOCUMENTED | `webhook_shared_secret` placeholder only; Banking Integration Spec. | Signature check, replay window, `provider_event_id` idempotency (`docs/adr/002-*` §4.5). |
 | SEC-022 | IMPLEMENTED (demo) | Release builds never advance a trade on the user's "I have paid" (`tradeStore.ts`, test "SEC-01"). | Server: only partner evidence moves state. |
-| SEC-023 | DOCUMENTED | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
+| SEC-023 | IMPLEMENTED (partial, offers only) — persisted 24-hour idempotency on offer publish, row locks on edit/withdraw, `0 ≤ matched ≤ original` CHECK (ADR-029) | `docs/adr/001-*`; demo phases guarded (`trade.test.tsx`). | PostgreSQL-authoritative state machine with row locks and idempotency keys (Standing Standards §6–7). |
 | SEC-024 | DOCUMENTED | `docs/adr/002-*`; Appendix D. | Reconciliation jobs and mismatch alerts. |
 | SEC-025 | IMPLEMENTED (partial, demo) | Step-up on beneficiary changes and on the whole order incl. payout accounts; own-name payout accounts only; new accounts held 24 hours (`docs/adr/022-payout-destination-welcome-location.md`); TOTP replay blocked. | 24-hour payout hold, new-device alerts, server quote locking. Server: `users.payout_hold_until` set for 24 h after recovery or authenticator reset (ADR-026); payout endpoints must enforce it. |
 

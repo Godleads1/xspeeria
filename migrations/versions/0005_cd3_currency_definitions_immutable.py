@@ -64,6 +64,18 @@ AUTH_TABLES = (
 )
 
 
+#: Fixed text; ``__ROLE__`` is replaced with the module constant ``APP_ROLE``, never input.
+_CREATE_ROLE_SQL = """
+DO $do$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '__ROLE__') THEN
+        CREATE ROLE __ROLE__ NOLOGIN;
+    END IF;
+END
+$do$;
+"""
+
+
 def upgrade() -> None:
     # --- Stage 1: triggers --------------------------------------------------------------
     op.execute(
@@ -97,17 +109,7 @@ def upgrade() -> None:
     )
 
     # --- Stage 2: the non-owning runtime role --------------------------------------------
-    op.execute(
-        f"""
-        DO $do$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{APP_ROLE}') THEN
-                CREATE ROLE {APP_ROLE} NOLOGIN;
-            END IF;
-        END
-        $do$;
-        """
-    )
+    op.execute(_CREATE_ROLE_SQL.replace("__ROLE__", APP_ROLE))
     op.execute(f"GRANT USAGE ON SCHEMA public TO {APP_ROLE}")
     op.execute(f"REVOKE ALL ON currency_definitions FROM PUBLIC, {APP_ROLE}")
     op.execute(f"GRANT SELECT, INSERT ON currency_definitions TO {APP_ROLE}")

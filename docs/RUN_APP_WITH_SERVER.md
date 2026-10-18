@@ -16,6 +16,8 @@ Copy `.env.example` to `.env`, then set:
 APP_ENV=local
 DATABASE_URL=postgresql+asyncpg://xspeeria_dev:xspeeria_dev_local_only@127.0.0.1:5432/xspeeria_dev
 DEV_SMS=true
+# Offers need an ID check; no ID-check provider exists yet. On your own computer only:
+KYC_DEV_BYPASS=true
 ```
 
 Generate the two keys and paste them in (never share or commit them):
@@ -30,6 +32,7 @@ python -c "import base64,os;print('MFA_ENCRYPTION_KEY=' + base64.b64encode(os.ur
 ```bash
 uv sync
 uv run alembic upgrade head
+(cd backend && uv run python -m app.cli.currency_definitions)   # adds NGN, USD, GBP, EUR once
 cd backend
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```

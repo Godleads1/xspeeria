@@ -48,10 +48,13 @@ APPROVED_TABLES = {
     "recovery_codes",
     "trusted_devices",
     "step_up_grants",
+    "offers",
+    "idempotency_records",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
-# Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005".
-EXPECTED_HEAD = "0005"
+# Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
+# 4.1C offers (ADR-029) -> "0006".
+EXPECTED_HEAD = "0006"
 
 
 def _config(database_url: str) -> Config:
@@ -62,6 +65,7 @@ def _config(database_url: str) -> Config:
     config.attributes["database_url"] = database_url
     # Round-trip tests remove CD3 on their own throwaway database (ADR-028, H9).
     config.attributes["cd3_downgrade"] = "authorized"
+    config.attributes["records_downgrade"] = "authorized"
     return config
 
 
@@ -193,7 +197,6 @@ class TestMetadataDriftGuard:
 
     def test_no_domain_table_is_declared_anywhere(self) -> None:
         forbidden = {
-            "offers",
             "matches",
             "transactions",
             "settlements",
@@ -202,8 +205,7 @@ class TestMetadataDriftGuard:
             "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
-            "idempotency_records",
-        }  # "users" left this list with Milestone AUTH-1 (ADR-025)
+        }  # "users" left with AUTH-1 (ADR-025); "offers", "idempotency_records" with 4.1C (ADR-029)
         leaked = set(Base.metadata.tables) & forbidden
         assert not leaked, f"domain tables declared before their approved batch: {sorted(leaked)}"
 
@@ -291,7 +293,6 @@ class TestAlembicModelDiscovery:
 
     def test_env_py_import_chain_registers_no_future_table(self) -> None:
         forbidden = {
-            "offers",
             "matches",
             "transactions",
             "settlements",
@@ -299,8 +300,7 @@ class TestAlembicModelDiscovery:
             "payout_executions",
             "kyc_cases",
             "kyc_profiles",
-            "beneficiary_accounts",
-            "idempotency_records",  # "users": approved by AUTH-1 (ADR-025)
+            "beneficiary_accounts",  # users: AUTH-1; offers, idempotency_records: 4.1C
         }
         snippet = (
             f"{self._app_import_lines()}\n"

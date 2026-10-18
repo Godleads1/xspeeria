@@ -22,10 +22,9 @@ name that ships in a public API response.
 * `VAL_422_RATE_NOT_POSITIVE` -- **identifier RATIFIED, HUMAN-APPROVED 2026-08-25** (§4.2).
 * `SYS_409_IDEMPOTENCY_KEY_REUSED` -- existing catalogue entry, meaning broadened
   2026-08-24; no new identifier introduced.
-* `VAL_422_RATE_ABOVE_CEILING` -- **semantics HUMAN-APPROVED; the identifier itself is
-  PROPOSED, NOT ratified** (§4.2 records it as *"proposed name"*). It supersedes
-  `VAL_422_RATE_OUT_OF_BAND`. The name must not be treated as final, must not be renamed
-  here, and must not be raised by any route until it is ratified.
+* `VAL_422_RATE_ABOVE_CEILING` -- **identifier RATIFIED, HUMAN-APPROVED 2026-10-18**
+  (ADR-029; §4.2). It supersedes `VAL_422_RATE_OUT_OF_BAND`. Raised by the offer routes
+  (Milestone 4.1C).
 
 The **runtime rule these codes express is settled and unchanged**: a rate `<= 0` is a
 domain-validity failure returning `VAL_422_RATE_NOT_POSITIVE`; a **positive** rate above
