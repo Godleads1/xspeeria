@@ -20,6 +20,7 @@ export default function TakeRoute(): ReactElement {
       source={takeServer}
       onBack={() => router.back()}
       onDone={() => router.back()} // back to the Market tab, which re-reads the offers
+      onDeals={() => router.replace('/market/deals')}
     />
   );
 }

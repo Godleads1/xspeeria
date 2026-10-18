@@ -47,7 +47,10 @@ export function TakeOfferScreen({
   source,
   onBack,
   onDone,
+  onDeals,
 }: {
+  /** Opens My Deals (ADR-033). */
+  onDeals?: () => void;
   offerId: string;
   source: TakeSource;
   onBack: () => void;
@@ -137,6 +140,11 @@ export function TakeOfferScreen({
           the partner bank’s escrow account — those steps are coming soon. Xspeeria never holds your money.
         </Text>
         <PrimaryButton testID="take-done" label="Done" onPress={onDone} />
+        {onDeals ? (
+          <Pressable testID="take-see-deals" accessibilityRole="button" onPress={onDeals} hitSlop={8} style={styles.seeDeals}>
+            <Text style={styles.link}>See my deals</Text>
+          </Pressable>
+        ) : null}
       </Screen>
     );
   }
@@ -235,6 +243,7 @@ const styles = themed(() => ({
   line: { ...typography.body, fontSize: 15, color: color.text.secondary },
   strong: { ...brandWeight("700"), color: color.text.primary },
   takeAll: { alignSelf: "flex-end", marginTop: -6 },
+  seeDeals: { alignSelf: "center", paddingVertical: space.xs },
   link: { ...typography.caption, fontSize: 13, color: color.brand.primary },
   error: { ...typography.caption, fontSize: 13, color: color.error.text },
   note: { ...typography.caption, fontSize: 12, color: color.text.secondary },

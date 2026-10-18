@@ -126,3 +126,7 @@ export const takeServer: TakeSource = {
     offersApi.accept(token(), offerId, amount, key, stepUpToken, serverAuth.apiOptions()),
   newKey: () => Crypto.randomUUID(),
 };
+
+export const myDeals = {
+  list: async () => offersApi.myMatches(token(), serverAuth.apiOptions()),
+};

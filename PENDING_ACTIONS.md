@@ -39,6 +39,8 @@ Last updated: 18 Oct 2026.
 - [x] **Authorise acceptance and `Match`** — approved 18 Oct 2026; built (ADR-031), Match only.
 - [ ] **Confirm the Match response details** — *You* (ADR-031 §3): `your_role`, `counter_currency`, the extra `GET /matches/mine`.
 - [x] **Connect the app's "Buy" button to taking an offer** — *Build* — done 18 Oct 2026 for development builds (ADR-032).
+- [x] **My Deals screen** — *Build* — done 18 Oct 2026 for development builds (ADR-033).
+- [ ] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build*; server endpoints exist.
 - [ ] **Next milestone: payout accounts and preparation** — *You* to authorise; needs the preparation stage names and window length (Standing Standards §15 rows 9–10).
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
