@@ -7,8 +7,8 @@
  * can fill. Xspeeria never holds the money: a match leads to bank escrow, not a balance.
  *
  * Demo builds use mock data. With `server` (a development build pointed at a real server,
- * ADR-030) Buy lists real offers and Sell's "Create Offer" publishes one; buy requests and
- * taking an offer are not built on the server yet, and the screen says so. All amounts and
+ * ADR-030) Buy lists real offers, tapping one opens Take offer (ADR-032), and Sell's "Create
+ * Offer" publishes one; buy requests are not built on the server yet, and the screen says so. All amounts and
  * rates are parsed to integers (`money.ts`); the server re-validates everything.
  */
 
@@ -213,15 +213,11 @@ export function MarketScreen({
   };
 
   const take = (listing: Listing): void => {
-    if (server) {
-      setNotice({
-        ok: false,
-        text: listing.own
-          ? "This is your offer. Manage it under ⋮ › My Offers."
-          : "Taking an offer is coming soon.",
-      });
+    if (server && listing.own) {
+      setNotice({ ok: false, text: "This is your offer. Manage it under ⋮ › My Offers." });
       return;
     }
+    // Server mode: the route opens Take offer (ADR-032), which reads the offer fresh.
     onTakeListing?.(listing, side);
   };
   const canCreate = ready && !busy && (server !== null || onCreate !== undefined);

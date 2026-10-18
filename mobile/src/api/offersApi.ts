@@ -28,6 +28,19 @@ export interface ListingsPage {
   next_offset: number | null;
 }
 
+/** A Match (ADR-031): who agreed to take how much at what rate. Information, not money. */
+export interface ServerMatch {
+  match_id: string;
+  offer_id: string;
+  currency: string;
+  counter_currency: string;
+  allocated_amount: string;
+  agreed_rate: string;
+  accepted_at: string;
+  server_order_key: string;
+  your_role: 'taker' | 'offer_owner';
+}
+
 export interface NewOffer {
   source_currency: string;
   target_currency: string;
@@ -58,6 +71,20 @@ export const offersApi = {
       body: { desired_rate: desiredRate },
       ...x,
     }),
+  get: (token: string, offerId: string, x: Extra = {}) =>
+    apiRequest<ServerOffer>('GET', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),
+  /** Take some or all of an offer. Needs a `trade.accept` step-up token (ADR-026/031). */
+  accept: (token: string, offerId: string, amount: string, idempotencyKey: string, stepUpToken: string | null, x: Extra = {}) =>
+    apiRequest<ServerMatch>('POST', `/api/v1/offers/${encodeURIComponent(offerId)}/accept`, {
+      token,
+      body: { accepted_amount: amount },
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+        ...(stepUpToken ? { 'X-Step-Up-Token': stepUpToken } : {}),
+      },
+      ...x,
+    }),
+  myMatches: (token: string, x: Extra = {}) => apiRequest<ServerMatch[]>('GET', '/api/v1/matches/mine', { token, ...x }),
   withdraw: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('DELETE', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),
 };

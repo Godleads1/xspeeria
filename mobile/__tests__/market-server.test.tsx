@@ -107,16 +107,18 @@ describe('Market screen with a server (ADR-030)', () => {
     expect(screen.getByTestId('listing-a1')).toBeTruthy();
   });
 
-  it('says taking an offer is coming, and never opens a trade', async () => {
-    const server = fakeServer();
+  it('opens Take offer for someone else’s offer, but not for your own', async () => {
+    const server = fakeServer([offer(), offer({ offer_id: 'own1', is_own: true, desired_rate: '1330.00' })]);
     const onTake = jest.fn();
     await render(<MarketScreen server={server} onTakeListing={onTake} />);
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
     await flush();
-    await fireEvent.press(screen.getByTestId('listing-a1-action'));
-    expect(screen.getByTestId('market-notice')).toHaveTextContent(/Taking\ an\ offer\ is\ coming\ soon\./);
+    await fireEvent.press(screen.getByTestId('listing-own1-action'));
+    expect(screen.getByTestId('market-notice')).toHaveTextContent(/This is your offer/);
     expect(onTake).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('listing-a1-action'));
+    expect(onTake).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), 'buy');
   });
 
   it('publishes a sell offer with exact strings and one key across retries', async () => {
