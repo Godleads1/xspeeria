@@ -8,7 +8,7 @@ Last updated: 18 Oct 2026.
 ## 1. Next build step (agreed)
 
 - [x] **Connect the mobile app to the server sign-in and 2FA** — *Build* — done 18 Oct 2026 for development builds (ADR-027, `docs/RUN_APP_WITH_SERVER.md`). Still to connect:
-  - Security screen 2FA management (replace authenticator, new recovery codes) — server endpoints exist.
+  - ~~Security screen 2FA management~~ — done (ADR-034).
   - Face ID log-in (needs passkeys).
   - Profile name and details from KYC (Home still shows the demo name).
 - [ ] *(original plan, for reference)* **Connect the mobile app to the server sign-in and 2FA**
@@ -40,7 +40,7 @@ Last updated: 18 Oct 2026.
 - [ ] **Confirm the Match response details** — *You* (ADR-031 §3): `your_role`, `counter_currency`, the extra `GET /matches/mine`.
 - [x] **Connect the app's "Buy" button to taking an offer** — *Build* — done 18 Oct 2026 for development builds (ADR-032).
 - [x] **My Deals screen** — *Build* — done 18 Oct 2026 for development builds (ADR-033).
-- [ ] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build*; server endpoints exist.
+- [x] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build* — done 18 Oct 2026 for development builds (ADR-034).
 - [ ] **Next milestone: payout accounts and preparation** — *You* to authorise; needs the preparation stage names and window length (Standing Standards §15 rows 9–10).
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)

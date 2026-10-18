@@ -104,6 +104,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `031-milestone-4-1d-accept-and-match.md` | Milestone 4.1D: `POST /offers/{id}/accept` creates a Match (information, not money) under the offer row lock with 24-hour idempotency and a `trade.accept` authenticator approval; minimum or exact rest; Match only (no Transaction yet); 60 market requests a minute per user (DEC-037) | **APPROVED** — 2026-10-18 |
 | `032-app-take-offer.md` | App: Take offer screen — fresh offer read, amount (Take all), authenticator code → step-up → accept with one Idempotency-Key per take; Deal recorded screen (DEC-038) | **PROPOSED** — 2026-10-18 |
 | `033-app-my-deals.md` | App: My Deals (Market ⋮ and after a take) — deals from both sides with exact naira total, fixed rate, date, and what comes next (DEC-039) | **PROPOSED** — 2026-10-18 |
+| `034-app-two-factor-settings.md` | App: 2FA settings on the server — new recovery codes and replacing the authenticator, each after a server-checked code; replacement ends trust everywhere and holds payouts 24 h (DEC-040) | **PROPOSED** — 2026-10-18 |
 
 ### Accounting policy is not architecture
 

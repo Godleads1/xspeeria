@@ -57,6 +57,26 @@ export const authApi = {
       '/api/v1/auth/step-up',
       { token: accessToken, body: { action, otp_code: otpCode }, ...x },
     ),
+  /** New recovery codes; the old ones stop working (step-up: recovery_codes.regenerate). */
+  regenerateRecoveryCodes: (accessToken: string, stepUpToken: string, x: Extra = {}) =>
+    apiRequest<{ recovery_codes: string[] }>('POST', '/api/v1/users/me/recovery-codes', {
+      token: accessToken,
+      headers: { 'X-Step-Up-Token': stepUpToken },
+      ...x,
+    }),
+  /** A new authenticator secret, not active until confirmed (step-up: mfa.change). */
+  replaceStart: (accessToken: string, stepUpToken: string, x: Extra = {}) =>
+    apiRequest<{ secret: string; otpauth_uri: string }>('POST', '/api/v1/users/me/mfa/replace/start', {
+      token: accessToken,
+      headers: { 'X-Step-Up-Token': stepUpToken },
+      ...x,
+    }),
+  replaceConfirm: (accessToken: string, otpCode: string, x: Extra = {}) =>
+    apiRequest<void>('POST', '/api/v1/users/me/mfa/replace/confirm', {
+      token: accessToken,
+      body: { otp_code: otpCode },
+      ...x,
+    }),
   me: (accessToken: string, x: Extra = {}) =>
     apiRequest<Profile>('GET', '/api/v1/users/me', { token: accessToken, ...x }),
 };

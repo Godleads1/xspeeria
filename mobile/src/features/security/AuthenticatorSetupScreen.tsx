@@ -99,8 +99,10 @@ export function AuthenticatorSetupScreen({
         .confirm(typed)
         .then(
           (result) => {
-            setCodes(result);
             setError(null);
+            // A replacement returns no new codes (the old ones still work): finish here.
+            if (result.length === 0) onDone();
+            else setCodes(result);
           },
           (e: unknown) => setError(engine.messageFor(e)),
         )
