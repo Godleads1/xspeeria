@@ -50,8 +50,8 @@ APPROVED_TABLES = {
     "step_up_grants",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
-# Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004".
-EXPECTED_HEAD = "0004"
+# Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005".
+EXPECTED_HEAD = "0005"
 
 
 def _config(database_url: str) -> Config:
@@ -60,6 +60,8 @@ def _config(database_url: str) -> Config:
     config.set_main_option("script_location", str(MIGRATIONS_DIR))
     config.cmd_opts = None
     config.attributes["database_url"] = database_url
+    # Round-trip tests remove CD3 on their own throwaway database (ADR-028, H9).
+    config.attributes["cd3_downgrade"] = "authorized"
     return config
 
 

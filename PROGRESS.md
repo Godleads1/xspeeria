@@ -24,8 +24,8 @@ governance gates** ahead of Milestone 4.1C.
 | **Milestone 4.1A** — Stage 4 persistence foundation | **COMPLETE** — PR #6, `f5ebc12`, 2026-08-27 |
 | **Milestone 4.1B** — money primitives and currency definitions | **COMPLETE AND MERGED** — PR #8, `70f8f664aacf9f6dad7c2749dc3d39633a87f70a`, 2026-08-30. PostgreSQL verification gate **DISCHARGED** by Step 9 |
 | **Step 9** — PostgreSQL behavioural verification of `currency_definitions` | **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI REPRODUCED** — PR #10, `5445d6155746a5e6ae65ce9a438be41784a97860`, 2026-08-31 |
-| **GATE 4.1B-CD3** — currency-definition immutability | **HUMAN DECISION APPROVED — IMPLEMENTATION NOT YET AUTHORIZED** — 2026-09-01 |
-| **Milestone 4.1C** | **NOT STARTED — NOT AUTHORIZED** |
+| **GATE 4.1B-CD3** — currency-definition immutability | **DISCHARGED 2026-10-18** — Stage 1 triggers + Stage 2 runtime role built and verified (migration 0005, ADR-028); decided 2026-09-01 |
+| **Milestone 4.1C** — offers | **AUTHORIZED 2026-10-18** (ADR-028, DEC-034) — offers only; acceptance/Match is the next milestone |
 | **Milestone AUTH-2** — server 2FA (TOTP, recovery codes, trusted devices, step-up; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/026-auth-2-two-factor.md` (DEC-032) |
 | **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **COMPLETE** — PR #18; **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
 

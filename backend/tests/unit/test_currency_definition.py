@@ -426,4 +426,5 @@ class TestPackageRegistration:
             "0002_currency_definitions.py",
             "0003_identity_tables_auth_1.py",  # Milestone AUTH-1 (ADR-025)
             "0004_two_factor_tables_auth_2.py",  # Milestone AUTH-2 (ADR-026)
+            "0005_cd3_currency_definitions_immutable.py",  # CD3 enforcement (ADR-028)
         ]

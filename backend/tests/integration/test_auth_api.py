@@ -70,6 +70,8 @@ def migrated(database_url: str) -> Iterator[None]:
     config = Config(str(ALEMBIC_INI))
     config.set_main_option("script_location", str(MIGRATIONS_DIR))
     config.attributes["database_url"] = database_url
+    # Round-trip tests remove CD3 on their own throwaway database (ADR-028, H9).
+    config.attributes["cd3_downgrade"] = "authorized"
     command.upgrade(config, "head")
     yield
 
