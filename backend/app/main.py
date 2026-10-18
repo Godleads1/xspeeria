@@ -7,7 +7,8 @@ request log. No money-bearing router exists.
 Sign-in needs ``JWT_SECRET_KEY`` (at least 32 characters) and ``MFA_ENCRYPTION_KEY`` (base64 of
 32 bytes, ADR-026). Without either, the auth routes answer
 ``SYS_503_SERVICE_UNAVAILABLE`` and the rest of the application still boots. No SMS provider
-is connected (ADR-025 §2): tests inject one through ``auth_runtime``.
+is connected (ADR-025 §2): tests inject one through ``auth_runtime``, and ``DEV_SMS=true``
+with ``APP_ENV=local`` prints codes to the terminal on a developer's computer (ADR-027).
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import auth, health
 from app.core.auth_tokens import ALGORITHM, TokenKeys
@@ -26,6 +28,7 @@ from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
+from app.providers.sms import DevConsoleSmsSender, SmsSender
 from app.services.auth import AuthRuntime
 
 __all__ = ["build_auth_runtime", "create_app", "app"]
@@ -49,11 +52,16 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         raise ValueError("MFA_ENCRYPTION_KEY is still the .env.example placeholder")
     keys = TokenKeys(settings.jwt_secret_key) if settings.jwt_secret_key else None
     box = SecretBox(settings.mfa_encryption_key) if settings.mfa_encryption_key else None
+    sms: SmsSender | None = None
+    if settings.dev_sms:
+        if settings.app_env != "local":
+            raise ValueError("DEV_SMS is allowed only with APP_ENV=local (ADR-027)")
+        sms = DevConsoleSmsSender()
     return AuthRuntime(
         keys=keys,
         secret_box=box,
         hasher=PinHasher(),
-        sms=None,
+        sms=sms,
         clock=lambda: datetime.now(UTC),
         address_limiter=SlidingWindowLimiter(
             limit=LOGIN_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
@@ -81,6 +89,16 @@ def create_app(
     application.state.auth = auth_runtime or build_auth_runtime(resolved)
     install_exception_handlers(application)
     install_request_logging(application)
+    if resolved.cors_origins:
+        # Only explicitly listed origins (none by default). Native apps do not need CORS;
+        # this exists for a browser build of the app pointed at a local server.
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=resolved.cors_origins,
+            allow_methods=["GET", "POST", "DELETE"],
+            allow_headers=["Authorization", "Content-Type", "X-Step-Up-Token", "X-Request-ID"],
+            allow_credentials=False,
+        )
     application.include_router(health.router)
     application.include_router(auth.router)
 

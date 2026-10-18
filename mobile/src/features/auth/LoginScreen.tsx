@@ -22,7 +22,10 @@ import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import { ActionSheet, FieldInput, OutlinedField } from "../market/controls";
 import { confirmWithBiometrics, type BiometricOutcome } from "./biometrics";
+import { API_BASE_URL } from "../../api/config";
+import { messageFor } from "../../api/client";
 import { DEMO_ACCOUNT } from "./demo";
+import type { LoginOutcome } from "./serverAuth";
 import { PIN_LENGTH } from "./pin";
 import { session, useSession } from "./session";
 import {
@@ -70,12 +73,21 @@ export function LoginScreen({
   onForgot,
   now = Date.now,
   biometrics = confirmWithBiometrics,
+  server = null,
+  onSecondFactor,
 }: {
   onDone: () => void;
   onSignUp: () => void;
   onForgot: () => void;
   now?: () => number;
   biometrics?: (prompt: string) => Promise<BiometricOutcome>;
+  /**
+   * Server mode (ADR-027): log in against the real server. Defaults off; the route turns it
+   * on when the app is built with a server address.
+   */
+  server?: { login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome> } | null;
+  /** Server mode: the PIN was right and 2FA comes next ("mfa"), or set-up ("enrol"). */
+  onSecondFactor?: (step: "mfa" | "enrol") => void;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const s = useSession();
@@ -99,8 +111,28 @@ export function LoginScreen({
   const [error, setError] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
 
+  const [busy, setBusy] = useState(false);
+
+  const submitToServer = async (id: string): Promise<void> => {
+    if (!server) return;
+    const typed = pin;
+    setPin("");
+    setBusy(true);
+    try {
+      const outcome = await server.login(id.trim(), typed, now());
+      session.setRemembered(remember ? id.trim() : null);
+      if (outcome === "signedIn") onDone();
+      else onSecondFactor?.(outcome);
+    } catch (e) {
+      setError(messageFor(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = (): void => {
     const id = mode === "phone" ? fullPhone(country, phone) : email;
+    if (server) return void submitToServer(id);
     const r = session.logIn(id, pin, now(), remember);
     setPin("");
     if (r.ok) return onDone();
@@ -230,6 +262,7 @@ export function LoginScreen({
           Remember me
         </CheckRow>
 
+        {server ? null : (
         <Pressable
           testID="login-faceid"
           accessibilityRole="button"
@@ -239,6 +272,7 @@ export function LoginScreen({
           <Icon name="scan" color={color.text.primary} size={30} />
           <Text style={styles.faceText}>Use face ID</Text>
         </Pressable>
+        )}
 
         {s.endedBy ? (
           <Text testID="login-ended" style={styles.ended} accessibilityLiveRegion="polite">
@@ -247,6 +281,11 @@ export function LoginScreen({
               : "Your session has ended after 7 days. Please log in with your PIN."}
           </Text>
         ) : null}
+        {server ? (
+          <DemoNote testID="login-server">
+            Development build connected to {API_BASE_URL}. Face ID log-in arrives with passkeys.
+          </DemoNote>
+        ) : (
         <DemoNote testID="login-demo">
           Demo app: log in with {DEMO_ACCOUNT.phone} or {DEMO_ACCOUNT.email},
           PIN {DEMO_ACCOUNT.pin}.{" "}
@@ -269,13 +308,14 @@ export function LoginScreen({
             Log in as if from the United States
           </Text>
         </DemoNote>
+        )}
 
         <View style={styles.actions}>
           <PrimaryButton
             testID="login-submit"
             label="Login"
             onPress={submit}
-            disabled={pin.length !== PIN_LENGTH}
+            disabled={pin.length !== PIN_LENGTH || busy}
           />
           <GhostButton
             testID="login-signup"

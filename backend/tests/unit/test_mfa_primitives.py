@@ -176,3 +176,35 @@ class TestStartupWiring:
                     mfa_encryption_key="CHANGE_ME",
                 )
             )
+
+
+class TestDevSms:
+    """ADR-027: the developer SMS exists only on a developer's own computer."""
+
+    def test_allowed_only_in_local_mode(self) -> None:
+        from app.core.config import Settings
+        from app.main import build_auth_runtime
+        from app.providers.sms import DevConsoleSmsSender
+
+        local = build_auth_runtime(Settings(_env_file=None, dev_sms=True))  # type: ignore[call-arg]
+        assert isinstance(local.sms, DevConsoleSmsSender)
+        for env in ("development", "staging", "production"):
+            with pytest.raises(ValueError, match="APP_ENV=local"):
+                build_auth_runtime(Settings(_env_file=None, dev_sms=True, app_env=env))  # type: ignore[call-arg]
+        assert build_auth_runtime(Settings(_env_file=None)).sms is None  # type: ignore[call-arg]
+
+    def test_prints_to_the_terminal_with_a_masked_number_never_to_logs(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import asyncio
+        import io
+        import logging
+
+        from app.providers.sms import DevConsoleSmsSender
+
+        caplog.set_level(logging.DEBUG)
+        out = io.StringIO()
+        asyncio.run(DevConsoleSmsSender(out).send_code("+2348038383838", "123456"))
+        assert "***3838" in out.getvalue() and "123456" in out.getvalue()
+        assert "+2348038383838" not in out.getvalue()
+        assert "123456" not in caplog.text

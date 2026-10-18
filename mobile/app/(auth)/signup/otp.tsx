@@ -2,7 +2,10 @@ import type { ReactElement } from 'react';
 import { Redirect, useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 
+import { SERVER_MODE } from '../../../src/api/config';
+import { ServerCodeScreen } from '../../../src/features/auth/ServerScreens';
 import { CodeScreen, IDENTITY_BODY } from '../../../src/features/auth/SignupScreens';
+import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { useThemeMode } from '../../../src/theme';
 
@@ -11,6 +14,27 @@ export default function SignupOtpRoute(): ReactElement {
   const router = useRouter();
   const draft = useSignup();
   if (!draft.phone) return <Redirect href="/signup/start" />;
+
+  if (SERVER_MODE) {
+    // ADR-027: the code was sent by the server after phone, email and PIN; it checks it too.
+    const { phone, email, pin } = draft;
+    if (!email || !pin || !draft.pinConfirmed) return <Redirect href="/signup/start" />;
+    return (
+      <ServerCodeScreen
+        phone={phone}
+        verify={(code) => serverAuth.verifyPhone(phone, code)}
+        resend={() => serverAuth.register({ phone, email, pin })}
+        onVerified={() => {
+          // The PIN is on the server now; the app keeps no copy.
+          signup.update({ identityVerified: true, pin: null });
+          router.replace('/signup/authenticator');
+        }}
+        onExpired={() => router.replace('/signup/details')}
+        onBack={() => router.back()}
+      />
+    );
+  }
+
   return (
     <CodeScreen
       testID="signup-otp"

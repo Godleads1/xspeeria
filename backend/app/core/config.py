@@ -131,6 +131,8 @@ class Settings(BaseSettings):
     #: AES-256-GCM key for TOTP secrets at rest (ADR-026): base64 of 32 random bytes.
     #: Without it the sign-in routes are switched off, since no session can exist without 2FA.
     mfa_encryption_key: str | None = None
+    #: ADR-027: print SMS codes to the server terminal. Refused unless app_env is "local".
+    dev_sms: bool = False
 
     cors_allowed_origins: str = ""
 

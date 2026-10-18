@@ -7,7 +7,11 @@ Last updated: 18 Oct 2026.
 
 ## 1. Next build step (agreed)
 
-- [ ] **Connect the mobile app to the server sign-in and 2FA** — *Build*
+- [x] **Connect the mobile app to the server sign-in and 2FA** — *Build* — done 18 Oct 2026 for development builds (ADR-027, `docs/RUN_APP_WITH_SERVER.md`). Still to connect:
+  - Security screen 2FA management (replace authenticator, new recovery codes) — server endpoints exist.
+  - Face ID log-in (needs passkeys).
+  - Profile name and details from KYC (Home still shows the demo name).
+- [ ] *(original plan, for reference)* **Connect the mobile app to the server sign-in and 2FA**
   - Replace the demo log-in and sign-up with the real server (`/api/v1/auth/...`).
   - Add the authenticator set-up screens (QR code and secret from the server, first code, recovery codes shown once).
   - Keep the refresh token and the trusted-device token in the phone's secure storage.

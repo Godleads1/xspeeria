@@ -2,6 +2,8 @@ import type { ReactElement } from "react";
 import { useRouter } from "expo-router";
 
 import { LoginScreen } from "../../src/features/auth/LoginScreen";
+import { SERVER_MODE } from "../../src/api/config";
+import { serverAuth } from "../../src/features/auth/serverAuth";
 import { session } from "../../src/features/auth/session";
 import { kycRegions } from "../../src/features/profile/kycRegions";
 import { useThemeMode } from "../../src/theme";
@@ -22,6 +24,10 @@ export default function LoginRoute(): ReactElement {
       }
       onSignUp={() => router.push("/signup/start")}
       onForgot={() => router.push("/forgot")}
+      server={SERVER_MODE ? serverAuth : null}
+      onSecondFactor={(step) =>
+        router.push(step === "mfa" ? "/mfa" : "/signup/authenticator")
+      }
     />
   );
 }
