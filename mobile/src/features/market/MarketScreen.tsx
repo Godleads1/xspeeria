@@ -57,7 +57,7 @@ export interface TradeRequest {
 const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
 
 /** Figma Market ⋮ menu (product-owner reference, 2026-10-17). */
-export type MenuKey = "requests" | "offers" | "disputes" | "forecast";
+export type MenuKey = "requests" | "offers" | "deals" | "disputes" | "forecast";
 const MENU: readonly { key: MenuKey; label: string; hint?: string }[] = [
   { key: "requests", label: "My Requests", hint: "(Buy)" },
   { key: "offers", label: "My Offers", hint: "(Sell)" },
@@ -476,7 +476,11 @@ export function MarketScreen({
         testID="market-menu"
         visible={menu}
         onClose={() => setMenu(false)}
-        actions={MENU.map((item) => ({
+        actions={(server
+          ? // Server builds also list the deals you made or received (ADR-033).
+            [...MENU.slice(0, 2), { key: "deals" as const, label: "My Deals" }, ...MENU.slice(2)]
+          : MENU
+        ).map((item) => ({
           ...item,
           onPress: () => {
             setMenu(false);
