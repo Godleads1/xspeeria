@@ -38,7 +38,7 @@ Last updated: 18 Oct 2026.
 - [x] **Offer request limit** — decided 18 Oct 2026: 60 a minute per user (ADR-031).
 - [x] **Authorise acceptance and `Match`** — approved 18 Oct 2026; built (ADR-031), Match only.
 - [ ] **Confirm the Match response details** — *You* (ADR-031 §3): `your_role`, `counter_currency`, the extra `GET /matches/mine`.
-- [ ] **Connect the app's "Buy" button to taking an offer** — *Build* (authenticator code, then the Match).
+- [x] **Connect the app's "Buy" button to taking an offer** — *Build* — done 18 Oct 2026 for development builds (ADR-032).
 - [ ] **Next milestone: payout accounts and preparation** — *You* to authorise; needs the preparation stage names and window length (Standing Standards §15 rows 9–10).
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)

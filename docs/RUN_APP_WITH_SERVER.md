@@ -74,6 +74,10 @@ Needs `KYC_DEV_BYPASS=true` in `.env` and the currency command from step 3.
    show without any name.
 3. **⋮ › My Offers**: see your offers and **Withdraw** one (tap twice).
 
-Buy requests and taking an offer are not built yet; the app says "coming soon". An offer is a
+4. **Take an offer** (needs a second account, e.g. on another phone): **Market › Buy › USD**,
+   tap **Buy** on the other account's offer, enter an amount and your authenticator code, then
+   **Take offer**. The deal is recorded at that rate.
+
+Buy requests, payout accounts and paying into escrow are not built yet; the app says "coming soon". An offer is a
 record of what you want to exchange. No money moves.
 

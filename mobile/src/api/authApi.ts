@@ -50,6 +50,13 @@ export const authApi = {
     apiRequest<Tokens>('POST', '/api/v1/auth/refresh', { token: refreshToken, ...x }),
   logout: (accessToken: string, x: Extra = {}) =>
     apiRequest<void>('POST', '/api/v1/auth/logout', { token: accessToken, ...x }),
+  /** One fresh authenticator code → a one-use approval for one action, valid 5 minutes. */
+  stepUp: (accessToken: string, action: string, otpCode: string, x: Extra = {}) =>
+    apiRequest<{ step_up_token: string; action: string; expires_in_seconds: number }>(
+      'POST',
+      '/api/v1/auth/step-up',
+      { token: accessToken, body: { action, otp_code: otpCode }, ...x },
+    ),
   me: (accessToken: string, x: Extra = {}) =>
     apiRequest<Profile>('GET', '/api/v1/users/me', { token: accessToken, ...x }),
 };

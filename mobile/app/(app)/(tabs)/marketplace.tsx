@@ -35,6 +35,10 @@ export default function MarketplaceRoute(): ReactElement {
           : undefined
       }
       onTakeListing={(listing, side) => {
+        if (SERVER_MODE) {
+          router.push({ pathname: '/market/take', params: { offer: listing.id } });
+          return;
+        }
         const amount = tradeStore.remainingMinor(listing);
         if (amount <= 0) return;
         router.push({
