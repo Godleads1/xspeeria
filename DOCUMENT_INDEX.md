@@ -121,6 +121,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `048-biometric-unlock.md` | Face ID/fingerprint unlock after the 5-minute idle lock (server builds): per-session key behind the biometric prompt, trusted devices only, never past 7 days, wrong key ends the session (DEC-055) | **PROPOSED** — 2026-10-19 |
 | `049-profile-images-cloudflare-r2.md` | Profile photo and banner in a private Cloudflare R2 bucket with server-issued upload links; supersedes the Firebase Storage answer (DEC-056) | **APPROVED (vendor)**, design PROPOSED — 2026-10-19 |
 | `050-support-through-disputes-referral-on-hold.md` | Support tickets run through the admin Disputes module; referral on hold until reward rules are given (DEC-057) | **APPROVED** — 2026-10-19 |
+| `051-admin-console-decisions.md` | Admin console scope: email-code staff 2FA (hardware key for Super Admin before live money), escrow float as a record not revenue, one approver never on own request, Cards/Adverts hidden, disputes from app and staff, Figma corrections (DEC-058) | **APPROVED** — 2026-10-19 |
 
 ### Accounting policy is not architecture
 
