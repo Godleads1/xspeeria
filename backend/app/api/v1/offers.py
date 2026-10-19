@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Response, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import (
@@ -28,6 +29,9 @@ from app.api.auth_deps import (
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.domain.kyc_rules import COUNTRIES
+from app.domain.settlement_rules import JURISDICTION
+from app.models.marketplace import Offer
 from app.schemas.offers import (
     AcceptRequest,
     AddPayoutAccountRequest,
@@ -90,6 +94,42 @@ async def kyc_approved(
     )
 
 
+async def require_pay_country(
+    principal: Principal,
+    currency: str,
+    settings: Settings,
+    runtime: AuthRuntime,
+    db: AsyncSession,
+) -> None:
+    """ADR-042: paying in a currency needs an approved check in that currency's country."""
+    if settings.kyc_dev_bypass and settings.app_env == "local":
+        return
+    country = JURISDICTION.get(currency.upper())
+    if country is not None and country in COUNTRIES:
+        ok = await KycService(db, runtime.clock, runtime.kyc_provider).is_approved(
+            principal.user_id, country
+        )
+        await db.rollback()
+        if ok:
+            return
+        name = COUNTRIES[country][1]
+        raise AppError(
+            "AUTH_403_KYC_REQUIRED",
+            f"Verify your identity for {name} to pay in {currency.upper()}.",
+            status_code=status.HTTP_403_FORBIDDEN,
+            details={"country": country},
+        )
+    # A currency with no country cannot be verified for (fail closed).
+    raise AppError(
+        "AUTH_403_KYC_REQUIRED",
+        "Trading in this currency is not available.",
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
+Settings_ = Annotated[Settings, Depends(get_app_settings)]
+Runtime = Annotated[AuthRuntime, Depends(get_auth_runtime)]
+Db = Annotated[AsyncSession, Depends(get_db_session)]
 Service = Annotated[OfferService, Depends(get_offer_service)]
 Verified = Annotated[Principal, Depends(kyc_approved)]
 IdempotencyKey = Annotated[uuid.UUID, Header(alias="Idempotency-Key")]
@@ -114,8 +154,16 @@ Auth = Annotated[AuthService, Depends(get_auth_service)]
     summary="Publish an offer (repeat-safe with Idempotency-Key)",
 )
 async def create_offer(
-    body: CreateOfferRequest, principal: Verified, service: Service, key: IdempotencyKey
+    body: CreateOfferRequest,
+    principal: Verified,
+    service: Service,
+    key: IdempotencyKey,
+    settings: Settings_,
+    runtime: Runtime,
+    db: Db,
 ) -> Any:
+    # The maker pays the source currency (ADR-042).
+    await require_pay_country(principal, body.source_currency, settings, runtime, db)
     result = await service.create(
         principal,
         key,
@@ -189,9 +237,17 @@ async def accept_offer(
     matches: Matches,
     auth: Auth,
     key: IdempotencyKey,
+    settings: Settings_,
+    runtime: Runtime,
+    db: Db,
     step_up_token: StepUpToken = None,
 ) -> Any:
     """Records a Match; no money moves. Same key + same request returns the first answer."""
+    # The taker pays the offer's target currency (ADR-042). Unknown offers: the service 404s.
+    pays = await db.scalar(select(Offer.target_currency).where(Offer.id == offer_id))
+    await db.rollback()
+    if pays is not None:
+        await require_pay_country(principal, pays, settings, runtime, db)
 
     async def confirm() -> None:
         # Shares this request's database session, so the approval is spent in the same commit.

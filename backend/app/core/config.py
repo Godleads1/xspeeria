@@ -164,6 +164,9 @@ class Settings(BaseSettings):
     #: ADR-041: base64 of 32 random bytes; keys the ID-document hash (one person, one
     #: verified account). Required whenever Didit is configured. Set once per environment.
     kyc_identity_key: str | None = None
+    #: ADR-042: request header carrying the client's country from a trusted proxy (e.g.
+    #: ``CF-IPCountry``). Only used to suggest a new country's check; grants nothing.
+    client_country_header: str | None = None
     #: ADR-037: the pretend partner bank (escrow simulation). In memory, moves no money.
     #: Refused unless app_env is "local". Real partners need legal sign-off (ADR-001 §12).
     pretend_bank: bool = False

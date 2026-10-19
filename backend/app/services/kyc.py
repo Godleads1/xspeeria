@@ -11,6 +11,8 @@
   One person, one verified account (ADR-041): an approval that matches a person already
   verified on another account — same ID document (keyed hash) or a Didit face/document match —
   is held for review instead.
+* Per country (ADR-042): each check verifies one country (NG, GB, US) with an ID issued
+  there; a second country's check must match the identity already on the account.
 * ``is_approved``: what offers, deals and payouts require (contract: AUTH_403_KYC_REQUIRED).
 
 Nothing personal is logged: no names, dates of birth, document data or provider payloads.
@@ -35,11 +37,14 @@ from app.core.logging import get_logger
 from app.domain.kyc_rules import (
     ACTIVE_STATUSES,
     CHECKS_INCOMPLETE,
+    COUNTRIES,
     DUPLICATE_IDENTITY,
+    IDENTITY_MISMATCH,
     KYC_TRANSITIONS,
     Outcome,
     evaluate,
     identity_key,
+    names_match,
     other_account_matches,
 )
 from app.models.kyc import KycCase, KycWebhookEvent
@@ -59,6 +64,14 @@ def _unavailable() -> AppError:
     )
 
 
+def _other_check_open() -> AppError:
+    return AppError(
+        "KYC_409_CASE_ALREADY_ACTIVE",
+        "Finish your other identity check first.",
+        status_code=status.HTTP_409_CONFLICT,
+    )
+
+
 _WORDS = {
     "pending_documents": "Not finished yet. Continue your identity check.",
     "under_review": "Being reviewed. We will let you know the result.",
@@ -68,10 +81,11 @@ _WORDS = {
 }
 
 
-def case_view(case: KycCase | None, url: str | None = None) -> dict[str, Any]:
+def case_view(case: KycCase | None, url: str | None = None, country: str = "NG") -> dict[str, Any]:
     if case is None:
         return {
             "kyc_case_id": None,
+            "country": country,
             "status": "not_started",
             "message": "Verify your identity to trade.",
             "verification_url": None,
@@ -79,6 +93,7 @@ def case_view(case: KycCase | None, url: str | None = None) -> dict[str, Any]:
         }
     return {
         "kyc_case_id": str(case.id),
+        "country": case.country,
         "status": case.status,
         "message": _WORDS.get(case.status) or case.decision_reason,
         "verification_url": url,
@@ -106,37 +121,71 @@ class KycService:
         #: ADR-041: key for the ID-document hash. Without it no approval goes through.
         self._identity_secret = identity_secret
 
-    async def _latest(self, user_id: uuid.UUID) -> KycCase | None:
+    async def _latest(self, user_id: uuid.UUID, country: str) -> KycCase | None:
         case: KycCase | None = await self._db.scalar(
             select(KycCase)
-            .where(KycCase.user_id == user_id)
+            .where(KycCase.user_id == user_id, KycCase.country == country)
             .order_by(KycCase.created_at.desc())
             .limit(1)
         )
         return case
 
-    async def is_approved(self, user_id: uuid.UUID) -> bool:
-        found = await self._db.scalar(
-            select(KycCase.id).where(KycCase.user_id == user_id, KycCase.status == "approved")
-        )
+    async def is_approved(self, user_id: uuid.UUID, country: str | None = None) -> bool:
+        """Approved in ``country``; with no country, approved in at least one (ADR-042)."""
+        query = select(KycCase.id).where(KycCase.user_id == user_id, KycCase.status == "approved")
+        if country is not None:
+            query = query.where(KycCase.country == country)
+        found = await self._db.scalar(query.limit(1))
         return found is not None
 
-    async def current(self, principal: Principal) -> dict[str, Any]:
-        case = await self._latest(principal.user_id)
-        view = case_view(case)
+    async def current(self, principal: Principal, country: str = "NG") -> dict[str, Any]:
+        case = await self._latest(principal.user_id, country)
+        view = case_view(case, country=country)
         await self._db.rollback()
         return view
 
-    async def start(self, principal: Principal) -> dict[str, Any]:
+    async def regions(self, principal: Principal, seen_country: str | None) -> dict[str, Any]:
+        """Each country's status, and a country to suggest (ADR-042 rule 4).
+
+        ``seen_country`` comes from a trusted proxy header; it only ever causes a suggestion.
+        """
+        items = []
+        for code in COUNTRIES:
+            case = await self._latest(principal.user_id, code)
+            items.append({"country": code, "status": case.status if case else "not_started"})
+        await self._db.rollback()
+        by_code = {i["country"]: i["status"] for i in items}
+        suggest = (
+            seen_country
+            if seen_country in COUNTRIES
+            and by_code[seen_country] not in ("approved", *ACTIVE_STATUSES)
+            and any(st == "approved" for st in by_code.values())
+            else None
+        )
+        return {"regions": items, "suggested_country": suggest}
+
+    async def start(self, principal: Principal, country: str = "NG") -> dict[str, Any]:
         if self._provider is None:
             raise _unavailable()
-        latest = await self._latest(principal.user_id)
+        if country not in COUNTRIES:  # pragma: no cover - the API validates first
+            raise _unavailable()
+        latest = await self._latest(principal.user_id, country)
         if latest is not None and latest.status == "approved":
             view = case_view(latest)
             await self._db.rollback()
             return view
         old_id = latest.id if latest is not None and latest.status in ACTIVE_STATUSES else None
+        elsewhere = await self._db.scalar(
+            select(KycCase.id).where(
+                KycCase.user_id == principal.user_id,
+                KycCase.country != country,
+                KycCase.status.in_(tuple(ACTIVE_STATUSES)),
+            )
+        )
         await self._db.rollback()  # no transaction is held across the call to Didit
+        if elsewhere is not None:
+            # Didit resumes one unfinished session per user: finish that one first.
+            raise _other_check_open()
         try:
             session = await self._provider.create_session(str(principal.user_id), {})
         except KycProviderError as exc:
@@ -153,6 +202,9 @@ class KycService:
             if existing.user_id != principal.user_id:  # pragma: no cover - vendor_data is ours
                 await self._db.rollback()
                 raise _unavailable()
+            if existing.country != country:  # pragma: no cover - checked above; a race only
+                await self._db.rollback()
+                raise _other_check_open()
             view = case_view(existing, session.url if existing.status in ACTIVE_STATUSES else None)
             await self._db.rollback()
             return view
@@ -172,6 +224,7 @@ class KycService:
                 id=uuid.uuid4(),
                 user_id=principal.user_id,
                 provider=self._provider.name,
+                country=country,
                 provider_session_id=session.session_id,
                 provider_status=session.status[:32],
                 status="pending_documents",
@@ -183,13 +236,18 @@ class KycService:
         except IntegrityError:
             # A concurrent start recorded it first; show that one.
             await self._db.rollback()
-            other = await self._latest(principal.user_id)
+            other = await self._latest(principal.user_id, country)
             active = other is not None and other.status in ACTIVE_STATUSES
             view = case_view(other, session.url if active else None)
             await self._db.rollback()
             return view
         _logger.info(
-            "kyc_started", extra={"user_id": str(principal.user_id), "kyc_case_id": str(case.id)}
+            "kyc_started",
+            extra={
+                "user_id": str(principal.user_id),
+                "kyc_case_id": str(case.id),
+                "country": country,
+            },
         )
         return case_view(case, session.url)
 
@@ -228,6 +286,29 @@ class KycService:
                 key,
             )
         return outcome, key
+
+    async def _same_person(self, case: KycCase, outcome: Outcome) -> Outcome:
+        """ADR-042 rule 6: a second country's approval must match the account's identity."""
+        known = (
+            await self._db.scalars(
+                select(KycCase).where(
+                    KycCase.user_id == case.user_id,
+                    KycCase.id != case.id,
+                    KycCase.legal_name.is_not(None),
+                    KycCase.status.in_(("approved", "expired")),
+                )
+            )
+        ).all()
+        for other in known:
+            if other.date_of_birth != outcome.date_of_birth or not names_match(
+                str(other.legal_name), str(outcome.legal_name)
+            ):
+                return Outcome(
+                    "under_review",
+                    note="identity differs from the account's",
+                    review_reason=IDENTITY_MISMATCH,
+                )
+        return outcome
 
     async def ingest(self, headers: dict[str, str], raw: bytes) -> WebhookResult:
         if self._provider is None:
@@ -286,10 +367,12 @@ class KycService:
         elif vendor_data != str(case.user_id):
             verdict = "IGNORED_WRONG_USER"
         else:
-            outcome = evaluate(provider_status, decision, now.date())
+            outcome = evaluate(provider_status, decision, now.date(), case.country)
             key: str | None = None
             if outcome is not None and outcome.status == "approved":
                 outcome, key = await self._one_account(case, outcome, decision)
+            if outcome is not None and outcome.status == "approved":
+                outcome = await self._same_person(case, outcome)
             if key is not None and case.identity_key is None and outcome is not None:
                 if outcome.status in ("approved", "under_review"):
                     case.identity_key = key
@@ -323,7 +406,7 @@ class KycService:
                         _logger.error
                         if outcome.review_reason == CHECKS_INCOMPLETE
                         else _logger.warning
-                        if outcome.review_reason == DUPLICATE_IDENTITY
+                        if outcome.review_reason in (DUPLICATE_IDENTITY, IDENTITY_MISMATCH)
                         else _logger.info
                     )
                     log(

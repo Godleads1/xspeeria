@@ -347,7 +347,7 @@ Filtering marketplace offers/requests by currency, amount, or counterparty.
 
 Currency Selector
 
-Selects source/target currency for an FX request (NGN/GBP at launch/pilot; NGN/USD added Year 2).
+Selects source/target currency for an FX request (NGN/GBP at launch/pilot; NGN/USD added Year 2 — **amended 2026-10-19, DEC-050: NGN/USD also at MVP**).
 
 |                      |                                                                                                  |
 |----------------------|--------------------------------------------------------------------------------------------------|

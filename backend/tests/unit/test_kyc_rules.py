@@ -11,7 +11,13 @@ from datetime import date
 import httpx
 import pytest
 
-from app.domain.kyc_rules import age_on, evaluate, identity_key, other_account_matches
+from app.domain.kyc_rules import (
+    age_on,
+    evaluate,
+    identity_key,
+    names_match,
+    other_account_matches,
+)
 from app.providers.didit import DiditClient, KycProviderError, canonical_json, verify_signature
 
 TODAY = date(2026, 10, 19)
@@ -206,3 +212,49 @@ def test_other_account_matches() -> None:
     d = _decision()
     d["ip_analyses"] = [{"matches": [{"status": "Approved", "vendor_data": "user-2"}]}]
     assert not other_account_matches(d, me)
+
+
+# --- per country (ADR-042) ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("country", "issuer", "status"),
+    [
+        ("NG", "NGA", "approved"),
+        ("GB", "GBR", "approved"),
+        ("US", "USA", "approved"),
+        ("GB", "NGA", "rejected"),
+        ("US", "GBR", "rejected"),
+        ("NG", "USA", "rejected"),
+        ("GB", None, "under_review"),
+        ("GB", "GB", "under_review"),
+    ],
+)
+def test_the_id_must_be_issued_by_the_country_checked(
+    country: str, issuer: object, status: str
+) -> None:
+    out = evaluate("Approved", _decision(issuing_state=issuer), TODAY, country)
+    assert out is not None and out.status == status
+    if status == "rejected":
+        assert out.reason is not None and out.reason.startswith("Please use an ID issued by")
+        assert out.legal_name is None and out.document_ref is None
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "same"),
+    [
+        ("Ada Obi", "ADA OBI", True),
+        ("Ada Obi", "Ada Chioma Obi", True),
+        ("Adá Ọbí", "Ada Obi", True),
+        ("Obi, Ada", "Ada Obi", True),
+        ("Ada", "Ada", True),
+        ("Ada", "Ada Obi", False),
+        ("Ada Obi", "Bola Obi", False),
+        ("Ada Obi", "Ada Okafor", False),
+        ("", "", False),
+        ("123", "Ada Obi", False),
+    ],
+)
+def test_names_match(a: str, b: str, same: bool) -> None:
+    assert names_match(a, b) is same
+    assert names_match(b, a) is same
