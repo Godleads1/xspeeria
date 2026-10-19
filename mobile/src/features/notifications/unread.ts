@@ -7,6 +7,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import { showBanner } from '../../components/Banner';
+import { session } from '../auth/session';
 import { notificationCopy } from './notificationCopy';
 import type { NotificationSource } from './serverNotifications';
 
@@ -95,3 +96,6 @@ export function useNotificationWatcher(
     };
   }, [source, pollMs]);
 }
+
+// Log-out or another account: nothing from the last user stays on the bell.
+session.onUserChange(() => resetUnread());

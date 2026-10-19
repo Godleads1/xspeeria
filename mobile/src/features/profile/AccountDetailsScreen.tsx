@@ -18,6 +18,7 @@ import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
 import { formatRating, longDate } from './data';
 import { useKycRegions } from './kycRegions';
+import type { KycRegion } from './data';
 import { ProfileAvatar } from './ProfileAvatar';
 import { useProfile } from './profileStore';
 
@@ -42,10 +43,20 @@ function Detail({ icon, label, value, note }: { icon: IconName; label: string; v
   );
 }
 
-export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; onEdit?: () => void }): ReactElement {
+export function AccountDetailsScreen({
+  onBack,
+  onEdit,
+  serverRegions,
+}: {
+  onBack: () => void;
+  onEdit?: () => void;
+  /** Server builds: the countries verified on the server (ADR-042) instead of the demo list. */
+  serverRegions?: readonly KycRegion[] | null;
+}): ReactElement {
   const insets = useSafeAreaInsets();
   const user = useProfile();
-  const regions = useKycRegions();
+  const demoRegions = useKycRegions();
+  const regions = serverRegions === undefined ? demoRegions : (serverRegions ?? []);
 
   return (
     <View testID="account-details-screen" style={styles.screen}>

@@ -65,7 +65,7 @@ export function isPlausibleSsn(ssn: string): boolean {
 
 /* ------------------------------------------------------------------ New location */
 
-function LocationArt(): ReactElement {
+function LocationArt({ flag = "USD" }: { flag?: string }): ReactElement {
   return (
     <View
       style={styles.art}
@@ -96,7 +96,7 @@ function LocationArt(): ReactElement {
         <Circle cx={150} cy={72} r={30} fill="#FFFFFF" />
       </Svg>
       <View style={styles.flagSpot}>
-        <RoundFlag code="USD" size={52} />
+        <RoundFlag code={flag} size={52} />
       </View>
     </View>
   );
@@ -105,9 +105,12 @@ function LocationArt(): ReactElement {
 export function NewLocationScreen({
   onConfirm,
   onSkip,
+  place = { flag: "USD", name: "United States of America", currency: "USD", detected: false },
 }: {
   onConfirm: () => void;
   onSkip: () => void;
+  /** ADR-042: the country the server suggests. Demo builds keep the Figma's USA. */
+  place?: { flag: string; name: string; currency: string; detected: boolean };
 }): ReactElement {
   const insets = useSafeAreaInsets();
   return (
@@ -122,18 +125,18 @@ export function NewLocationScreen({
         <AuthTop />
       </View>
       <View style={styles.center}>
-        <LocationArt />
+        <LocationArt flag={place.flag} />
         <Text accessibilityRole="header" style={styles.locTitle}>
           Trade in Your New Location
         </Text>
         <Text style={styles.locBody}>
           We’ve noticed you’re accessing your account from a new location and
           detected you’re in the{" "}
-          <Text style={styles.strong}>United States of America</Text>. Please
+          <Text style={styles.strong}>{place.name}</Text>. Please
           confirm, and let us know if you’d like to create a profile that allows
-          you to trade in USD for a smoother and more convenient experience.
+          you to trade in {place.currency} for a smoother and more convenient experience.
         </Text>
-        <DemoNote>Demo app: the location is simulated, not detected.</DemoNote>
+        {place.detected ? null : <DemoNote>Demo app: the location is simulated, not detected.</DemoNote>}
       </View>
       <View style={[styles.pad, styles.actions]}>
         <PrimaryButton
