@@ -3,6 +3,8 @@
 Milestone 1 wires configuration, structured logging, the error envelope and a single
 health route. Milestone AUTH-1 (ADR-025) adds the sign-in and current-user routes and the
 request log. Milestone 4.1C (ADR-029) adds offers: records of intent, never money.
+Milestone 4.1F (ADR-037) adds the escrow steps, with a pretend partner bank only
+(``PRETEND_BANK=true`` and ``APP_ENV=local``).
 
 Sign-in needs ``JWT_SECRET_KEY`` (at least 32 characters) and ``MFA_ENCRYPTION_KEY`` (base64 of
 32 bytes, ADR-026). Without either, the auth routes answer
@@ -21,7 +23,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, health, offers
+from app.api.v1 import auth, health, offers, settlement
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -32,6 +34,7 @@ from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
 from app.providers.bank_check import DevNameCheck
+from app.providers.pretend_bank import PretendBank
 from app.providers.sms import DevConsoleSmsSender, SmsSender
 from app.services.auth import AuthRuntime
 
@@ -71,6 +74,9 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         if settings.beneficiary_encryption_key
         else None
     )
+    if settings.pretend_bank and settings.app_env != "local":
+        raise ValueError("PRETEND_BANK is allowed only with APP_ENV=local (ADR-037)")
+    clock = lambda: datetime.now(UTC)  # noqa: E731 - one clock shared by the runtime
     sms: SmsSender | None = None
     if settings.dev_sms:
         if settings.app_env != "local":
@@ -81,13 +87,14 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         secret_box=box,
         hasher=PinHasher(),
         sms=sms,
-        clock=lambda: datetime.now(UTC),
+        clock=clock,
         address_limiter=SlidingWindowLimiter(
             limit=LOGIN_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
         ),
         unknown_identifier_limiter=SlidingWindowLimiter(limit=MAX_PIN_TRIES, window=PIN_LOCK),
         beneficiary_box=beneficiary_box,
         name_check=DevNameCheck() if settings.bank_check_dev else None,
+        pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
     )
 
 
@@ -106,6 +113,21 @@ async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
             log.exception("preparation_sweep_failed")
 
 
+async def _escrow_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """Escrow background work (ADR-037): funding windows, partner commands, partner messages."""
+    from app.db.session import get_sessionmaker
+    from app.services.settlement import SettlementService
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(settings.escrow_tick_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                await SettlementService(db, runtime.clock, runtime.pretend_bank).tick()
+        except Exception:  # noqa: BLE001 - keep going; the next pass retries
+            log.exception("escrow_tick_failed")
+
+
 def create_app(
     settings: Settings | None = None, auth_runtime: AuthRuntime | None = None
 ) -> FastAPI:
@@ -117,13 +139,19 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        task = None
+        tasks = []
         if resolved.database_url and resolved.preparation_sweep_seconds > 0:
-            task = asyncio.create_task(_sweep_preparations(resolved, runtime))
+            tasks.append(asyncio.create_task(_sweep_preparations(resolved, runtime)))
+        if (
+            resolved.database_url
+            and runtime.pretend_bank is not None
+            and resolved.escrow_tick_seconds > 0
+        ):
+            tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
         try:
             yield
         finally:
-            if task is not None:
+            for task in tasks:
                 task.cancel()
 
     application = FastAPI(
@@ -161,6 +189,10 @@ def create_app(
     application.include_router(offers.marketplace_router)
     application.include_router(offers.matches_router)
     application.include_router(offers.payout_accounts_router)
+    application.include_router(settlement.router)
+    application.include_router(settlement.webhooks_router)
+    if resolved.app_env == "local" and runtime.pretend_bank is not None:
+        application.include_router(settlement.dev_router)  # ADR-037: simulation only
 
     get_logger(__name__).info(
         "application_configured",

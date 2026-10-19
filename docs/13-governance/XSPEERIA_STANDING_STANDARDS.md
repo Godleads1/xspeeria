@@ -849,6 +849,9 @@ implementation, document, or assistant.
 Governance-deferred parameters awaiting external owners (U-1, U-2, U-5, U-8, U-9, U-10 per
 `docs/adr/001-transaction-state-machine.md` §11; P-1 … P-11 per
 `docs/adr/002-financial-event-ledger-architecture.md` §9.2) remain open and undefaulted.
+*Exception, 2026-10-19 (ADR-037 / DEC-043):* the product owner set U-1 (fee refunded in full
+on a failed deal) and U-2 (5-minute funding window) **for the pretend-bank simulation**;
+Legal, Risk and the partner's SLA must still confirm them before any real partner.
 
 `docs/adr/002-financial-event-ledger-architecture.md` exposure wording remains an open
 reconciliation issue (§8.6).

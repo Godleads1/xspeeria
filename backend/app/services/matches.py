@@ -56,8 +56,10 @@ from app.domain.payout_rules import (
 )
 from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
+from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
+from app.services.settlement import SettlementService
 
 __all__ = ["ACCEPT_OPERATION", "EXPIRY_CAUSE", "MatchService", "PayoutChoice", "match_view"]
 
@@ -166,9 +168,15 @@ def _normalised_amount(text: str) -> str:
 
 
 class MatchService:
-    def __init__(self, db: AsyncSession, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        clock: Callable[[], datetime],
+        bank: PretendBank | None = None,
+    ) -> None:
         self._db = db
         self._clock = clock
+        self._bank = bank
 
     async def accept(
         self,
@@ -529,8 +537,7 @@ class MatchService:
                 await self._db.rollback()
                 raise _err(
                     "VALIDATION_ERROR",
-                    f"You receive {currency} from this deal; "
-                    f"that account is in {other_currency}.",
+                    f"You receive {currency} from this deal; that account is in {other_currency}.",
                     status.HTTP_422_UNPROCESSABLE_CONTENT,
                 )
             if account.validation_state != "validated":
@@ -568,6 +575,10 @@ class MatchService:
         if {match.counterparty_user_id, offer.user_id} <= chosen:
             match.preparation_state = "funding_ready"
             match.preparation_ended_at = now
+            # ADR-037: open the escrow steps in the same transaction (simulation only).
+            await SettlementService(self._db, self._clock, self._bank).create_for_match(
+                match, offer
+            )
         view = match_view(match, offer, principal.user_id, chosen)
         await self._db.commit()
         _logger.info(

@@ -28,6 +28,7 @@ governance gates** ahead of Milestone 4.1C.
 | **Milestone 4.1C** — offers | **BUILT 2026-10-18, awaiting merge** (ADR-028/029, DEC-034/035) — publish, list, edit rate, withdraw; migration 0006; offers are records of intent, not money. Acceptance/Match is the next milestone and needs its own authorization |
 | **Milestone 4.1D** — taking an offer (acceptance, Match) | **BUILT 2026-10-18, awaiting merge** (ADR-031, DEC-037) — Match only; Transaction, Settlement, payout accounts and escrow are later milestones |
 | **Milestone 4.1E** — payout accounts and the 30-minute preparation window | **BUILT 2026-10-18, awaiting merge** (ADR-035, DEC-041) — up to `funding_ready`; escrow, funding and payouts need the partner bank |
+| **Milestone 4.1F** — escrow steps, **simulation only** (pretend partner bank on a developer's computer) | **BUILT 2026-10-19, awaiting merge** (ADR-037, DEC-043) — settlement, legs, signed partner messages, outbox, holds, reconciliation exceptions; migration 0009. No real partner (ADR-001 §12 legal gate), no ledger (P-1/P-2) |
 | **Milestone AUTH-2** — server 2FA (TOTP, recovery codes, trusted devices, step-up; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/026-auth-2-two-factor.md` (DEC-032) |
 | **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **COMPLETE** — PR #18; **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
 

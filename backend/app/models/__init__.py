@@ -13,8 +13,9 @@ MILESTONE 4.1B: `CurrencyDefinition`. MILESTONE AUTH-1 (ADR-025): the identity t
 `MfaFactor`, `MfaChallenge`, `RecoveryCode`, `TrustedDevice`, `StepUpGrant` -- none carries
 money. MILESTONE 4.1C (ADR-029): `Offer`, `IdempotencyRecord`; MILESTONE 4.1D (ADR-031):
 `Match`; MILESTONE 4.1E (ADR-035): `Beneficiary`, `MatchPayoutSelection` -- records with
-amounts, not money. Transaction, Settlement, SettlementLeg, PayoutExecution and KycCase belong
-to later milestones and must not be added here ahead of their approved batch.
+amounts, not money. MILESTONE 4.1F (ADR-037, simulation only): the escrow settlement records
+-- workflow decisions and partner-confirmed facts, never balances. KycCase belongs to a later
+milestone and must not be added here ahead of its approved batch.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
@@ -33,8 +34,32 @@ from app.models.identity import (
 )
 from app.models.marketplace import IdempotencyRecord, Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
+from app.models.settlement import (
+    OutboxMessage,
+    Partner,
+    PayoutExecution,
+    PendingEvent,
+    ReconciliationException,
+    Settlement,
+    SettlementEvent,
+    SettlementHold,
+    SettlementLeg,
+    Transaction,
+    WebhookReceipt,
+)
 
 __all__ = [
+    "OutboxMessage",
+    "Partner",
+    "PayoutExecution",
+    "PendingEvent",
+    "ReconciliationException",
+    "Settlement",
+    "SettlementEvent",
+    "SettlementHold",
+    "SettlementLeg",
+    "Transaction",
+    "WebhookReceipt",
     "AuthRefreshToken",
     "AuthSession",
     "Beneficiary",

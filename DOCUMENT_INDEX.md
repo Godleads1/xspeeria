@@ -107,6 +107,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `034-app-two-factor-settings.md` | App: 2FA settings on the server — new recovery codes and replacing the authenticator, each after a server-checked code; replacement ends trust everywhere and holds payouts 24 h (DEC-040) | **PROPOSED** — 2026-10-18 |
 | `035-milestone-4-1e-payout-accounts-and-preparation.md` | Milestone 4.1E: own payout accounts (sealed number, last 4 only, pretend bank check local-only), per-deal choice with exact split, 30-minute window → `funding_ready` or expiry returning the amount to the offer; resolves Standing Standards §15 row 9 (DEC-041) | **APPROVED** — 2026-10-18 (details in §4 PROPOSED) |
 | `036-app-payout-accounts.md` | App: payout accounts (last 4 only, add/remove with a code) and choosing them per deal with exact split and time left; My Deals shows each deal's step (DEC-042) | **PROPOSED** — 2026-10-18 |
+| `037-milestone-4-1f-escrow-simulation.md` | Milestone 4.1F: escrow steps with a pretend partner bank only (local) — two domestic legs, amount + 1% in, signed partner messages as the only money facts, 5-minute funding window, failed deal refunded in full incl. fee, release once, 24-hour payout hold respected; migration 0009; no ledger; sets U-1/U-2 for the simulation (DEC-043) | **APPROVED** — 2026-10-19 (simulation only; details in §4 PROPOSED) |
 
 ### Accounting policy is not architecture
 
