@@ -94,7 +94,7 @@ async def get_match_service(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> MatchService:
-    return MatchService(db, runtime.clock)
+    return MatchService(db, runtime.clock, runtime.pretend_bank)
 
 
 Matches = Annotated[MatchService, Depends(get_match_service)]

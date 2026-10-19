@@ -1,7 +1,7 @@
 # Pending Actions
 
 Things we agreed to do later. When it is time, pick an item, do it, and tick it off here.
-Last updated: 18 Oct 2026.
+Last updated: 19 Oct 2026.
 
 **Owner:** *You* = product owner decision or action. *Build* = engineering work.
 
@@ -46,10 +46,16 @@ Last updated: 18 Oct 2026.
 - [ ] **Corrected account after a bank rejection: same deadline or a new one?** — *You* (Standing Standards §15 row 10).
 - [ ] **EUR payout account form** (IBAN/BIC?) — *You*; EUR payout accounts are refused until then.
 - [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
+- [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
+- [ ] **Confirm ADR-037 §4 details** — *You*: fee stored per leg; 5 retries before a person is alerted; late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
+- [ ] **24-hour payout hold on new accounts** — *You*: ADR-037 reads ADR-008/022 as "the money waits in escrow until the hold ends". The other reading is "a new account cannot be chosen for 24 hours". Which one?
+- [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
+- [ ] **App escrow steps on a deal** (pay-in details, countdown, pretend transfer, progress) — *Build* — next.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 
-- [ ] **Partner bank** — escrow and payouts: API documents, test (sandbox) access, webhook security details, settlement and reconciliation files, signed agreement. Unblocks real money movement.
+- [ ] **Partner bank** — escrow and payouts: API documents, test (sandbox) access, webhook security details, settlement and reconciliation files, signed agreement. Unblocks real money movement. The pretend bank (ADR-037) follows our own Banking spec; the real contract may differ.
+- [ ] **Partner webhook secrets** — stored in a secret manager per partner, with rotation (the pretend bank uses a random one per run).
 - [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
 - [ ] **ID checks (KYC) and anti-money-laundering** — verification provider (NIN, BVN, face match; UK/US/EU checks), sanctions screening, a compliance officer to own the rules.
 - [ ] **SMS and email provider accounts.**

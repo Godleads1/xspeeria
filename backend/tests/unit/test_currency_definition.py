@@ -343,15 +343,25 @@ class TestPackageRegistration:
             "matches",
             "beneficiaries",
             "match_payout_selections",
+            "partners",
+            "transactions",
+            "settlements",
+            "settlement_legs",
+            "payout_executions",
+            "settlement_events",
+            "webhook_receipts",
+            "pending_events",
+            "settlement_holds",
+            "reconciliation_exceptions",
+            "outbox_messages",
         }
 
     @pytest.mark.parametrize(
         "future_table",
         [
-            "transactions",
-            "settlements",
-            "settlement_legs",
-            "payout_executions",
+            "ledger_entries",  # no ledger: finance policy P-1/P-2 not approved (ADR-037)
+            "balances",
+            "wallets",
             "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
@@ -384,11 +394,13 @@ class TestPackageRegistration:
         assert result.returncode == 0, result.stderr
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
-            "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', 'currency_definitions', "
-            "'idempotency_records', 'match_payout_selections', 'matches', 'mfa_challenges', "
-            "'mfa_factors', 'offers', "
-            "'phone_verifications', 'recovery_codes', 'step_up_grants', 'trusted_devices', "
-            "'users']"
+            "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
+            "'currency_definitions', 'idempotency_records', 'match_payout_selections', "
+            "'matches', 'mfa_challenges', 'mfa_factors', 'offers', 'outbox_messages', "
+            "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
+            "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
+            "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
+            "'transactions', 'trusted_devices', 'users', 'webhook_receipts']"
         )
 
     def test_registration_opens_no_connection(self) -> None:
@@ -434,4 +446,5 @@ class TestPackageRegistration:
             "0006_offers_and_idempotency_records_4_1c.py",  # Milestone 4.1C (ADR-029)
             "0007_matches_4_1d.py",  # Milestone 4.1D (ADR-031)
             "0008_payout_accounts_and_preparation_4_1e.py",  # Milestone 4.1E (ADR-035)
+            "0009_escrow_settlement_simulation_4_1f.py",  # Milestone 4.1F (ADR-037)
         ]

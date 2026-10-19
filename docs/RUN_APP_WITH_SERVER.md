@@ -20,6 +20,8 @@ DEV_SMS=true
 KYC_DEV_BYPASS=true
 # Payout accounts: a pretend bank check (this computer only) and a key for account numbers.
 BANK_CHECK_DEV=true
+# Escrow steps with a pretend bank (this computer only; no real money moves):
+PRETEND_BANK=true
 ```
 
 Generate the three keys and paste them in (never share or commit them):
@@ -36,6 +38,7 @@ python -c "import base64,os;print('BENEFICIARY_ENCRYPTION_KEY=' + base64.b64enco
 uv sync
 uv run alembic upgrade head
 (cd backend && uv run python -m app.cli.currency_definitions)   # adds NGN, USD, GBP, EUR once
+(cd backend && APP_ENV=local uv run python -m app.cli.pretend_bank)   # adds the pretend banks once
 cd backend
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```

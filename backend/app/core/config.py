@@ -145,6 +145,11 @@ class Settings(BaseSettings):
     #: ADR-035: how often the server looks for deals whose 30 minutes ran out (0 = never;
     #: expiry then happens only when the offer or deal is next touched).
     preparation_sweep_seconds: int = 30
+    #: ADR-037: the pretend partner bank (escrow simulation). In memory, moves no money.
+    #: Refused unless app_env is "local". Real partners need legal sign-off (ADR-001 §12).
+    pretend_bank: bool = False
+    #: ADR-037: how often escrow background work runs (funding windows, partner commands).
+    escrow_tick_seconds: int = 5
 
     cors_allowed_origins: str = ""
 
