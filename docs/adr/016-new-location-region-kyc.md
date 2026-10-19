@@ -39,7 +39,9 @@ States" sets the next log-in's region. The selfie match is simulated with a labe
 
 ## 5. Open
 
-- Location signal source (IP/device), and whether a new region also requires 2FA (ADR-008
-  new-device rule applies to devices, not regions).
+- ~~Location signal source (IP/device)~~ — **settled by ADR-042 (DEC-049, 2026-10-19):** a
+  new country seen server-side at sign-in, confirmed by the user; location alone never blocks.
+  Whether a new region also requires 2FA is still open (ADR-008 new-device rule applies to
+  devices, not regions).
 - US identity provider, SSN handling under US law (GLBA/state privacy), and data residency.
 - Regions other than the US.
