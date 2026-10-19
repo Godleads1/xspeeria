@@ -55,7 +55,7 @@ Last updated: 19 Oct 2026.
 - [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039). Live run 2026-10-19: Didit's NIMC/FRSC/NIS database check is listed for Nigeria but **locked until the first paid top-up**.
 - [x] **Set up Didit** — *You*: workflow "Compliance workflow" published; keys in your own `.env` (2026-10-19).
 - [ ] **Add `KYC_IDENTITY_KEY`** — *You*: one more line in your own `.env` (ADR-041); the server will not start with Didit on without it.
-- [ ] **Confirm the Nigerian ID rule** — *You*: ADR-042 now requires a **Nigerian-issued ID** for the Nigerian check (same rule as UK/US). Before, any ID was accepted. Say if a foreign passport should still count for Nigeria.
+- [x] **Confirm the Nigerian ID rule** — *You*: confirmed 2026-10-19: the Nigerian check needs a **Nigerian-issued ID**; a foreign passport does not count (ADR-042).
 - [ ] **App: country choice and region screens** — *Build*: the app still starts only the Nigerian check; UK/US users need the Figma "Trade in Your New Location" and "KYC approved regions" screens connected (ADR-042).
 - [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
 - [ ] **Decide who clears held identity checks** — *You + Compliance*: a second account for an already-verified person is held for review (ADR-041); the staff review tools wait for the Figma file.
