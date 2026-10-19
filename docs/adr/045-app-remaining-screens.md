@@ -30,4 +30,4 @@ Evidence: `test_escrow_api.py::test_my_deals_show_both_amounts_and_the_escrow_ph
 
 ## Still to connect (later parts)
 
-Change PIN and forgot PIN — done, ADR-046. Profile edits — done, ADR-047, biometric unlock. Not planned without a decision: profile photo storage, referral rewards, support tickets.
+Change PIN and forgot PIN — done, ADR-046. Profile edits — done, ADR-047, biometric unlock. Biometric unlock — done, ADR-048. Profile photo storage — Cloudflare R2, ADR-049 (not built). Support through admin Disputes; referral on hold — ADR-050.

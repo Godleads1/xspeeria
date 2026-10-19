@@ -118,6 +118,9 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `045-app-remaining-screens.md` | App: connecting the remaining demo screens — part 1: signed-in and trusted devices; part 2: History and Home from real deals; per-country identity check, new-location prompt from the server's suggestion, approved regions from the server (DEC-052) | **PROPOSED** — 2026-10-19 |
 | `046-pin-change-and-reset.md` | Change PIN (current PIN + authenticator approval; other devices signed out) and Forgot PIN (SMS code + authenticator or recovery code; every device signed out); codes carry a purpose; migration 0014 (DEC-053) | **PROPOSED** — 2026-10-19 |
 | `047-phone-number-change.md` | Phone number change: approval, code to the new number bound to the user, then the change (409 if another account has it); email changes only through Support; date of birth and legal name come from the verified ID (DEC-054) | **PROPOSED** — 2026-10-19 |
+| `048-biometric-unlock.md` | Face ID/fingerprint unlock after the 5-minute idle lock (server builds): per-session key behind the biometric prompt, trusted devices only, never past 7 days, wrong key ends the session (DEC-055) | **PROPOSED** — 2026-10-19 |
+| `049-profile-images-cloudflare-r2.md` | Profile photo and banner in a private Cloudflare R2 bucket with server-issued upload links; supersedes the Firebase Storage answer (DEC-056) | **APPROVED (vendor)**, design PROPOSED — 2026-10-19 |
+| `050-support-through-disputes-referral-on-hold.md` | Support tickets run through the admin Disputes module; referral on hold until reward rules are given (DEC-057) | **APPROVED** — 2026-10-19 |
 
 ### Accounting policy is not architecture
 

@@ -33,7 +33,7 @@ Duplicates across reviewers are merged below (IDs listed together).
 
 | ID | Finding | Status |
 |---|---|---|
-| SEC-02 | Biometric log-in is a stored flag, not a device-bound key | **Partly fixed** (bound to account, cleared for new accounts, legacy flag dropped). Key-backed login → backend auth slice |
+| SEC-02 | Biometric log-in is a stored flag, not a device-bound key | **Partly fixed** (bound to account, cleared for new accounts, legacy flag dropped). Key-backed unlock built for server builds (ADR-048); real-device check pending |
 | SEC-04 | TOTP key and recovery codes left on clipboard | **Fixed**: cleared after 60 s if unchanged |
 | SEC-05 / QA-06 | Chat secret filter bypassable; false positives on amounts | **Fixed**: normalised matching, table-tested both ways |
 | SEC-06 / QA-08 | Sign-up OTP silently reissued: unlimited guesses | **Fixed**: explicit resend after 60 s only |

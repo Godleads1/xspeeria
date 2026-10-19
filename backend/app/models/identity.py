@@ -107,8 +107,17 @@ class AuthSession(Base):
         ),
         CheckConstraint(
             "revoke_reason IS NULL OR revoke_reason IN "
-            "('logout', 'revoked_by_user', 'token_reuse', 'replaced', 'pin_change', 'pin_reset')",
+            "('logout', 'revoked_by_user', 'token_reuse', 'replaced', 'pin_change', 'pin_reset', "
+            "'unlock_failed')",
             name="revoke_reason_allowed",
+        ),
+        CheckConstraint(
+            "unlock_key_hash IS NULL OR unlock_key_hash ~ '^[0-9a-f]{64}$'",
+            name="unlock_key_hash_format",
+        ),
+        CheckConstraint(
+            "(unlock_key_hash IS NULL) = (unlock_device_id IS NULL)",
+            name="unlock_key_has_device",
         ),
         Index("ix_auth_sessions_user_id", "user_id"),
     )
@@ -127,6 +136,13 @@ class AuthSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoke_reason: Mapped[str | None] = mapped_column(String(32))
+    #: ADR-048: hash of the biometric unlock key held on the phone behind Face ID/fingerprint.
+    #: Lets this session resume after the 5-minute idle lock; never moves ``expires_at``.
+    unlock_key_hash: Mapped[str | None] = mapped_column(CHAR(64))
+    #: The trusted device the key was issued to; un-trusting it stops the key working.
+    unlock_device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trusted_devices.id", ondelete="RESTRICT")
+    )
 
 
 class AuthRefreshToken(Base):

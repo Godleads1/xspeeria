@@ -16,6 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.domain.auth_rules import normalise_email
 
 __all__ = [
+    "BiometricEnableRequest",
+    "BiometricEnableResponse",
+    "BiometricUnlockRequest",
     "ChallengeRequest",
     "ChallengeResponse",
     "EnrolConfirmRequest",
@@ -117,6 +120,22 @@ class ChangePinRequest(_Strict):
 
     current_pin: str = Field(min_length=1, max_length=16)
     new_pin: str = Field(min_length=1, max_length=16)
+
+
+class BiometricEnableRequest(_Strict):
+    """ADR-048: the trusted-device token proves this phone passed 2FA (ADR-008)."""
+
+    device_token: str = Field(min_length=1, max_length=128)
+
+
+class BiometricEnableResponse(BaseModel):
+    #: Shown once. The phone keeps it behind Face ID/fingerprint; the server keeps a hash.
+    unlock_key: str
+
+
+class BiometricUnlockRequest(_Strict):
+    refresh_token: str = Field(min_length=1, max_length=128)
+    unlock_key: str = Field(min_length=1, max_length=128)
 
 
 class PinResetStartRequest(_Strict):
