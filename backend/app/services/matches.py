@@ -56,6 +56,7 @@ from app.domain.payout_rules import (
 )
 from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
+from app.models.settlement import Settlement, Transaction
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
 from app.services.notifications import notify
@@ -107,6 +108,11 @@ def match_view(
         "currency": match.currency,
         "counter_currency": offer.target_currency,
         "allocated_amount": money_text(match.allocated_amount_minor, match.scale),
+        # ADR-045: the other currency's amount, so a deal can be shown without recomputing.
+        "counter_amount": money_text(
+            counter_amount_minor(match.allocated_amount_minor, match.currency, match.agreed_rate),
+            match.scale,
+        ),
         "agreed_rate": rate_text(match.agreed_rate),
         "accepted_at": match.accepted_at.isoformat(),
         "server_order_key": str(match.server_order_key),
@@ -120,6 +126,19 @@ def match_view(
         "you_chose_payout_accounts": viewer in chosen_by,
         "other_side_chose_payout_accounts": other in chosen_by,
     }
+
+
+async def _phases(db: AsyncSession, match_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+    if not match_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Transaction.match_id, Settlement.phase)
+            .join(Settlement, Settlement.transaction_id == Transaction.id)
+            .where(Transaction.match_id.in_(match_ids))
+        )
+    ).all()
+    return {mid: phase for mid, phase in rows}
 
 
 async def _chosen_by(
@@ -377,8 +396,17 @@ class MatchService:
                 .limit(200)
             )
         ).all()
-        chosen = await _chosen_by(self._db, [m.id for m, _ in rows])
-        return [match_view(m, o, principal.user_id, chosen.get(m.id, frozenset())) for m, o in rows]
+        ids = [m.id for m, _ in rows]
+        chosen = await _chosen_by(self._db, ids)
+        phases = await _phases(self._db, ids)
+        return [
+            {
+                **match_view(m, o, principal.user_id, chosen.get(m.id, frozenset())),
+                # ADR-045: where the escrow is (None before it opens), for History.
+                "settlement_phase": phases.get(m.id),
+            }
+            for m, o in rows
+        ]
 
     # --- preparation (ADR-035) -----------------------------------------------------------
 
