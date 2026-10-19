@@ -50,7 +50,7 @@ describe('My Deals screen', () => {
     await flush();
     expect(screen.getByTestId('deal-m1')).toHaveTextContent(/You took an offer/);
     expect(screen.getByTestId('deal-m2')).toHaveTextContent(/Someone took your offer/);
-    expect(screen.getByTestId('deal-m1')).toHaveTextContent(/coming soon/);
+    expect(screen.getByTestId('deal-m1')).toHaveTextContent(/then pay into escrow/);
   });
 
   it('shows an empty state and a load error', async () => {

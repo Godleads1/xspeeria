@@ -1,6 +1,6 @@
 /**
  * Payout Destination (Figma; ADR-022): own accounts only, amounts add up exactly, no
- * balance wording, last 4 digits only, 24-hour hold on new accounts, card not available.
+ * balance wording, last 4 digits only, new accounts paid at once (DEC-044), card not available.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -104,7 +104,7 @@ describe('Payout Destination screen', () => {
     expect(screen.getByTestId('payout-continue').props.accessibilityState.disabled).toBe(true);
   });
 
-  it('new recipient: validated bank details, own name only, 24-hour hold, last 4 kept', async () => {
+  it('new recipient: validated bank details, own name only, code-confirmed, last 4 kept', async () => {
     const onContinue = jest.fn();
     await screenWith(onContinue, []);
     expect(screen.getByTestId('payout-empty')).toBeTruthy();
@@ -187,12 +187,12 @@ describe('placing the order', () => {
     expect(added[0]).toMatchObject({ bank: 'Chase', accountLast4: '6789', status: 'pending', currency: 'USD' });
   });
 
-  it('a new account is paid only after a 24-hour hold', () => {
+  it('a new account is paid at once (DEC-044)', () => {
     const one = { side: 'buy' as const, requestedMinor: 20000, parts: [{ listing: OFFERS[0], amountMinor: 20000 }] };
     const [id] = placeOrder({ draft: one, recipients: [R('new-1', 20000, { isNew: true, last4: '6789' })], now: NOW, random: rnd }).created;
     tradeStore.markPaid(id, NOW);
     for (let i = 1; i <= 3; i++) tradeStore.tick(id, NOW + i * DEMO_STEP_MS);
-    expect(tradeStore.get(id)!.events.map((e) => e.label)).toContain('200.00 USD for your new account ending 6789: held 24 hours, then paid');
+    expect(tradeStore.get(id)!.events.map((e) => e.label)).toContain('200.00 USD to your new account ending 6789');
   });
 
   it('the order draft is cleared on log-out', () => {

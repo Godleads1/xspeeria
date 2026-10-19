@@ -183,7 +183,7 @@ export function MfaScreen({
         title="Confirm it’s you"
         body={
           useRecovery
-            ? 'Enter one of the recovery codes you saved when you set up 2FA. Each code works once. For your safety, payouts are paused for 24 hours after using one.'
+            ? 'Enter one of the recovery codes you saved when you set up 2FA. Each code works once. For your safety, every other phone will need a code again.'
             : 'This is a new phone for your account. Enter the 6-digit code from your authenticator app.'
         }
       />

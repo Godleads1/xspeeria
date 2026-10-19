@@ -51,7 +51,8 @@ Last updated: 19 Oct 2026.
 - [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
-- [ ] **App escrow steps on a deal** (pay-in details, countdown, pretend transfer, progress) — *Build* — next.
+- [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
+- [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 

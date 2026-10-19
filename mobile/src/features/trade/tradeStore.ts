@@ -105,8 +105,8 @@ export function receiveFor(side: Side, amountMinor: number, rateHundredths: numb
 /** Event text for one payout, with the amount when the money was split. */
 function paidLabel(t: Trade, p: PayoutShare): string {
   const cur = t.side === 'buy' ? t.currency : 'NGN';
-  // ADR-008: a newly added account is paid only after a 24-hour security hold.
-  if (p.isNew) return `${formatHundredths(p.amountMinor)} ${cur} for your new account ending ${p.last4}: held 24 hours, then paid`;
+  // DEC-044: a newly added account is paid at once, like any other.
+  if (p.isNew) return `${formatHundredths(p.amountMinor)} ${cur} to your new account ending ${p.last4}`;
   return t.payouts.length > 1
     ? `Paid ${formatHundredths(p.amountMinor)} ${cur} to your account ending ${p.last4}`
     : `Paid to your account ending ${p.last4}`;

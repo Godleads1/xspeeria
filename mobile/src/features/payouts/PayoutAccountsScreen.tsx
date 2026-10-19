@@ -52,7 +52,7 @@ export function PayoutAccountsScreen({
       </View>
       <Text style={styles.intro}>
         Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you
-        choose. New accounts are paid after a 24-hour security hold.
+        choose. Adding or removing an account needs your authenticator code.
       </Text>
       {notice ? (
         <Text testID="payout-accounts-notice" accessibilityRole="alert" style={styles.notice}>

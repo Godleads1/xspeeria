@@ -84,6 +84,16 @@ Needs `KYC_DEV_BYPASS=true` in `.env` and the currency command from step 3.
    tap **Buy** on the other account's offer, enter an amount and your authenticator code, then
    **Take offer**. The deal is recorded at that rate.
 
-Buy requests, payout accounts and paying into escrow are not built yet; the app says "coming soon". An offer is a
-record of what you want to exchange. No money moves.
+5. **Choose payout accounts** (both accounts): **⋮ › My Deals › Choose payout account**. Add an
+   account if you have none (your authenticator code confirms it), set how much each account
+   gets, and confirm with a code. Both sides have 30 minutes.
+
+6. **Pay into escrow** (needs `PRETEND_BANK=true` and the pretend-bank command from step 3):
+   **My Deals › Escrow steps**. Each side sees the amount + 1% fee and the pretend bank's
+   escrow details, with 5 minutes to pay. Tap **Simulate my transfer** on each phone. When both
+   have paid, the pretend bank pays out at once and the deal says **Done**. If only one side
+   pays, that side is refunded in full, fee included.
+
+Buy requests are not built yet; the app says "coming soon". The pretend bank only exists on
+your computer and forgets everything when the server restarts. No real money moves.
 

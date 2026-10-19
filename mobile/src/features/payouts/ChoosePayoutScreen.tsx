@@ -108,7 +108,7 @@ export function ChoosePayoutScreen({
   if (deal.preparation_state !== 'awaiting_payout_accounts' || saved) {
     const text =
       deal.preparation_state === 'funding_ready'
-        ? 'Both sides have chosen their payout accounts. The deal is ready for the partner bank’s escrow — paying in is coming soon.'
+        ? 'Both sides have chosen their payout accounts. Next: open the escrow steps from My Deals and pay in within 5 minutes.'
         : deal.preparation_state === 'expired'
           ? 'The 30 minutes to choose payout accounts passed, so this deal was cancelled. Nothing was paid.'
           : 'You have chosen your payout accounts. Waiting for the other side.';

@@ -19,6 +19,7 @@ export default function MyDealsRoute(): ReactElement {
       refreshSignal={refresh}
       onBack={() => router.back()}
       onChoose={(match) => router.push({ pathname: '/market/payout-choice', params: { match } })}
+      onEscrow={(match) => router.push({ pathname: '/market/escrow', params: { match } })}
     />
   );
 }

@@ -4,7 +4,7 @@
  * Every change first spends a fresh authenticator code as a one-use step-up approval. A
  * replacement secret is kept here, in memory, between the two screens — never in route
  * parameters. Replacing the authenticator ends trust on every device (the server does it),
- * so this phone forgets its trusted-device token too, and payouts are held for 24 hours.
+ * so this phone forgets its trusted-device token too.
  */
 
 import { ApiError } from '../../api/client';

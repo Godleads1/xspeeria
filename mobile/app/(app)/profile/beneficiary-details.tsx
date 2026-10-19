@@ -21,7 +21,7 @@ export default function BeneficiaryDetailsRoute(): ReactElement {
       stepUp={requestStepUp}
       onDone={() => {
         router.dismissTo('/profile/beneficiaries');
-        Alert.alert('Beneficiary added', 'Your bank will confirm the account name. Payouts to a new beneficiary are held for 24 hours.');
+        Alert.alert('Beneficiary added', 'Your bank will confirm the account name.');
       }}
     />
   );
