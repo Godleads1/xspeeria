@@ -8,7 +8,6 @@ bound to action and session, and last 5 minutes; 5 wrong codes lock 2FA for 15 m
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import timedelta
 from typing import Any
 
 import pyotp
@@ -243,16 +242,14 @@ async def test_five_wrong_codes_lock_2fa_for_fifteen_minutes(env: Env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_recovery_code_logs_in_once_and_triggers_the_hold(
-    env: Env, db_settings: Settings
-) -> None:
+async def test_recovery_code_logs_in_once_and_ends_trust(env: Env, db_settings: Settings) -> None:
     body = await env.sign_up()
     code = body["recovery_codes"][0]
     r = await _verify(env, await _challenge(env), recovery_code=code.lower().replace("-", ""))
     assert r.status_code == 200
     assert r.json()["device_token"] is None  # a recovery log-in does not trust the device
     hold = await _sql(db_settings, "SELECT payout_hold_until FROM users")
-    assert hold == env.clock.now + timedelta(hours=24)
+    assert hold == env.clock.now  # DEC-044: no payout wait
     # Trust ended everywhere: the sign-up device now needs a code too.
     assert (await env.login()).json()["mfa_required"] is True
     # The same recovery code never works twice.
@@ -390,7 +387,7 @@ async def test_replacing_the_authenticator(env: Env, db_settings: Settings) -> N
     )
     assert r.status_code == 204
     hold = await _sql(db_settings, "SELECT payout_hold_until FROM users")
-    assert hold == env.clock.now + timedelta(hours=24)
+    assert hold == env.clock.now  # DEC-044: no payout wait
 
     # Trust ended everywhere; the old authenticator no longer works, the new one does.
     assert (await env.login()).json()["mfa_required"] is True

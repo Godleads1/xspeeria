@@ -48,7 +48,8 @@ Last updated: 19 Oct 2026.
 - [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
 - [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
 - [ ] **Confirm ADR-037 §4 details** — *You*: fee stored per leg; 5 retries before a person is alerted; late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
-- [ ] **24-hour payout hold on new accounts** — *You*: ADR-037 reads ADR-008/022 as "the money waits in escrow until the hold ends". The other reading is "a new account cannot be chosen for 24 hours". Which one?
+- [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
+- [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
 - [ ] **App escrow steps on a deal** (pay-in details, countdown, pretend transfer, progress) — *Build* — next.
 

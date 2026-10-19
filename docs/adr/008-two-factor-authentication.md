@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** |
+| **Status** | **APPROVED** — payout-hold rule amended 2026-10-19 (DEC-044, see §2) |
 | **Date** | 2026-10-17 |
 | **Decision ID** | DEC-014 |
 | **Authority** | Product owner, 2026-10-17: "design a very strong 2 FA authentication", then selected **"Strongest (Recommended)"** from the proposal below — `DOCUMENT_INDEX.md` §1 rank 2 |
@@ -46,7 +46,7 @@ only as hashes. Losing every factor and every code → identity re-verification 
 **Safety rules**
 - 2FA **cannot be switched off**; a user can replace a factor only after passing 2FA.
 - **5 wrong codes → 15-minute lock** on 2FA attempts, plus an email alert.
-- **24-hour payout hold** after a 2FA reset/recovery or a newly added beneficiary.
+- ~~**24-hour payout hold** after a 2FA reset/recovery or a newly added beneficiary.~~ **Removed 2026-10-19 by the product owner (DEC-044, ADR-037):** payouts are immediate; each payout account change and each deal's payout choice needs an authenticator code instead. Trust still ends everywhere after a reset or recovery, with an alert.
 - Every rule is **enforced on the server**. The app's checks are for user experience only.
 
 ## 3. Mobile implementation status (2026-10-17)

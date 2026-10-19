@@ -28,8 +28,6 @@ class YouReceive(BaseModel):
     currency: str
     amount: str
     state: str
-    #: My own 24-hour security hold (ADR-008/022): the bank pays out no earlier than this.
-    paid_after: str | None
 
 
 class SettlementResponse(BaseModel):

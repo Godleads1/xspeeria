@@ -9,7 +9,7 @@ holds money; it records where each user wants to be paid.
   are ever readable or returned (ADR-022). No raw number is logged.
 - The bank's name check decides ``validated`` or ``failed``. Without a checker (no partner
   bank yet) the account stays ``pending`` and cannot be chosen for a deal.
-- A new account is paid only after a 24-hour hold (ADR-008/022).
+- No waiting period: a new account can be paid at once (DEC-044); adding it needs a code.
 """
 
 from __future__ import annotations
