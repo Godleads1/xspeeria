@@ -20,6 +20,9 @@ from app.api.auth_deps import (
 )
 from app.domain.auth_rules import STEP_UP_TTL
 from app.schemas.auth import (
+    BiometricEnableRequest,
+    BiometricEnableResponse,
+    BiometricUnlockRequest,
     ChallengeRequest,
     ChallengeResponse,
     ChangePinRequest,
@@ -394,3 +397,41 @@ async def phone_change_confirm(
 ) -> dict[str, str]:
     phone = await service.phone_change_confirm(principal, body.new_phone, body.code)
     return {"phone": phone}
+
+
+# --- biometric unlock after the idle lock (ADR-048) ------------------------------------------
+
+
+@router.post(
+    "/auth/biometric",
+    response_model=BiometricEnableResponse,
+    tags=["auth"],
+    summary="Turn on Face ID/fingerprint unlock for this session (trusted devices only)",
+)
+async def biometric_enable(
+    body: BiometricEnableRequest, principal: CurrentPrincipal, service: Service
+) -> BiometricEnableResponse:
+    return BiometricEnableResponse(
+        unlock_key=await service.biometric_enable(principal, body.device_token)
+    )
+
+
+@router.delete(
+    "/auth/biometric",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["auth"],
+    summary="Turn off Face ID/fingerprint unlock for this session",
+)
+async def biometric_disable(principal: CurrentPrincipal, service: Service) -> Response:
+    await service.biometric_disable(principal)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/auth/biometric/unlock",
+    response_model=TokenResponse,
+    tags=["auth"],
+    summary="Resume a session after the idle lock with the key Face ID/fingerprint released",
+)
+async def biometric_unlock(body: BiometricUnlockRequest, service: Service) -> TokenResponse:
+    return _tokens(await service.biometric_unlock(body.refresh_token, body.unlock_key))

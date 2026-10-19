@@ -85,7 +85,11 @@ export function LoginScreen({
    * Server mode (ADR-027): log in against the real server. Defaults off; the route turns it
    * on when the app is built with a server address.
    */
-  server?: { login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome> } | null;
+  server?: {
+    login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome>;
+    /** ADR-048: Face ID/fingerprint resumes the session after the idle lock. */
+    unlock?: (now: number) => Promise<boolean>;
+  } | null;
   /** Server mode: the PIN was right and 2FA comes next ("mfa"), or set-up ("enrol"). */
   onSecondFactor?: (step: "mfa" | "enrol") => void;
 }): ReactElement {
@@ -154,7 +158,23 @@ export function LoginScreen({
       );
   };
 
+  const serverUnlock = server?.unlock;
+  const showFaceId = server ? Boolean(serverUnlock) && session.biometricSaved() : true;
+
   const faceId = async (): Promise<void> => {
+    if (server) {
+      if (!serverUnlock) return;
+      setBusy(true);
+      setError(null);
+      try {
+        if (await serverUnlock(now())) onDone();
+      } catch (e) {
+        setError(`${messageFor(e)} Log in with your PIN.`);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!session.biometricOn()) {
       Alert.alert(
         "Face ID is off",
@@ -262,10 +282,11 @@ export function LoginScreen({
           Remember me
         </CheckRow>
 
-        {server ? null : (
+        {!showFaceId ? null : (
         <Pressable
           testID="login-faceid"
           accessibilityRole="button"
+          disabled={busy}
           onPress={() => void faceId()}
           style={styles.face}
         >
@@ -283,7 +304,7 @@ export function LoginScreen({
         ) : null}
         {server ? (
           <DemoNote testID="login-server">
-            Development build connected to {API_BASE_URL}. Face ID log-in arrives with passkeys.
+            Development build connected to {API_BASE_URL}.
           </DemoNote>
         ) : (
         <DemoNote testID="login-demo">

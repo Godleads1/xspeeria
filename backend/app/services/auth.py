@@ -1248,3 +1248,103 @@ class AuthService:
             raise _err("RES_404_NOT_FOUND", "That device was not found.", status.HTTP_404_NOT_FOUND)
         row.revoked_at = self._now()
         await self._db.commit()
+
+    # --- biometric unlock after the idle lock (ADR-048) -------------------------------------
+
+    async def biometric_enable(self, principal: Principal, device_token: str | None) -> str:
+        """A new unlock key for this session, shown once. Only on a trusted device (ADR-008).
+
+        The phone stores it behind Face ID/fingerprint. Turning it on again replaces the key.
+        """
+        now = self._now()
+        session = await self._repo.session_by_id(principal.session_id, lock=True)
+        if session is None or not self._session_usable(session, now):
+            await self._db.rollback()
+            raise _unauthorized()
+        device = await self._trusted_device_for(principal.user_id, device_token, now)
+        if device is None:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_403_DEVICE_NOT_TRUSTED",
+                "Fingerprint or Face ID unlock needs a trusted device. Log in with your "
+                "authenticator code and choose to trust this device first.",
+                status.HTTP_403_FORBIDDEN,
+            )
+        key = generate_refresh_token()
+        session.unlock_key_hash = hash_refresh_token(key)
+        session.unlock_device_id = device.id
+        await self._db.commit()
+        _logger.info("biometric_unlock_enabled", extra={"user_id": str(principal.user_id)})
+        return key
+
+    async def biometric_disable(self, principal: Principal) -> None:
+        session = await self._repo.session_by_id(principal.session_id, lock=True)
+        if session is not None:
+            session.unlock_key_hash = None
+            session.unlock_device_id = None
+        await self._db.commit()
+
+    async def biometric_unlock(self, refresh_token: str, unlock_key: str) -> TokenPair:
+        """Resume a session past the 5-minute idle limit with the refresh token plus the key
+        the phone released after Face ID/fingerprint. Never past the 7-day limit, never on a
+        revoked or un-trusted device, never while the PIN is locked. A wrong key for a real
+        session means someone holds a copied refresh token: the session ends."""
+        now = self._now()
+        if not refresh_token or len(refresh_token) > 128 or not unlock_key or len(unlock_key) > 128:
+            raise _invalid_refresh()
+        token = await self._repo.refresh_token_by_hash(hash_refresh_token(refresh_token))
+        if token is None:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        session = await self._repo.session_by_id(token.session_id, lock=True)
+        if session is None or session.revoked_at is not None or now >= session.expires_at:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if token.used_at is not None:
+            session.revoked_at = now
+            session.revoke_reason = "token_reuse"
+            await self._db.commit()
+            _logger.warning("refresh_token_reuse", extra={"user_id": str(session.user_id)})
+            raise _invalid_refresh()
+        if session.unlock_key_hash is None or session.unlock_device_id is None:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if not secrets.compare_digest(session.unlock_key_hash, hash_refresh_token(unlock_key)):
+            session.revoked_at = now
+            session.revoke_reason = "unlock_failed"
+            await self._db.commit()
+            _logger.warning("biometric_unlock_failed", extra={"user_id": str(session.user_id)})
+            raise _invalid_refresh()
+        device = await self._repo.trusted_device_by_id(session.unlock_device_id)
+        if (
+            device is None
+            or device.user_id != session.user_id
+            or device.revoked_at is not None
+            or now >= device.expires_at
+        ):
+            await self._db.rollback()
+            raise _invalid_refresh()
+        user = await self._repo.user_by_id(session.user_id)
+        if user is None or user.status != "active":
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if user.pin_locked_until is not None and now < user.pin_locked_until:
+            retry = user.pin_locked_until - now
+            await self._db.rollback()
+            raise _rate_limited(retry)
+
+        token.used_at = now
+        session.last_active_at = now
+        new_refresh = generate_refresh_token()
+        self._repo.add(
+            AuthRefreshToken(
+                id=uuid.uuid4(),
+                session_id=session.id,
+                token_hash=hash_refresh_token(new_refresh),
+                created_at=now,
+            )
+        )
+        access = self._keys.issue_access(AccessClaims(session.user_id, session.id), now)
+        await self._db.commit()
+        _logger.info("biometric_unlock", extra={"user_id": str(session.user_id)})
+        return TokenPair(access_token=access, refresh_token=new_refresh)

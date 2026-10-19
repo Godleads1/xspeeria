@@ -7,13 +7,23 @@
  * specifics are Open Decision 2, so those rows say they are coming. MOCK ONLY.
  */
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { messageFor } from '../../api/client';
+import { confirmWithBiometrics, type BiometricOutcome } from '../auth/biometrics';
+import { useSession } from '../auth/session';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { securitySettings, useSecuritySettings } from './securitySettings';
+
+/** Server builds (ADR-048): Face ID/fingerprint unlock after the 5-minute idle lock. */
+export interface BiometricControl {
+  supported: () => boolean;
+  enable: () => Promise<void>;
+  disable: () => Promise<void>;
+}
 
 export type SecurityDestination = 'password' | 'twoFactor' | 'devices';
 
@@ -36,14 +46,49 @@ export function SecurityScreen({
   onBack,
   onOpen,
   showDevices = false,
+  biometric = null,
+  biometrics = confirmWithBiometrics,
 }: {
   onBack: () => void;
   onOpen?: (destination: SecurityDestination) => void;
   /** Server builds: the signed-in devices list (ADR-025/026). */
   showDevices?: boolean;
+  biometric?: BiometricControl | null;
+  biometrics?: (prompt: string) => Promise<BiometricOutcome>;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const { allowScreenshots } = useSecuritySettings();
+  const s = useSession();
+  const bioOn = s.biometricFor !== null && s.biometricFor === s.account.phone;
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+
+  const toggleBiometric = async (on: boolean): Promise<void> => {
+    if (!biometric) return;
+    setBioError(null);
+    if (on && !biometric.supported()) {
+      setBioError('Face ID or fingerprint isn’t set up on this phone.');
+      return;
+    }
+    setBioBusy(true);
+    try {
+      if (on) {
+        // The person holding the phone proves it is them before it is turned on.
+        const r = await biometrics('Turn on Face ID for Xspeeria');
+        if (r !== 'ok') {
+          if (r === 'unavailable') setBioError('Face ID or fingerprint isn’t set up on this phone.');
+          return;
+        }
+        await biometric.enable();
+      } else {
+        await biometric.disable();
+      }
+    } catch (e) {
+      setBioError(messageFor(e));
+    } finally {
+      setBioBusy(false);
+    }
+  };
 
   const open = (d: SecurityDestination, title: string): void => {
     if (onOpen) onOpen(d);
@@ -66,6 +111,25 @@ export function SecurityScreen({
         {showDevices ? (
           <LinkRow testID="security-devices" label="Signed-in devices" onPress={() => open('devices', 'Signed-in devices')} />
         ) : null}
+        {biometric ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Unlock with Face ID / fingerprint</Text>
+            <Switch
+              testID="security-biometric"
+              accessibilityLabel="Unlock with Face ID or fingerprint"
+              value={bioOn}
+              disabled={bioBusy}
+              onValueChange={(v) => void toggleBiometric(v)}
+              trackColor={{ true: color.brand.secondary, false: color.border.strong }}
+              thumbColor={color.bg.canvas}
+            />
+          </View>
+        ) : null}
+        {bioError ? (
+          <Text testID="security-biometric-error" accessibilityRole="alert" style={styles.error}>
+            {bioError}
+          </Text>
+        ) : null}
         <View style={styles.row}>
           <Text style={styles.label}>Allow Screenshot</Text>
           <Switch
@@ -87,6 +151,7 @@ const styles = themed(() => ({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
   headerSpacer: { width: 22 },
+  error: { ...typography.caption, fontSize: 13, color: color.error.text, paddingVertical: space.xs },
   list: { paddingHorizontal: space.md, paddingTop: space.md },
   row: {
     flexDirection: 'row',

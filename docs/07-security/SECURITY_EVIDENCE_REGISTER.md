@@ -53,7 +53,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-015 | IMPLEMENTED (partial) | No secrets in the app (reviewer scan of 507 files); only the remembered phone/email in AsyncStorage. | `expo-secure-store` for tokens; device-bound biometric key (review SEC-02). |
+| SEC-015 | IMPLEMENTED (partial) | No secrets in the app (reviewer scan of 507 files); only the remembered phone/email in AsyncStorage. | Device-bound biometric key built for server builds (ADR-048, `test_biometric_unlock_api.py`, `biometric-unlock-server.test.tsx`); real-device check of `requireAuthentication` NOT VERIFIED. |
 | SEC-016 | IMPLEMENTED (partial) | No `console.*`; clipboard auto-clear; screenshots blocked on secret screens (`security-review.test.tsx` "SEC-04"); Android `allowBackup: false`. | TLS / certificate-pinning decision; crash-reporting redaction when added. |
 | SEC-017 | IMPLEMENTED (partial) | Route params re-validated, digits-only (`security-review.test.tsx`); no WebViews; custom `xspeeria://` scheme only. | Route render tests for tampered params (review QA-12); App/Universal Links decision. |
 | SEC-018 | IMPLEMENTED (partial) | Release builds refuse demo paths (`docs/adr/018-security-review-remediation.md`). | Build a release bundle in CI and scan it for demo credentials/keys; tamper/root posture decision. |

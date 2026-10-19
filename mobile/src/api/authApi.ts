@@ -77,6 +77,21 @@ export const authApi = {
   ) => apiRequest<Tokens>('POST', '/api/v1/auth/mfa/verify', { body, ...x }),
   refresh: (refreshToken: string, x: Extra = {}) =>
     apiRequest<Tokens>('POST', '/api/v1/auth/refresh', { token: refreshToken, ...x }),
+  /** ADR-048: a new unlock key for this session; trusted devices only. */
+  biometricEnable: (accessToken: string, deviceToken: string, x: Extra = {}) =>
+    apiRequest<{ unlock_key: string }>('POST', '/api/v1/auth/biometric', {
+      token: accessToken,
+      body: { device_token: deviceToken },
+      ...x,
+    }),
+  biometricDisable: (accessToken: string, x: Extra = {}) =>
+    apiRequest<void>('DELETE', '/api/v1/auth/biometric', { token: accessToken, ...x }),
+  /** ADR-048: resume the session after the idle lock (refresh token + unlock key). */
+  biometricUnlock: (refreshToken: string, unlockKey: string, x: Extra = {}) =>
+    apiRequest<Tokens>('POST', '/api/v1/auth/biometric/unlock', {
+      body: { refresh_token: refreshToken, unlock_key: unlockKey },
+      ...x,
+    }),
   logout: (accessToken: string, x: Extra = {}) =>
     apiRequest<void>('POST', '/api/v1/auth/logout', { token: accessToken, ...x }),
   /** One fresh authenticator code → a one-use approval for one action, valid 5 minutes. */

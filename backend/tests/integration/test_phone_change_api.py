@@ -52,10 +52,14 @@ async def test_wrong_code_or_someone_elses_code_changes_nothing(env: Env) -> Non
     other = (await env.sign_up(phone="+2348031111111", email="ada@example.com"))["access_token"]
     await _start(env, me, NEW_PHONE, await _approve(env, me, "contact.change"))
     code = env.sms.last_code_for(NEW_PHONE)
-    r = await env.post("/users/me/phone/confirm", {"new_phone": NEW_PHONE, "code": "000000"}, token=me)
+    r = await env.post(
+        "/users/me/phone/confirm", {"new_phone": NEW_PHONE, "code": "000000"}, token=me
+    )
     assert r.status_code == 401
     # The code is bound to the user who asked for it.
-    r = await env.post("/users/me/phone/confirm", {"new_phone": NEW_PHONE, "code": code}, token=other)
+    r = await env.post(
+        "/users/me/phone/confirm", {"new_phone": NEW_PHONE, "code": code}, token=other
+    )
     assert r.status_code == 401
     assert (await env.get("/users/me", token=me)).json()["phone"] == PHONE
 
