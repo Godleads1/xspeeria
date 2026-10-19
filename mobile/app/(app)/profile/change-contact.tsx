@@ -9,6 +9,7 @@ import { ChangeContactScreen } from '../../../src/features/profile/ChangeContact
 import { NotEditableHere, ServerChangePhoneScreen } from '../../../src/features/profile/ServerChangePhoneScreen';
 import { requestStepUp } from '../../../src/features/security/stepUp';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /** Route params are untrusted: only `phone` or `email` open the flow. */
 export default function ChangeContactRoute(): ReactElement {
@@ -22,7 +23,7 @@ export default function ChangeContactRoute(): ReactElement {
         source={serverPhoneChange}
         onBack={() => router.back()}
         onDone={() => {
-          showBanner({ tone: 'success', title: 'Phone number updated', message: 'Log in with your new number from now on.' });
+          showBanner({ tone: 'success', title: tr("Phone number updated"), message: tr("Log in with your new number from now on.") });
           router.back();
         }}
       />
@@ -31,8 +32,8 @@ export default function ChangeContactRoute(): ReactElement {
   if (SERVER_MODE) {
     return (
       <NotEditableHere
-        title="Change email address"
-        body="For your security, your email address can only be changed by our Support team. Contact Support from your Profile and we will help you."
+        title={tr("Change email address")}
+        body={tr("For your security, your email address can only be changed by our Support team. Contact Support from your Profile and we will help you.")}
         onBack={() => router.back()}
       />
     );

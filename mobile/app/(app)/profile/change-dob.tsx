@@ -5,6 +5,7 @@ import { SERVER_MODE } from '../../../src/api/config';
 import { ChangeDobScreen } from '../../../src/features/profile/ChangeDobScreen';
 import { NotEditableHere } from '../../../src/features/profile/ServerChangePhoneScreen';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 export default function ChangeDobRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
@@ -12,8 +13,8 @@ export default function ChangeDobRoute(): ReactElement {
   if (SERVER_MODE) {
     return (
       <NotEditableHere
-        title="Date of birth"
-        body="Your date of birth comes from your verified ID and cannot be changed here. If it is wrong, contact Support."
+        title={tr("Date of birth")}
+        body={tr("Your date of birth comes from your verified ID and cannot be changed here. If it is wrong, contact Support.")}
         onBack={() => router.back()}
       />
     );

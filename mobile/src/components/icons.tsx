@@ -13,7 +13,7 @@
  */
 
 import type { ReactElement } from 'react';
-import type { ColorValue } from 'react-native';
+import { I18nManager, type ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 export type IconName =
@@ -103,8 +103,16 @@ export function Icon({
   const body = filled ? solid : stroke;
   const detail = filled ? cut : stroke;
 
+  // ADR-053: arrows point the way the reading goes; in Arabic (right to left) they mirror.
+  const mirror = I18nManager.isRTL && (name === 'back' || name === 'chevron');
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`} testID={`icon-${name}`}>
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${BOX} ${BOX}`}
+      testID={`icon-${name}`}
+      style={mirror ? { transform: [{ scaleX: -1 }] } : undefined}
+    >
       {name === 'home' ? (
         <>
           <Path d="M4 10.4 12 4l8 6.4V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z" {...body} />

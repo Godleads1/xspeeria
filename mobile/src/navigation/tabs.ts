@@ -8,6 +8,8 @@
  * a real destination — never a dead or disabled tab.
  */
 
+import { k } from "../i18n";
+
 export type TabName = 'index' | 'marketplace' | 'history' | 'cards' | 'profile';
 
 export interface TabDefinition {
@@ -21,9 +23,9 @@ export interface TabDefinition {
 }
 
 export const TABS: readonly TabDefinition[] = [
-  { name: 'index', title: 'Home' },
-  { name: 'marketplace', title: 'Market' },
-  { name: 'history', title: 'History' },
-  { name: 'cards', title: 'Cards', comingSoon: true },
-  { name: 'profile', title: 'Profile' },
+  { name: 'index', title: k("Home") },
+  { name: 'marketplace', title: k("Market") },
+  { name: 'history', title: k("History") },
+  { name: 'cards', title: k("Cards"), comingSoon: true },
+  { name: 'profile', title: k("Profile") },
 ] as const;

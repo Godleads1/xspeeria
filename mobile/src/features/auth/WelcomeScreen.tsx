@@ -17,12 +17,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { AuthTop, GhostButton } from './ui';
+import { tr, k } from "../../i18n";
 
 export const SLIDES = [
-  { title: 'Welcome to Xspeeria', body: 'Experience fast, secure, and low-fee currency exchange — anytime, anywhere.' },
-  { title: 'Exchange Money Peer-to-Peer', body: 'Set your own rate and match with verified people. One clear 1% fee, with no hidden margin in the rate.' },
-  { title: 'Safe. Verified. Secure.', body: 'Everyone is identity-checked. Your money goes to a partner bank’s escrow, never to Xspeeria, until both sides have paid.' },
-  { title: 'Go Global, Seamlessly', body: 'Exchange naira with people abroad. Each side is paid by local transfer in their own country — no money crosses the border.' },
+  { title: k("Welcome to Xspeeria"), body: k("Experience fast, secure, and low-fee currency exchange — anytime, anywhere.") },
+  { title: k("Exchange Money Peer-to-Peer"), body: k("Set your own rate and match with verified people. One clear 1% fee, with no hidden margin in the rate.") },
+  { title: k("Safe. Verified. Secure."), body: k("Everyone is identity-checked. Your money goes to a partner bank’s escrow, never to Xspeeria, until both sides have paid.") },
+  { title: k("Go Global, Seamlessly"), body: k("Exchange naira with people abroad. Each side is paid by local transfer in their own country — no money crosses the border.") },
 ] as const;
 
 /** Decorative artwork, one per slide (Figma; licence to confirm, ADR-013). */
@@ -73,19 +74,19 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
               <Image testID={`welcome-hero-${i}`} source={HERO_IMAGES[i]} style={styles.heroImage} resizeMode="contain" />
             </View>
             <View style={styles.text}>
-              <Text accessibilityRole="header" style={styles.title}>{s.title}</Text>
-              <Text style={styles.body}>{s.body}</Text>
+              <Text accessibilityRole="header" style={styles.title}>{tr(s.title)}</Text>
+              <Text style={styles.body}>{tr(s.body)}</Text>
             </View>
           </View>
         ))}
       </ScrollView>
-      <View style={[styles.padded, styles.bars]} accessibilityLabel={`Slide ${index + 1} of ${SLIDES.length}`}>
+      <View style={[styles.padded, styles.bars]} accessibilityLabel={tr("Slide {{value}} of {{length}}", { value: index + 1, length: SLIDES.length })}>
         {SLIDES.map((s, i) => (
           <Pressable
             key={s.title}
             testID={`welcome-bar-${i}`}
             accessibilityRole="button"
-            accessibilityLabel={`Show slide ${i + 1} of ${SLIDES.length}`}
+            accessibilityLabel={tr("Show slide {{value}} of {{length}}", { value: i + 1, length: SLIDES.length })}
             accessibilityState={{ selected: i === index }}
             onPress={() => goTo(i)}
             hitSlop={{ top: 12, bottom: 12 }}
@@ -96,8 +97,8 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
         ))}
       </View>
       <View style={[styles.padded, styles.actions]}>
-        <PrimaryButton testID="welcome-signup" label="Open a free profile" onPress={onSignUp} />
-        <GhostButton testID="welcome-login" label="I have a profile" onPress={onLogIn} />
+        <PrimaryButton testID="welcome-signup" label={tr("Open a free profile")} onPress={onSignUp} />
+        <GhostButton testID="welcome-login" label={tr("I have a profile")} onPress={onLogIn} />
       </View>
     </View>
   );

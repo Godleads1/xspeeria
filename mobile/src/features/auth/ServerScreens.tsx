@@ -16,6 +16,7 @@ import { ApiError, messageFor } from '../../api/client';
 import { color, space, themed, typography } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { AuthTop, GhostButton, Heading } from './ui';
+import { tr } from "../../i18n";
 
 const RESEND_WAIT_S = 60;
 
@@ -32,12 +33,12 @@ function Frame({ testID, top, children, footer }: { testID: string; top: ReactNo
   );
 }
 
-function CodeField({ testID, value, onChange, invalid, label = 'Code *' }: { testID: string; value: string; onChange: (v: string) => void; invalid: boolean; label?: string }): ReactElement {
+function CodeField({ testID, value, onChange, invalid, label = tr("Code *") }: { testID: string; value: string; onChange: (v: string) => void; invalid: boolean; label?: string }): ReactElement {
   return (
     <OutlinedField label={label} invalid={invalid}>
       <FieldInput
         testID={testID}
-        accessibilityLabel="6-digit code"
+        accessibilityLabel={tr("6-digit code")}
         value={value}
         onChangeText={(t) => onChange(t.replace(/\D/g, ''))}
         keyboardType="number-pad"
@@ -110,14 +111,14 @@ export function ServerCodeScreen({
     <Frame
       testID="server-sms-code"
       top={<AuthTop onBack={onBack} step={3} />}
-      footer={<PrimaryButton testID="server-sms-verify" label="Verify phone" onPress={() => void submit()} disabled={code.length !== 6 || busy} />}
+      footer={<PrimaryButton testID="server-sms-verify" label={tr("Verify phone")} onPress={() => void submit()} disabled={code.length !== 6 || busy} />}
     >
-      <Heading title="Confirm your phone" body="We sent a 6-digit code by SMS to make sure this number is yours." />
-      <Text style={styles.text}>Enter the code sent to the number ending with ******{phone.slice(-4)}</Text>
-      <CodeField testID="server-sms-code-input" value={code} onChange={(v) => { setCode(v); setError(null); }} invalid={Boolean(error)} label="OTP *" />
+      <Heading title={tr("Confirm your phone")} body={tr("We sent a 6-digit code by SMS to make sure this number is yours.")} />
+      <Text style={styles.text}>{tr("Enter the code sent to the number ending with ******{{value}}", { value: phone.slice(-4) })}</Text>
+      <CodeField testID="server-sms-code-input" value={code} onChange={(v) => { setCode(v); setError(null); }} invalid={Boolean(error)} label={tr("OTP *")} />
       {error ? <Text testID="server-sms-error" style={styles.error}>{error}</Text> : null}
       <Pressable testID="server-sms-resend" accessibilityRole="button" disabled={wait > 0 || busy} onPress={() => void again()} style={styles.link}>
-        <Text style={wait > 0 ? styles.linkWait : styles.linkText}>{wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}</Text>
+        <Text style={wait > 0 ? styles.linkWait : styles.linkText}>{wait > 0 ? tr("Send a new code in {{wait}}s", { wait }) : tr("Send a new code")}</Text>
       </Pressable>
     </Frame>
   );
@@ -166,10 +167,10 @@ export function MfaScreen({
       top={<AuthTop onBack={onRestart} />}
       footer={
         <View style={styles.actions}>
-          <PrimaryButton testID="mfa-verify" label="Continue" onPress={() => void submit()} disabled={!ready || busy} />
+          <PrimaryButton testID="mfa-verify" label={tr("Continue")} onPress={() => void submit()} disabled={!ready || busy} />
           <GhostButton
             testID="mfa-toggle"
-            label={useRecovery ? 'Use my authenticator app' : 'Use a recovery code'}
+            label={useRecovery ? tr("Use my authenticator app") : tr("Use a recovery code")}
             onPress={() => {
               setUseRecovery((v) => !v);
               setValue('');
@@ -180,18 +181,18 @@ export function MfaScreen({
       }
     >
       <Heading
-        title="Confirm it’s you"
+        title={tr("Confirm it’s you")}
         body={
           useRecovery
-            ? 'Enter one of the recovery codes you saved when you set up 2FA. Each code works once. For your safety, every other phone will need a code again.'
-            : 'This is a new phone for your account. Enter the 6-digit code from your authenticator app.'
+            ? tr("Enter one of the recovery codes you saved when you set up 2FA. Each code works once. For your safety, every other phone will need a code again.")
+            : tr("This is a new phone for your account. Enter the 6-digit code from your authenticator app.")
         }
       />
       {useRecovery ? (
-        <OutlinedField label="Recovery code *" invalid={Boolean(error)}>
+        <OutlinedField label={tr("Recovery code *")} invalid={Boolean(error)}>
           <FieldInput
             testID="mfa-recovery-input"
-            accessibilityLabel="Recovery code"
+            accessibilityLabel={tr("Recovery code")}
             value={value}
             onChangeText={(t) => { setValue(t.toUpperCase().slice(0, 10)); setError(null); }}
             maxLength={10}

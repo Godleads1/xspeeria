@@ -18,6 +18,7 @@ import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { formatHundredths, parseToHundredths } from '../market/money';
 import type { PayoutSource } from './serverPayouts';
+import { tr } from "../../i18n";
 
 function exactMinor(text: string): number | null {
   return /^[0-9]+(\.[0-9]{1,2})?$/.test(text) ? parseToHundredths(text) : text === '0' ? 0 : null;
@@ -29,7 +30,7 @@ export function timeLeft(deadline: string | null | undefined, now: number): stri
   const ms = Date.parse(deadline) - now;
   if (Number.isNaN(ms) || ms <= 0) return null;
   const mins = Math.floor(ms / 60_000);
-  return mins < 1 ? 'less than a minute left' : `${mins} min left`;
+  return mins < 1 ? tr("less than a minute left") : tr("{{mins}} min left", { mins });
 }
 
 export function ChoosePayoutScreen({
@@ -81,18 +82,16 @@ export function ChoosePayoutScreen({
 
   const header = (
     <View style={styles.header}>
-      <Pressable testID="choose-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="choose-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
-      <Text accessibilityRole="header" style={styles.title}>
-        Payout accounts
-      </Text>
+      <Text accessibilityRole="header" style={styles.title}>{tr("Payout accounts")}</Text>
       <View style={styles.spacer} />
     </View>
   );
 
   if (loadError) return <Screen testID="choose-payout-screen">{header}<ErrorState title={loadError} onRetry={load} /></Screen>;
-  if (!deal || !accounts) return <Screen testID="choose-payout-screen">{header}<LoadingState label="Loading" /></Screen>;
+  if (!deal || !accounts) return <Screen testID="choose-payout-screen">{header}<LoadingState label={tr("Loading")} /></Screen>;
 
   const currency = deal.you_receive_currency ?? '';
   const due = exactMinor(deal.you_receive_amount ?? '') ?? 0;
@@ -108,15 +107,15 @@ export function ChoosePayoutScreen({
   if (deal.preparation_state !== 'awaiting_payout_accounts' || saved) {
     const text =
       deal.preparation_state === 'funding_ready'
-        ? 'Both sides have chosen their payout accounts. Next: open the escrow steps from My Deals and pay in within 5 minutes.'
+        ? tr("Both sides have chosen their payout accounts. Next: open the escrow steps from My Deals and pay in within 5 minutes.")
         : deal.preparation_state === 'expired'
-          ? 'The 30 minutes to choose payout accounts passed, so this deal was cancelled. Nothing was paid.'
-          : 'You have chosen your payout accounts. Waiting for the other side.';
+          ? tr("The 30 minutes to choose payout accounts passed, so this deal was cancelled. Nothing was paid.")
+          : tr("You have chosen your payout accounts. Waiting for the other side.");
     return (
       <Screen testID="choose-payout-screen">
         {header}
         <Text testID="choose-status" style={styles.status}>{text}</Text>
-        <PrimaryButton testID="choose-done" label="Done" onPress={onBack} />
+        <PrimaryButton testID="choose-done" label={tr("Done")} onPress={onBack} />
       </Screen>
     );
   }
@@ -145,29 +144,29 @@ export function ChoosePayoutScreen({
     <Screen testID="choose-payout-screen">
       {header}
       <View testID="choose-summary" style={styles.card}>
-        <Text style={styles.big}>{`You receive ${formatHundredths(due)} ${currency}`}</Text>
+        <Text style={styles.big}>{tr("You receive {{due}} {{currency}}", { due: formatHundredths(due), currency })}</Text>
         <Text style={styles.line}>
-          {left ? `Choose where it is paid — ${left}.` : 'Time is up for this deal.'}
+          {left ? tr("Choose where it is paid — {{left}}.", { left }) : tr("Time is up for this deal.")}
         </Text>
-        {deal.other_side_chose_payout_accounts ? <Text style={styles.line}>The other side has chosen.</Text> : null}
+        {deal.other_side_chose_payout_accounts ? <Text style={styles.line}>{tr("The other side has chosen.")}</Text> : null}
         {deal.you_chose_payout_accounts ? (
-          <Text style={styles.line}>You have already chosen; you can change it until the other side chooses.</Text>
+          <Text style={styles.line}>{tr("You have already chosen; you can change it until the other side chooses.")}</Text>
         ) : null}
       </View>
 
       {accounts.length === 0 ? (
         <Text testID="choose-no-accounts" style={styles.line}>
-          {`You have no confirmed ${currency} payout account yet.`}
+          {tr("You have no confirmed {{currency}} payout account yet.", { currency })}
         </Text>
       ) : (
         <View testID="choose-accounts" style={styles.list}>
           {accounts.map((a) => (
             <View key={a.payout_account_id} style={styles.row}>
               <Text style={styles.strong}>{`${a.bank_name} •••• ${a.account_last4}`}</Text>
-              <OutlinedField label={`Amount in ${currency}`}>
+              <OutlinedField label={tr("Amount in {{currency}}", { currency })}>
                 <FieldInput
                   testID={`choose-amount-${a.payout_account_id}`}
-                  accessibilityLabel={`Amount to ${a.bank_name} ending ${a.account_last4}`}
+                  accessibilityLabel={tr("Amount to {{bank_name}} ending {{account_last4}}", { bank_name: a.bank_name, account_last4: a.account_last4 })}
                   value={amounts[a.payout_account_id] ?? ''}
                   onChangeText={(t) => setAmounts((s) => ({ ...s, [a.payout_account_id]: t }))}
                   placeholder="0.00"
@@ -178,25 +177,25 @@ export function ChoosePayoutScreen({
         </View>
       )}
       <Pressable testID="choose-add-account" accessibilityRole="button" onPress={() => onAddAccount(currency)} hitSlop={8}>
-        <Text style={styles.link}>{`Add a ${currency} payout account`}</Text>
+        <Text style={styles.link}>{tr("Add a {{currency}} payout account", { currency })}</Text>
       </Pressable>
 
       {accounts.length > 0 ? (
         <Text testID="choose-left" style={[styles.line, leftToAssign !== 0 || malformed ? styles.warn : null]}>
           {malformed
-            ? 'Enter amounts like 1000.00.'
+            ? tr("Enter amounts like 1000.00.")
             : leftToAssign > 0
-              ? `Left to assign: ${formatHundredths(leftToAssign)} ${currency}`
+              ? tr("Left to assign: {{leftToAssign}} {{currency}}", { leftToAssign: formatHundredths(leftToAssign), currency })
               : leftToAssign < 0
-                ? `${formatHundredths(-leftToAssign)} ${currency} more than you receive`
-                : 'All assigned.'}
+                ? tr("{{leftToAssign}} {{currency}} more than you receive", { leftToAssign: formatHundredths(-leftToAssign), currency })
+                : tr("All assigned.")}
         </Text>
       ) : null}
 
-      <OutlinedField label="Authenticator code *">
+      <OutlinedField label={tr("Authenticator code *")}>
         <FieldInput
           testID="choose-code"
-          accessibilityLabel="6-digit code from your authenticator app"
+          accessibilityLabel={tr("6-digit code from your authenticator app")}
           value={code}
           onChangeText={(t) => {
             setCode(t.replace(/[^0-9]/g, '').slice(0, 6));
@@ -213,7 +212,7 @@ export function ChoosePayoutScreen({
           {error}
         </Text>
       ) : null}
-      <PrimaryButton testID="choose-confirm" label={busy ? 'Saving…' : 'Confirm payout accounts'} onPress={() => void submit()} disabled={!ready} />
+      <PrimaryButton testID="choose-confirm" label={busy ? tr("Saving…") : tr("Confirm payout accounts")} onPress={() => void submit()} disabled={!ready} />
     </Screen>
   );
 }

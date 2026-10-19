@@ -15,6 +15,7 @@ import type { MarketRate } from '../../fixtures';
 import { color, numericTextStyle, radius, space, typography, themed } from '../../theme';
 import { groupDigits } from './rate';
 import { SectionLabel } from './SectionLabel';
+import { tr } from "../../i18n";
 
 /** Overlap with the hero card above, so the card sits on the panel as in Figma. */
 export const ATTACH_OVERLAP = 20;
@@ -39,13 +40,13 @@ export function MarketRates({
 }): ReactElement {
   return (
     <View testID="home-market-rates" style={[styles.panel, attached ? styles.attached : null]}>
-      <SectionLabel>Current market rates</SectionLabel>
+      <SectionLabel>{tr("Current market rates")}</SectionLabel>
       {rates.map((rate) => (
         <View
           key={rate.id}
           testID={`rate-${rate.id}`}
           accessible
-          accessibilityLabel={`${rate.base} to ${rate.quote}: 1 ${rate.quote} costs ${groupDigits(rate.rate)} ${rate.base}`}
+          accessibilityLabel={tr("{{base}} to {{quote}}: 1 {{quote2}} costs {{rate}} {{base2}}", { base: rate.base, quote: rate.quote, quote2: rate.quote, rate: groupDigits(rate.rate), base2: rate.base })}
           style={styles.row}
         >
           <Text style={styles.pair}>{`${rate.base} - ${rate.quote}`}</Text>

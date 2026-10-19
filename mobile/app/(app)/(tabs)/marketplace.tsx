@@ -8,6 +8,7 @@ import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer } from '../../../src/features/market/serverOffers';
 import { tradeStore } from '../../../src/features/trade/tradeStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /**
  * Market tab (ADR-005). Mock data only. "Create" opens Select Match for the request typed;
@@ -40,7 +41,7 @@ export default function MarketplaceRoute(): ReactElement {
           ? (key) => {
               if (key === 'offers') router.push('/market/my-offers');
               else if (key === 'deals') router.push('/market/deals');
-              else Alert.alert('Coming soon', 'This is one of the next screens to be built.');
+              else Alert.alert(tr("Coming soon"), tr("This is one of the next screens to be built."));
             }
           : undefined
       }

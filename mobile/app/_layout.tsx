@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { Fragment, useEffect, useState, type ReactElement } from 'react';
 import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,6 +11,7 @@ import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { UnavailableBuild } from '../src/features/auth/ui';
 import { BannerHost } from '../src/components/Banner';
 import { installWebAlert } from '../src/components/webAlert';
+import { language, useLanguage } from '../src/i18n';
 import { session, useSession } from '../src/features/auth/session';
 import { SERVER_MODE } from '../src/api/config';
 import { serverAuth } from '../src/features/auth/serverAuth';
@@ -32,7 +33,7 @@ export default function RootLayout(): ReactElement | null {
   // Restore the saved light/dark choice before the splash hides, so nothing flashes.
   const [modeReady, setModeReady] = useState(false);
   useEffect(() => {
-    Promise.all([loadSavedThemeMode(), session.restore()])
+    Promise.all([loadSavedThemeMode(), session.restore(), language.restore()])
       // Server mode (ADR-027): resume the server session if it is still alive.
       .then(() => (SERVER_MODE ? serverAuth.restore(Date.now()) : undefined))
       .finally(() => setModeReady(true));
@@ -40,6 +41,8 @@ export default function RootLayout(): ReactElement | null {
   const ready = fontsReady && modeReady;
   const mode = useThemeMode();
   const { signedIn } = useSession();
+  // ADR-053: a new language redraws every screen (text is looked up while drawing).
+  const lang = useLanguage();
   // Figma's first screen: the logo splash stays briefly after the native one hides.
   const [launching, setLaunching] = useState(true);
   useApplyScreenCapturePreference();
@@ -57,7 +60,7 @@ export default function RootLayout(): ReactElement | null {
   if (!DEMO_MODE) return <UnavailableBuild />;
 
   return (
-    <>
+    <Fragment key={lang}>
       <StatusBar style={mode === 'dark' && !launching ? 'light' : 'dark'} />
       {/* ADR-013: the app is reachable only when signed in; otherwise welcome / log in / sign-up. */}
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas } }}>
@@ -73,6 +76,6 @@ export default function RootLayout(): ReactElement | null {
       {/* ADR-044: in-app banner (Figma message style). */}
       <BannerHost />
       {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}
-    </>
+    </Fragment>
   );
 }

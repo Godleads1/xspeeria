@@ -7,6 +7,8 @@
  * persisted `Match`, and using it here creates no new requirement.
  */
 
+import { k } from "../i18n";
+
 export type ReadinessState = 'complete' | 'action-required' | 'pending';
 
 export interface ReadinessDimension {
@@ -24,33 +26,33 @@ export interface ReadinessDimension {
 export const READINESS_INCOMPLETE: readonly ReadinessDimension[] = [
   {
     id: 'identity',
-    label: 'Identity',
+    label: k("Identity"),
     state: 'complete',
-    detail: 'Verified',
+    detail: k("Verified"),
   },
   {
     id: 'security',
-    label: 'Security',
+    label: k("Security"),
     state: 'action-required',
-    detail: 'Add a second factor to continue',
-    action: 'Set up',
+    detail: k("Add a second factor to continue"),
+    action: k("Set up"),
   },
   {
     id: 'eligibility',
-    label: 'Eligible to transact',
+    label: k("Eligible to transact"),
     state: 'pending',
-    detail: 'Available once the steps above are complete',
+    detail: k("Available once the steps above are complete"),
   },
 ];
 
 export const READINESS_COMPLETE: readonly ReadinessDimension[] = [
-  { id: 'identity', label: 'Identity', state: 'complete', detail: 'Verified' },
-  { id: 'security', label: 'Security', state: 'complete', detail: 'Two-factor on' },
+  { id: 'identity', label: k("Identity"), state: 'complete', detail: k("Verified") },
+  { id: 'security', label: k("Security"), state: 'complete', detail: k("Two-factor on") },
   {
     id: 'eligibility',
-    label: 'Eligible to transact',
+    label: k("Eligible to transact"),
     state: 'complete',
-    detail: 'You can create and accept offers',
+    detail: k("You can create and accept offers"),
   },
 ];
 

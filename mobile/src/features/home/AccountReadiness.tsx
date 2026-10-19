@@ -24,6 +24,7 @@ import {
 } from '../../components/primitives';
 import type { ReadinessDimension, ReadinessState } from '../../fixtures';
 import { color, radius, space, typography, themed } from '../../theme';
+import { tr, k } from "../../i18n";
 
 const TONE_FOR: Record<ReadinessState, StatusTone> = {
   complete: 'success',
@@ -32,9 +33,9 @@ const TONE_FOR: Record<ReadinessState, StatusTone> = {
 };
 
 const LABEL_FOR: Record<ReadinessState, string> = {
-  complete: 'Complete',
-  'action-required': 'Action required',
-  pending: 'Pending',
+  complete: k("Complete"),
+  'action-required': k("Action required"),
+  pending: k("Pending"),
 };
 
 /**
@@ -76,8 +77,8 @@ export function AccountReadiness({
     return (
       <Card testID="readiness-collapsed" style={styles.card}>
         <View style={styles.collapsedRow}>
-          <Headline>You&apos;re ready to transact</Headline>
-          <StatusChip label="Complete" tone="success" />
+          <Headline>{tr("You're ready to transact")}</Headline>
+          <StatusChip label={tr("Complete")} tone="success" />
         </View>
       </Card>
     );
@@ -88,9 +89,9 @@ export function AccountReadiness({
   return (
     <Card testID="readiness-expanded" style={styles.card}>
       <View style={styles.cardHeader}>
-        <Headline>Account readiness</Headline>
+        <Headline>{tr("Account readiness")}</Headline>
         {/* A count of steps, never a currency figure. */}
-        <Caption>{`${done} of ${dimensions.length} complete`}</Caption>
+        <Caption>{tr("{{done}} of {{length}} complete", { done, length: dimensions.length })}</Caption>
       </View>
 
       <View style={styles.list}>
@@ -99,10 +100,10 @@ export function AccountReadiness({
             {index > 0 ? <Divider /> : null}
             <View style={styles.row}>
               <View style={styles.rowText}>
-                <Text style={styles.rowLabel}>{dimension.label}</Text>
-                <Caption>{dimension.detail}</Caption>
+                <Text style={styles.rowLabel}>{tr(dimension.label)}</Text>
+                <Caption>{tr(dimension.detail)}</Caption>
               </View>
-              <StatusChip label={LABEL_FOR[dimension.state]} tone={TONE_FOR[dimension.state]} />
+              <StatusChip label={tr(LABEL_FOR[dimension.state])} tone={TONE_FOR[dimension.state]} />
             </View>
           </View>
         ))}

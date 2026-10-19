@@ -7,13 +7,17 @@
 
 import * as SecureStore from 'expo-secure-store';
 
+import { tr } from '../i18n';
+
 const KEY = 'xspeeria.unlockKey';
 
-const OPTIONS: SecureStore.SecureStoreOptions = {
-  keychainAccessible: SecureStore.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-  requireAuthentication: true,
-  authenticationPrompt: 'Unlock Xspeeria',
-};
+function options(): SecureStore.SecureStoreOptions {
+  return {
+    keychainAccessible: SecureStore.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+    requireAuthentication: true,
+    authenticationPrompt: tr('Unlock Xspeeria'),
+  };
+}
 
 export const unlockKey = {
   /** True when this phone can keep a key behind Face ID/fingerprint. */
@@ -26,7 +30,7 @@ export const unlockKey = {
   },
   async save(value: string): Promise<boolean> {
     try {
-      await SecureStore.setItemAsync(KEY, value, OPTIONS);
+      await SecureStore.setItemAsync(KEY, value, options());
       return true;
     } catch {
       return false;
@@ -35,14 +39,14 @@ export const unlockKey = {
   /** Shows the Face ID/fingerprint prompt. Null when cancelled, failed or missing. */
   async read(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(KEY, OPTIONS);
+      return await SecureStore.getItemAsync(KEY, options());
     } catch {
       return null;
     }
   },
   async clear(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(KEY, OPTIONS);
+      await SecureStore.deleteItemAsync(KEY, options());
     } catch {
       /* nothing stored */
     }

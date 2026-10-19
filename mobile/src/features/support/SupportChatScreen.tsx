@@ -18,7 +18,8 @@ import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FAQ } from '../faq/data';
 import { AssistantAvatar } from './AssistantAvatar';
-import { FALLBACK, QUICK_REPLIES, bestAnswer, greeting, sensitiveWarning, type QuickReply } from './assistant';
+import { fallbackAnswer, QUICK_REPLIES, bestAnswer, greeting, sensitiveWarning, type QuickReply } from './assistant';
+import { tr } from "../../i18n";
 
 interface Message {
   readonly id: number;
@@ -96,12 +97,12 @@ export function SupportChatScreen({
     }
     setDraft('');
     setWarning(null);
-    ask(text, bestAnswer(text)?.answer ?? FALLBACK);
+    ask(text, tr(bestAnswer(text)?.answer ?? '') || fallbackAnswer());
   };
 
   const chip = (q: QuickReply): void => {
     const item = FAQ.find((f) => f.id === q.faqId);
-    ask(q.label, item?.answer ?? FALLBACK);
+    ask(tr(q.label), item ? tr(item.answer) : fallbackAnswer());
   };
 
   return (
@@ -111,10 +112,10 @@ export function SupportChatScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="support-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="support-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Alex Mobile Assistant</Text>
+        <Text style={styles.title}>{tr("Alex Mobile Assistant")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -124,7 +125,7 @@ export function SupportChatScreen({
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.notice}>Automated assistant. Answers come from our FAQ.</Text>
+        <Text style={styles.notice}>{tr("Automated assistant. Answers come from our FAQ.")}</Text>
         {messages.map((m, i) => {
           const showChips = m.id === 0 && !chipsUsed;
           return (
@@ -146,7 +147,7 @@ export function SupportChatScreen({
                             onPress={() => chip(q)}
                             style={styles.chip}
                           >
-                            <Text style={styles.chipText}>{q.label}</Text>
+                            <Text style={styles.chipText}>{tr(q.label)}</Text>
                           </Pressable>
                         ))}
                       </View>
@@ -176,12 +177,12 @@ export function SupportChatScreen({
         <Pressable
           testID="support-camera"
           accessibilityRole="button"
-          accessibilityLabel="Attach a photo"
+          accessibilityLabel={tr("Attach a photo")}
           hitSlop={8}
           onPress={() =>
             Alert.alert(
-              'Photos are not accepted here',
-              'For your safety, never send ID documents in chat. To share payment evidence for a trade, open it in History and raise a dispute.',
+              tr("Photos are not accepted here"),
+              tr("For your safety, never send ID documents in chat. To share payment evidence for a trade, open it in History and raise a dispute."),
             )
           }
         >
@@ -196,20 +197,20 @@ export function SupportChatScreen({
               setDraft(t);
               if (warning) setWarning(null);
             }}
-            placeholder="Write a comment"
+            placeholder={tr("Write a comment")}
             placeholderTextColor={color.text.secondary}
-            accessibilityLabel="Write a comment"
+            accessibilityLabel={tr("Write a comment")}
             maxLength={500}
             returnKeyType="send"
             onSubmitEditing={send}
             style={styles.input}
           />
-          <Pressable testID="support-emoji" accessibilityRole="button" accessibilityLabel="Emoji" hitSlop={8} onPress={() => input.current?.focus()}>
+          <Pressable testID="support-emoji" accessibilityRole="button" accessibilityLabel={tr("Emoji")} hitSlop={8} onPress={() => input.current?.focus()}>
             <SmileGlyph />
           </Pressable>
         </View>
         {draft.trim() !== '' ? (
-          <Pressable testID="support-send" accessibilityRole="button" accessibilityLabel="Send" onPress={send} style={styles.send}>
+          <Pressable testID="support-send" accessibilityRole="button" accessibilityLabel={tr("Send")} onPress={send} style={styles.send}>
             <Icon name="chevron" color={color.text.onFill} size={16} weight={2.5} />
           </Pressable>
         ) : null}

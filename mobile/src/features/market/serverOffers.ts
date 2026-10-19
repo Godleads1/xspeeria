@@ -15,6 +15,7 @@ import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersA
 import { serverAuth } from '../auth/serverAuth';
 import type { Listing } from './data';
 import { formatHundredths, parseToHundredths } from './money';
+import { tr } from "../../i18n";
 
 /** Server text such as "1320.50" or "1320.125" → hundredths, only when exact. */
 export function exactHundredths(text: string): number | null {
@@ -31,14 +32,14 @@ export function groupedRate(text: string): string {
 
 function minutesAgo(iso: string, now: number): string {
   const at = Date.parse(iso);
-  if (Number.isNaN(at)) return 'Offer time: just now';
+  if (Number.isNaN(at)) return tr("Offer time: just now");
   const mins = Math.max(0, Math.floor((now - at) / 60_000));
-  if (mins < 1) return 'Offer time: just now';
-  if (mins < 60) return `Offer time: ${mins} min${mins === 1 ? '' : 's'} ago`;
+  if (mins < 1) return tr("Offer time: just now");
+  if (mins < 60) return (mins === 1 ? tr("Offer time: 1 min ago") : tr("Offer time: {{count}} mins ago", { count: mins }));
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `Offer time: ${hours} hour${hours === 1 ? '' : 's'} ago`;
+  if (hours < 24) return (hours === 1 ? tr("Offer time: 1 hour ago") : tr("Offer time: {{count}} hours ago", { count: hours }));
   const days = Math.floor(hours / 24);
-  return `Offer time: ${days} day${days === 1 ? '' : 's'} ago`;
+  return (days === 1 ? tr("Offer time: 1 day ago") : tr("Offer time: {{count}} days ago", { count: days }));
 }
 
 /** A server offer as a Market row. Returns null for anything the app cannot show exactly. */
@@ -57,7 +58,7 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
     availableMinor: remaining,
     rateHundredths: sortKey,
     ...(rate === null ? { rateLabel: groupedRate(offer.desired_rate) } : {}),
-    meta: offer.is_own ? 'Your offer' : minutesAgo(offer.created_at, now),
+    meta: offer.is_own ? tr("Your offer") : minutesAgo(offer.created_at, now),
     ...(best ? { best: true } : {}),
     ...(offer.is_own ? { own: true } : {}),
   };
@@ -65,7 +66,7 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 

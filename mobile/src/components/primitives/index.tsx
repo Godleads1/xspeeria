@@ -27,6 +27,7 @@ import {
   typography,
   themed,
 } from "../../theme";
+import { tr } from "../../i18n";
 
 /* ------------------------------------------------------------------ Screen */
 
@@ -278,7 +279,7 @@ export function StatusChip({
   return (
     <View
       accessible
-      accessibilityLabel={`Status: ${label}`}
+      accessibilityLabel={tr("Status: {{label}}", { label })}
       style={[
         styles.chip,
         { backgroundColor: palette.surface, borderColor: palette.border },
@@ -356,7 +357,7 @@ export function ErrorState({
       <Text style={[typography.headline, { color: color.error.text }]}>
         {title}
       </Text>
-      <PrimaryButton label="Try again" onPress={onRetry} testID="error-retry" />
+      <PrimaryButton label={tr("Try again")} onPress={onRetry} testID="error-retry" />
     </View>
   );
 }

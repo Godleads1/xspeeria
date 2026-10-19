@@ -21,6 +21,7 @@ import { ServerCodeSheet } from './ServerCodeSheet';
 import type { ServerTwoFactor } from './serverTwoFactor';
 import type { StepUp } from './stepUp';
 import { RECOVERY_CODE_COUNT, twoFactor, useTwoFactor, type RandomBytes } from './twoFactorStore';
+import { tr } from "../../i18n";
 
 function MethodRow({
   icon,
@@ -89,7 +90,7 @@ export function TwoFactorScreen({
       setAsking('codes');
       return;
     }
-    if (await stepUp('Get new recovery codes. Your old codes will stop working.')) {
+    if (await stepUp(tr("Get new recovery codes. Your old codes will stop working."))) {
       setNewCodes(twoFactor.regenerateRecoveryCodes(random));
     }
   };
@@ -97,10 +98,10 @@ export function TwoFactorScreen({
   return (
     <View testID="two-factor-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="two-factor-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="two-factor-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>2 FA authentication</Text>
+        <Text style={styles.title}>{tr("2 FA authentication")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -108,38 +109,38 @@ export function TwoFactorScreen({
         <View style={styles.status}>
           <MenuIcon name="security" size={44} />
           <View style={styles.statusText}>
-            <Text testID="two-factor-status" style={styles.statusTitle}>{enrolled ? '2 FA is on' : '2 FA is not set up'}</Text>
+            <Text testID="two-factor-status" style={styles.statusTitle}>{enrolled ? tr("2 FA is on") : tr("2 FA is not set up")}</Text>
             <Text style={styles.statusBody}>
               {enrolled
-                ? 'We ask for a code when you sign in on a new phone and before sensitive changes.'
-                : 'Set it up to trade and to make changes to your account and beneficiaries.'}
+                ? tr("We ask for a code when you sign in on a new phone and before sensitive changes.")
+                : tr("Set it up to trade and to make changes to your account and beneficiaries.")}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.section}>Methods</Text>
+        <Text style={styles.section}>{tr("Methods")}</Text>
         <MethodRow
           testID="two-factor-authenticator"
           icon="lock"
-          title="Authenticator app"
-          detail={enrolled ? 'On' : 'Codes from an app like Google Authenticator'}
+          title={tr("Authenticator app")}
+          detail={enrolled ? tr("On") : tr("Codes from an app like Google Authenticator")}
           done={enrolled}
-          action={server ? 'Replace' : enrolled ? undefined : 'Set up'}
+          action={server ? 'Replace' : enrolled ? undefined : tr("Set up")}
           onPress={server ? () => setAsking('replace') : enrolled ? undefined : onSetUpAuthenticator}
         />
         <MethodRow
           testID="two-factor-passkey"
           icon="key"
-          title="Passkey"
-          detail="Face ID or fingerprint. Coming in the next app version"
+          title={tr("Passkey")}
+          detail={tr("Face ID or fingerprint. Coming in the next app version")}
         />
         {enrolled ? (
           <MethodRow
             testID="two-factor-recovery"
             icon="document"
-            title="Recovery codes"
-            detail={server ? 'Each code works once' : `${tf.recoveryCodes.length} of ${RECOVERY_CODE_COUNT} unused`}
-            action="Get new codes"
+            title={tr("Recovery codes")}
+            detail={server ? tr("Each code works once") : tr("{{length}} of {{RECOVERY_CODE_COUNT}} unused", { length: tf.recoveryCodes.length, RECOVERY_CODE_COUNT })}
+            action={tr("Get new codes")}
             onPress={() => {
               void regenerate();
             }}
@@ -147,10 +148,10 @@ export function TwoFactorScreen({
         ) : null}
 
         <View style={styles.rules}>
-          <Text style={styles.rule}>• 2 FA cannot be turned off. It is required to trade.</Text>
-          <Text style={styles.rule}>• We never send codes by SMS, and Xspeeria staff will never ask for your codes.</Text>
-          <Text style={styles.rule}>• After 5 wrong codes, 2 FA is locked for 15 minutes.</Text>
-          <Text style={styles.rule}>• Adding a beneficiary and choosing where a deal is paid each need a code.</Text>
+          <Text style={styles.rule}>{tr("• 2 FA cannot be turned off. It is required to trade.")}</Text>
+          <Text style={styles.rule}>{tr("• We never send codes by SMS, and Xspeeria staff will never ask for your codes.")}</Text>
+          <Text style={styles.rule}>{tr("• After 5 wrong codes, 2 FA is locked for 15 minutes.")}</Text>
+          <Text style={styles.rule}>{tr("• Adding a beneficiary and choosing where a deal is paid each need a code.")}</Text>
         </View>
       </ScrollView>
 
@@ -158,8 +159,8 @@ export function TwoFactorScreen({
         visible={asking !== null}
         reason={
           asking === 'replace'
-            ? 'Replace your authenticator app. Logging in on any phone will need a code again.'
-            : 'Get new recovery codes. Your old codes will stop working.'
+            ? tr("Replace your authenticator app. Logging in on any phone will need a code again.")
+            : tr("Get new recovery codes. Your old codes will stop working.")
         }
         onCancel={() => setAsking(null)}
         onSubmit={async (code) => {

@@ -22,6 +22,8 @@ import {
   filterHistory,
   type HistoryItem,
 } from './data';
+import { tr, k } from "../../i18n";
+import { trRich } from "../../i18n/rich";
 
 function CalendarGlyph(): ReactElement {
   const s = { stroke: color.text.disabled, strokeWidth: 1.5, fill: 'none', strokeLinecap: 'round' as const };
@@ -49,7 +51,7 @@ function DateField({
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={value ? `${label}: ${displayDate(value)}. Change` : `${label}. Choose a date`}
+      accessibilityLabel={value ? tr("{{label}}: {{value}}. Change", { label, value: displayDate(value) }) : tr("{{label}}. Choose a date", { label })}
       onPress={onPress}
       style={({ pressed }) => [styles.dateField, pressed ? styles.rowPressed : null]}
     >
@@ -68,14 +70,19 @@ export function HistoryRow({
   item: HistoryItem;
   onPress?: (item: HistoryItem) => void;
 }): ReactElement {
-  const verb = item.side === 'buy' ? 'bought' : 'sold';
+  const bought = item.side === 'buy';
   const amount = `${formatCompact(item.amountMinor)} ${item.currency}`;
-  const status = item.status === 'completed' ? '' : item.status === 'pending' ? ' · Pending' : ' · Failed';
+  const status = item.status === 'completed' ? '' : item.status === 'pending' ? tr(" · Pending") : tr(" · Failed");
   return (
     <Pressable
       testID={`history-${item.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`You ${verb} ${amount} at ${formatCompact(item.rateHundredths)} NGN per ${item.currency}, ${displayDate(item.date)}${status}`}
+      accessibilityLabel={(() => {
+        const v = { amount, rateHundredths: formatCompact(item.rateHundredths), currency: item.currency, date: displayDate(item.date), status };
+        return bought
+          ? tr("You bought {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v)
+          : tr("You sold {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v);
+      })()}
       disabled={!onPress}
       onPress={() => onPress?.(item)}
       style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
@@ -84,11 +91,12 @@ export function HistoryRow({
       <View style={styles.rowDivided}>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle}>
-          {`You ${verb} `}
-          <Text style={styles.rowAmount}>{amount}</Text>
+          {bought
+            ? trRich("You bought <1>{{amount}}</1>", { amount }, { 1: (s) => <Text style={styles.rowAmount}>{s}</Text> })
+            : trRich("You sold <1>{{amount}}</1>", { amount }, { 1: (s) => <Text style={styles.rowAmount}>{s}</Text> })}
         </Text>
         <Text style={styles.rowRate}>
-          {`Rate - NGN ${formatCompact(item.rateHundredths)}/${item.currency}`}
+          {tr("Rate - NGN {{rateHundredths}}/{{currency}}", { rateHundredths: formatCompact(item.rateHundredths), currency: item.currency })}
           {status ? <Text style={item.status === 'failed' ? styles.failed : styles.pending}>{status}</Text> : null}
         </Text>
       </View>
@@ -104,8 +112,8 @@ export function HistoryRow({
  */
 export type HistoryMenuKey = 'support' | 'statement';
 const MENU: readonly { key: HistoryMenuKey; label: string }[] = [
-  { key: 'support', label: 'Contact support' },
-  { key: 'statement', label: 'Download Statement' },
+  { key: 'support', label: k("Contact support") },
+  { key: 'statement', label: k("Download Statement") },
 ];
 
 export function HistoryScreen({
@@ -129,20 +137,18 @@ export function HistoryScreen({
   return (
     <Screen testID="history-screen">
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Transaction History
-        </Text>
-        <RoundButton icon="more" label="More options" testID="history-more" onPress={() => setMenu(true)} />
+        <Text accessibilityRole="header" style={styles.title}>{tr("Transaction History")}</Text>
+        <RoundButton icon="more" label={tr("More options")} testID="history-more" onPress={() => setMenu(true)} />
       </View>
 
       <View style={styles.dates}>
-        <DateField label="Start date" value={from} onPress={() => setPicking('start')} testID="history-start" />
-        <DateField label="End date" value={to} onPress={() => setPicking('end')} testID="history-end" />
+        <DateField label={tr("Start date")} value={from} onPress={() => setPicking('start')} testID="history-start" />
+        <DateField label={tr("End date")} value={to} onPress={() => setPicking('end')} testID="history-end" />
       </View>
 
       {visible.length === 0 ? (
         <Text testID="history-empty" style={styles.empty}>
-          {from || to ? 'No transactions in these dates' : 'No transactions yet'}
+          {from || to ? tr("No transactions in these dates") : tr("No transactions yet")}
         </Text>
       ) : (
         <View testID="history-list">
@@ -155,7 +161,7 @@ export function HistoryScreen({
       <CalendarSheet
         testID="history-calendar"
         visible={picking !== null}
-        title={picking === 'end' ? 'End date' : 'Start date'}
+        title={picking === 'end' ? tr("End date") : tr("Start date")}
         value={picking === 'end' ? to : from}
         initialMonth={(picking === 'end' ? from : to) ?? newest}
         // The end can never be before the start, and the start never after the end.
@@ -180,10 +186,11 @@ export function HistoryScreen({
         onClose={() => setMenu(false)}
         actions={MENU.map((item) => ({
           ...item,
+          label: tr(item.label),
           onPress: () => {
             setMenu(false);
             if (onMenu) onMenu(item.key);
-            else Alert.alert(item.label, `${item.label} is one of the next screens to be built.`);
+            else Alert.alert(tr(item.label), tr("{{label}} is one of the next screens to be built.", { label: tr(item.label) }));
           },
         }))}
       />

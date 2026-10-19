@@ -51,7 +51,7 @@ describe('Cards (ADR-012, exact Figma demo ADR-023)', () => {
   it('renders the Figma layout: three card designs, actions and history, no Create yours', async () => {
     await render(<CardsScreen />);
     expect(screen.getByText('Debit Cards')).toBeTruthy();
-    expect(screen.getByTestId('cards-label').props.children.join('')).toBe('USD Card');
+    expect([screen.getByTestId('cards-label').props.children].flat().join('')).toBe('USD Card');
     for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}`)).toBeTruthy();
     for (const t of ['Details', 'Freeze Card', 'More', 'Transaction History']) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.queryByText('Create yours')).toBeNull();

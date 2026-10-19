@@ -19,6 +19,7 @@ import { splitProblem, type PayoutShare } from './payoutSplit';
 import { rateProblem } from '../market/rateCeiling';
 import { DEMO_MODE } from '../auth/demo';
 import { session } from '../auth/session';
+import { k, tr } from "../../i18n";
 
 export const FUNDING_WINDOW_MS = 5 * 60 * 1000;
 export const EXTENSION_MS = 5 * 60 * 1000;
@@ -106,10 +107,10 @@ export function receiveFor(side: Side, amountMinor: number, rateHundredths: numb
 function paidLabel(t: Trade, p: PayoutShare): string {
   const cur = t.side === 'buy' ? t.currency : 'NGN';
   // DEC-044: a newly added account is paid at once, like any other.
-  if (p.isNew) return `${formatHundredths(p.amountMinor)} ${cur} to your new account ending ${p.last4}`;
+  if (p.isNew) return tr("{{amountMinor}} {{cur}} to your new account ending {{last4}}", { amountMinor: formatHundredths(p.amountMinor), cur, last4: p.last4 });
   return t.payouts.length > 1
-    ? `Paid ${formatHundredths(p.amountMinor)} ${cur} to your account ending ${p.last4}`
-    : `Paid to your account ending ${p.last4}`;
+    ? tr("Paid {{amountMinor}} {{cur}} to your account ending {{last4}}", { amountMinor: formatHundredths(p.amountMinor), cur, last4: p.last4 })
+    : tr("Paid to your account ending {{last4}}", { last4: p.last4 });
 }
 
 /**
@@ -147,7 +148,7 @@ function patch(id: string, f: (t: Trade) => Trade): Trade | null {
   return out;
 }
 
-const other = (side: Side): string => (side === 'buy' ? 'Seller' : 'Buyer');
+const other = (side: Side): string => (side === 'buy' ? k('Seller') : k('Buyer'));
 
 export const tradeStore = {
   get: (id: string): Trade | undefined => trades.find((t) => t.id === id),
@@ -198,8 +199,8 @@ export const tradeStore = {
       payouts,
       phase: 'awaiting_payment',
       events: [
-        { label: side === 'buy' ? 'You accepted the offer' : 'You accepted the request', at: now },
-        { label: `You are matched with ${other(side)}`, at: now },
+        { label: side === 'buy' ? tr("You accepted the offer") : tr("You accepted the request"), at: now },
+        { label: tr("You are matched with {{side}}", { side: tr(other(side)) }), at: now },
       ],
       deadline: now + FUNDING_WINDOW_MS,
       extension: 'none',
@@ -221,7 +222,7 @@ export const tradeStore = {
   requestExtension(id: string, now: number): boolean {
     const t = tradeStore.get(id);
     if (!t || t.phase !== 'awaiting_payment' || t.extension !== 'none' || now > t.deadline) return false;
-    patch(id, (x) => ({ ...x, extension: 'requested', phaseSince: now, events: [...x.events, { label: 'You requested a payment extension', at: now }] }));
+    patch(id, (x) => ({ ...x, extension: 'requested', phaseSince: now, events: [...x.events, { label: tr("You requested a payment extension"), at: now }] }));
     return true;
   },
 
@@ -238,7 +239,7 @@ export const tradeStore = {
     const t = tradeStore.get(id);
     // After the deadline the trade has expired (tick records that); it cannot be "cancelled".
     if (!t || t.phase !== 'awaiting_payment' || now > t.deadline) return false;
-    patch(id, (x) => ({ ...x, phase: 'cancelled', phaseSince: now, events: [...x.events, { label: 'You cancelled the trade', at: now }] }));
+    patch(id, (x) => ({ ...x, phase: 'cancelled', phaseSince: now, events: [...x.events, { label: tr("You cancelled the trade"), at: now }] }));
     return true;
   },
 
@@ -253,10 +254,10 @@ export const tradeStore = {
       // extension runs from the original deadline. Demo only: the counterparty "answers".
       if (t.extension === 'requested') {
         if (due && DEMO_MODE) {
-          patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, `Extension approved by ${x.counterparty}`) }));
+          patch(id, (x) => ({ ...x, extension: 'approved', deadline: x.deadline + EXTENSION_MS, phaseSince: now, events: add(x, tr("Extension approved by {{counterparty}}", { counterparty: tr(x.counterparty) })) }));
         }
       } else if (now > t.deadline) {
-        patch(id, (x) => ({ ...x, phase: 'expired', phaseSince: now, events: add(x, 'Time ran out: the trade was cancelled') }));
+        patch(id, (x) => ({ ...x, phase: 'expired', phaseSince: now, events: add(x, tr("Time ran out: the trade was cancelled")) }));
       }
       return;
     }
@@ -264,18 +265,18 @@ export const tradeStore = {
     // moves a trade only on bank evidence from the server, never on the user's "I have paid".
     if (!due || !DEMO_MODE) return;
     if (t.phase === 'confirming') {
-      patch(id, (x) => ({ ...x, phase: 'awaiting_counterparty', phaseSince: now, events: add(x, 'Payment made to escrow by you') }));
+      patch(id, (x) => ({ ...x, phase: 'awaiting_counterparty', phaseSince: now, events: add(x, tr("Payment made to escrow by you")) }));
     } else if (t.phase === 'awaiting_counterparty') {
-      patch(id, (x) => ({ ...x, phase: 'releasing', phaseSince: now, events: add(x, `Payment made to escrow by ${x.counterparty}`) }));
+      patch(id, (x) => ({ ...x, phase: 'releasing', phaseSince: now, events: add(x, tr("Payment made to escrow by {{counterparty}}", { counterparty: tr(x.counterparty) })) }));
     } else if (t.phase === 'releasing') {
       patch(id, (x) => ({
         ...x,
         phase: 'completed',
         phaseSince: now,
         events: [
-          ...add(x, 'Partner bank released the funds'),
+          ...add(x, tr("Partner bank released the funds")),
           ...x.payouts.map((p) => ({ label: paidLabel(x, p), at: now })),
-          { label: `Confirmation sent to you and the ${x.counterparty}`, at: now },
+          { label: tr("Confirmation sent to you and the {{counterparty}}", { counterparty: tr(x.counterparty) }), at: now },
         ],
       }));
     }
@@ -324,11 +325,11 @@ function clock(ms: number): string {
 /** Steps the user still waits for, shown greyed in the progress list. */
 export function pendingSteps(t: Trade): string[] {
   const all = [
-    'Payment made to escrow by you',
-    `Payment made to escrow by ${t.counterparty}`,
-    'Partner bank released the funds',
+    tr("Payment made to escrow by you"),
+    tr("Payment made to escrow by {{counterparty}}", { counterparty: tr(t.counterparty) }),
+    tr("Partner bank released the funds"),
     ...t.payouts.map((p) => paidLabel(t, p)),
-    `Confirmation sent to you and the ${t.counterparty}`,
+    tr("Confirmation sent to you and the {{counterparty}}", { counterparty: tr(t.counterparty) }),
   ];
   const done = new Set(t.events.map((e) => e.label));
   if (t.phase === 'expired' || t.phase === 'cancelled') return [];

@@ -16,6 +16,7 @@ import { Pressable, Text, View, Image } from 'react-native';
 import { Icon, type IconName } from '../../components/icons';
 import { NotificationBadge as Badge } from '../../components/NotificationBadge';
 import { color, typography, themed } from '../../theme';
+import { tr } from "../../i18n";
 
 function HeaderButton({
   icon,
@@ -68,7 +69,7 @@ export function HomeHeader({
 }): ReactElement {
   return (
     <View style={styles.bar}>
-      <View accessible accessibilityLabel={`Welcome, ${name}`} style={styles.identity}>
+      <View accessible accessibilityLabel={tr("Welcome, {{name}}", { name })} style={styles.identity}>
         {avatarUri ? (
           <Image testID="home-avatar-photo" source={{ uri: avatarUri }} style={styles.avatar} />
         ) : (
@@ -77,16 +78,16 @@ export function HomeHeader({
           </View>
         )}
         <View>
-          <Text style={styles.welcome}>Welcome</Text>
+          <Text style={styles.welcome}>{tr("Welcome")}</Text>
           <Text style={styles.name}>{name}</Text>
         </View>
       </View>
 
       <View style={styles.actions}>
-        <HeaderButton icon="help" label="Help" testID="home-help" onPress={onHelp} />
+        <HeaderButton icon="help" label={tr("Help")} testID="home-help" onPress={onHelp} />
         <HeaderButton
           icon="bell"
-          label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+          label={unread > 0 ? tr("Notifications, {{unread}} unread", { unread }) : tr("Notifications")}
           testID="home-notifications"
           onPress={onNotifications}
           badge={unread}

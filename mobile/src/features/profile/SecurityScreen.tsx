@@ -17,6 +17,7 @@ import { useSession } from '../auth/session';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { securitySettings, useSecuritySettings } from './securitySettings';
+import { tr } from "../../i18n";
 
 /** Server builds (ADR-048): Face ID/fingerprint unlock after the 5-minute idle lock. */
 export interface BiometricControl {
@@ -67,16 +68,16 @@ export function SecurityScreen({
     if (!biometric) return;
     setBioError(null);
     if (on && !biometric.supported()) {
-      setBioError('Face ID or fingerprint isn’t set up on this phone.');
+      setBioError(tr("Face ID or fingerprint isn’t set up on this phone."));
       return;
     }
     setBioBusy(true);
     try {
       if (on) {
         // The person holding the phone proves it is them before it is turned on.
-        const r = await biometrics('Turn on Face ID for Xspeeria');
+        const r = await biometrics(tr("Turn on Face ID for Xspeeria"));
         if (r !== 'ok') {
-          if (r === 'unavailable') setBioError('Face ID or fingerprint isn’t set up on this phone.');
+          if (r === 'unavailable') setBioError(tr("Face ID or fingerprint isn’t set up on this phone."));
           return;
         }
         await biometric.enable();
@@ -92,31 +93,31 @@ export function SecurityScreen({
 
   const open = (d: SecurityDestination, title: string): void => {
     if (onOpen) onOpen(d);
-    else Alert.alert(title, `${title} is one of the next screens to be built.`);
+    else Alert.alert(title, tr("{{title}} is one of the next screens to be built.", { title }));
   };
 
   return (
     <View testID="security-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="security-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="security-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Security</Text>
+        <Text style={styles.title}>{tr("Security")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.list}>
-        <LinkRow testID="security-password" label="Change Password" onPress={() => open('password', 'Change Password')} />
-        <LinkRow testID="security-2fa" label="2 FA authentication" onPress={() => open('twoFactor', '2 FA authentication')} />
+        <LinkRow testID="security-password" label={tr("Change Password")} onPress={() => open('password', tr("Change Password"))} />
+        <LinkRow testID="security-2fa" label={tr("2 FA authentication")} onPress={() => open('twoFactor', tr("2 FA authentication"))} />
         {showDevices ? (
-          <LinkRow testID="security-devices" label="Signed-in devices" onPress={() => open('devices', 'Signed-in devices')} />
+          <LinkRow testID="security-devices" label={tr("Signed-in devices")} onPress={() => open('devices', tr("Signed-in devices"))} />
         ) : null}
         {biometric ? (
           <View style={styles.row}>
-            <Text style={styles.label}>Unlock with Face ID / fingerprint</Text>
+            <Text style={styles.label}>{tr("Unlock with Face ID / fingerprint")}</Text>
             <Switch
               testID="security-biometric"
-              accessibilityLabel="Unlock with Face ID or fingerprint"
+              accessibilityLabel={tr("Unlock with Face ID or fingerprint")}
               value={bioOn}
               disabled={bioBusy}
               onValueChange={(v) => void toggleBiometric(v)}
@@ -131,10 +132,10 @@ export function SecurityScreen({
           </Text>
         ) : null}
         <View style={styles.row}>
-          <Text style={styles.label}>Allow Screenshot</Text>
+          <Text style={styles.label}>{tr("Allow Screenshot")}</Text>
           <Switch
             testID="security-screenshot"
-            accessibilityLabel="Allow Screenshot"
+            accessibilityLabel={tr("Allow Screenshot")}
             value={allowScreenshots}
             onValueChange={(v) => securitySettings.setAllowScreenshots(v)}
             trackColor={{ true: color.brand.secondary, false: color.border.strong }}

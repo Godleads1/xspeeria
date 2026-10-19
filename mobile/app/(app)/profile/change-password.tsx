@@ -8,6 +8,7 @@ import { ChangePasswordScreen } from '../../../src/features/profile/ChangePasswo
 import type { PasswordForm } from '../../../src/features/profile/passwordForm';
 import { ServerCodeSheet } from '../../../src/features/security/ServerCodeSheet';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /**
  * Profile › Security › Change Password (the app's PIN). Server builds (ADR-046): the form, then
@@ -23,13 +24,13 @@ export default function ChangePasswordRoute(): ReactElement {
       <ChangePasswordScreen onBack={() => router.back()} onSubmit={setForm} />
       <ServerCodeSheet
         visible={form !== null}
-        reason="Change your PIN. Other devices will be signed out."
+        reason={tr("Change your PIN. Other devices will be signed out.")}
         onCancel={() => setForm(null)}
         onSubmit={async (code) => {
           if (!form) return;
           await serverPin.change(form.oldPassword, form.newPassword, code);
           setForm(null);
-          showBanner({ tone: 'success', title: 'PIN changed', message: 'Other devices have been signed out.' });
+          showBanner({ tone: 'success', title: tr("PIN changed"), message: tr("Other devices have been signed out.") });
           router.back();
         }}
       />

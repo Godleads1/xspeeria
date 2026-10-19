@@ -1,3 +1,5 @@
+import { tr } from "../../i18n";
+
 /**
  * PIN rules. 6 digits (product owner, 2026-10-18, ADR-024; Figma drew 4). Weak PINs (all
  * the same digit, or a straight run like 123456 / 654321) are refused. In production the
@@ -7,12 +9,12 @@
 export const PIN_LENGTH = 6;
 
 export function pinProblem(pin: string): string | null {
-  if (!new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin)) return `Enter ${PIN_LENGTH} digits`;
+  if (!new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin)) return tr("Enter {{PIN_LENGTH}} digits", { PIN_LENGTH });
   const d = pin.split('').map(Number);
-  if (d.every((x) => x === d[0])) return 'Avoid repeating the same digit';
+  if (d.every((x) => x === d[0])) return tr("Avoid repeating the same digit");
   const up = d.every((x, i) => i === 0 || x === (d[i - 1] + 1) % 10);
   const down = d.every((x, i) => i === 0 || x === (d[i - 1] + 9) % 10);
-  if (up || down) return 'Avoid simple sequences like 1234';
+  if (up || down) return tr("Avoid simple sequences like 1234");
   return null;
 }
 

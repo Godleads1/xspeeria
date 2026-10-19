@@ -21,6 +21,7 @@ import { formatHundredths } from "../market/money";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_LABEL } from "../history/data";
+import { tr } from "../../i18n";
 
 function Row({
   label,
@@ -68,34 +69,40 @@ export function ConfirmTradeSheet({
   const receiveCur = side === "buy" ? cur : "NGN";
   const receiveMinor = side === "buy" ? totals.foreignMinor : totals.ngnMinor;
   const minutes = Math.round(FUNDING_WINDOW_MS / 60000);
-  const noun = side === "buy" ? "offer" : "request";
   const canAccept = !stale && parts.length > 0;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable
         style={styles.scrim}
-        accessibilityLabel="Close"
+        accessibilityLabel={tr("Close")}
         onPress={onClose}
       />
       <View testID="confirm-trade" style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.body}>
           <Text accessibilityRole="header" style={styles.title}>
-            {several ? `Confirm ${parts.length} trades` : "Confirm trade"}
+            {several ? tr("Confirm {{length}} trades", { length: parts.length }) : tr("Confirm trade")}
           </Text>
           {short ? (
             <Text testID="confirm-partial" style={styles.notice}>
-              You asked for {formatHundredths(requestedMinor)} {cur}.{" "}
-              {several ? `These ${parts.length} ${noun}s fill` : `This ${noun} fills`}{" "}
-              {formatHundredths(totals.foreignMinor)} {cur}. You can go back and add
-              more {noun}s.
+              {(() => {
+                const v = { asked: formatHundredths(requestedMinor), filled: formatHundredths(totals.foreignMinor), cur, count: parts.length };
+                const isBuy = side === "buy";
+                if (several) {
+                  return isBuy
+                    ? tr("You asked for {{asked}} {{cur}}. These {{count}} offers fill {{filled}} {{cur}}. You can go back and add more offers.", v)
+                    : tr("You asked for {{asked}} {{cur}}. These {{count}} requests fill {{filled}} {{cur}}. You can go back and add more requests.", v);
+                }
+                return isBuy
+                  ? tr("You asked for {{asked}} {{cur}}. This offer fills {{filled}} {{cur}}. You can go back and add more offers.", v)
+                  : tr("You asked for {{asked}} {{cur}}. This request fills {{filled}} {{cur}}. You can go back and add more requests.", v);
+              })()}
             </Text>
           ) : null}
           {stale ? (
-            <Text testID="confirm-stale" style={styles.notice}>
-              Someone else took part of {several ? `one of these ${noun}s` : `this ${noun}`}.
-              Go back and choose again.
-            </Text>
+            <Text testID="confirm-stale" style={styles.notice}>{side === "buy"
+                ? several ? tr("Someone else took part of one of these offers. Go back and choose again.") : tr("Someone else took part of this offer. Go back and choose again.")
+                : several ? tr("Someone else took part of one of these requests. Go back and choose again.") : tr("Someone else took part of this request. Go back and choose again.")}</Text>
           ) : null}
 
           {several ? (
@@ -112,25 +119,25 @@ export function ConfirmTradeSheet({
 
           <View style={styles.card}>
             <Row
-              label={side === "buy" ? "You buy" : "You sell"}
+              label={side === "buy" ? tr("You buy") : tr("You sell")}
               value={`${formatHundredths(totals.foreignMinor)} ${cur}`}
               strong
             />
             {several ? null : (
               <Row
-                label="Rate"
+                label={tr("Rate")}
                 value={`NGN ${formatHundredths(parts[0]?.listing.rateHundredths ?? 0)}/${cur}`}
               />
             )}
             {side === "buy" ? (
               <>
-                <Row label="Amount" value={`${formatHundredths(totals.ngnMinor)} NGN`} />
+                <Row label={tr("Amount")} value={`${formatHundredths(totals.ngnMinor)} NGN`} />
                 <Row
-                  label={`Coordination fee (${COORDINATION_FEE_LABEL})`}
+                  label={tr("Coordination fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
                   value={`${formatHundredths(totals.feeMinor)} NGN`}
                 />
                 <Row
-                  label="Total to transfer"
+                  label={tr("Total to transfer")}
                   value={`${formatHundredths(totals.transferMinor)} NGN`}
                   strong
                 />
@@ -138,15 +145,15 @@ export function ConfirmTradeSheet({
             ) : (
               <>
                 <Row
-                  label="You receive"
+                  label={tr("You receive")}
                   value={`${formatHundredths(totals.ngnMinor)} NGN`}
                 />
                 <Row
-                  label={`Coordination fee (${COORDINATION_FEE_LABEL})`}
+                  label={tr("Coordination fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
                   value={`${formatHundredths(totals.feeMinor)} ${cur}`}
                 />
                 <Row
-                  label="You transfer"
+                  label={tr("You transfer")}
                   value={`${formatHundredths(totals.transferMinor)} ${cur}`}
                   strong
                 />
@@ -156,27 +163,25 @@ export function ConfirmTradeSheet({
 
           <View testID="confirm-receive" style={styles.card}>
             {side === "buy" ? (
-              <Row label="You receive" value={`${formatHundredths(receiveMinor)} ${receiveCur}`} strong />
+              <Row label={tr("You receive")} value={`${formatHundredths(receiveMinor)} ${receiveCur}`} strong />
             ) : null}
-            <Text style={styles.feeNote}>
-              Next, choose the accounts in your name that the partner bank pays.
-            </Text>
+            <Text style={styles.feeNote}>{tr("Next, choose the accounts in your name that the partner bank pays.")}</Text>
           </View>
 
           <View style={styles.hint}>
             <Icon name="info" color={color.text.secondary} size={16} />
             <Text style={styles.hintText}>
               {several
-                ? `Each ${noun} is a separate trade with its own transfer and reference. After you accept, you have ${minutes} minutes to make each transfer from a bank account in your own name.`
-                : `After you accept, you have ${minutes} minutes to transfer from a bank account in your own name.`}{" "}
-              Xspeeria never holds your money: it goes into a partner bank’s escrow account.
-            </Text>
+                ? (side === "buy"
+                  ? tr("Each offer is a separate trade with its own transfer and reference. After you accept, you have {{minutes}} minutes to make each transfer from a bank account in your own name.", { minutes })
+                  : tr("Each request is a separate trade with its own transfer and reference. After you accept, you have {{minutes}} minutes to make each transfer from a bank account in your own name.", { minutes }))
+                : tr("After you accept, you have {{minutes}} minutes to transfer from a bank account in your own name.", { minutes })}{" "}{tr("Xspeeria never holds your money: it goes into a partner bank’s escrow account.")}</Text>
           </View>
         </ScrollView>
         <View style={styles.actions}>
           <PrimaryButton
             testID="confirm-accept"
-            label="Continue"
+            label={tr("Continue")}
             onPress={canAccept ? () => onAccept(parts) : undefined}
             disabled={!canAccept}
             tone={side === "sell" ? "sell" : "primary"}
@@ -187,7 +192,7 @@ export function ConfirmTradeSheet({
             onPress={onClose}
             style={styles.cancel}
           >
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{tr("Cancel")}</Text>
           </Pressable>
         </View>
       </View>

@@ -5,6 +5,7 @@ import * as Crypto from 'expo-crypto';
 import { CodeScreen } from '../../../src/features/auth/SignupScreens';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /** Not in Figma: the email is confirmed with a code, like every email change (ADR-011). */
 export default function SignupEmailRoute(): ReactElement {
@@ -18,9 +19,9 @@ export default function SignupEmailRoute(): ReactElement {
       kind="email"
       target={draft.email}
       step={3}
-      title="Confirm your email"
-      body="We sent a 6-digit code to your email address to make sure it is yours."
-      verifyLabel="Confirm email"
+      title={tr("Confirm your email")}
+      body={tr("We sent a 6-digit code to your email address to make sure it is yours.")}
+      verifyLabel={tr("Confirm email")}
       onBack={() => router.back()}
       onVerified={() => {
         signup.update({ emailVerified: true });

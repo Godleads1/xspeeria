@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color, typography, themed, brandWeight } from '../theme';
 import { Icon, type IconName } from './icons';
+import { tr } from "../i18n";
 
 export type BannerTone = 'success' | 'warning' | 'error' | 'info';
 
@@ -97,7 +98,7 @@ export function Banner({ banner, onClose }: { banner: BannerMessage; onClose: ()
           ) : null}
         </View>
       </Pressable>
-      <Pressable testID="banner-close" accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10}>
+      <Pressable testID="banner-close" accessibilityRole="button" accessibilityLabel={tr("Close")} onPress={onClose} hitSlop={10}>
         <Text style={styles.close}>✕</Text>
       </Pressable>
     </View>

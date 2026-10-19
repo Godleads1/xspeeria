@@ -17,6 +17,7 @@ import { longDate } from './data';
 import { pickDocument, type PickOutcome } from './photos';
 import { profileStore, useProfile } from './profileStore';
 import { dobError, parseDob } from './verification';
+import { tr } from "../../i18n";
 
 /** Inserts slashes as the user types digits: `12071997` → `12/07/1997`. */
 export function formatDobInput(raw: string): string {
@@ -48,9 +49,9 @@ export function ChangeDobScreen({
     try {
       const r = await pick();
       if (r.kind === 'picked') setDoc(r.uri);
-      else if (r.kind === 'denied') Alert.alert('Allow photo access', 'Allow Xspeeria to use your photos in your phone settings to add your document.');
+      else if (r.kind === 'denied') Alert.alert(tr("Allow photo access"), tr("Allow Xspeeria to use your photos in your phone settings to add your document."));
     } catch {
-      Alert.alert('Could not use that photo', 'Please try again.');
+      Alert.alert(tr("Could not use that photo"), tr("Please try again."));
     }
   };
 
@@ -58,8 +59,8 @@ export function ChangeDobScreen({
     const iso = parseDob(value);
     const problem = dobError(iso, now());
     if (problem || !iso) return setError(problem);
-    if (iso === profile.dateOfBirth) return setError('This is already your date of birth');
-    if (!doc) return setError('Add a photo of your ID document');
+    if (iso === profile.dateOfBirth) return setError(tr("This is already your date of birth"));
+    if (!doc) return setError(tr("Add a photo of your ID document"));
     profileStore.submitDob(iso, now().getTime());
     setDoc(null);
     setSubmitted(true);
@@ -72,32 +73,26 @@ export function ChangeDobScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="change-dob-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="change-dob-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Change date of birth</Text>
+        <Text style={styles.title}>{tr("Change date of birth")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {submitted ? (
           <>
-            <Text testID="change-dob-done" style={styles.text}>
-              Submitted for review. Your date of birth will change once our team has checked your document. We will
-              let you know by email.
-            </Text>
-            <PrimaryButton testID="change-dob-finish" label="Done" onPress={onDone} />
+            <Text testID="change-dob-done" style={styles.text}>{tr("Submitted for review. Your date of birth will change once our team has checked your document. We will let you know by email.")}</Text>
+            <PrimaryButton testID="change-dob-finish" label={tr("Done")} onPress={onDone} />
           </>
         ) : (
           <>
-            <Text style={styles.text}>
-              Your date of birth is part of your verified identity ({longDate(profile.dateOfBirth)}). To change it, add a
-              photo of your passport, driver’s licence or national ID showing the correct date.
-            </Text>
-            <OutlinedField label="New date of birth *" invalid={Boolean(error) && !doc}>
+            <Text style={styles.text}>{tr("Your date of birth is part of your verified identity ({{dateOfBirth}}). To change it, add a photo of your passport, driver’s licence or national ID showing the correct date.", { dateOfBirth: longDate(profile.dateOfBirth) })}</Text>
+            <OutlinedField label={tr("New date of birth *")} invalid={Boolean(error) && !doc}>
               <FieldInput
                 testID="change-dob-value"
-                accessibilityLabel="New date of birth, day month year"
+                accessibilityLabel={tr("New date of birth, day month year")}
                 value={value}
                 onChangeText={(t) => {
                   setValue(formatDobInput(t));
@@ -111,11 +106,11 @@ export function ChangeDobScreen({
             </OutlinedField>
             <Pressable testID="change-dob-attach" accessibilityRole="button" onPress={() => void attach()} style={styles.attach}>
               <Icon name={doc ? 'check' : 'camera'} color={doc ? color.success.text : color.brand.primary} size={20} />
-              <Text style={doc ? styles.attached : styles.attachText}>{doc ? 'ID document added — tap to replace' : 'Add ID document photo'}</Text>
+              <Text style={doc ? styles.attached : styles.attachText}>{doc ? tr("ID document added — tap to replace") : tr("Add ID document photo")}</Text>
             </Pressable>
             {error ? <Text testID="change-dob-error" style={styles.error}>{error}</Text> : null}
-            <PrimaryButton testID="change-dob-submit" label="Submit for review" onPress={submit} disabled={value.length !== 10} />
-            <Text style={styles.small}>Your document is used only for this check and is never shared in chat.</Text>
+            <PrimaryButton testID="change-dob-submit" label={tr("Submit for review")} onPress={submit} disabled={value.length !== 10} />
+            <Text style={styles.small}>{tr("Your document is used only for this check and is never shared in chat.")}</Text>
           </>
         )}
       </ScrollView>

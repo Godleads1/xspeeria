@@ -14,12 +14,9 @@ import { Modal, Pressable, Text, View } from 'react-native';
 
 import { Icon } from './icons';
 import { brandWeight, color, typography, themed } from '../theme';
+import { dayMonthYear, monthYear, tr, weekdaysShort } from "../i18n";
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 export const toIso = (y: number, m: number, d: number): string => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -92,31 +89,31 @@ export function CalendarSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close calendar" />
+      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={tr("Close calendar")} />
       <View testID={testID} style={styles.sheet}>
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
 
           <View style={styles.header}>
-            <Pressable testID={`${testID}-prev-year`} accessibilityRole="button" accessibilityLabel="Previous year" onPress={() => step(-12)} hitSlop={8} style={styles.nav}>
+            <Pressable testID={`${testID}-prev-year`} accessibilityRole="button" accessibilityLabel={tr("Previous year")} onPress={() => step(-12)} hitSlop={8} style={styles.nav}>
               <Text style={styles.navText}>«</Text>
             </Pressable>
-            <Pressable testID={`${testID}-prev`} accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => step(-1)} hitSlop={8} style={styles.nav}>
+            <Pressable testID={`${testID}-prev`} accessibilityRole="button" accessibilityLabel={tr("Previous month")} onPress={() => step(-1)} hitSlop={8} style={styles.nav}>
               <Icon name="back" color={color.text.primary} size={18} />
             </Pressable>
             <Text testID={`${testID}-month`} accessibilityRole="header" style={styles.month}>
-              {`${MONTHS[month]} ${year}`}
+              {monthYear(month, year)}
             </Text>
-            <Pressable testID={`${testID}-next`} accessibilityRole="button" accessibilityLabel="Next month" onPress={() => step(1)} hitSlop={8} style={[styles.nav, styles.flip]}>
+            <Pressable testID={`${testID}-next`} accessibilityRole="button" accessibilityLabel={tr("Next month")} onPress={() => step(1)} hitSlop={8} style={[styles.nav, styles.flip]}>
               <Icon name="back" color={color.text.primary} size={18} />
             </Pressable>
-            <Pressable testID={`${testID}-next-year`} accessibilityRole="button" accessibilityLabel="Next year" onPress={() => step(12)} hitSlop={8} style={styles.nav}>
+            <Pressable testID={`${testID}-next-year`} accessibilityRole="button" accessibilityLabel={tr("Next year")} onPress={() => step(12)} hitSlop={8} style={styles.nav}>
               <Text style={styles.navText}>»</Text>
             </Pressable>
           </View>
 
           <View style={styles.week}>
-            {WEEKDAYS.map((d) => (
+            {weekdaysShort().map((d) => (
               <Text key={d} style={styles.weekday}>{d}</Text>
             ))}
           </View>
@@ -132,7 +129,7 @@ export function CalendarSheet({
                   key={iso}
                   testID={`${testID}-day-${iso}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`${day} ${MONTHS[month]} ${year}`}
+                  accessibilityLabel={dayMonthYear(day, month, year)}
                   accessibilityState={{ selected, disabled }}
                   disabled={disabled}
                   onPress={() => onSelect(iso)}
@@ -150,13 +147,13 @@ export function CalendarSheet({
 
           {value ? (
             <Pressable testID={`${testID}-clear`} accessibilityRole="button" onPress={onClear} style={styles.clear}>
-              <Text style={styles.clearText}>Clear date</Text>
+              <Text style={styles.clearText}>{tr("Clear date")}</Text>
             </Pressable>
           ) : null}
         </View>
 
         <Pressable testID={`${testID}-cancel`} accessibilityRole="button" onPress={onClose} style={styles.cancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{tr("Cancel")}</Text>
         </Pressable>
       </View>
     </Modal>

@@ -29,6 +29,7 @@ import { BestRateCard, HeroCard } from './BestRateCard';
 import { FigmaActivityList } from './FigmaActivityList';
 import { HomeHeader } from './HomeHeader';
 import { MarketRates } from './MarketRates';
+import { tr } from "../../i18n";
 
 export type HomeStatus = 'ready' | 'loading' | 'error';
 
@@ -79,9 +80,9 @@ export function HomeScreen({
         unread={unread}
       />
 
-      {status === 'loading' ? <LoadingState label="Loading your account" /> : null}
+      {status === 'loading' ? <LoadingState label={tr("Loading your account")} /> : null}
       {status === 'error' ? (
-        <ErrorState title="We could not load your account" onRetry={onRetry} />
+        <ErrorState title={tr("We could not load your account")} onRetry={onRetry} />
       ) : null}
 
       {status === 'ready' ? (
@@ -94,7 +95,7 @@ export function HomeScreen({
                   label={demoHero.label}
                   figure={demoHero.figure}
                   badge={DEMO_BADGE}
-                  accessibilityLabel={`${demoHero.label}: ${demoHero.figure}. Demo figure, not real money`}
+                  accessibilityLabel={tr("{{label}}: {{figure}}. Demo figure, not real money", { label: demoHero.label, figure: demoHero.figure })}
                 />
               </View>
             ) : bestRate ? (

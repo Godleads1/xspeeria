@@ -1,33 +1,46 @@
 /** Shared onboarding pieces (Figma onboarding frames), ADR-013. */
 
-import type { ReactElement, ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { DEMO_MODE } from './demo';
+import { tr, useLanguage } from "../../i18n";
+import { MenuIcon } from '../../components/menuIcons';
+import { LanguageSheet, currentLanguageName } from '../profile/LanguageSheet';
 
 /** "← Previous" (optional), the English language chip, and step bars (optional). */
 export function AuthTop({ onBack, step, steps = 3 }: { onBack?: () => void; step?: number; steps?: number }): ReactElement {
+  const lang = useLanguage();
+  const [picker, setPicker] = useState(false);
   return (
     <View style={styles.top}>
       <View style={styles.topRow}>
         {onBack ? (
-          <Pressable testID="auth-back" accessibilityRole="button" accessibilityLabel="Previous" onPress={onBack} hitSlop={10} style={styles.prev}>
+          <Pressable testID="auth-back" accessibilityRole="button" accessibilityLabel={tr("Previous")} onPress={onBack} hitSlop={10} style={styles.prev}>
             <Icon name="back" color={color.text.secondary} size={18} />
-            <Text style={styles.prevText}>Previous</Text>
+            <Text style={styles.prevText}>{tr("Previous")}</Text>
           </Pressable>
         ) : (
           <View />
         )}
-        <View style={styles.lang} accessible accessibilityLabel="Language: English">
-          <RoundFlag code="USD" size={16} />
-          <Text style={styles.langText}>English</Text>
-        </View>
+        <Pressable
+          testID="auth-language"
+          style={styles.lang}
+          accessibilityRole="button"
+          accessibilityLabel={tr("Language: {{name}}", { name: currentLanguageName(lang) })}
+          onPress={() => setPicker(true)}
+          hitSlop={8}
+        >
+          <MenuIcon name="language" size={16} />
+          <Text style={styles.langText}>{currentLanguageName(lang)}</Text>
+        </Pressable>
       </View>
+      <LanguageSheet visible={picker} onClose={() => setPicker(false)} />
       {step !== undefined ? (
-        <View style={styles.bars} accessible accessibilityLabel={`Step ${step} of ${steps}`}>
+        <View style={styles.bars} accessible accessibilityLabel={tr("Step {{step}} of {{steps}}", { step, steps })}>
           {Array.from({ length: steps }, (_, i) => (
             <View key={i} style={[styles.bar, i < step ? styles.barOn : null]} />
           ))}
@@ -96,7 +109,7 @@ export function PhoneInput({
       <Pressable
         testID={`${testID}-country`}
         accessibilityRole={onPickCountry ? 'button' : undefined}
-        accessibilityLabel={`Country code ${code}`}
+        accessibilityLabel={tr("Country code {{code}}", { code })}
         disabled={!onPickCountry}
         onPress={onPickCountry}
         style={styles.country}
@@ -113,7 +126,7 @@ export function PhoneInput({
         placeholderTextColor={color.text.disabled}
         keyboardType="phone-pad"
         autoComplete="tel"
-        accessibilityLabel="Phone number"
+        accessibilityLabel={tr("Phone number")}
         maxLength={14}
         style={styles.phoneInput}
       />
@@ -146,7 +159,7 @@ export function PinPad({ value, onChange, length = 6 }: { value: string; onChang
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
   return (
     <View style={styles.pinWrap}>
-      <View style={styles.dots} accessible accessibilityLabel={`${value.length} of ${length} digits entered`}>
+      <View style={styles.dots} accessible accessibilityLabel={tr("{{length}} of {{length2}} digits entered", { length: value.length, length2: length })}>
         {Array.from({ length }, (_, i) => (
           <View key={i} style={[styles.dot, i < value.length ? styles.dotOn : null]} />
         ))}
@@ -160,7 +173,7 @@ export function PinPad({ value, onChange, length = 6 }: { value: string; onChang
               key={i}
               testID={`pin-key-${k}`}
               accessibilityRole="button"
-              accessibilityLabel={k === 'del' ? 'Delete' : k}
+              accessibilityLabel={k === 'del' ? tr("Delete") : k}
               onPress={() => press(k)}
               style={({ pressed }) => [styles.key, pressed ? styles.keyPressed : null]}
             >
@@ -215,11 +228,8 @@ const styles = themed(() => ({
 export function UnavailableBuild(): ReactElement {
   return (
     <View testID="unavailable-build" style={unavailableStyles.screen}>
-      <Text accessibilityRole="header" style={unavailableStyles.title}>Not available yet</Text>
-      <Text style={unavailableStyles.body}>
-        This version of Xspeeria isn’t connected to our services yet, so you can’t sign up or log in. Please use an
-        official release from your app store.
-      </Text>
+      <Text accessibilityRole="header" style={unavailableStyles.title}>{tr("Not available yet")}</Text>
+      <Text style={unavailableStyles.body}>{tr("This version of Xspeeria isn’t connected to our services yet, so you can’t sign up or log in. Please use an official release from your app store.")}</Text>
     </View>
   );
 }

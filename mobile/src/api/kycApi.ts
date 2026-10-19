@@ -1,6 +1,7 @@
 /** Identity checks (ADR-039). The verification link is Didit's hosted check, shown once. */
 
 import { apiRequest, type RequestOptions } from './client';
+import { k } from "../i18n";
 
 export type KycStatus = 'not_started' | 'pending_documents' | 'under_review' | 'approved' | 'rejected' | 'expired';
 
@@ -9,8 +10,8 @@ export type KycCountry = 'NG' | 'GB' | 'US';
 export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US'];
 export const COUNTRY_NAME: Record<KycCountry, string> = {
   NG: 'Nigeria',
-  GB: 'the United Kingdom',
-  US: 'the United States',
+  GB: k("the United Kingdom"),
+  US: k("the United States"),
 };
 /** Currency code for the round flag. */
 export const COUNTRY_FLAG: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD' };

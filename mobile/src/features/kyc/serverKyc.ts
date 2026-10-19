@@ -5,10 +5,11 @@ import * as Linking from 'expo-linking';
 import { ApiError } from '../../api/client';
 import { kycApi, type KycCountry, type ServerKycCase, type ServerRegions } from '../../api/kycApi';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 

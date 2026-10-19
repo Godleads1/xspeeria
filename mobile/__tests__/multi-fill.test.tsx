@@ -122,7 +122,7 @@ describe('Confirm sheet for several trades', () => {
   it('says plainly when the parts fill less than asked', async () => {
     const plan = fourParts().slice(0, 3);
     await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} onAccept={jest.fn()} onClose={jest.fn()} />);
-    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 1,000.00 USD.*These 3 offers fill.*750.00 USD/);
+    expect([screen.getByTestId('confirm-partial').props.children].flat().join('')).toMatch(/You asked for 1,000.00 USD.*These 3 offers fill.*750.00 USD/);
   });
 
   it('refuses to accept if a listing was taken meanwhile — never shrinks a part silently', async () => {

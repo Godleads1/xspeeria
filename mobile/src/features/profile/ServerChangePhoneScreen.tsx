@@ -16,6 +16,7 @@ import { PhoneInput, fullPhone } from '../auth/ui';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { ServerCodeSheet } from '../security/ServerCodeSheet';
 import { normalisePhone } from './verification';
+import { tr } from "../../i18n";
 
 export interface PhoneChangeSource {
   start(newPhone: string, authenticatorCode: string): Promise<void>;
@@ -42,14 +43,14 @@ export function ServerChangePhoneScreen({
 
   const next = (): void => {
     const n = normalisePhone(fullPhone('NG', raw));
-    if (!n) return setError('Enter the full number with country code, e.g. +234 803 000 0000');
+    if (!n) return setError(tr("Enter the full number with country code, e.g. +234 803 000 0000"));
     setError(null);
     setPhone(n);
     setAsking(true);
   };
 
   const confirm = async (): Promise<void> => {
-    if (!phone || !/^\d{6}$/.test(code)) return setError('Enter the 6-digit code from the SMS');
+    if (!phone || !/^\d{6}$/.test(code)) return setError(tr("Enter the 6-digit code from the SMS"));
     setBusy(true);
     setError(null);
     try {
@@ -70,27 +71,27 @@ export function ServerChangePhoneScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="change-phone-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="change-phone-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Change phone number</Text>
+        <Text style={styles.title}>{tr("Change phone number")}</Text>
         <View style={styles.spacer} />
       </View>
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {!sent ? (
           <>
-            <Text style={styles.text}>We will text a 6-digit code to the new number to confirm it is yours.</Text>
-            <OutlinedField label="New phone number" invalid={Boolean(error)}>
+            <Text style={styles.text}>{tr("We will text a 6-digit code to the new number to confirm it is yours.")}</Text>
+            <OutlinedField label={tr("New phone number")} invalid={Boolean(error)}>
               <PhoneInput testID="change-phone-input" country="NG" value={raw} onChange={setRaw} />
             </OutlinedField>
           </>
         ) : (
           <>
-            <Text testID="change-phone-sent" style={styles.text}>{`Enter the code we sent to ${phone ?? ''}.`}</Text>
-            <OutlinedField label="SMS code" invalid={Boolean(error)}>
+            <Text testID="change-phone-sent" style={styles.text}>{tr("Enter the code we sent to {{value}}.", { value: phone ?? '' })}</Text>
+            <OutlinedField label={tr("SMS code")} invalid={Boolean(error)}>
               <FieldInput
                 testID="change-phone-code"
-                accessibilityLabel="SMS code"
+                accessibilityLabel={tr("SMS code")}
                 value={code}
                 onChangeText={(t) => {
                   setCode(t.replace(/\D/g, '').slice(0, 6));
@@ -111,14 +112,14 @@ export function ServerChangePhoneScreen({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
         {!sent ? (
-          <PrimaryButton testID="change-phone-next" label="Send code" onPress={next} />
+          <PrimaryButton testID="change-phone-next" label={tr("Send code")} onPress={next} />
         ) : (
-          <PrimaryButton testID="change-phone-confirm" label={busy ? 'Saving…' : 'Confirm'} onPress={() => void confirm()} disabled={busy} />
+          <PrimaryButton testID="change-phone-confirm" label={busy ? tr("Saving…") : tr("Confirm")} onPress={() => void confirm()} disabled={busy} />
         )}
       </View>
       <ServerCodeSheet
         visible={asking}
-        reason={`Change your phone number to ${phone ?? ''}.`}
+        reason={tr("Change your phone number to {{value}}.", { value: phone ?? '' })}
         onCancel={() => setAsking(false)}
         onSubmit={async (otp) => {
           if (!phone) return;
@@ -137,7 +138,7 @@ export function NotEditableHere({ title, body, onBack }: { title: string; body: 
   return (
     <View testID="not-editable-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="not-editable-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="not-editable-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
         <Text style={styles.title}>{title}</Text>

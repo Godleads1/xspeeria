@@ -17,6 +17,7 @@ import { FieldInput, OutlinedField } from '../market/controls';
 import { normalisePhone } from '../profile/verification';
 import type { PinSource } from './serverPin';
 import { AuthTop, Heading, PhoneInput, fullPhone } from './ui';
+import { tr } from "../../i18n";
 
 type Step = 'phone' | 'reset' | 'done';
 
@@ -47,7 +48,7 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
 
   const sendCode = (): void => {
     const n = normalisePhone(fullPhone('NG', phone));
-    if (!n) return setError('Enter a valid phone number');
+    if (!n) return setError(tr("Enter a valid phone number"));
     void run(async () => {
       await source.resetStart(n);
       setE164(n);
@@ -56,11 +57,11 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
   };
 
   const reset = (): void => {
-    if (!/^\d{6}$/.test(sms)) return setError('Enter the 6-digit code from the SMS');
-    if (!useRecovery && !/^\d{6}$/.test(second)) return setError('Enter the 6-digit code from your authenticator app');
-    if (useRecovery && second.trim().length < 8) return setError('Enter one of your recovery codes');
-    if (!/^\d{6}$/.test(pin)) return setError('Your new PIN must be 6 digits');
-    if (pin !== pin2) return setError('The two PINs do not match');
+    if (!/^\d{6}$/.test(sms)) return setError(tr("Enter the 6-digit code from the SMS"));
+    if (!useRecovery && !/^\d{6}$/.test(second)) return setError(tr("Enter the 6-digit code from your authenticator app"));
+    if (useRecovery && second.trim().length < 8) return setError(tr("Enter one of your recovery codes"));
+    if (!/^\d{6}$/.test(pin)) return setError(tr("Your new PIN must be 6 digits"));
+    if (pin !== pin2) return setError(tr("The two PINs do not match"));
     const typed = { sms, second: second.trim(), pin };
     void run(async () => {
       await source.resetConfirm(
@@ -111,21 +112,21 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
         <AuthTop onBack={onBack} />
         {step === 'phone' ? (
           <>
-            <Heading title="Forgot PIN" body="Enter the phone number on your Xspeeria account. We will text you a code." />
-            <OutlinedField label="Phone Number" invalid={Boolean(error)}>
+            <Heading title={tr("Forgot PIN")} body={tr("Enter the phone number on your Xspeeria account. We will text you a code.")} />
+            <OutlinedField label={tr("Phone Number")} invalid={Boolean(error)}>
               <PhoneInput testID="forgot-phone" country="NG" value={phone} onChange={setPhone} />
             </OutlinedField>
           </>
         ) : step === 'reset' ? (
           <>
             <Heading
-              title="Set a new PIN"
-              body="If this number has an account, we have sent a code by SMS. You also need your authenticator app or a recovery code."
+              title={tr("Set a new PIN")}
+              body={tr("If this number has an account, we have sent a code by SMS. You also need your authenticator app or a recovery code.")}
             />
-            {field('SMS code', sms, setSms, 'forgot-sms', { digits: true })}
+            {field(tr("SMS code"), sms, setSms, 'forgot-sms', { digits: true })}
             {useRecovery
-              ? field('Recovery code', second, setSecond, 'forgot-recovery')
-              : field('Authenticator code', second, setSecond, 'forgot-otp', { digits: true })}
+              ? field(tr("Recovery code"), second, setSecond, 'forgot-recovery')
+              : field(tr("Authenticator code"), second, setSecond, 'forgot-otp', { digits: true })}
             <Pressable
               testID="forgot-toggle-recovery"
               accessibilityRole="button"
@@ -134,14 +135,14 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
                 setSecond('');
               }}
             >
-              <Text style={styles.link}>{useRecovery ? 'Use my authenticator app instead' : 'Lost your phone? Use a recovery code'}</Text>
+              <Text style={styles.link}>{useRecovery ? tr("Use my authenticator app instead") : tr("Lost your phone? Use a recovery code")}</Text>
             </Pressable>
-            {field('New PIN', pin, setPin, 'forgot-pin', { digits: true, secure: true })}
-            {field('Confirm new PIN', pin2, setPin2, 'forgot-pin2', { digits: true, secure: true })}
+            {field(tr("New PIN"), pin, setPin, 'forgot-pin', { digits: true, secure: true })}
+            {field(tr("Confirm new PIN"), pin2, setPin2, 'forgot-pin2', { digits: true, secure: true })}
           </>
         ) : (
           <>
-            <Heading title="PIN changed" body="Your PIN has been reset and every device has been signed out. Log in with your new PIN." />
+            <Heading title={tr("PIN changed")} body={tr("Your PIN has been reset and every device has been signed out. Log in with your new PIN.")} />
           </>
         )}
         {error ? (
@@ -152,11 +153,11 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
         {step === 'phone' ? (
-          <PrimaryButton testID="forgot-submit" label={busy ? 'Sending…' : 'Send code'} onPress={sendCode} disabled={busy} />
+          <PrimaryButton testID="forgot-submit" label={busy ? tr("Sending…") : tr("Send code")} onPress={sendCode} disabled={busy} />
         ) : step === 'reset' ? (
-          <PrimaryButton testID="forgot-reset" label={busy ? 'Saving…' : 'Reset PIN'} onPress={reset} disabled={busy} />
+          <PrimaryButton testID="forgot-reset" label={busy ? tr("Saving…") : tr("Reset PIN")} onPress={reset} disabled={busy} />
         ) : (
-          <PrimaryButton testID="forgot-back-login" label="Back to log in" onPress={onBack} />
+          <PrimaryButton testID="forgot-back-login" label={tr("Back to log in")} onPress={onBack} />
         )}
       </View>
     </KeyboardAvoidingView>

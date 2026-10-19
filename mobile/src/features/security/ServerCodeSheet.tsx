@@ -10,6 +10,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View
 import { messageFor } from '../../api/client';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
+import { tr } from "../../i18n";
 
 export function ServerCodeSheet({
   visible,
@@ -50,12 +51,12 @@ export function ServerCodeSheet({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.scrim} accessibilityLabel="Cancel" onPress={onCancel} />
+      <Pressable style={styles.scrim} accessibilityLabel={tr("Cancel")} onPress={onCancel} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View testID="server-code-sheet" style={styles.sheet}>
-          <Text accessibilityRole="header" style={styles.title}>{"Confirm it's you"}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr("Confirm it's you")}</Text>
           <Text style={styles.reason}>{reason}</Text>
-          <Text style={styles.body}>Enter the 6-digit code from your authenticator app.</Text>
+          <Text style={styles.body}>{tr("Enter the 6-digit code from your authenticator app.")}</Text>
           <TextInput
             testID="server-code-input"
             value={code}
@@ -65,7 +66,7 @@ export function ServerCodeSheet({
             }}
             placeholder="123456"
             placeholderTextColor={color.text.disabled}
-            accessibilityLabel="6-digit code"
+            accessibilityLabel={tr("6-digit code")}
             keyboardType="number-pad"
             autoComplete="one-time-code"
             textContentType="oneTimeCode"
@@ -80,12 +81,12 @@ export function ServerCodeSheet({
           ) : null}
           <PrimaryButton
             testID="server-code-confirm"
-            label={busy ? 'Checking…' : 'Confirm'}
+            label={busy ? tr("Checking…") : tr("Confirm")}
             onPress={() => void submit()}
             disabled={code.length !== 6 || busy}
           />
           <Pressable testID="server-code-cancel" accessibilityRole="button" onPress={onCancel} style={styles.cancel}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{tr("Cancel")}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

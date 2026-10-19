@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersApi';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 

@@ -8,6 +8,7 @@ import { SERVER_MODE } from '../../../src/api/config';
 import { AuthenticatorSetupScreen, type EnrolmentEngine } from '../../../src/features/security/AuthenticatorSetupScreen';
 import { serverTwoFactor } from '../../../src/features/security/serverTwoFactor';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /**
  * Replace the authenticator (ADR-034, server builds only). Opens only after the current code
@@ -37,8 +38,8 @@ export default function AuthenticatorReplaceRoute(): ReactElement {
       onDone={() => {
         router.back();
         Alert.alert(
-          'Authenticator replaced',
-          'Your new app is now the one we ask for. Logging in on any phone will need a code again.',
+          tr("Authenticator replaced"),
+          tr("Your new app is now the one we ask for. Logging in on any phone will need a code again."),
         );
       }}
     />

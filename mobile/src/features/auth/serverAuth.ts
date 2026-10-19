@@ -19,6 +19,7 @@ import { ApiError } from '../../api/client';
 import { secureTokens } from '../../api/secureTokens';
 import { unlockKey } from '../../api/unlockKey';
 import { session } from './session';
+import { tr } from "../../i18n";
 
 export const KEEP_ALIVE_MS = 4 * 60 * 1000;
 
@@ -109,14 +110,14 @@ export const serverAuth = {
   },
 
   async enrolStart(): Promise<{ secret: string; uri: string }> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please log in again.');
+    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
     const r = await authApi.enrolStart(state.challengeId, x());
     return { secret: r.secret, uri: r.otpauth_uri };
   },
 
   /** The first authenticator code. Returns the recovery codes; the session starts on `finish`. */
   async enrolConfirm(code: string): Promise<readonly string[]> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please log in again.');
+    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
     const r = await authApi.enrolConfirm(state.challengeId, code, x());
     state.challengeId = null;
     state.pending = r;
@@ -126,7 +127,7 @@ export const serverAuth = {
   /** After the recovery codes were saved: start the session. */
   async finish(now: number, options: { newAccount?: boolean } = {}): Promise<void> {
     const tokens = state.pending;
-    if (!tokens) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please log in again.');
+    if (!tokens) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
     state.pending = null;
     await signIn(tokens, now, options);
   },
@@ -145,7 +146,7 @@ export const serverAuth = {
   },
 
   async verifyMfa(code: { otp: string } | { recovery: string }, now: number): Promise<void> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please log in again.');
+    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
     const body = 'otp' in code ? { otp_code: code.otp } : { recovery_code: code.recovery };
     const tokens = await authApi.mfaVerify({ mfa_challenge_id: state.challengeId, ...body }, x());
     state.challengeId = null;
@@ -162,7 +163,7 @@ export const serverAuth = {
     state.refreshing = (async () => {
       try {
         const refresh = await secureTokens.refreshToken();
-        if (!refresh) throw new ApiError('AUTH_401_INVALID_REFRESH_TOKEN', 401, 'Please log in again.');
+        if (!refresh) throw new ApiError('AUTH_401_INVALID_REFRESH_TOKEN', 401, tr("Please log in again."));
         const t = await authApi.refresh(refresh, x());
         state.access = t.access_token;
         state.lastRefreshAt = now;
@@ -186,22 +187,22 @@ export const serverAuth = {
   /** Turn on for this session. Trusted devices only; the server says so if not. */
   async enableBiometric(): Promise<void> {
     if (!unlockKey.supported()) {
-      throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, 'Face ID or fingerprint isn’t set up on this phone.');
+      throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, tr("Face ID or fingerprint isn’t set up on this phone."));
     }
     const access = state.access;
     const device = await secureTokens.deviceToken();
-    if (!access) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+    if (!access) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
     if (!device) {
       throw new ApiError(
         'AUTH_403_DEVICE_NOT_TRUSTED',
         403,
-        'Fingerprint or Face ID unlock needs a trusted device. Log in with your authenticator code and choose to trust this device first.',
+        tr("Fingerprint or Face ID unlock needs a trusted device. Log in with your authenticator code and choose to trust this device first."),
       );
     }
     const r = await authApi.biometricEnable(access, device, x());
     if (!(await unlockKey.save(r.unlock_key))) {
       authApi.biometricDisable(access, x()).catch(() => undefined);
-      throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, 'Face ID or fingerprint isn’t set up on this phone.');
+      throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, tr("Face ID or fingerprint isn’t set up on this phone."));
     }
     session.setBiometric(true);
   },

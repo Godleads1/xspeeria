@@ -3,6 +3,7 @@
 import { ApiError } from '../../api/client';
 import { notificationsApi, type NotificationPage, type ServerNotification } from '../../api/notificationsApi';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 export interface NotificationSource {
   list(before?: string | null): Promise<NotificationPage>;
@@ -11,7 +12,7 @@ export interface NotificationSource {
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 
@@ -24,6 +25,6 @@ export const serverNotifications: NotificationSource = {
 export const demoNotifications: NotificationSource = {
   list: async () => ({ items: [], unread_count: 0, next_before: null }),
   mark: async () => {
-    throw new ApiError('APP_NOT_CONFIGURED', 0, 'This version of the app is not connected to Xspeeria.');
+    throw new ApiError('APP_NOT_CONFIGURED', 0, tr("This version of the app is not connected to Xspeeria."));
   },
 };

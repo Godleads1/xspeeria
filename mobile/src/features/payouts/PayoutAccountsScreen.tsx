@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, LoadingState, PrimaryButton, Screen, StatusChip
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ServerCodeSheet } from '../security/ServerCodeSheet';
 import { accountStatus, type PayoutSource } from './serverPayouts';
+import { tr } from "../../i18n";
 
 export function PayoutAccountsScreen({
   source,
@@ -42,18 +43,13 @@ export function PayoutAccountsScreen({
   return (
     <Screen testID="payout-accounts-screen">
       <View style={styles.header}>
-        <Pressable testID="payout-accounts-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="payout-accounts-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          Payout accounts
-        </Text>
+        <Text accessibilityRole="header" style={styles.title}>{tr("Payout accounts")}</Text>
         <View style={styles.spacer} />
       </View>
-      <Text style={styles.intro}>
-        Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you
-        choose. Adding or removing an account needs your authenticator code.
-      </Text>
+      <Text style={styles.intro}>{tr("Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you choose. Adding or removing an account needs your authenticator code.")}</Text>
       {notice ? (
         <Text testID="payout-accounts-notice" accessibilityRole="alert" style={styles.notice}>
           {notice}
@@ -63,9 +59,9 @@ export function PayoutAccountsScreen({
       {error ? (
         <ErrorState title={error} onRetry={load} />
       ) : accounts === null ? (
-        <LoadingState label="Loading your payout accounts" />
+        <LoadingState label={tr("Loading your payout accounts")} />
       ) : accounts.length === 0 ? (
-        <EmptyState title="No payout accounts yet." />
+        <EmptyState title={tr("No payout accounts yet.")} />
       ) : (
         <View testID="payout-accounts-list" style={styles.list}>
           {accounts.map((a) => {
@@ -82,7 +78,7 @@ export function PayoutAccountsScreen({
                 <Pressable
                   testID={`payout-account-${a.payout_account_id}-remove`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${a.bank_name} account ending ${a.account_last4}`}
+                  accessibilityLabel={tr("Remove {{bank_name}} account ending {{account_last4}}", { bank_name: a.bank_name, account_last4: a.account_last4 })}
                   onPress={() => setRemoving(a)}
                   hitSlop={10}
                 >
@@ -94,17 +90,17 @@ export function PayoutAccountsScreen({
         </View>
       )}
 
-      <PrimaryButton testID="payout-accounts-add" label="Add payout account" onPress={onAdd} />
+      <PrimaryButton testID="payout-accounts-add" label={tr("Add payout account")} onPress={onAdd} />
 
       <ServerCodeSheet
         visible={removing !== null}
-        reason={removing ? `Remove ${removing.bank_name} •••• ${removing.account_last4}. Deals that already use it keep it.` : ''}
+        reason={removing ? tr("Remove {{bank_name}} •••• {{account_last4}}. Deals that already use it keep it.", { bank_name: removing.bank_name, account_last4: removing.account_last4 }) : ''}
         onCancel={() => setRemoving(null)}
         onSubmit={async (code) => {
           if (!removing) return;
           await source.remove(removing.payout_account_id, code);
           setRemoving(null);
-          setNotice('Account removed.');
+          setNotice(tr("Account removed."));
           load();
         }}
       />

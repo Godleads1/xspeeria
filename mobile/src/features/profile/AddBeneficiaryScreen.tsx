@@ -25,6 +25,7 @@ import {
   type BankFieldKey,
   type BankFormValues,
 } from './data';
+import { tr } from "../../i18n";
 
 export function AddBeneficiaryScreen({
   currency,
@@ -46,7 +47,7 @@ export function AddBeneficiaryScreen({
     const found = validateBankForm(currency, values);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    if (!(await stepUp(`Add a ${currency} account at ${(values.bankName ?? '').trim()}`))) return;
+    if (!(await stepUp(tr("Add a {{currency}} account at {{value}}", { currency, value: (values.bankName ?? '').trim() })))) return;
     const added = beneficiaryStore.add({
       currency,
       bank: values.bankName ?? '',
@@ -65,15 +66,15 @@ export function AddBeneficiaryScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="add-beneficiary-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="add-beneficiary-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Manage Beneficiaries</Text>
+        <Text style={styles.title}>{tr("Manage Beneficiaries")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Text accessibilityRole="header" style={styles.section}>Account Details</Text>
+        <Text accessibilityRole="header" style={styles.section}>{tr("Account Details")}</Text>
 
         <BankAccountFields
           currency={currency}
@@ -86,17 +87,17 @@ export function AddBeneficiaryScreen({
         />
 
         <View style={styles.fieldWrap}>
-          <OutlinedField label="Account Name">
-            <View style={styles.select} accessible accessibilityLabel="Account Name. Confirmed by your bank after you add the account">
-              <Text style={styles.selectPlaceholder}>Confirmed by your bank</Text>
+          <OutlinedField label={tr("Account Name")}>
+            <View style={styles.select} accessible accessibilityLabel={tr("Account Name. Confirmed by your bank after you add the account")}>
+              <Text style={styles.selectPlaceholder}>{tr("Confirmed by your bank")}</Text>
             </View>
           </OutlinedField>
-          <Text style={styles.help}>You can only add accounts in your own name ({PROFILE_USER.fullName}).</Text>
+          <Text style={styles.help}>{tr("You can only add accounts in your own name ({{fullName}}).", { fullName: PROFILE_USER.fullName })}</Text>
         </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
-        <PrimaryButton testID="add-beneficiary-submit" label="Add Beneficiary" onPress={() => void submit()} />
+        <PrimaryButton testID="add-beneficiary-submit" label={tr("Add Beneficiary")} onPress={() => void submit()} />
       </View>
 
     </KeyboardAvoidingView>

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { PRIVACY_POLICY, type PolicyBlock, type PolicyDocument } from './privacyPolicy';
+import { language, tr } from "../../i18n";
 
 const EMAIL = /([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/;
 
@@ -54,17 +55,22 @@ export function TermsScreen({ onBack, doc = PRIVACY_POLICY }: { onBack: () => vo
   return (
     <View testID="terms-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="terms-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="terms-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Terms and Conditions</Text>
+        <Text style={styles.title}>{tr("Terms and Conditions")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}>
         <Text accessibilityRole="header" style={styles.docTitle}>{doc.title}</Text>
-        <Text style={styles.docTitle}>Effective Date: {doc.effective}</Text>
-        <Text style={[styles.docTitle, styles.titleGap]}>Last Updated: {doc.updated}</Text>
+        {language.get().startsWith('en') ? null : (
+          <Text testID="terms-english-only" style={[styles.docTitle, styles.titleGap]}>
+            {tr("This document is available in English only until a reviewed translation is ready.")}
+          </Text>
+        )}
+        <Text style={styles.docTitle}>{tr("Effective Date: {{effective}}", { effective: doc.effective })}</Text>
+        <Text style={[styles.docTitle, styles.titleGap]}>{tr("Last Updated: {{updated}}", { updated: doc.updated })}</Text>
         {doc.sections.map((s) => (
           <View key={s.title} style={styles.section}>
             <Text accessibilityRole="header" style={styles.h}>{s.title}</Text>

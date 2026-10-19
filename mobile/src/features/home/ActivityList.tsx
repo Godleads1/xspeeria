@@ -22,6 +22,7 @@ import type { ActivityItem } from '../../fixtures';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from './SectionLabel';
 import { StatusPill } from './StatusPill';
+import { tr } from "../../i18n";
 
 export function orderActivity(items: readonly ActivityItem[]): readonly ActivityItem[] {
   return [...items].sort((a, b) => Number(b.timeCritical ?? false) - Number(a.timeCritical ?? false));
@@ -39,7 +40,7 @@ export function ActivityList({
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <SectionLabel>Recent transactions</SectionLabel>
+        <SectionLabel>{tr("Recent transactions")}</SectionLabel>
         {onViewAll && items.length > 0 ? (
           <Pressable
             testID="home-view-all"
@@ -47,15 +48,15 @@ export function ActivityList({
             onPress={onViewAll}
             hitSlop={12}
           >
-            <Text style={styles.viewAll}>View all</Text>
+            <Text style={styles.viewAll}>{tr("View all")}</Text>
           </Pressable>
         ) : null}
       </View>
 
       {items.length === 0 ? (
         <EmptyState
-          title="No active offers"
-          actionLabel="Create your first offer"
+          title={tr("No active offers")}
+          actionLabel={tr("Create your first offer")}
           onAction={onCreateOffer}
         />
       ) : (
@@ -68,7 +69,7 @@ export function ActivityList({
                   <Icon name="swap" color={color.text.primary} size={22} />
                 </View>
                 <View style={styles.main}>
-                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.title}>{tr(item.title)}</Text>
                   <Amount
                     minor={item.amountMinor}
                     currency={item.currency}
@@ -80,7 +81,7 @@ export function ActivityList({
                   ) : null}
                 </View>
                 <View style={styles.side}>
-                  <StatusPill label={item.status} tone={item.statusTone} />
+                  <StatusPill label={tr(item.status)} tone={item.statusTone} />
                   <Caption>{item.when}</Caption>
                 </View>
               </View>

@@ -13,6 +13,7 @@ import { brandWeight, color, numericTextStyle, space, themed, typography } from 
 import { DEMO_BADGE, type DemoHomeActivity } from '../demo/figmaDemo';
 import { SectionLabel } from './SectionLabel';
 import { StatusPill } from './StatusPill';
+import { tr } from "../../i18n";
 
 const TONE = { Completed: 'success', Pending: 'warning', Failed: 'error' } as const;
 
@@ -27,12 +28,12 @@ export function FigmaActivityList({
     <View testID="home-figma-activity" style={styles.section}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SectionLabel>Recent Transactions</SectionLabel>
+          <SectionLabel>{tr("Recent Transactions")}</SectionLabel>
           <Text style={styles.demo}>{DEMO_BADGE}</Text>
         </View>
         {onViewAll ? (
           <Pressable testID="home-view-all" accessibilityRole="link" onPress={onViewAll} hitSlop={12}>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.viewAll}>{tr("View All")}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -43,7 +44,7 @@ export function FigmaActivityList({
             testID={`figma-activity-${item.id}`}
             style={styles.row}
             accessible
-            accessibilityLabel={`${item.title}, ${item.amount}, ${item.status}, ${item.when}. Demo`}
+            accessibilityLabel={tr("{{title}}, {{amount}}, {{status}}, {{when}}. Demo", { title: item.title, amount: item.amount, status: tr(item.status), when: item.when })}
           >
             <View style={styles.glyph}>
               <Icon name={item.icon === 'shopping' ? 'tag' : 'swap'} color={color.text.primary} size={22} />
@@ -53,7 +54,7 @@ export function FigmaActivityList({
               <Text style={[styles.amount, item.spend ? styles.spend : null]}>{item.amount}</Text>
             </View>
             <View style={styles.side}>
-              <StatusPill label={item.status} tone={TONE[item.status]} />
+              <StatusPill label={tr(item.status)} tone={TONE[item.status]} />
               <Text style={styles.when}>{item.when}</Text>
             </View>
           </View>

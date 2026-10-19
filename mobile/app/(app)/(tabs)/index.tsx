@@ -17,6 +17,7 @@ import { DEMO_HOME_ACTIVITY, DEMO_HOME_BALANCE } from '../../../src/features/dem
 import { useProfile } from '../../../src/features/profile/profileStore';
 import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 const loadDeals = () => serverDeals.deals();
 const loadOffers = async () => [
@@ -29,12 +30,12 @@ const loadKyc = () => serverKyc.current();
 export function serverReadiness(approved: boolean): ReadinessDimension[] {
   return [
     approved
-      ? { id: 'identity', label: 'Identity', state: 'complete', detail: 'Verified' }
-      : { id: 'identity', label: 'Identity', state: 'action-required', detail: 'Verify your identity to trade', action: 'Verify' },
-    { id: 'security', label: 'Security', state: 'complete', detail: 'Two-factor on' },
+      ? { id: 'identity', label: tr("Identity"), state: 'complete', detail: tr("Verified") }
+      : { id: 'identity', label: 'Identity', state: 'action-required', detail: tr("Verify your identity to trade"), action: 'Verify' },
+    { id: 'security', label: 'Security', state: 'complete', detail: tr("Two-factor on") },
     approved
-      ? { id: 'eligibility', label: 'Eligible to transact', state: 'complete', detail: 'You can create and accept offers' }
-      : { id: 'eligibility', label: 'Eligible to transact', state: 'pending', detail: 'Available once your identity is verified' },
+      ? { id: 'eligibility', label: tr("Eligible to transact"), state: 'complete', detail: tr("You can create and accept offers") }
+      : { id: 'eligibility', label: tr("Eligible to transact"), state: 'pending', detail: tr("Available once your identity is verified") },
   ];
 }
 

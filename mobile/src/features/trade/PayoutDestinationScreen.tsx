@@ -29,6 +29,7 @@ import { formatHundredths, parseToHundredths } from '../market/money';
 import { BankAccountFields } from '../profile/BankAccountFields';
 import { BANK_FORMS, validateBankForm, type BankFieldKey, type BankFormValues, type Beneficiary } from '../profile/data';
 import { splitProblem } from './payoutSplit';
+import { tr } from "../../i18n";
 
 export interface Recipient {
   /** Unique within this screen. */
@@ -48,9 +49,9 @@ export interface Recipient {
 /** What to show under the list: what is left to place, or by how much it is over. */
 export function assignmentMessage(totalMinor: number, recipients: readonly Recipient[], currency: string): string | null {
   const assigned = recipients.reduce((sum, r) => sum + r.amountMinor, 0);
-  if (recipients.length === 0) return `Add an account to receive ${formatHundredths(totalMinor)} ${currency}.`;
-  if (assigned > totalMinor) return `That is ${formatHundredths(assigned - totalMinor)} ${currency} more than you receive.`;
-  if (assigned < totalMinor) return `Left to assign: ${formatHundredths(totalMinor - assigned)} ${currency}.`;
+  if (recipients.length === 0) return tr("Add an account to receive {{totalMinor}} {{currency}}.", { totalMinor: formatHundredths(totalMinor), currency });
+  if (assigned > totalMinor) return tr("That is {{totalMinor}} {{currency}} more than you receive.", { totalMinor: formatHundredths(assigned - totalMinor), currency });
+  if (assigned < totalMinor) return tr("Left to assign: {{assigned}} {{currency}}.", { assigned: formatHundredths(totalMinor - assigned), currency });
   return null;
 }
 
@@ -102,41 +103,41 @@ export function PayoutDestinationScreen({
   const remove = (key: string): void => setRecipients((list) => list.filter((r) => r.key !== key));
 
   const requestCard = (): void =>
-    Alert.alert('Cards aren’t available yet', `A prepaid ${currency} card is coming later. For now, choose a bank account in your name.`);
+    Alert.alert(tr("Cards aren’t available yet"), tr("A prepaid {{currency}} card is coming later. For now, choose a bank account in your name.", { currency }));
 
   const editingRecipient = recipients.find((r) => r.key === editing) ?? null;
 
   return (
     <View testID="payout-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="payout-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12} style={styles.headerSide}>
+        <Pressable testID="payout-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12} style={styles.headerSide}>
           <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>Payout Destination</Text>
-        <RoundButton icon="more" label="More options" testID="payout-more" onPress={() => setMenu(true)} />
+        <Text accessibilityRole="header" style={styles.title}>{tr("Payout Destination")}</Text>
+        <RoundButton icon="more" label={tr("More options")} testID="payout-more" onPress={() => setMenu(true)} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.totalRow} accessible accessibilityLabel={`Total amount ${formatHundredths(totalMinor)} ${currency}`}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
+        <View style={styles.totalRow} accessible accessibilityLabel={tr("Total amount {{totalMinor}} {{currency}}", { totalMinor: formatHundredths(totalMinor), currency })}>
+          <Text style={styles.totalLabel}>{tr("Total Amount")}</Text>
           <Text testID="payout-total" style={styles.totalValue}>{`${formatHundredths(totalMinor)} ${currency}`}</Text>
         </View>
 
-        <Text accessibilityRole="header" style={styles.section}>Fund Card</Text>
+        <Text accessibilityRole="header" style={styles.section}>{tr("Fund Card")}</Text>
         <Text style={styles.text}>
-          {`A prepaid card funded with your exchanged currency, ready to collect at your destination. Cards aren’t available yet.`}
+          {tr("A prepaid card funded with your exchanged currency, ready to collect at your destination. Cards aren’t available yet.")}
         </Text>
         <Pressable testID="payout-card" accessibilityRole="button" onPress={requestCard} style={styles.linkRow} hitSlop={6}>
           <Icon name="cards" color={color.success.text} size={16} />
-          <Text style={styles.link}>{`Request a ${currency} card`}</Text>
+          <Text style={styles.link}>{tr("Request a {{currency}} card", { currency })}</Text>
         </Pressable>
 
-        <Text accessibilityRole="header" style={styles.section}>Fund Account</Text>
+        <Text accessibilityRole="header" style={styles.section}>{tr("Fund Account")}</Text>
         <Text style={styles.text}>
-          {`You can add several accounts to be paid in a single transaction. All accounts must be in ${currency} and in your own name (${ownerName}).`}
+          {tr("You can add several accounts to be paid in a single transaction. All accounts must be in {{currency}} and in your own name ({{ownerName}}).", { currency, ownerName })}
         </Text>
         <Pressable testID="payout-new" accessibilityRole="button" onPress={() => setAdding(true)} style={styles.newLink} hitSlop={6}>
-          <Text style={styles.link}>Send to a new recipient →</Text>
+          <Text style={styles.link}>{tr("Send to a new recipient →")}</Text>
         </Pressable>
 
         {recipients.map((r) => (
@@ -145,14 +146,14 @@ export function PayoutDestinationScreen({
               <Text style={styles.cardName}>{r.name}</Text>
               <Text style={styles.cardBank}>{`${r.bank} •••• ${r.last4}`}</Text>
               {r.isNew ? (
-                <Text testID={`payout-hold-${r.key}`} style={styles.hold}>New account: confirmed with your authenticator code</Text>
+                <Text testID={`payout-hold-${r.key}`} style={styles.hold}>{tr("New account: confirmed with your authenticator code")}</Text>
               ) : null}
             </View>
             <Text testID={`payout-amount-${r.key}`} style={styles.cardAmount}>{`${formatHundredths(r.amountMinor)} ${currency}`}</Text>
             <Pressable
               testID={`payout-menu-${r.key}`}
               accessibilityRole="button"
-              accessibilityLabel={`Options for account ending ${r.last4}`}
+              accessibilityLabel={tr("Options for account ending {{last4}}", { last4: r.last4 })}
               onPress={() => setRowMenu(r.key)}
               hitSlop={10}
               style={styles.kebab}
@@ -164,13 +165,13 @@ export function PayoutDestinationScreen({
 
         {unused.length > 0 ? (
           <>
-            <Text style={styles.subhead}>Your saved accounts</Text>
+            <Text style={styles.subhead}>{tr("Your saved accounts")}</Text>
             {unused.map((b) => (
               <Pressable
                 key={b.id}
                 testID={`payout-saved-${b.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Add ${b.bank} account ending ${b.accountLast4}`}
+                accessibilityLabel={tr("Add {{bank}} account ending {{accountLast4}}", { bank: b.bank, accountLast4: b.accountLast4 })}
                 onPress={() => addSaved(b)}
                 style={styles.saved}
               >
@@ -187,7 +188,7 @@ export function PayoutDestinationScreen({
             <View style={styles.emptyIcon}>
               <Icon name="people" color={color.text.disabled} size={28} />
             </View>
-            <Text style={styles.emptyText}>No saved Beneficiary to show</Text>
+            <Text style={styles.emptyText}>{tr("No saved Beneficiary to show")}</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -198,7 +199,7 @@ export function PayoutDestinationScreen({
             {message}
           </Text>
         ) : null}
-        <PrimaryButton testID="payout-continue" label="Continue" onPress={problem === null ? () => onContinue(recipients) : undefined} disabled={problem !== null} />
+        <PrimaryButton testID="payout-continue" label={tr("Continue")} onPress={problem === null ? () => onContinue(recipients) : undefined} disabled={problem !== null} />
       </View>
 
       <ActionSheet
@@ -207,9 +208,9 @@ export function PayoutDestinationScreen({
         onClose={() => setMenu(false)}
         actions={[
           ...(onManageBeneficiaries
-            ? [{ key: 'manage', label: 'Manage beneficiaries', onPress: () => { setMenu(false); onManageBeneficiaries(); } }]
+            ? [{ key: 'manage', label: tr("Manage beneficiaries"), onPress: () => { setMenu(false); onManageBeneficiaries(); } }]
             : []),
-          { key: 'card', label: `Request a ${currency} card`, onPress: () => { setMenu(false); requestCard(); } },
+          { key: 'card', label: tr("Request a {{currency}} card", { currency }), onPress: () => { setMenu(false); requestCard(); } },
         ]}
       />
       <ActionSheet
@@ -217,8 +218,8 @@ export function PayoutDestinationScreen({
         visible={rowMenu !== null}
         onClose={() => setRowMenu(null)}
         actions={[
-          { key: 'amount', label: 'Change amount', onPress: () => { setEditing(rowMenu); setRowMenu(null); } },
-          { key: 'remove', label: 'Remove', onPress: () => { if (rowMenu) remove(rowMenu); setRowMenu(null); } },
+          { key: 'amount', label: tr("Change amount"), onPress: () => { setEditing(rowMenu); setRowMenu(null); } },
+          { key: 'remove', label: tr("Remove"), onPress: () => { if (rowMenu) remove(rowMenu); setRowMenu(null); } },
         ]}
       />
       {editingRecipient ? (
@@ -270,21 +271,21 @@ function AmountSheet({
   const [error, setError] = useState<string | null>(null);
   const save = (): void => {
     const m = parseToHundredths(text);
-    if (m === null) return setError('Enter an amount, for example 250 or 250.50');
-    if (m > maxMinor) return setError(`At most ${formatHundredths(maxMinor)} ${currency} is left for this account.`);
+    if (m === null) return setError(tr("Enter an amount, for example 250 or 250.50"));
+    if (m > maxMinor) return setError(tr("At most {{maxMinor}} {{currency}} is left for this account.", { maxMinor: formatHundredths(maxMinor), currency }));
     onSave(m);
   };
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} accessibilityLabel="Close" onPress={onClose} />
+      <Pressable style={styles.scrim} accessibilityLabel={tr("Close")} onPress={onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View testID="payout-amount-sheet" style={styles.sheet}>
-          <Text accessibilityRole="header" style={styles.sheetTitle}>{`Amount for account ending ${last4}`}</Text>
-          <OutlinedField label={`Amount (${currency})`} invalid={error !== null}>
-            <FieldInput testID="payout-amount-input" accessibilityLabel={`Amount in ${currency}`} value={text} onChangeText={(t) => { setText(t); setError(null); }} />
+          <Text accessibilityRole="header" style={styles.sheetTitle}>{tr("Amount for account ending {{last4}}", { last4 })}</Text>
+          <OutlinedField label={tr("Amount ({{currency}})", { currency })} invalid={error !== null}>
+            <FieldInput testID="payout-amount-input" accessibilityLabel={tr("Amount in {{currency}}", { currency })} value={text} onChangeText={(t) => { setText(t); setError(null); }} />
           </OutlinedField>
           {error ? <Text testID="payout-amount-error" style={styles.messageError}>{error}</Text> : null}
-          <PrimaryButton testID="payout-amount-save" label="Save" onPress={save} />
+          <PrimaryButton testID="payout-amount-save" label={tr("Save")} onPress={save} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -320,9 +321,9 @@ export function NewRecipientSheet({
     setErrors(found);
     const m = full ? leftMinor : parseToHundredths(amount);
     let amountProblem: string | null = null;
-    if (leftMinor === 0) amountProblem = 'Nothing is left to assign. Change another account’s amount first.';
-    else if (m === null || m <= 0) amountProblem = 'Enter an amount, for example 250 or 250.50';
-    else if (m > leftMinor) amountProblem = `At most ${formatHundredths(leftMinor)} ${currency} is left to assign.`;
+    if (leftMinor === 0) amountProblem = tr("Nothing is left to assign. Change another account’s amount first.");
+    else if (m === null || m <= 0) amountProblem = tr("Enter an amount, for example 250 or 250.50");
+    else if (m > leftMinor) amountProblem = tr("At most {{leftMinor}} {{currency}} is left to assign.", { leftMinor: formatHundredths(leftMinor), currency });
     setAmountError(amountProblem);
     if (Object.keys(found).length > 0 || amountProblem !== null || m === null) return;
     // Only the last 4 digits are kept on the device; the full number goes once to the
@@ -346,17 +347,17 @@ export function NewRecipientSheet({
       >
         <View style={styles.header}>
           <View style={styles.headerSide} />
-          <Text accessibilityRole="header" style={styles.title}>Send to a New Recipient</Text>
-          <Pressable testID="payout-new-close" accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={12} style={styles.headerSide}>
+          <Text accessibilityRole="header" style={styles.title}>{tr("Send to a New Recipient")}</Text>
+          <Pressable testID="payout-new-close" accessibilityRole="button" accessibilityLabel={tr("Close")} onPress={onClose} hitSlop={12} style={styles.headerSide}>
             <Icon name="close" color={color.text.primary} size={22} />
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {!supported ? (
-            <Text testID="payout-new-unsupported" style={styles.text}>{`New ${currency} accounts can’t be added here yet. Choose one of your saved accounts.`}</Text>
+            <Text testID="payout-new-unsupported" style={styles.text}>{tr("New {{currency}} accounts can’t be added here yet. Choose one of your saved accounts.", { currency })}</Text>
           ) : (
             <>
-              <Text accessibilityRole="header" style={styles.section}>Account Details</Text>
+              <Text accessibilityRole="header" style={styles.section}>{tr("Account Details")}</Text>
               <BankAccountFields
                 currency={currency}
                 values={values}
@@ -366,39 +367,39 @@ export function NewRecipientSheet({
                   if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
                 }}
               />
-              <OutlinedField label="Account Name">
-                <View style={styles.readonly} accessible accessibilityLabel="Account name. Confirmed by your bank">
-                  <Text style={styles.readonlyText}>Confirmed by your bank</Text>
+              <OutlinedField label={tr("Account Name")}>
+                <View style={styles.readonly} accessible accessibilityLabel={tr("Account name. Confirmed by your bank")}>
+                  <Text style={styles.readonlyText}>{tr("Confirmed by your bank")}</Text>
                 </View>
               </OutlinedField>
-              <Text style={styles.help}>{`The account must be in your own name (${ownerName}). Adding it needs your authenticator code.`}</Text>
+              <Text style={styles.help}>{tr("The account must be in your own name ({{ownerName}}). Adding it needs your authenticator code.", { ownerName })}</Text>
               <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Save to beneficiary</Text>
-                <Switch testID="payout-new-save" accessibilityLabel="Save to beneficiary" value={save} onValueChange={setSave} />
+                <Text style={styles.switchLabel}>{tr("Save to beneficiary")}</Text>
+                <Switch testID="payout-new-save" accessibilityLabel={tr("Save to beneficiary")} value={save} onValueChange={setSave} />
               </View>
 
               <View style={styles.amountHead}>
-                <Text accessibilityRole="header" style={[styles.section, styles.amountSection]}>Amount</Text>
-                <Text testID="payout-new-left" style={styles.leftLabel}>{`Left to assign: ${formatHundredths(leftMinor)} ${currency}`}</Text>
+                <Text accessibilityRole="header" style={[styles.section, styles.amountSection]}>{tr("Amount")}</Text>
+                <Text testID="payout-new-left" style={styles.leftLabel}>{tr("Left to assign: {{leftMinor}} {{currency}}", { leftMinor: formatHundredths(leftMinor), currency })}</Text>
               </View>
-              <OutlinedField label="Enter Amount" invalid={amountError !== null}>
+              <OutlinedField label={tr("Enter Amount")} invalid={amountError !== null}>
                 <FieldInput
                   testID="payout-new-amount"
-                  accessibilityLabel={`Amount in ${currency}`}
+                  accessibilityLabel={tr("Amount in {{currency}}", { currency })}
                   value={full ? formatHundredths(leftMinor) : amount}
                   onChangeText={(t) => { setAmount(t); setFull(false); setAmountError(null); }}
                 />
               </OutlinedField>
               {amountError ? <Text testID="payout-new-amount-error" style={styles.messageError}>{amountError}</Text> : null}
               <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Send the full amount left</Text>
-                <Switch testID="payout-new-full" accessibilityLabel="Send the full amount left" value={full} onValueChange={(v) => { setFull(v); setAmountError(null); }} />
+                <Text style={styles.switchLabel}>{tr("Send the full amount left")}</Text>
+                <Switch testID="payout-new-full" accessibilityLabel={tr("Send the full amount left")} value={full} onValueChange={(v) => { setFull(v); setAmountError(null); }} />
               </View>
             </>
           )}
         </ScrollView>
         <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
-          <PrimaryButton testID="payout-new-add" label="Add" onPress={supported ? add : undefined} disabled={!supported} />
+          <PrimaryButton testID="payout-new-add" label={tr("Add")} onPress={supported ? add : undefined} disabled={!supported} />
         </View>
       </KeyboardAvoidingView>
     </Modal>

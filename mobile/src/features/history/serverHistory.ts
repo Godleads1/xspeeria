@@ -6,6 +6,7 @@
 import type { ServerMatch, ServerOffer } from '../../api/offersApi';
 import type { ActivityItem, MarketRate } from '../../fixtures';
 import type { HistoryItem, TradeStatus } from './data';
+import { tr, k } from "../../i18n";
 
 /** "264100.00" → 26410000 (scale 2). Throws on anything that is not plain decimal text. */
 export function toMinor(text: string, scale = 2): number {
@@ -60,7 +61,7 @@ export function dealsToHistory(ms: readonly ServerMatch[]): HistoryItem[] {
 }
 
 const TONE = { completed: 'success', pending: 'warning', failed: 'error' } as const;
-const LABEL = { completed: 'Completed', pending: 'In progress', failed: 'Not completed' } as const;
+const LABEL = { completed: k("Completed"), pending: k("In progress"), failed: k("Not completed") } as const;
 
 /** The three newest deals for Home (amounts in what I receive). */
 export function dealsToActivity(ms: readonly ServerMatch[]): ActivityItem[] {
@@ -80,12 +81,12 @@ export function dealsToActivity(ms: readonly ServerMatch[]): ActivityItem[] {
           amountMinor: toMinor(amount),
           currency: receive,
           scale: 2,
-          status: LABEL[status],
+          status: tr(LABEL[status]),
           statusTone: TONE[status],
           when: m.accepted_at.slice(0, 10).split('-').reverse().join('/'),
           nextAction:
             m.preparation_state === 'awaiting_payout_accounts' && !m.you_chose_payout_accounts
-              ? 'Add your payout account'
+              ? tr("Add your payout account")
               : undefined,
           timeCritical: m.preparation_state === 'awaiting_payout_accounts' && !m.you_chose_payout_accounts,
         },

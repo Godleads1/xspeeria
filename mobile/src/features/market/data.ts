@@ -5,6 +5,7 @@
  */
 
 import { rateProblem } from './rateCeiling';
+import { k } from "../../i18n";
 
 export interface Currency {
   readonly code: string;
@@ -13,15 +14,15 @@ export interface Currency {
   readonly flag: string;
 }
 
-export const NGN: Currency = { code: 'NGN', name: 'Nigerian Naira', flag: '🇳🇬' };
+export const NGN: Currency = { code: 'NGN', name: k("Nigerian Naira"), flag: '🇳🇬' };
 
 /** Currencies a NGN holder can buy. */
 export const BUYABLE: readonly Currency[] = [
-  { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-  { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-  { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
-  { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-  { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'USD', name: k("US Dollar"), flag: '🇺🇸' },
+  { code: 'GBP', name: k("British Pound"), flag: '🇬🇧' },
+  { code: 'CAD', name: k("Canadian Dollar"), flag: '🇨🇦' },
+  { code: 'EUR', name: k("Euro"), flag: '🇪🇺' },
+  { code: 'AUD', name: k("Australian Dollar"), flag: '🇦🇺' },
 ];
 
 /** Currencies a seller can receive. Figma: "Currencies you are licensed to sell". */
@@ -61,22 +62,22 @@ export interface Listing {
  * offers stay in the data but are not eligible (no official rate yet).
  */
 export const OFFERS: readonly Listing[] = [
-  { id: 'o1', currency: 'USD', availableMinor: 20000, rateHundredths: 132500, meta: 'Offer Time: 5 mins ago', best: true },
+  { id: 'o1', currency: 'USD', availableMinor: 20000, rateHundredths: 132500, meta: k("Offer Time: 5 mins ago"), best: true },
   { id: 'o2', currency: 'USD', availableMinor: 20000, rateHundredths: 133200, meta: 'User 9867' },
   { id: 'o3', currency: 'USD', availableMinor: 20000, rateHundredths: 133000, meta: 'User 0897' },
-  { id: 'o4', currency: 'USD', availableMinor: 50000, rateHundredths: 132500, meta: 'Offer Time: 12 mins ago' },
+  { id: 'o4', currency: 'USD', availableMinor: 50000, rateHundredths: 132500, meta: k("Offer Time: 12 mins ago") },
   { id: 'o8', currency: 'USD', availableMinor: 40000, rateHundredths: 132800, meta: 'User 5512' },
-  { id: 'g1', currency: 'GBP', availableMinor: 30000, rateHundredths: 176000, meta: 'Offer Time: 4 mins ago', best: true },
+  { id: 'g1', currency: 'GBP', availableMinor: 30000, rateHundredths: 176000, meta: k("Offer Time: 4 mins ago"), best: true },
   { id: 'g2', currency: 'GBP', availableMinor: 50000, rateHundredths: 176300, meta: 'User 2208' },
-  { id: 'o5', currency: 'CAD', availableMinor: 30000, rateHundredths: 118000, meta: 'Offer Time: 3 mins ago', best: true },
+  { id: 'o5', currency: 'CAD', availableMinor: 30000, rateHundredths: 118000, meta: k("Offer Time: 3 mins ago"), best: true },
   { id: 'o6', currency: 'EUR', availableMinor: 15000, rateHundredths: 148800, meta: 'User 4410', best: true },
-  { id: 'o7', currency: 'AUD', availableMinor: 25000, rateHundredths: 105500, meta: 'Offer Time: 9 mins ago', best: true },
+  { id: 'o7', currency: 'AUD', availableMinor: 25000, rateHundredths: 105500, meta: k("Offer Time: 9 mins ago"), best: true },
 ];
 
 /** Buy requests a seller can fill (Sell mode). Figma: "Available USD request". Repriced as above. */
 export const REQUESTS: readonly Listing[] = [
-  { id: 'r1', currency: 'USD', availableMinor: 20000, rateHundredths: 133000, meta: 'Request Time: 5 mins ago', best: true },
-  { id: 'r2', currency: 'USD', availableMinor: 20000, rateHundredths: 133000, meta: 'Request Time: 5 mins ago' },
+  { id: 'r1', currency: 'USD', availableMinor: 20000, rateHundredths: 133000, meta: k("Request Time: 5 mins ago"), best: true },
+  { id: 'r2', currency: 'USD', availableMinor: 20000, rateHundredths: 133000, meta: k("Request Time: 5 mins ago") },
   { id: 'r3', currency: 'USD', availableMinor: 35000, rateHundredths: 132600, meta: 'User 2231' },
 ];
 

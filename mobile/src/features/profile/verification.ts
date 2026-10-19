@@ -1,3 +1,5 @@
+import { tr } from "../../i18n";
+
 /**
  * Proof of ownership for a new phone number or email (ADR-011).
  *
@@ -104,9 +106,9 @@ export function ageOn(iso: string, now: Date): number {
 
 /** Xspeeria is for adults only (Privacy Policy §12). */
 export function dobError(iso: string | null, now: Date): string | null {
-  if (!iso) return 'Enter a real date as DD/MM/YYYY';
+  if (!iso) return tr("Enter a real date as DD/MM/YYYY");
   const age = ageOn(iso, now);
-  if (age < 18) return 'You must be 18 or older to use Xspeeria';
-  if (age > 120) return 'Check the year';
+  if (age < 18) return tr("You must be 18 or older to use Xspeeria");
+  if (age > 120) return tr("Check the year");
   return null;
 }

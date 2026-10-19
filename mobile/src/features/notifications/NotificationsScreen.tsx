@@ -17,6 +17,7 @@ import { brandWeight, color, space, typography, themed } from '../../theme';
 import { notificationCopy, type Tone } from './notificationCopy';
 import type { NotificationSource } from './serverNotifications';
 import { setUnreadCount } from './unread';
+import { dayMonth, tr } from "../../i18n";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -34,7 +35,7 @@ function timeLabel(createdAt: string, now: Date): string {
   if (groupOf(createdAt, now) === 'Today') {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return dayMonth(d.getDate(), d.getMonth());
 }
 
 function toneColor(t: Tone): string {
@@ -104,12 +105,10 @@ export function NotificationsScreen({
 
   const header = (
     <View style={styles.header}>
-      <Pressable testID="notifications-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="notifications-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
-      <Text accessibilityRole="header" style={styles.title}>
-        Notifications
-      </Text>
+      <Text accessibilityRole="header" style={styles.title}>{tr("Notifications")}</Text>
       <View style={styles.spacer} />
     </View>
   );
@@ -118,7 +117,7 @@ export function NotificationsScreen({
     return (
       <Screen testID="notifications-screen">
         {header}
-        {error ? <ErrorState title={error} onRetry={load} /> : <LoadingState label="Loading your notifications" />}
+        {error ? <ErrorState title={error} onRetry={load} /> : <LoadingState label={tr("Loading your notifications")} />}
       </Screen>
     );
   }
@@ -135,7 +134,7 @@ export function NotificationsScreen({
       {sections.length === 0 ? (
         <View testID="notifications-empty" style={styles.empty}>
           <Icon name="bell" color={color.text.secondary} size={40} />
-          <Text style={styles.emptyText}>You’re all caught up</Text>
+          <Text style={styles.emptyText}>{tr("You’re all caught up")}</Text>
         </View>
       ) : (
         <SectionList
@@ -146,14 +145,14 @@ export function NotificationsScreen({
           onEndReachedThreshold={0.3}
           stickySectionHeadersEnabled={false}
           contentContainerStyle={styles.list}
-          renderSectionHeader={({ section }) => <Text style={styles.group}>{section.title}</Text>}
+          renderSectionHeader={({ section }) => <Text style={styles.group}>{tr(section.title)}</Text>}
           renderItem={({ item }) => {
             const copy = notificationCopy(item);
             return (
               <Pressable
                 testID={`notification-${item.notification_id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.read ? '' : 'Unread: '}${copy.title}. ${copy.body}`}
+                accessibilityLabel={`${item.read ? '' : tr("Unread: ")}${copy.title}. ${copy.body}`}
                 onPress={() => open(item)}
                 style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
               >

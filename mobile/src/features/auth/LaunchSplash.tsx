@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, type ReactElement } from 'react';
 import { Animated, Image } from 'react-native';
+import { tr } from "../../i18n";
 
 export const LAUNCH_HOLD_MS = 1200;
 const LOGO_W = 290;
@@ -22,7 +23,7 @@ export function LaunchSplash({ onDone, holdMs = LAUNCH_HOLD_MS }: { onDone: () =
   }, [holdMs, onDone, opacity]);
 
   return (
-    <Animated.View testID="launch-splash" style={[styles.fill, { opacity }]} accessible accessibilityLabel="Xspeeria">
+    <Animated.View testID="launch-splash" style={[styles.fill, { opacity }]} accessible accessibilityLabel={tr("Xspeeria")}>
       <Image source={require('../../../../assets/brand/xspeeria-logo.png')} style={{ width: LOGO_W, height: LOGO_H }} resizeMode="contain" />
     </Animated.View>
   );

@@ -28,23 +28,24 @@ import {
   type ContactKind,
   type RandomBytes,
 } from './verification';
+import { tr, k } from "../../i18n";
 
 const COPY: Record<ContactKind, { title: string; label: string; via: string; invalid: string; same: string; done: string }> = {
   phone: {
-    title: 'Change phone number',
-    label: 'New phone number',
-    via: 'We will text a 6-digit code to the new number to confirm it is yours.',
-    invalid: 'Enter the full number with country code, e.g. +234 803 000 0000',
-    same: 'This is already your phone number',
-    done: 'Phone number updated. We have let your old number know about this change.',
+    title: k("Change phone number"),
+    label: k("New phone number"),
+    via: k("We will text a 6-digit code to the new number to confirm it is yours."),
+    invalid: k("Enter the full number with country code, e.g. +234 803 000 0000"),
+    same: k("This is already your phone number"),
+    done: k("Phone number updated. We have let your old number know about this change."),
   },
   email: {
-    title: 'Change email address',
-    label: 'New email address',
-    via: 'We will email a 6-digit code to the new address to confirm it is yours.',
-    invalid: 'Enter a valid email address',
-    same: 'This is already your email address',
-    done: 'Email address updated. We have let your old email know about this change.',
+    title: k("Change email address"),
+    label: k("New email address"),
+    via: k("We will email a 6-digit code to the new address to confirm it is yours."),
+    invalid: k("Enter a valid email address"),
+    same: k("This is already your email address"),
+    done: k("Email address updated. We have let your old email know about this change."),
   },
 };
 
@@ -88,10 +89,10 @@ export function ChangeContactScreen({
 
   const sendCode = async (): Promise<void> => {
     const target = normalise(value);
-    if (!target) return setError(copy.invalid);
-    if (target === current) return setError(copy.same);
+    if (!target) return setError(tr(copy.invalid));
+    if (target === current) return setError(tr(copy.same));
     setError(null);
-    if (!(await stepUp(`${copy.title} to ${maskContact(kind, target)}`))) return;
+    if (!(await stepUp(tr("{{title}} to {{target}}", { title: tr(copy.title), target: maskContact(kind, target) })))) return;
     setChallenge(sendChallenge(kind, target, now(), random));
   };
 
@@ -108,10 +109,10 @@ export function ChangeContactScreen({
     setChallenge(r.challenge);
     setError(
       r.reason === 'expired'
-        ? 'This code has expired. Send a new one.'
+        ? tr("This code has expired. Send a new one.")
         : r.reason === 'used-up'
-          ? 'Too many wrong codes. Send a new one.'
-          : `That code is not right. ${r.challenge.triesLeft} ${r.challenge.triesLeft === 1 ? 'try' : 'tries'} left.`,
+          ? tr("Too many wrong codes. Send a new one.")
+          : (r.challenge.triesLeft === 1 ? tr("That code is not right. 1 try left.") : tr("That code is not right. {{count}} tries left.", { count: r.challenge.triesLeft })),
     );
   };
 
@@ -131,26 +132,26 @@ export function ChangeContactScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="change-contact-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="change-contact-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>{copy.title}</Text>
+        <Text style={styles.title}>{tr(copy.title)}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {done ? (
           <>
-            <Text testID="change-contact-done" style={styles.text}>{copy.done}</Text>
-            <PrimaryButton testID="change-contact-finish" label="Done" onPress={onDone} />
+            <Text testID="change-contact-done" style={styles.text}>{tr(copy.done)}</Text>
+            <PrimaryButton testID="change-contact-finish" label={tr("Done")} onPress={onDone} />
           </>
         ) : !challenge ? (
           <>
-            <Text style={styles.text}>{copy.via}</Text>
-            <OutlinedField label={`${copy.label} *`} invalid={Boolean(error)}>
+            <Text style={styles.text}>{tr(copy.via)}</Text>
+            <OutlinedField label={`${tr(copy.label)} *`} invalid={Boolean(error)}>
               <FieldInput
                 testID="change-contact-value"
-                accessibilityLabel={copy.label}
+                accessibilityLabel={tr(copy.label)}
                 value={value}
                 onChangeText={(t) => {
                   setValue(t);
@@ -163,17 +164,13 @@ export function ChangeContactScreen({
               />
             </OutlinedField>
             {error ? <Text testID="change-contact-error" style={styles.error}>{error}</Text> : null}
-            <PrimaryButton testID="change-contact-send" label="Send code" onPress={() => void sendCode()} disabled={value.trim() === ''} />
+            <PrimaryButton testID="change-contact-send" label={tr("Send code")} onPress={() => void sendCode()} disabled={value.trim() === ''} />
           </>
         ) : (
           <>
-            <Text testID="change-contact-sent" style={styles.text}>
-              Enter the 6-digit code we sent to {maskContact(kind, challenge.target)}. It expires in 10 minutes.
-            </Text>
+            <Text testID="change-contact-sent" style={styles.text}>{tr("Enter the 6-digit code we sent to {{target}}. It expires in 10 minutes.", { target: maskContact(kind, challenge.target) })}</Text>
             {showDevCode ? (
-              <Text testID="change-contact-devcode" style={styles.dev}>
-                Test build: no {kind === 'phone' ? 'SMS' : 'email'} service is connected yet. Your code is {challenge.code}.
-              </Text>
+              <Text testID="change-contact-devcode" style={styles.dev}>{(kind === 'phone' ? tr("Test build: no SMS service is connected yet. Your code is {{code}}.", { code: challenge.code }) : tr("Test build: no email service is connected yet. Your code is {{code}}.", { code: challenge.code }))}</Text>
             ) : null}
             <TextInput
               testID="change-contact-code"
@@ -184,7 +181,7 @@ export function ChangeContactScreen({
               }}
               placeholder="123456"
               placeholderTextColor={color.text.disabled}
-              accessibilityLabel="6-digit code"
+              accessibilityLabel={tr("6-digit code")}
               keyboardType="number-pad"
               autoComplete={kind === 'phone' ? 'sms-otp' : 'one-time-code'}
               textContentType="oneTimeCode"
@@ -193,10 +190,10 @@ export function ChangeContactScreen({
               style={styles.code}
             />
             {error ? <Text testID="change-contact-error" style={styles.error}>{error}</Text> : null}
-            <PrimaryButton testID="change-contact-verify" label="Confirm" onPress={verify} disabled={code.length !== 6 || blocked} />
+            <PrimaryButton testID="change-contact-verify" label={tr("Confirm")} onPress={verify} disabled={code.length !== 6 || blocked} />
             <Pressable testID="change-contact-resend" accessibilityRole="button" disabled={wait > 0} onPress={resend} style={styles.resend}>
               <Text style={wait > 0 ? styles.resendWait : styles.resendText}>
-                {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
+                {wait > 0 ? tr("Send a new code in {{wait}}s", { wait }) : tr("Send a new code")}
               </Text>
             </Pressable>
           </>

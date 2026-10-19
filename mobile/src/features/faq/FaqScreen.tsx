@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FAQ, FAQ_TOPICS, filterFaq, type FaqItem, type FaqTopic } from './data';
+import { tr } from "../../i18n";
 
 /** A function, not a constant: colours are read per render (light/dark). */
 const TOPIC_STYLE = (): Record<FaqTopic, { icon: IconName; bg: string; fg: string }> => ({
@@ -27,18 +28,18 @@ function QuestionCard({ item, open, onToggle }: { item: FaqItem; open: boolean; 
       testID={`faq-${item.id}`}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      accessibilityLabel={item.question}
+      accessibilityLabel={tr(item.question)}
       onPress={onToggle}
       style={styles.qCard}
     >
       <View style={styles.qHead}>
-        <Text style={styles.question}>{item.question}</Text>
+        <Text style={styles.question}>{tr(item.question)}</Text>
         <Icon name={open ? 'minus' : 'plus'} color={color.brand.primary} size={18} weight={2.25} />
       </View>
       {open ? (
         <>
           <View style={styles.qRule} />
-          <Text testID={`faq-answer-${item.id}`} style={styles.answer}>{item.answer}</Text>
+          <Text testID={`faq-answer-${item.id}`} style={styles.answer}>{tr(item.answer)}</Text>
         </>
       ) : null}
     </Pressable>
@@ -58,20 +59,20 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
     return filtering || showAll ? matched : matched.filter((i) => i.top);
   }, [query, topic, showAll, filtering]);
 
-  const heading = topic ? FAQ_TOPICS.find((t) => t.key === topic)?.title ?? 'Questions' : query.trim() ? 'Results' : 'Top Questions';
+  const heading = topic ? tr(FAQ_TOPICS.find((t) => t.key === topic)?.title ?? "Questions") : query.trim() ? tr("Results") : tr("Top Questions");
 
   return (
     <View testID="faq-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="faq-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="faq-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>FAQ</Text>
+        <Text style={styles.title}>{tr("FAQ")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.lg }} keyboardShouldPersistTaps="handled">
-        <Text accessibilityRole="header" style={styles.help}>How can we help you?</Text>
+        <Text accessibilityRole="header" style={styles.help}>{tr("How can we help you?")}</Text>
 
         <View style={styles.search}>
           <Icon name="search" color={color.text.primary} size={22} weight={2} />
@@ -79,9 +80,9 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
             testID="faq-search"
             value={query}
             onChangeText={setQuery}
-            placeholder="Enter your keyword"
+            placeholder={tr("Enter your keyword")}
             placeholderTextColor={color.text.secondary}
-            accessibilityLabel="Search questions"
+            accessibilityLabel={tr("Search questions")}
             autoCorrect={false}
             maxLength={60}
             style={styles.searchInput}
@@ -98,14 +99,14 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
                 testID={`faq-topic-${t.key}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                accessibilityLabel={`Questions about ${t.title}`}
+                accessibilityLabel={tr("Questions about {{title}}", { title: tr(t.title) })}
                 onPress={() => setTopic(selected ? null : t.key)}
                 style={[styles.topic, { backgroundColor: st.bg }, selected ? { borderColor: st.fg } : null]}
               >
                 <Icon name={st.icon} color={st.fg} size={22} />
                 <View>
-                  <Text style={styles.topicSmall}>Questions about</Text>
-                  <Text style={styles.topicTitle}>{t.title}</Text>
+                  <Text style={styles.topicSmall}>{tr("Questions about")}</Text>
+                  <Text style={styles.topicTitle}>{tr(t.title)}</Text>
                 </View>
               </Pressable>
             );
@@ -116,16 +117,14 @@ export function FaqScreen({ onBack }: { onBack: () => void }): ReactElement {
           <Text style={styles.listTitle}>{heading}</Text>
           {!filtering ? (
             <Pressable testID="faq-view-all" accessibilityRole="button" onPress={() => setShowAll((v) => !v)} hitSlop={8}>
-              <Text style={styles.viewAll}>{showAll ? 'Show less' : 'View all'}</Text>
+              <Text style={styles.viewAll}>{showAll ? tr("Show less") : tr("View all")}</Text>
             </Pressable>
           ) : null}
         </View>
 
         <View style={styles.list}>
           {list.length === 0 ? (
-            <Text testID="faq-empty" style={styles.empty}>
-              No questions match. Try another keyword or contact support.
-            </Text>
+            <Text testID="faq-empty" style={styles.empty}>{tr("No questions match. Try another keyword or contact support.")}</Text>
           ) : (
             list.map((i) => (
               <QuestionCard key={i.id} item={i} open={openId === i.id} onToggle={() => setOpenId(openId === i.id ? null : i.id)} />

@@ -7,11 +7,12 @@ import { NewLocationScreen } from '../../../src/features/auth/RegionScreens';
 import { session } from '../../../src/features/auth/session';
 import { regionPrompt } from '../../../src/features/kyc/regionPrompt';
 import { useThemeMode } from '../../../src/theme';
+import { k } from "../../../src/i18n";
 
 const PLACE = {
-  NG: { name: 'Nigeria', currency: 'NGN' },
-  GB: { name: 'United Kingdom', currency: 'GBP' },
-  US: { name: 'United States of America', currency: 'USD' },
+  NG: { name: k("Nigeria"), currency: 'NGN' },
+  GB: { name: k("United Kingdom"), currency: 'GBP' },
+  US: { name: k("United States of America"), currency: 'USD' },
 } as const;
 
 /**

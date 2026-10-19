@@ -16,6 +16,7 @@ import type { ServerSession, ServerTrustedDevice } from '../../api/devicesApi';
 import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
+import { dayMonth, tr } from "../../i18n";
 
 export interface DevicesSource {
   sessions(): Promise<ServerSession[]>;
@@ -30,16 +31,16 @@ export function deviceName(userAgent: string | null): string {
   const os = /iPhone|iPad|iOS/i.test(ua)
     ? 'iPhone'
     : /Android/i.test(ua)
-      ? 'Android phone'
+      ? tr("Android phone")
       : /Windows/i.test(ua)
-        ? 'Windows computer'
+        ? tr("Windows computer")
         : /Mac OS|Macintosh/i.test(ua)
           ? 'Mac'
           : /Linux/i.test(ua)
-            ? 'Linux computer'
+            ? tr("Linux computer")
             : null;
   const app = /Expo|okhttp|CFNetwork|Xspeeria/i.test(ua)
-    ? 'Xspeeria app'
+    ? tr("Xspeeria app")
     : /Edg\//.test(ua)
       ? 'Edge'
       : /Chrome\//.test(ua)
@@ -49,15 +50,15 @@ export function deviceName(userAgent: string | null): string {
           : /Safari\//.test(ua)
             ? 'Safari'
             : null;
-  if (os && app) return `${app} on ${os}`;
-  return os ?? app ?? 'Unknown device';
+  if (os && app) return tr("{{app}} on {{os}}", { app, os });
+  return os ?? app ?? tr("Unknown device");
 }
 
 function when(iso: string | null): string {
-  if (!iso) return 'never';
+  if (!iso) return tr('never');
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const date = dayMonth(d.getDate(), d.getMonth());
   return `${date}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
@@ -96,12 +97,10 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
 
   const header = (
     <View style={styles.header}>
-      <Pressable testID="devices-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="devices-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
       </Pressable>
-      <Text accessibilityRole="header" style={styles.title}>
-        Signed-in devices
-      </Text>
+      <Text accessibilityRole="header" style={styles.title}>{tr("Signed-in devices")}</Text>
       <View style={styles.spacer} />
     </View>
   );
@@ -110,7 +109,7 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
     return (
       <View testID="devices-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
         {header}
-        {loadError ? <ErrorState title={loadError} onRetry={load} /> : <LoadingState label="Loading your devices" />}
+        {loadError ? <ErrorState title={loadError} onRetry={load} /> : <LoadingState label={tr("Loading your devices")} />}
       </View>
     );
   }
@@ -119,20 +118,20 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
     <View testID="devices-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       {header}
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.section}>Signed in now</Text>
+        <Text style={styles.section}>{tr("Signed in now")}</Text>
         {sessions.map((s) => (
           <View key={s.session_id} testID={`session-${s.session_id}`} style={styles.row}>
             <View style={styles.rowText}>
               <Text style={styles.name}>{deviceName(s.user_agent)}</Text>
               <Text style={styles.meta}>
-                {s.current ? 'This device' : `Last active ${when(s.last_active_at)}`}
+                {s.current ? tr("This device") : tr("Last active {{last_active_at}}", { last_active_at: when(s.last_active_at) })}
               </Text>
             </View>
             {s.current ? null : (
               <Pressable
                 testID={`session-signout-${s.session_id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Sign out ${deviceName(s.user_agent)}`}
+                accessibilityLabel={tr("Sign out {{user_agent}}", { user_agent: deviceName(s.user_agent) })}
                 disabled={busy !== null}
                 onPress={() =>
                   void act(s.session_id, () => source.signOut(s.session_id), () =>
@@ -141,29 +140,27 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
                 }
                 hitSlop={8}
               >
-                <Text style={styles.action}>{busy === s.session_id ? 'Signing out…' : 'Sign out'}</Text>
+                <Text style={styles.action}>{busy === s.session_id ? tr("Signing out…") : tr("Sign out")}</Text>
               </Pressable>
             )}
           </View>
         ))}
 
-        <Text style={styles.section}>Trusted devices</Text>
-        <Text style={styles.note}>These can log in with your PIN only, without an authenticator code, for 30 days.</Text>
+        <Text style={styles.section}>{tr("Trusted devices")}</Text>
+        <Text style={styles.note}>{tr("These can log in with your PIN only, without an authenticator code, for 30 days.")}</Text>
         {trusted.length === 0 ? (
-          <Text testID="trusted-empty" style={styles.meta}>
-            No trusted devices.
-          </Text>
+          <Text testID="trusted-empty" style={styles.meta}>{tr("No trusted devices.")}</Text>
         ) : (
           trusted.map((d) => (
             <View key={d.trusted_device_id} testID={`trusted-${d.trusted_device_id}`} style={styles.row}>
               <View style={styles.rowText}>
                 <Text style={styles.name}>{deviceName(d.user_agent)}</Text>
-                <Text style={styles.meta}>Trusted until {when(d.expires_at)}</Text>
+                <Text style={styles.meta}>{tr("Trusted until {{expires_at}}", { expires_at: when(d.expires_at) })}</Text>
               </View>
               <Pressable
                 testID={`trusted-remove-${d.trusted_device_id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Stop trusting ${deviceName(d.user_agent)}`}
+                accessibilityLabel={tr("Stop trusting {{user_agent}}", { user_agent: deviceName(d.user_agent) })}
                 disabled={busy !== null}
                 onPress={() =>
                   void act(d.trusted_device_id, () => source.untrust(d.trusted_device_id), () =>
@@ -172,7 +169,7 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
                 }
                 hitSlop={8}
               >
-                <Text style={styles.action}>{busy === d.trusted_device_id ? 'Removing…' : 'Stop trusting'}</Text>
+                <Text style={styles.action}>{busy === d.trusted_device_id ? 'Removing…' : tr("Stop trusting")}</Text>
               </Pressable>
             </View>
           ))

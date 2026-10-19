@@ -7,7 +7,7 @@
  * instead of doing nothing. MOCK DATA ONLY.
  */
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Icon } from '../../components/icons';
@@ -16,6 +16,8 @@ import { Screen } from '../../components/primitives';
 import { brandWeight, color, setThemeMode, typography, themed, useThemeMode } from '../../theme';
 import { ProfileAvatar } from './ProfileAvatar';
 import { useProfile } from './profileStore';
+import { k, tr, useLanguage } from "../../i18n";
+import { LanguageSheet, currentLanguageName } from './LanguageSheet';
 
 export type ProfileDestination =
   | 'account'
@@ -28,13 +30,13 @@ export type ProfileDestination =
   | 'terms';
 
 const ITEMS: readonly { key: ProfileDestination; icon: MenuIconName; title: string; subtitle: string }[] = [
-  { key: 'beneficiaries', icon: 'beneficiaries', title: 'Manage Beneficiaries', subtitle: 'Manage your account and beneficiaries' },
-  { key: 'kyc', icon: 'kyc', title: 'KYC and limits', subtitle: 'Know your KYC Level and limits.' },
-  { key: 'security', icon: 'security', title: 'Security', subtitle: 'Protect yourself from intruders' },
-  { key: 'faq', icon: 'faq', title: 'FAQ', subtitle: 'Find answers to common questions' },
-  { key: 'support', icon: 'support', title: 'Contact Support', subtitle: 'Get support or send feedback' },
-  { key: 'referral', icon: 'referral', title: 'Referral Program', subtitle: 'Get 10% off fees when your friends join Xspeeria' },
-  { key: 'terms', icon: 'terms', title: 'Terms and Conditions', subtitle: 'Learn about our terms and conditions, privacy policies' },
+  { key: 'beneficiaries', icon: 'beneficiaries', title: k("Manage Beneficiaries"), subtitle: k("Manage your account and beneficiaries") },
+  { key: 'kyc', icon: 'kyc', title: k("KYC and limits"), subtitle: k("Know your KYC Level and limits.") },
+  { key: 'security', icon: 'security', title: k("Security"), subtitle: k("Protect yourself from intruders") },
+  { key: 'faq', icon: 'faq', title: k("FAQ"), subtitle: k("Find answers to common questions") },
+  { key: 'support', icon: 'support', title: k("Contact Support"), subtitle: k("Get support or send feedback") },
+  { key: 'referral', icon: 'referral', title: k("Referral Program"), subtitle: k("Get 10% off fees when your friends join Xspeeria") },
+  { key: 'terms', icon: 'terms', title: k("Terms and Conditions"), subtitle: k("Learn about our terms and conditions, privacy policies") },
 ];
 
 function Badge({ icon }: { icon: MenuIconName }): ReactElement {
@@ -89,17 +91,19 @@ export function ProfileScreen({
 }): ReactElement {
   const user = useProfile();
   const dark = useThemeMode() === 'dark';
+  const lang = useLanguage();
+  const [languageOpen, setLanguageOpen] = useState(false);
 
   const open = (key: ProfileDestination, title: string): void => {
     if (onOpen) onOpen(key);
-    else Alert.alert(title, `${title} is one of the next screens to be built.`);
+    else Alert.alert(title, tr("{{title}} is one of the next screens to be built.", { title }));
   };
 
   const confirmDelete = (): void =>
     Alert.alert(
-      'Delete your profile?',
-      'This closes your Xspeeria account. Trades in progress must finish first, and records we are required to keep by law are retained. This flow is not built yet — nothing will be deleted.',
-      [{ text: 'Keep my profile', style: 'cancel' }],
+      tr("Delete your profile?"),
+      tr("This closes your Xspeeria account. Trades in progress must finish first, and records we are required to keep by law are retained. This flow is not built yet — nothing will be deleted."),
+      [{ text: tr("Keep my profile"), style: 'cancel' }],
     );
 
   return (
@@ -107,14 +111,14 @@ export function ProfileScreen({
       <Pressable
         testID="profile-account"
         accessibilityRole="button"
-        accessibilityLabel={`${user.fullName}. Account details`}
-        onPress={() => open('account', 'Account details')}
+        accessibilityLabel={tr("{{fullName}}. Account details", { fullName: user.fullName })}
+        onPress={() => open('account', tr("Account details"))}
         style={({ pressed }) => [styles.header, pressed ? styles.pressed : null]}
       >
         <ProfileAvatar testID="profile-avatar" size={70} initials={user.initials} uri={user.avatarUri} />
         <View style={styles.headerText}>
           <Text style={styles.name}>{user.fullName}</Text>
-          <Text style={styles.headerSub}>Account details</Text>
+          <Text style={styles.headerSub}>{tr("Account details")}</Text>
         </View>
         <Icon name="chevron" color={color.text.secondary} size={16} weight={2} />
       </Pressable>
@@ -125,9 +129,9 @@ export function ProfileScreen({
             key={item.key}
             testID={`profile-${item.key}`}
             icon={item.icon}
-            title={item.title}
-            subtitle={item.subtitle}
-            onPress={() => open(item.key, item.title)}
+            title={tr(item.title)}
+            subtitle={tr(item.subtitle)}
+            onPress={() => open(item.key, tr(item.title))}
           />
         ))}
 
@@ -135,13 +139,13 @@ export function ProfileScreen({
           <Badge icon="mode" />
           <View style={styles.rowDivided}>
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Switch Mode</Text>
-              <Text style={styles.rowSubtitle}>Choose a light or dark appearance</Text>
+              <Text style={styles.rowTitle}>{tr("Switch Mode")}</Text>
+              <Text style={styles.rowSubtitle}>{tr("Choose a light or dark appearance")}</Text>
             </View>
-            <Text style={styles.modeLabel}>{dark ? 'Dark Mode' : 'Light Mode'}</Text>
+            <Text style={styles.modeLabel}>{dark ? tr("Dark Mode") : tr("Light Mode")}</Text>
             <Switch
               testID="profile-mode"
-              accessibilityLabel="Dark mode"
+              accessibilityLabel={tr("Dark mode")}
               value={dark}
               onValueChange={(on) => setThemeMode(on ? 'dark' : 'light')}
               trackColor={{ true: color.brand.secondary, false: color.border.strong }}
@@ -149,22 +153,31 @@ export function ProfileScreen({
             />
           </View>
         </View>
+
+        <Row
+          testID="profile-language"
+          icon="language"
+          title={tr("Language")}
+          subtitle={currentLanguageName(lang)}
+          onPress={() => setLanguageOpen(true)}
+        />
       </View>
+      <LanguageSheet visible={languageOpen} onClose={() => setLanguageOpen(false)} />
 
       {onLogOut ? (
         <Pressable
           testID="profile-logout"
           accessibilityRole="button"
           onPress={() =>
-            Alert.alert('Log out?', 'You will need your PIN or Face ID to log in again.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Log out', style: 'destructive', onPress: onLogOut },
+            Alert.alert(tr("Log out?"), tr("You will need your PIN or Face ID to log in again."), [
+              { text: tr("Cancel"), style: 'cancel' },
+              { text: tr("Log out"), style: 'destructive', onPress: onLogOut },
             ])
           }
           hitSlop={8}
           style={styles.delete}
         >
-          <Text style={styles.logoutText}>Log out</Text>
+          <Text style={styles.logoutText}>{tr("Log out")}</Text>
         </Pressable>
       ) : null}
 
@@ -175,7 +188,7 @@ export function ProfileScreen({
         hitSlop={8}
         style={styles.delete}
       >
-        <Text style={styles.deleteText}>Delete Profile</Text>
+        <Text style={styles.deleteText}>{tr("Delete Profile")}</Text>
       </Pressable>
     </Screen>
   );

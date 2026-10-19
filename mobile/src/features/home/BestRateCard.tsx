@@ -21,6 +21,7 @@ import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import type { MarketRate } from '../../fixtures';
 import { brandWeight, color, heroFigureStyle, radius, themed } from '../../theme';
 import { formatRate, pairLabel } from './rate';
+import { tr } from "../../i18n";
 
 /** The Figma frame every measurement below is taken from. */
 const FIGMA = {
@@ -196,7 +197,7 @@ export function HeroCard({
       <Pressable
         testID="home-primary-action"
         accessibilityRole="button"
-        accessibilityLabel={`${accessibilityLabel}. Trade now`}
+        accessibilityLabel={tr("{{label}}. Trade now", { label: accessibilityLabel })}
         accessibilityHint={accessibilityHint}
         onPress={onPress}
         style={({ pressed }) => [styles.card, frame, pressed ? styles.pressed : null]}
@@ -215,14 +216,14 @@ export function BestRateCard({
   onTrade?: () => void;
 }): ReactElement {
   const rendered = formatRate(rate);
-  const label = `Best ${pairLabel(rate)} rate today`;
+  const label = tr("Best {{pair}} rate today", { pair: pairLabel(rate) });
   return (
     <HeroCard
       testID="home-best-rate"
       label={label}
       figure={rendered}
       accessibilityLabel={`${label}: ${rendered}`}
-      accessibilityHint="Opens the marketplace"
+      accessibilityHint={tr("Opens the marketplace")}
       onPress={onTrade}
     />
   );

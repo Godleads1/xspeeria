@@ -37,6 +37,7 @@ import {
 } from "../demo/figmaDemo";
 
 import { Chip, Contactless } from "../home/BestRateCard";
+import { tr, k } from "../../i18n";
 
 /** Card artwork colours (illustration, like flags.tsx — not UI tokens). */
 interface CardDesign {
@@ -65,7 +66,7 @@ export const CARD_DESIGNS: readonly CardDesign[] = [
 ];
 
 export const CARDS_UNAVAILABLE =
-  "Xspeeria cards are not available yet. We will let you know when you can create one.";
+  k("Xspeeria cards are not available yet. We will let you know when you can create one.");
 
 /** Figma card 1036:4839: artwork behind "Virtual Card", chip, contactless, number and amount. */
 function CardArt({
@@ -89,7 +90,7 @@ function CardArt({
     >
       <View style={[cardStyles.layer, { padding: 17 * k }]} pointerEvents="none">
         <View style={cardStyles.topRow}>
-          <Text style={[cardStyles.virtual, { fontSize: 13 * k }]}>Virtual Card</Text>
+          <Text style={[cardStyles.virtual, { fontSize: 13 * k }]}>{tr("Virtual Card")}</Text>
           {demo ? (
             <View testID={`card-${design.currency}-badge`} style={cardStyles.badge}>
               <Text style={cardStyles.badgeText}>{DEMO_BADGE}</Text>
@@ -107,7 +108,7 @@ function CardArt({
             {demo ? demo.number : "**** **** **** ****"}
           </Text>
           <Text style={[cardStyles.amount, { fontSize: 21 * k }]}>
-            {demo ? demo.amount : `Preview · ${design.currency}`}
+            {demo ? demo.amount : tr("Preview · {{currency}}", { currency: design.currency })}
           </Text>
         </View>
       </View>
@@ -134,7 +135,7 @@ function Action({
       style={styles.action}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityHint="Cards are not available yet"
+      accessibilityHint={tr("Cards are not available yet")}
       testID={testID}
       onPress={onPress}
       hitSlop={6}
@@ -161,7 +162,7 @@ function TransactionRow({ tx }: { tx: DemoCardTransaction }): ReactElement {
       testID={`cards-tx-${tx.id}`}
       style={styles.txRow}
       accessible
-      accessibilityLabel={`${tx.title}, ${tx.date}, ${tx.amount}. Demo`}
+      accessibilityLabel={tr("{{title}}, {{date}}, {{amount}}. Demo", { title: tx.title, date: tx.date, amount: tx.amount })}
     >
       <Icon name={TX_ICON[tx.icon]} color={color.text.primary} size={24} />
       <View style={styles.txMain}>
@@ -195,7 +196,7 @@ export function CardsScreen({
   const design = CARD_DESIGNS[index];
 
   const unavailable = (): void => {
-    Alert.alert("Cards are not available", CARDS_UNAVAILABLE);
+    Alert.alert(tr("Cards are not available"), tr(CARDS_UNAVAILABLE));
   };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>): void => {
@@ -210,13 +211,11 @@ export function CardsScreen({
     >
       <ScrollView contentContainerStyle={{ paddingBottom: space.lg }}>
         <View style={styles.header}>
-          <Text accessibilityRole="header" style={styles.title}>
-            Debit Cards
-          </Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr("Debit Cards")}</Text>
           <Pressable
             testID="cards-more"
             accessibilityRole="button"
-            accessibilityLabel="More"
+            accessibilityLabel={tr("More")}
             onPress={unavailable}
             style={styles.round}
           >
@@ -224,9 +223,7 @@ export function CardsScreen({
           </Pressable>
         </View>
 
-        <Text testID="cards-label" style={styles.cardLabel}>
-          {design.currency} Card
-        </Text>
+        <Text testID="cards-label" style={styles.cardLabel}>{tr("{{currency}} Card", { currency: design.currency })}</Text>
 
         <ScrollView
           testID="cards-carousel"
@@ -245,8 +242,8 @@ export function CardsScreen({
               accessible
               accessibilityLabel={
                 demoText
-                  ? `${d.currency} virtual card, demo figures. Cards are not available yet.`
-                  : `${d.currency} virtual card design, preview. Cards are not available yet.`
+                  ? tr("{{currency}} virtual card, demo figures. Cards are not available yet.", { currency: d.currency })
+                  : tr("{{currency}} virtual card design, preview. Cards are not available yet.", { currency: d.currency })
               }
             >
               <CardArt design={d} width={cardW} demoText={demoText} />
@@ -268,13 +265,13 @@ export function CardsScreen({
         </View>
 
         <View style={styles.actions}>
-          <Action testID="cards-details" icon="info" label="Details" filled onPress={unavailable} />
-          <Action testID="cards-freeze" icon="snowflake" label="Freeze Card" onPress={unavailable} />
-          <Action testID="cards-actions-more" icon="more" label="More" onPress={unavailable} />
+          <Action testID="cards-details" icon="info" label={tr("Details")} filled onPress={unavailable} />
+          <Action testID="cards-freeze" icon="snowflake" label={tr("Freeze Card")} onPress={unavailable} />
+          <Action testID="cards-actions-more" icon="more" label={tr("More")} onPress={unavailable} />
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.section}>Transaction History</Text>
+          <Text style={styles.section}>{tr("Transaction History")}</Text>
           {demoTransactions.length > 0 ? <Text style={styles.demo}>{DEMO_BADGE}</Text> : null}
         </View>
         {demoTransactions.length > 0 ? (
@@ -288,13 +285,8 @@ export function CardsScreen({
           </View>
         ) : (
         <View testID="cards-history-empty" style={styles.empty}>
-          <Text style={styles.emptyText}>
-            Card transactions will appear here once Xspeeria cards are
-            available.
-          </Text>
-          <Text style={styles.emptyNote}>
-            Xspeeria never holds your money, so there is no balance to show.
-          </Text>
+          <Text style={styles.emptyText}>{tr("Card transactions will appear here once Xspeeria cards are available.")}</Text>
+          <Text style={styles.emptyNote}>{tr("Xspeeria never holds your money, so there is no balance to show.")}</Text>
         </View>
         )}
       </ScrollView>
