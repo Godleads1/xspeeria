@@ -112,6 +112,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `039-kyc-1-didit-identity-checks.md` | Milestone KYC-1: Didit identity checks — hosted ID + selfie capture, signed results, server re-checks ID/liveness/face/sanctions and 18+, no ID images stored, market needs an approved check; migration 0010 (DEC-046) | **APPROVED** — 2026-10-19 (details in §4 PROPOSED) |
 | `040-app-identity-check.md` | App: identity check screen — Figma heading, opens Didit's hosted check (https only), re-checks the server on return, plain words per status; Market offers it on AUTH_403_KYC_REQUIRED (DEC-047) | **PROPOSED** — 2026-10-19 |
 | `041-kyc-one-person-one-account.md` | One verified account per person — an approval matching a person already verified on another account (keyed hash of the ID document, or a Didit face/document match) is held for review, not approved; `KYC_IDENTITY_KEY`; migration 0011 (DEC-048) | **APPROVED** — 2026-10-19 (rule; mechanism PROPOSED) |
+| `042-new-country-identity-check.md` | New-country identity check (plan): verification is per country; a new country seen at sign-in (server-side) plus the user confirming starts that country's check; home-country trading keeps working meanwhile; same account, identity must match; build deferred to the US launch (DEC-049) | **APPROVED** — 2026-10-19 (rules; build deferred) |
 
 ### Accounting policy is not architecture
 
