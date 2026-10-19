@@ -34,4 +34,9 @@ export const notificationsApi = {
       body: { read },
       ...x,
     }),
+  /** ADR-052: this phone's Expo push token, for the current session. */
+  registerPush: (token: string, push: { token: string; platform: 'ios' | 'android' }, x: Extra = {}) =>
+    apiRequest<void>('PUT', '/api/v1/users/me/push-token', { token, body: push, ...x }),
+  removePush: (token: string, x: Extra = {}) =>
+    apiRequest<void>('DELETE', '/api/v1/users/me/push-token', { token, ...x }),
 };

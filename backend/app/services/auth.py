@@ -84,6 +84,7 @@ from app.models.identity import (
 from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
 from app.providers.pretend_bank import PretendBank
+from app.providers.push import PushSender
 from app.providers.sms import SmsSender
 from app.repositories.identity import IdentityRepository
 
@@ -220,6 +221,8 @@ class AuthRuntime:
     kyc_identity_key: bytes | None = None
     #: ADR-037: the pretend partner bank. None: no escrow is opened (no real partner yet).
     pretend_bank: PretendBank | None = None
+    #: ADR-052: phone push. None: notifications stay in-app only.
+    push_sender: PushSender | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(

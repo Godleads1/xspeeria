@@ -173,6 +173,13 @@ class Settings(BaseSettings):
     #: ADR-037: how often escrow background work runs (funding windows, partner commands).
     escrow_tick_seconds: int = 5
 
+    #: ADR-052: send phone push through Expo (FCM/APNs). Off: notifications stay in-app.
+    push_enabled: bool = False
+    #: ADR-052: optional Expo access token ("enhanced push security"). Never logged.
+    expo_access_token: str | None = None
+    #: ADR-052: how often new notifications are pushed.
+    push_tick_seconds: int = 5
+
     cors_allowed_origins: str = ""
 
     @field_validator("database_url")
