@@ -20,6 +20,7 @@ from being dangerous is worse than no configuration.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import field_validator
@@ -85,6 +86,10 @@ def require_supported_database_url(value: str) -> str:
     return value
 
 
+#: backend/app/core/config.py -> project root.
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
 class Settings(BaseSettings):
     """Environment-driven settings.
 
@@ -93,7 +98,9 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # The project-root `.env` (where the setup guide puts it), then one in the current
+        # folder, so commands work from the project root and from `backend/` alike.
+        env_file=(str(_PROJECT_ROOT / ".env"), ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
