@@ -105,6 +105,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `032-app-take-offer.md` | App: Take offer screen — fresh offer read, amount (Take all), authenticator code → step-up → accept with one Idempotency-Key per take; Deal recorded screen (DEC-038) | **PROPOSED** — 2026-10-18 |
 | `033-app-my-deals.md` | App: My Deals (Market ⋮ and after a take) — deals from both sides with exact naira total, fixed rate, date, and what comes next (DEC-039) | **PROPOSED** — 2026-10-18 |
 | `034-app-two-factor-settings.md` | App: 2FA settings on the server — new recovery codes and replacing the authenticator, each after a server-checked code; replacement ends trust everywhere and holds payouts 24 h (DEC-040) | **PROPOSED** — 2026-10-18 |
+| `035-milestone-4-1e-payout-accounts-and-preparation.md` | Milestone 4.1E: own payout accounts (sealed number, last 4 only, pretend bank check local-only), per-deal choice with exact split, 30-minute window → `funding_ready` or expiry returning the amount to the offer; resolves Standing Standards §15 row 9 (DEC-041) | **APPROVED** — 2026-10-18 (details in §4 PROPOSED) |
 
 ### Accounting policy is not architecture
 

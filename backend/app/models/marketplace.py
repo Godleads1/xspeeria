@@ -163,7 +163,20 @@ class Match(Base):
             name="fk_matches_currency_definition",
             ondelete="RESTRICT",
         ),
+        CheckConstraint(
+            "preparation_state IN ('awaiting_payout_accounts', 'funding_ready', 'expired')",
+            name="preparation_state_allowed",
+        ),
+        CheckConstraint(
+            "(preparation_state = 'awaiting_payout_accounts') = (preparation_ended_at IS NULL)",
+            name="preparation_ended_iff_not_awaiting",
+        ),
+        CheckConstraint(
+            "(preparation_state = 'expired') = (termination_cause IS NOT NULL)",
+            name="expired_iff_cause",
+        ),
         Index("ix_matches_offer_order", "offer_id", "accepted_at", "server_order_key"),
+        Index("ix_matches_preparation_due", "preparation_state", "preparation_deadline"),
         Index("ix_matches_counterparty_user_id", "counterparty_user_id"),
     )
 
@@ -188,3 +201,12 @@ class Match(Base):
     agreed_rate: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     #: Trusted server time; with server_order_key, the acceptance order.
     accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: ADR-035 (PROPOSED literals): awaiting_payout_accounts → funding_ready | expired.
+    preparation_state: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'awaiting_payout_accounts'")
+    )
+    #: accepted_at + 30 minutes (product owner, 2026-10-18).
+    preparation_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    preparation_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: The attributable cause when preparation ends without readiness (ADR-001 §14.5).
+    termination_cause: Mapped[str | None] = mapped_column(String(64))

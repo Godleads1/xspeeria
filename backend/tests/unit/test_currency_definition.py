@@ -341,6 +341,8 @@ class TestPackageRegistration:
             "offers",
             "idempotency_records",
             "matches",
+            "beneficiaries",
+            "match_payout_selections",
         }
 
     @pytest.mark.parametrize(
@@ -382,8 +384,9 @@ class TestPackageRegistration:
         assert result.returncode == 0, result.stderr
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
-            "['auth_refresh_tokens', 'auth_sessions', 'currency_definitions', "
-            "'idempotency_records', 'matches', 'mfa_challenges', 'mfa_factors', 'offers', "
+            "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', 'currency_definitions', "
+            "'idempotency_records', 'match_payout_selections', 'matches', 'mfa_challenges', "
+            "'mfa_factors', 'offers', "
             "'phone_verifications', 'recovery_codes', 'step_up_grants', 'trusted_devices', "
             "'users']"
         )
@@ -430,4 +433,5 @@ class TestPackageRegistration:
             "0005_cd3_currency_definitions_immutable.py",  # CD3 enforcement (ADR-028)
             "0006_offers_and_idempotency_records_4_1c.py",  # Milestone 4.1C (ADR-029)
             "0007_matches_4_1d.py",  # Milestone 4.1D (ADR-031)
+            "0008_payout_accounts_and_preparation_4_1e.py",  # Milestone 4.1E (ADR-035)
         ]

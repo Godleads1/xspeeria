@@ -18,13 +18,16 @@ DATABASE_URL=postgresql+asyncpg://xspeeria_dev:xspeeria_dev_local_only@127.0.0.1
 DEV_SMS=true
 # Offers need an ID check; no ID-check provider exists yet. On your own computer only:
 KYC_DEV_BYPASS=true
+# Payout accounts: a pretend bank check (this computer only) and a key for account numbers.
+BANK_CHECK_DEV=true
 ```
 
-Generate the two keys and paste them in (never share or commit them):
+Generate the three keys and paste them in (never share or commit them):
 
 ```bash
 python -c "import secrets;print('JWT_SECRET_KEY=' + secrets.token_urlsafe(48))"
 python -c "import base64,os;print('MFA_ENCRYPTION_KEY=' + base64.b64encode(os.urandom(32)).decode())"
+python -c "import base64,os;print('BENEFICIARY_ENCRYPTION_KEY=' + base64.b64encode(os.urandom(32)).decode())"
 ```
 
 ## 3. Create the tables and start the server

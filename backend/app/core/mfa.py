@@ -49,13 +49,13 @@ class SecretBoxError(Exception):
 class SecretBox:
     """AES-256-GCM with a 96-bit random nonce stored in front of the ciphertext."""
 
-    def __init__(self, key_b64: str) -> None:
+    def __init__(self, key_b64: str, *, name: str = "MFA_ENCRYPTION_KEY") -> None:
         try:
             key = base64.b64decode(key_b64, validate=True)
         except ValueError as exc:
-            raise ValueError("MFA_ENCRYPTION_KEY must be base64") from exc
+            raise ValueError(f"{name} must be base64") from exc
         if len(key) != 32:
-            raise ValueError("MFA_ENCRYPTION_KEY must decode to 32 bytes")
+            raise ValueError(f"{name} must decode to 32 bytes")
         self._aead = AESGCM(key)
 
     def __repr__(self) -> str:

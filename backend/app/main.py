@@ -13,6 +13,9 @@ with ``APP_ENV=local`` prints codes to the terminal on a developer's computer (A
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
@@ -28,6 +31,7 @@ from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
+from app.providers.bank_check import DevNameCheck
 from app.providers.sms import DevConsoleSmsSender, SmsSender
 from app.services.auth import AuthRuntime
 
@@ -54,6 +58,19 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
     box = SecretBox(settings.mfa_encryption_key) if settings.mfa_encryption_key else None
     if settings.kyc_dev_bypass and settings.app_env != "local":
         raise ValueError("KYC_DEV_BYPASS is allowed only with APP_ENV=local (ADR-029)")
+    if settings.bank_check_dev and settings.app_env != "local":
+        raise ValueError("BANK_CHECK_DEV is allowed only with APP_ENV=local (ADR-035)")
+    if (
+        settings.is_production
+        and settings.beneficiary_encryption_key
+        and "CHANGE_ME" in settings.beneficiary_encryption_key
+    ):
+        raise ValueError("BENEFICIARY_ENCRYPTION_KEY is still the .env.example placeholder")
+    beneficiary_box = (
+        SecretBox(settings.beneficiary_encryption_key, name="BENEFICIARY_ENCRYPTION_KEY")
+        if settings.beneficiary_encryption_key
+        else None
+    )
     sms: SmsSender | None = None
     if settings.dev_sms:
         if settings.app_env != "local":
@@ -69,7 +86,24 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
             limit=LOGIN_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
         ),
         unknown_identifier_limiter=SlidingWindowLimiter(limit=MAX_PIN_TRIES, window=PIN_LOCK),
+        beneficiary_box=beneficiary_box,
+        name_check=DevNameCheck() if settings.bank_check_dev else None,
     )
+
+
+async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
+    """Expire deals whose payout-account window ran out (ADR-035). Runs until cancelled."""
+    from app.db.session import get_sessionmaker
+    from app.services.matches import MatchService
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(settings.preparation_sweep_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                await MatchService(db, runtime.clock).expire_due()
+        except Exception:  # noqa: BLE001 - keep sweeping; the next pass retries
+            log.exception("preparation_sweep_failed")
 
 
 def create_app(
@@ -79,7 +113,21 @@ def create_app(
     resolved = settings or get_settings()
     configure_logging(resolved.log_level)
 
+    runtime = auth_runtime or build_auth_runtime(resolved)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        task = None
+        if resolved.database_url and resolved.preparation_sweep_seconds > 0:
+            task = asyncio.create_task(_sweep_preparations(resolved, runtime))
+        try:
+            yield
+        finally:
+            if task is not None:
+                task.cancel()
+
     application = FastAPI(
+        lifespan=lifespan,
         title=resolved.app_name,
         version="0.0.0",
         docs_url=resolved.docs_url,
@@ -88,7 +136,7 @@ def create_app(
     )
 
     application.state.settings = resolved
-    application.state.auth = auth_runtime or build_auth_runtime(resolved)
+    application.state.auth = runtime
     install_exception_handlers(application)
     install_request_logging(application)
     if resolved.cors_origins:
@@ -97,7 +145,7 @@ def create_app(
         application.add_middleware(
             CORSMiddleware,
             allow_origins=resolved.cors_origins,
-            allow_methods=["GET", "POST", "PATCH", "DELETE"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             allow_headers=[
                 "Authorization",
                 "Content-Type",
@@ -112,6 +160,7 @@ def create_app(
     application.include_router(offers.router)
     application.include_router(offers.marketplace_router)
     application.include_router(offers.matches_router)
+    application.include_router(offers.payout_accounts_router)
 
     get_logger(__name__).info(
         "application_configured",

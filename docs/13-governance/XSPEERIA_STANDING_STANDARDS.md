@@ -841,7 +841,7 @@ implementation, document, or assistant.
 | 6 | Buyer desired-rate/reference policy, if still unresolved |
 | 7 | `MatchConfirmed` → `MatchCreated` rename |
 | 8 | Mixed irreversible payout aggregate-state semantics *(production blocker)* |
-| 9 | Preparation-window duration |
+| 9 | ~~Preparation-window duration~~ — **RESOLVED 2026-10-18** (human-approved): **30 minutes** from acceptance, by ADR-035 / DEC-041 |
 | 10 | Resume-vs-new preparation deadline behaviour |
 | 11 | Any unratified public identifier not explicitly ratified |
 | 12 | Fee ownership / fee semantics |
