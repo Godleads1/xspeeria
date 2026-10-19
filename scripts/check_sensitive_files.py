@@ -41,6 +41,9 @@ DENIED_NAMES: tuple[str, ...] = (
     "*.jks",
     "*.keystore",
     "*.fig",
+    # ADR-052: Firebase app config; kept only as an Expo secret file variable.
+    "google-services.json",
+    "GoogleService-Info.plist",
 )
 
 #: Path prefixes that must never be tracked. Compared against the full repo-relative

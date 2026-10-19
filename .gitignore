@@ -90,3 +90,6 @@ private/
 # --- Misc ---
 *.swp
 *.swo
+# ADR-052: Firebase app config lives only in Expo as a secret file variable.
+google-services.json
+GoogleService-Info.plist
