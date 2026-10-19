@@ -138,12 +138,12 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).toHaveBeenCalledWith('/history');
   });
 
-  it('leaves the Home notification control disabled while no notification centre exists', async () => {
+  it('opens the notification centre from the Home bell (ADR-044)', async () => {
     await render(<HomeRoute />);
     const bell = screen.getByTestId('home-notifications');
-    expect(bell.props.accessibilityState).toEqual({ disabled: true });
-    fireEvent.press(bell);
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(bell.props.accessibilityState).toEqual({ disabled: false });
+    await fireEvent.press(bell);
+    expect(mockPush).toHaveBeenCalledWith('/notifications');
   });
 
   it('opens a History row receipt', async () => {

@@ -73,6 +73,8 @@ export function MarketScreen({
   onTakeListing,
   onMenu,
   onVerifyIdentity,
+  onNotifications,
+  unread = 0,
   server = null,
   refreshSignal = 0,
 }: {
@@ -87,6 +89,9 @@ export function MarketScreen({
   onTakeListing?: (listing: Listing, side: Side) => void;
   /** Server builds: opens the identity check when the server says KYC is needed (ADR-040). */
   onVerifyIdentity?: () => void;
+  /** Opens the notification centre (ADR-044). */
+  onNotifications?: () => void;
+  unread?: number;
 }): ReactElement {
   const [side, setSide] = useState<Side>(initialSide);
   const [buyCurrency, setBuyCurrency] = useState<Currency | null>(null);
@@ -296,8 +301,10 @@ export function MarketScreen({
           <CurrencyChip currency={side === "buy" ? NGN : SELL_CURRENCY} />
           <RoundButton
             icon="bell"
-            label="Notifications"
+            label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
             testID="market-notifications"
+            onPress={onNotifications}
+            badge={unread}
           />
           <RoundButton
             icon="more"

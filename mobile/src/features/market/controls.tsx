@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { RoundFlag } from "../../components/flags";
+import { NotificationBadge as Badge } from "../../components/NotificationBadge";
 import { Icon, type IconName } from "../../components/icons";
 import {
   brandWeight,
@@ -161,11 +162,14 @@ export function RoundButton({
   label,
   onPress,
   testID,
+  badge = 0,
 }: {
   icon: IconName;
   label: string;
   onPress?: () => void;
   testID?: string;
+  /** Unread count on the icon (ADR-044); 0 hides it. */
+  badge?: number;
 }): ReactElement {
   const available = onPress !== undefined;
   return (
@@ -186,6 +190,7 @@ export function RoundButton({
         color={available ? color.text.primary : color.text.disabled}
         size={18}
       />
+      <Badge count={badge} />
     </Pressable>
   );
 }

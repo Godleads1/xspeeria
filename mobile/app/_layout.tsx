@@ -9,6 +9,7 @@ import { StepUpHost } from '../src/features/security/StepUpHost';
 import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { UnavailableBuild } from '../src/features/auth/ui';
+import { BannerHost } from '../src/components/Banner';
 import { session, useSession } from '../src/features/auth/session';
 import { SERVER_MODE } from '../src/api/config';
 import { serverAuth } from '../src/features/auth/serverAuth';
@@ -65,6 +66,8 @@ export default function RootLayout(): ReactElement | null {
       </Stack>
       {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
       {signedIn ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
+      {/* ADR-044: in-app banner (Figma message style). */}
+      <BannerHost />
       {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}
     </>
   );
