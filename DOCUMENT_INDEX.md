@@ -117,6 +117,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `044-notifications-n1-in-app.md` | Notifications N-1 (server): messages recorded in the same transaction as identity results, offer taken and each escrow phase (both parties); once per fact; ids only, words in the app; list/mark read; 404 for others' (contract deviation); N-2 app built (bell badge, notification centre, Figma-style banner); N-3 push (Expo + FCM/APNs) and N-4 email (Resend) / SMS next; migration 0013 (DEC-051) | **APPROVED** — 2026-10-19 (scope; details PROPOSED) |
 | `045-app-remaining-screens.md` | App: connecting the remaining demo screens — part 1: signed-in and trusted devices; part 2: History and Home from real deals; per-country identity check, new-location prompt from the server's suggestion, approved regions from the server (DEC-052) | **PROPOSED** — 2026-10-19 |
 | `046-pin-change-and-reset.md` | Change PIN (current PIN + authenticator approval; other devices signed out) and Forgot PIN (SMS code + authenticator or recovery code; every device signed out); codes carry a purpose; migration 0014 (DEC-053) | **PROPOSED** — 2026-10-19 |
+| `047-phone-number-change.md` | Phone number change: approval, code to the new number bound to the user, then the change (409 if another account has it); email changes only through Support; date of birth and legal name come from the verified ID (DEC-054) | **PROPOSED** — 2026-10-19 |
 
 ### Accounting policy is not architecture
 

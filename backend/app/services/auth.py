@@ -1146,6 +1146,98 @@ class AuthService:
         await self._db.commit()
         self._alert(str(user.id), "pin_reset")
 
+    # --- phone number change (ADR-047) ------------------------------------------------------
+
+    def _phone_or_422(self, phone_raw: str) -> str:
+        phone = normalise_phone(phone_raw)
+        if phone is None:
+            raise _err(
+                "VAL_422_INVALID_PHONE",
+                "Enter the phone number with its country code, for example +2348012345678.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        return phone
+
+    async def phone_change_start(
+        self, principal: Principal, new_phone_raw: str, step_up_token: str | None
+    ) -> None:
+        """Contract: "phone change re-triggers phone verification". With a ``contact.change``
+        approval, a code goes to the NEW number; the change applies only when it is entered.
+        The code is bound to this user, so nobody else can use it."""
+        phone = self._phone_or_422(new_phone_raw)
+        if self._rt.sms is None:
+            raise sms_unavailable()
+        now = self._now()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        if user.phone == phone:
+            await self._db.rollback()
+            raise _err(
+                "VAL_422_INVALID_PHONE",
+                "This is already your phone number.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        await self.consume_step_up(principal, "contact.change", step_up_token)
+        await self._enforce_sms_limits(phone, now)
+        code = generate_code()
+        row = self._verification(phone, code, now)
+        row.code_digest = self._keys.code_digest(f"{phone}#{user.id}", code)
+        row.purpose = "phone_change"
+        self._repo.add(row)
+        await self._db.commit()
+        await self._rt.sms.send_code(phone, code)
+        _logger.info("phone_change_code_sent", extra={"user_id": str(user.id)})
+
+    async def phone_change_confirm(
+        self, principal: Principal, new_phone_raw: str, code: str
+    ) -> str:
+        phone = self._phone_or_422(new_phone_raw)
+        now = self._now()
+        row = await self._repo.latest_open_code(phone, "phone_change")
+        if row is None:
+            await self._db.rollback()
+            raise _invalid_code()
+        if now >= row.expires_at:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_410_CHALLENGE_EXPIRED",
+                "That code has expired. Ask for a new one.",
+                status.HTTP_410_GONE,
+            )
+        if row.attempts >= MAX_CODE_TRIES:
+            remaining = row.expires_at - now
+            await self._db.rollback()
+            raise _rate_limited(remaining)
+        if not self._keys.code_matches(f"{phone}#{principal.user_id}", code, row.code_digest):
+            row.attempts += 1
+            await self._db.commit()
+            raise _invalid_code()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        row.consumed_at = now
+        old = user.phone
+        user.phone = phone
+        user.phone_verified_at = now
+        try:
+            await self._db.commit()
+        except IntegrityError as exc:
+            await self._db.rollback()
+            if "uq_users_phone" not in str(exc.orig):
+                raise
+            # Shown only after the code proved the user holds this number.
+            raise _err(
+                "AUTH_409_PHONE_TAKEN",
+                "This number is already used by another account.",
+                status.HTTP_409_CONFLICT,
+            ) from None
+        self._alert(str(principal.user_id), "phone_changed")
+        _logger.info(
+            "phone_changed", extra={"user_id": str(principal.user_id), "old": mask_phone(old)}
+        )
+        return phone
+
     async def trusted_devices(self, principal: Principal) -> list[TrustedDevice]:
         return await self._repo.live_trusted_devices(principal.user_id, self._now())
 

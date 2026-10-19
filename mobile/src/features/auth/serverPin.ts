@@ -37,3 +37,15 @@ export const serverPin: PinSource = {
     await secureTokens.setDeviceToken(null);
   },
 };
+
+/** Phone number change (ADR-047). */
+export const serverPhoneChange = {
+  async start(newPhone: string, code: string): Promise<void> {
+    const x = serverAuth.apiOptions();
+    const approval = await authApi.stepUp(token(), 'contact.change', code, x);
+    await authApi.phoneChangeStart(token(), newPhone, approval.step_up_token, x);
+  },
+  async confirm(newPhone: string, smsCode: string): Promise<void> {
+    await authApi.phoneChangeConfirm(token(), newPhone, smsCode, serverAuth.apiOptions());
+  },
+};

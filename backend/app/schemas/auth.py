@@ -133,6 +133,15 @@ class PinResetConfirmRequest(_Strict):
     recovery_code: str | None = Field(default=None, min_length=8, max_length=16)
 
 
+class PhoneChangeStartRequest(_Strict):
+    new_phone: str = Field(min_length=1, max_length=32)
+
+
+class PhoneChangeConfirmRequest(_Strict):
+    new_phone: str = Field(min_length=1, max_length=32)
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
 StepUpAction = Literal[
     "beneficiary.add",
     "beneficiary.remove",

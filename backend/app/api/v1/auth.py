@@ -29,6 +29,8 @@ from app.schemas.auth import (
     LoginRequest,
     MfaVerifyRequest,
     OtpCodeRequest,
+    PhoneChangeConfirmRequest,
+    PhoneChangeStartRequest,
     PinResetConfirmRequest,
     PinResetStartRequest,
     ProfileResponse,
@@ -361,3 +363,34 @@ async def pin_reset_confirm(body: PinResetConfirmRequest, service: Service) -> R
         recovery_code=body.recovery_code,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- phone number change (ADR-047) -----------------------------------------------------------
+
+
+@router.post(
+    "/users/me/phone/start",
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["users"],
+    summary="Change my phone: text a code to the new number (step-up: contact.change)",
+)
+async def phone_change_start(
+    body: PhoneChangeStartRequest,
+    principal: CurrentPrincipal,
+    service: Service,
+    step_up_token: StepUpToken = None,
+) -> dict[str, str]:
+    await service.phone_change_start(principal, body.new_phone, step_up_token)
+    return {"status": "code_sent"}
+
+
+@router.post(
+    "/users/me/phone/confirm",
+    tags=["users"],
+    summary="Change my phone: the code from the new number applies the change",
+)
+async def phone_change_confirm(
+    body: PhoneChangeConfirmRequest, principal: CurrentPrincipal, service: Service
+) -> dict[str, str]:
+    phone = await service.phone_change_confirm(principal, body.new_phone, body.code)
+    return {"phone": phone}

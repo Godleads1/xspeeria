@@ -26,6 +26,20 @@ export interface Profile {
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
 
 export const authApi = {
+  /** ADR-047: text a code to the new number (needs a ``contact.change`` approval). */
+  phoneChangeStart: (accessToken: string, newPhone: string, stepUpToken: string, x: Extra = {}) =>
+    apiRequest<{ status: string }>('POST', '/api/v1/users/me/phone/start', {
+      token: accessToken,
+      body: { new_phone: newPhone },
+      headers: { 'X-Step-Up-Token': stepUpToken },
+      ...x,
+    }),
+  phoneChangeConfirm: (accessToken: string, newPhone: string, code: string, x: Extra = {}) =>
+    apiRequest<{ phone: string }>('POST', '/api/v1/users/me/phone/confirm', {
+      token: accessToken,
+      body: { new_phone: newPhone, code },
+      ...x,
+    }),
   /** ADR-046: change my PIN; needs a ``pin.change`` approval. Other devices are signed out. */
   changePin: (accessToken: string, body: { current_pin: string; new_pin: string }, stepUpToken: string, x: Extra = {}) =>
     apiRequest<void>('POST', '/api/v1/users/me/pin', {

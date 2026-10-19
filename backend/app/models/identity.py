@@ -159,7 +159,9 @@ class PhoneVerification(Base):
         CheckConstraint("code_digest ~ '^[0-9a-f]{64}$'", name="code_digest_format"),
         CheckConstraint("attempts BETWEEN 0 AND 5", name="attempts_range"),
         CheckConstraint("expires_at > created_at", name="expires_after_created"),
-        CheckConstraint("purpose IN ('signup', 'pin_reset')", name="purpose_allowed"),
+        CheckConstraint(
+            "purpose IN ('signup', 'pin_reset', 'phone_change')", name="purpose_allowed"
+        ),
         Index("ix_phone_verifications_phone_created_at", "phone", "created_at"),
     )
 

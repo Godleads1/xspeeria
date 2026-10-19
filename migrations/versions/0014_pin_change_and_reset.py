@@ -1,8 +1,8 @@
 # ruff: noqa: E501
-"""PIN change and PIN reset (ADR-046)
+"""PIN change and PIN reset (ADR-046); phone number change (ADR-047)
 
-* ``phone_verifications.purpose``: ``signup`` (existing rows) or ``pin_reset`` — a code sent
-  for one purpose never works for the other.
+* ``phone_verifications.purpose``: ``signup`` (existing rows), ``pin_reset`` or
+  ``phone_change`` — a code sent for one purpose never works for another.
 * ``auth_sessions.revoke_reason`` also allows ``pin_change`` and ``pin_reset``.
 
 ``downgrade()`` refuses unless ``-x records_downgrade=authorized``; it fails if reset codes or
@@ -46,7 +46,7 @@ def upgrade() -> None:
     op.create_check_constraint(
         op.f("ck_phone_verifications_purpose_allowed"),
         "phone_verifications",
-        "purpose IN ('signup', 'pin_reset')",
+        "purpose IN ('signup', 'pin_reset', 'phone_change')",
     )
     op.drop_constraint(
         op.f("ck_auth_sessions_revoke_reason_allowed"), "auth_sessions", type_="check"
