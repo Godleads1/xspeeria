@@ -52,6 +52,9 @@ Last updated: 19 Oct 2026.
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
 - [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
+- [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039)
+- [ ] **Set up Didit** — *You*: create the workflow (ID + liveness + face match + AML), then put `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET` in your own `.env` (never in chat or Git).
+- [ ] **App screens for the identity check** — *Build* — next.
 - [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
@@ -59,7 +62,7 @@ Last updated: 19 Oct 2026.
 - [ ] **Partner bank** — escrow and payouts: API documents, test (sandbox) access, webhook security details, settlement and reconciliation files, signed agreement. Unblocks real money movement. The pretend bank (ADR-037) follows our own Banking spec; the real contract may differ.
 - [ ] **Partner webhook secrets** — stored in a secret manager per partner, with rotation (the pretend bank uses a random one per run).
 - [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
-- [ ] **ID checks (KYC) and anti-money-laundering** — verification provider (NIN, BVN, face match; UK/US/EU checks), sanctions screening, a compliance officer to own the rules.
+- [ ] **ID checks (KYC) and anti-money-laundering** — provider chosen: **Didit** (ADR-039, server built). Still needed: a Didit account and workflow (ID + liveness + face match + AML), its data processing agreement, NIN/BVN support (ask Didit), and a compliance officer to own the rules.
 - [ ] **SMS and email provider accounts.**
 - [ ] **Hosting** — cloud account (database, Redis, servers; separate test and live), domain name, secret manager.
 - [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).

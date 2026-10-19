@@ -40,6 +40,7 @@ from app.schemas.offers import (
     UpdateRateRequest,
 )
 from app.services.auth import AuthRuntime, AuthService, Principal
+from app.services.kyc import KycService
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
 from app.services.payouts import PayoutAccountService
@@ -63,10 +64,11 @@ async def kyc_approved(
     principal: CurrentPrincipal,
     settings: Annotated[Settings, Depends(get_app_settings)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> Principal:
     """Per-user request limit, then KYC.
 
-    No KYC provider is connected yet, so nobody is approved except under the local bypass.
+    Approved means an approved Didit identity check (ADR-039), or the local-only bypass.
     """
     if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
         raise AppError(
@@ -77,6 +79,10 @@ async def kyc_approved(
         )
     if settings.kyc_dev_bypass and settings.app_env == "local":
         return principal
+    if await KycService(db, runtime.clock, runtime.kyc_provider).is_approved(principal.user_id):
+        await db.rollback()
+        return principal
+    await db.rollback()
     raise AppError(
         "AUTH_403_KYC_REQUIRED",
         "Please complete identity verification before using the marketplace.",

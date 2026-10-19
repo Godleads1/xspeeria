@@ -82,6 +82,7 @@ from app.models.identity import (
     User,
 )
 from app.providers.bank_check import NameCheck
+from app.providers.didit import KycSessionProvider
 from app.providers.pretend_bank import PretendBank
 from app.providers.sms import SmsSender
 from app.repositories.identity import IdentityRepository
@@ -213,6 +214,8 @@ class AuthRuntime:
     beneficiary_box: SecretBox | None = None
     #: ADR-035: the bank's account name check. None: new accounts stay "pending".
     name_check: NameCheck | None = None
+    #: ADR-039: the identity-check provider (Didit). None: identity checks are switched off.
+    kyc_provider: KycSessionProvider | None = None
     #: ADR-037: the pretend partner bank. None: no escrow is opened (no real partner yet).
     pretend_bank: PretendBank | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).

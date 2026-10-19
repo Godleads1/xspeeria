@@ -23,7 +23,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, health, offers, settlement
+from app.api.v1 import auth, health, kyc, offers, settlement
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -34,6 +34,7 @@ from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
 from app.providers.bank_check import DevNameCheck
+from app.providers.didit import DiditClient
 from app.providers.pretend_bank import PretendBank
 from app.providers.sms import DevConsoleSmsSender, SmsSender
 from app.services.auth import AuthRuntime
@@ -95,6 +96,31 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         beneficiary_box=beneficiary_box,
         name_check=DevNameCheck() if settings.bank_check_dev else None,
         pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
+        kyc_provider=_didit(settings),
+    )
+
+
+def _didit(settings: Settings) -> DiditClient | None:
+    """ADR-039: all three Didit values, or none (identity checks off)."""
+    parts = (settings.didit_api_key, settings.didit_workflow_id, settings.didit_webhook_secret)
+    if not any(parts):
+        return None
+    if not all(parts):
+        raise ValueError("DIDIT_API_KEY, DIDIT_WORKFLOW_ID and DIDIT_WEBHOOK_SECRET go together")
+    if any("CHANGE_ME" in str(p) for p in parts):
+        raise ValueError("Didit settings are still .env.example placeholders")
+    if not settings.didit_base_url.startswith("https://"):
+        raise ValueError("DIDIT_BASE_URL must be https")
+    if settings.didit_callback_url and not settings.didit_callback_url.startswith(
+        ("https://", "xspeeria://")
+    ):
+        raise ValueError("DIDIT_CALLBACK_URL must be https or the app's own scheme")
+    return DiditClient(
+        str(settings.didit_api_key),
+        str(settings.didit_workflow_id),
+        str(settings.didit_webhook_secret),
+        settings.didit_base_url,
+        settings.didit_callback_url,
     )
 
 
@@ -189,6 +215,8 @@ def create_app(
     application.include_router(offers.marketplace_router)
     application.include_router(offers.matches_router)
     application.include_router(offers.payout_accounts_router)
+    application.include_router(kyc.router)
+    application.include_router(kyc.webhooks_router)
     application.include_router(settlement.router)
     application.include_router(settlement.webhooks_router)
     if resolved.app_env == "local" and runtime.pretend_bank is not None:
