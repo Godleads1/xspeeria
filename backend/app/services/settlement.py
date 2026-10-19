@@ -60,7 +60,6 @@ from app.domain.settlement_rules import (
     TERMINAL_PHASES,
     coordination_fee_minor,
 )
-from app.models.identity import User
 from app.models.marketplace import Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import (
@@ -463,19 +462,6 @@ class SettlementService:
                     self._hold(leg.settlement_id, "RISK", "payout account removed or unconfirmed")
                     await self._db.commit()
                     done += 1
-                    continue
-                # ADR-008/022: a new account, or a user after a 2FA reset or recovery log-in,
-                # is paid only after the 24-hour security hold. The money waits in escrow.
-                user_hold = await self._db.scalar(
-                    select(User.payout_hold_until).where(User.id == leg.payee_user_id)
-                )
-                hold_until = max(
-                    [b.payout_hold_until for b in accounts]
-                    + ([user_hold] if user_hold is not None else [])
-                )
-                if hold_until > now:
-                    msg.next_attempt_at = hold_until  # not an attempt: nothing was sent
-                    await self._db.commit()
                     continue
             await self._db.commit()  # no network call inside a transaction (L-19)
 
@@ -957,19 +943,6 @@ async def settlement_view(
     if mine is None or theirs is None:  # pragma: no cover - callers check the party first
         return None
     instructions = bank.pay_in_instructions(mine.leg_id) if bank is not None else None
-    # My own security hold on what I receive (ADR-008/022). Never the other party's.
-    holds = list(
-        (
-            await db.scalars(
-                select(Beneficiary.payout_hold_until)
-                .join(PayoutExecution, PayoutExecution.beneficiary_account_id == Beneficiary.id)
-                .where(PayoutExecution.leg_id == theirs.leg_id)
-            )
-        ).all()
-    )
-    user_hold = await db.scalar(select(User.payout_hold_until).where(User.id == viewer))
-    if user_hold is not None:
-        holds.append(user_hold)
     show_pay_in = (
         instructions is not None
         and mine.state == "ESCROW_PROVISIONED"
@@ -1016,6 +989,5 @@ async def settlement_view(
             "currency": theirs.currency,
             "amount": money_text(theirs.amount_minor, theirs.scale),
             "state": theirs.state,
-            "paid_after": max(holds).isoformat() if holds else None,
         },
     }

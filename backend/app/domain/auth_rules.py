@@ -62,7 +62,9 @@ MAX_MFA_TRIES = 5  # wrong codes before the 2FA lock (ADR-008)
 MFA_LOCK = timedelta(minutes=15)  # ADR-008
 TRUSTED_DEVICE_TTL = timedelta(days=30)  # product owner, 2026-10-18
 STEP_UP_TTL = timedelta(minutes=5)  # one action, within 5 minutes (2026-10-18)
-PAYOUT_HOLD = timedelta(hours=24)  # after recovery or authenticator reset (ADR-008)
+#: Product owner, 2026-10-19 (DEC-044): no payout wait after recovery or an authenticator
+#: reset (was 24 hours, ADR-008). Trust still ends everywhere and an alert is sent.
+PAYOUT_HOLD = timedelta(0)
 STEP_UP_ACTIONS = frozenset(
     {
         "beneficiary.add",

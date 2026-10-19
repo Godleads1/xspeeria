@@ -28,8 +28,9 @@ __all__ = [
 
 #: Product owner, 2026-10-18: "30 minutes" to choose payout accounts after a deal.
 PREPARATION_WINDOW = timedelta(minutes=30)
-#: ADR-008 / ADR-022: a new payout account is paid only after a 24-hour security hold.
-NEW_ACCOUNT_HOLD = timedelta(hours=24)
+#: Product owner, 2026-10-19 (DEC-044): a new account can be paid at once (was 24 hours,
+#: ADR-008/022). Adding it and choosing it for a deal each need an authenticator code.
+NEW_ACCOUNT_HOLD = timedelta(0)
 #: PROPOSED (ADR-035): an upper bound on one request, not a product limit.
 MAX_PAYOUT_ACCOUNTS_PER_DEAL = 10
 
