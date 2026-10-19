@@ -45,7 +45,7 @@ async def get_kyc_service(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> KycService:
-    return KycService(db, runtime.clock, runtime.kyc_provider)
+    return KycService(db, runtime.clock, runtime.kyc_provider, runtime.kyc_identity_key)
 
 
 Kyc = Annotated[KycService, Depends(get_kyc_service)]

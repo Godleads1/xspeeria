@@ -71,8 +71,8 @@ APPROVED_TABLES = {
 # Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
 # 4.1C offers (ADR-029) -> "0006"; 4.1D matches (ADR-031) -> "0007";
 # 4.1E payout accounts (ADR-035) -> "0008"; 4.1F escrow simulation (ADR-037) -> "0009";
-# KYC-1 Didit (ADR-039) -> "0010".
-EXPECTED_HEAD = "0010"
+# KYC-1 Didit (ADR-039) -> "0010"; one person, one account (ADR-041) -> "0011".
+EXPECTED_HEAD = "0011"
 
 
 def _config(database_url: str) -> Config:

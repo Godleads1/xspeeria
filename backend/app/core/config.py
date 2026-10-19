@@ -161,6 +161,9 @@ class Settings(BaseSettings):
     didit_base_url: str = "https://verification.didit.me"
     #: Where Didit sends the user after the check (optional; Didit's workflow default if unset).
     didit_callback_url: str | None = None
+    #: ADR-041: base64 of 32 random bytes; keys the ID-document hash (one person, one
+    #: verified account). Required whenever Didit is configured. Set once per environment.
+    kyc_identity_key: str | None = None
     #: ADR-037: the pretend partner bank (escrow simulation). In memory, moves no money.
     #: Refused unless app_env is "local". Real partners need legal sign-off (ADR-001 §12).
     pretend_bank: bool = False

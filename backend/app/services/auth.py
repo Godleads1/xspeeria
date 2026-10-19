@@ -216,6 +216,8 @@ class AuthRuntime:
     name_check: NameCheck | None = None
     #: ADR-039: the identity-check provider (Didit). None: identity checks are switched off.
     kyc_provider: KycSessionProvider | None = None
+    #: ADR-041: key for the ID-document hash (one person, one verified account).
+    kyc_identity_key: bytes | None = None
     #: ADR-037: the pretend partner bank. None: no escrow is opened (no real partner yet).
     pretend_bank: PretendBank | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).

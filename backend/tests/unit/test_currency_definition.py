@@ -450,4 +450,5 @@ class TestPackageRegistration:
             "0008_payout_accounts_and_preparation_4_1e.py",  # Milestone 4.1E (ADR-035)
             "0009_escrow_settlement_simulation_4_1f.py",  # Milestone 4.1F (ADR-037)
             "0010_kyc_cases_didit_kyc_1.py",  # Milestone KYC-1 (ADR-039)
+            "0011_kyc_one_person_one_account.py",  # one person, one account (ADR-041)
         ]

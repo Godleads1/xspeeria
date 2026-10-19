@@ -8,6 +8,9 @@
   then the session must be ours **and** belong to the user named in ``vendor_data``. Status
   only moves forward (``KYC_TRANSITIONS``); an Approved result is checked again here
   (all required checks approved, readable date of birth, 18+) before the user is approved.
+  One person, one verified account (ADR-041): an approval that matches a person already
+  verified on another account — same ID document (keyed hash) or a Didit face/document match —
+  is held for review instead.
 * ``is_approved``: what offers, deals and payouts require (contract: AUTH_403_KYC_REQUIRED).
 
 Nothing personal is logged: no names, dates of birth, document data or provider payloads.
@@ -23,13 +26,22 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.domain.kyc_rules import ACTIVE_STATUSES, KYC_TRANSITIONS, evaluate
+from app.domain.kyc_rules import (
+    ACTIVE_STATUSES,
+    CHECKS_INCOMPLETE,
+    DUPLICATE_IDENTITY,
+    KYC_TRANSITIONS,
+    Outcome,
+    evaluate,
+    identity_key,
+    other_account_matches,
+)
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.providers.didit import KycProviderError, KycSessionProvider, verify_signature
 from app.services.auth import Principal
@@ -86,10 +98,13 @@ class KycService:
         db: AsyncSession,
         clock: Callable[[], datetime],
         provider: KycSessionProvider | None,
+        identity_secret: bytes | None = None,
     ) -> None:
         self._db = db
         self._clock = clock
         self._provider = provider
+        #: ADR-041: key for the ID-document hash. Without it no approval goes through.
+        self._identity_secret = identity_secret
 
     async def _latest(self, user_id: uuid.UUID) -> KycCase | None:
         case: KycCase | None = await self._db.scalar(
@@ -178,6 +193,42 @@ class KycService:
         )
         return case_view(case, session.url)
 
+    async def _one_account(
+        self, case: KycCase, outcome: Outcome, decision: dict[str, Any] | None
+    ) -> tuple[Outcome, str | None]:
+        """ADR-041: hold an approval that matches a person verified on another account."""
+        if self._identity_secret is None or outcome.document_ref is None:
+            held = Outcome(
+                "under_review", note="identity key unavailable", review_reason=CHECKS_INCOMPLETE
+            )
+            return held, None
+        key = identity_key(self._identity_secret, outcome.document_ref)
+        # Two approvals of the same document at once must see each other: serialise on the key.
+        await self._db.execute(
+            text("SELECT pg_advisory_xact_lock(:k)"),
+            {"k": int.from_bytes(bytes.fromhex(key[:16]), "big", signed=True)},
+        )
+        other = await self._db.scalar(
+            select(KycCase.id)
+            .where(
+                KycCase.identity_key == key,
+                KycCase.user_id != case.user_id,
+                KycCase.status.in_(("approved", "expired")),
+            )
+            .limit(1)
+        )
+        if other is not None or other_account_matches(decision, str(case.user_id)):
+            source = "document" if other is not None else "provider match"
+            return (
+                Outcome(
+                    "under_review",
+                    note=f"duplicate identity ({source})",
+                    review_reason=DUPLICATE_IDENTITY,
+                ),
+                key,
+            )
+        return outcome, key
+
     async def ingest(self, headers: dict[str, str], raw: bytes) -> WebhookResult:
         if self._provider is None:
             return WebhookResult(404, "NOT_CONFIGURED")
@@ -236,17 +287,27 @@ class KycService:
             verdict = "IGNORED_WRONG_USER"
         else:
             outcome = evaluate(provider_status, decision, now.date())
+            key: str | None = None
+            if outcome is not None and outcome.status == "approved":
+                outcome, key = await self._one_account(case, outcome, decision)
+            if key is not None and case.identity_key is None and outcome is not None:
+                if outcome.status in ("approved", "under_review"):
+                    case.identity_key = key
             if outcome is None:
                 verdict = "IGNORED_UNKNOWN_STATUS"
             elif outcome.status == case.status:
                 case.provider_status = provider_status[:32]
                 case.updated_at = now
+                if outcome.review_reason is not None:
+                    case.review_reason = outcome.review_reason
             elif (case.status, outcome.status) not in KYC_TRANSITIONS:
                 verdict = "IGNORED_STALE"
             else:
                 case.status = outcome.status
                 case.provider_status = provider_status[:32]
                 case.updated_at = now
+                if outcome.review_reason is not None:
+                    case.review_reason = outcome.review_reason
                 if outcome.status in ("approved", "rejected"):
                     case.decided_at = now
                     case.decision_reason = outcome.reason
@@ -258,7 +319,13 @@ class KycService:
                 if outcome.status == "expired":
                     case.decision_reason = outcome.reason
                 if outcome.note:
-                    log = _logger.error if outcome.status == "under_review" else _logger.info
+                    log = (
+                        _logger.error
+                        if outcome.review_reason == CHECKS_INCOMPLETE
+                        else _logger.warning
+                        if outcome.review_reason == DUPLICATE_IDENTITY
+                        else _logger.info
+                    )
                     log(
                         "kyc_outcome_note",
                         extra={"kyc_case_id": str(case.id), "note": outcome.note},
@@ -280,9 +347,14 @@ class KycService:
         )
         try:
             await self._db.commit()
-        except IntegrityError:  # the same event raced in: already handled
+        except IntegrityError as exc:
             await self._db.rollback()
-            return WebhookResult(200, "DUPLICATE")
+            if "uq_kyc_cases_identity_approved" in str(exc.orig):
+                # Backstop only (the advisory lock normally prevents it): ask Didit to send
+                # it again; the next attempt sees the other approval and holds this one.
+                _logger.warning("kyc_identity_race")
+                return WebhookResult(503, "RETRY")
+            return WebhookResult(200, "DUPLICATE")  # the same event raced in: already handled
         if verdict != "APPLIED":
             _logger.warning("kyc_webhook_ignored", extra={"verdict": verdict})
         return WebhookResult(200, verdict)

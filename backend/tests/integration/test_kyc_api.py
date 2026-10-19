@@ -36,6 +36,7 @@ from tests.integration.test_matches_api import OWNER, TAKER
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 SECRET = b"test-webhook-secret-not-real"
+IDENTITY_KEY = b"i" * 32
 
 
 class FakeDidit:
@@ -91,7 +92,9 @@ async def _make(
     clock = Clock()
     didit = FakeDidit()
     runtime = dataclasses.replace(
-        _runtime(clock, RecordingSmsSender(), 10_000), kyc_provider=didit if provider else None
+        _runtime(clock, RecordingSmsSender(), 10_000),
+        kyc_provider=didit if provider else None,
+        kyc_identity_key=IDENTITY_KEY,
     )
     settings = Settings(  # type: ignore[call-arg]
         _env_file=None,
@@ -124,6 +127,8 @@ def _approved(
     event: str | None = None,
     skip: str | None = None,
     status: str = "Approved",
+    document: str = "A12345678",
+    seen_for: str | None = None,
 ) -> dict[str, Any]:
     decision: dict[str, Any] = {
         "session_id": sid,
@@ -138,7 +143,13 @@ def _approved(
                 "full_name": "Ada Obi",
                 "document_type": "Passport",
                 "issuing_state": "NGA",
-                "document_number": "A12345678",
+                "document_number": document,
+                # Didit: approved sessions of the same document (vendor_data = their account).
+                "matches": (
+                    [{"status": "Approved", "vendor_data": seen_for, "session_number": 1}]
+                    if seen_for
+                    else []
+                ),
             }
         ],
         "liveness_checks": [{"status": "Approved", "score": 97.0}],
@@ -390,13 +401,145 @@ async def test_kyc_grants(db_settings: Settings) -> None:
 
 
 def test_didit_settings_go_together() -> None:
+    import base64
+
     from app.main import build_auth_runtime
 
     with pytest.raises(ValueError, match="go together"):
         build_auth_runtime(Settings(_env_file=None, didit_api_key="x"))  # type: ignore[call-arg]
-    rt = build_auth_runtime(
-        Settings(  # type: ignore[call-arg]
-            _env_file=None, didit_api_key="k", didit_workflow_id="w", didit_webhook_secret="s"
+
+    def didit(key: str | None) -> Settings:
+        return Settings(  # type: ignore[call-arg]
+            _env_file=None,
+            didit_api_key="k",
+            didit_workflow_id="w",
+            didit_webhook_secret="s",
+            kyc_identity_key=key,
         )
-    )
+
+    with pytest.raises(ValueError, match="KYC_IDENTITY_KEY is required"):
+        build_auth_runtime(didit(None))
+    with pytest.raises(ValueError, match="32 bytes"):
+        build_auth_runtime(didit("c2hvcnQ="))
+    with pytest.raises(ValueError, match="placeholder"):
+        build_auth_runtime(didit("CHANGE_ME"))
+    rt = build_auth_runtime(didit(base64.b64encode(b"k" * 32).decode()))
     assert rt.kyc_provider is not None and rt.kyc_provider.name == "didit"
+    assert rt.kyc_identity_key == b"k" * 32
+
+
+# --- one person, one verified account (ADR-041) -------------------------------------------
+
+
+async def _verify(k: K, who: tuple[str, str], **kw: Any) -> tuple[str, str, Response]:
+    token, uid = await _user(k, who)
+    await _start(k, token)
+    r = await k.post_webhook(_approved(k.didit.sessions[uid], uid, **kw))
+    return token, uid, r
+
+
+async def _status(k: K, token: str) -> str:
+    return str((await k.env.get("/kyc/cases/current", token=token)).json()["status"])
+
+
+async def test_same_id_document_on_a_second_account_is_held(db_settings: Settings, k: K) -> None:
+    first, _, _ = await _verify(k, OWNER)
+    # Same passport, written differently (spaces, dash, lower case): still the same document.
+    second, uid2, r = await _verify(k, TAKER, document="a1234-5678 ")
+    assert r.json()["verdict"] == "APPLIED"
+    assert await _status(k, first) == "approved"
+    v = (await k.env.get("/kyc/cases/current", token=second)).json()
+    assert v["status"] == "under_review" and v["legal_name"] is None
+    assert "another" not in v["message"].lower() and "duplicate" not in v["message"].lower()
+    r = await k.env.client.get("/api/v1/offers/mine", headers={"Authorization": f"Bearer {second}"})
+    assert r.status_code == 403
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT review_reason FROM kyc_cases WHERE user_id = CAST(:u AS uuid)",
+            u=uid2,
+        )
+        == "DUPLICATE_IDENTITY"
+    )
+    rows = str(await _sql(db_settings, "SELECT json_agg(kyc_cases)::text FROM kyc_cases"))
+    assert "A12345678" not in rows.upper()  # only the keyed hash is kept
+    assert await _sql(db_settings, "SELECT count(DISTINCT identity_key) FROM kyc_cases") == 1
+
+
+async def test_a_different_document_is_approved(k: K) -> None:
+    await _verify(k, OWNER)
+    second, _, _ = await _verify(k, TAKER, document="B99999999")
+    assert await _status(k, second) == "approved"
+
+
+async def test_didit_match_from_another_account_is_held(k: K) -> None:
+    other = str(uuid.uuid4())
+    token, _, _ = await _verify(k, OWNER, document="C1", seen_for=other)
+    assert await _status(k, token) == "under_review"
+
+
+async def test_didit_match_from_my_own_account_is_fine(k: K) -> None:
+    token, uid = await _user(k)
+    await _start(k, token)
+    await k.post_webhook(_approved(k.didit.sessions[uid], uid, seen_for=uid))
+    assert await _status(k, token) == "approved"
+
+
+async def test_reverifying_my_own_account_after_expiry_is_approved(k: K) -> None:
+    token, uid, _ = await _verify(k, OWNER)
+    sid = k.didit.sessions[uid]
+    await k.post_webhook({**_approved(sid, uid, status="Kyc Expired"), "decision": None})
+    k.didit.finish(uid)
+    await _start(k, token)
+    await k.post_webhook(_approved(k.didit.sessions[uid], uid))
+    assert await _status(k, token) == "approved"
+
+
+async def test_document_verified_then_expired_elsewhere_still_counts(k: K) -> None:
+    _, uid, _ = await _verify(k, OWNER)
+    sid = k.didit.sessions[uid]
+    await k.post_webhook({**_approved(sid, uid, status="Kyc Expired"), "decision": None})
+    second, _, _ = await _verify(k, TAKER)
+    assert await _status(k, second) == "under_review"
+
+
+async def test_no_document_number_is_held(db_settings: Settings, k: K) -> None:
+    token, _, _ = await _verify(k, OWNER, document=" - ")
+    assert await _status(k, token) == "under_review"
+    assert await _sql(db_settings, "SELECT review_reason FROM kyc_cases") == "CHECKS_INCOMPLETE"
+
+
+async def test_in_review_then_approved_duplicate_stays_in_review(
+    db_settings: Settings, k: K
+) -> None:
+    await _verify(k, OWNER)
+    token, uid = await _user(k, TAKER)
+    await _start(k, token)
+    sid = k.didit.sessions[uid]
+    await k.post_webhook({**_approved(sid, uid, status="In Review"), "decision": None})
+    await k.post_webhook(_approved(sid, uid))
+    assert await _status(k, token) == "under_review"
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT review_reason FROM kyc_cases WHERE user_id = CAST(:u AS uuid)",
+            u=uid,
+        )
+        == "DUPLICATE_IDENTITY"
+    )
+
+
+async def test_identity_key_is_set_once_and_one_approval_per_document(
+    db_settings: Settings, k: K
+) -> None:
+    await _verify(k, OWNER)
+    await _verify(k, TAKER)
+    with pytest.raises(Exception, match="set once"):
+        await _sql(db_settings, "UPDATE kyc_cases SET identity_key = repeat('0', 64)")
+    with pytest.raises(Exception, match="uq_kyc_cases_identity_approved"):
+        await _sql(
+            db_settings,
+            "UPDATE kyc_cases SET status = 'approved', decided_at = now(), "
+            "legal_name = 'Ada Obi', date_of_birth = '1990-05-17' "
+            "WHERE status = 'under_review'",
+        )

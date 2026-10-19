@@ -11,18 +11,26 @@ listed person. Every refusal uses plain, generic words.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 __all__ = [
     "ACTIVE_STATUSES",
+    "CHECKS_INCOMPLETE",
+    "DUPLICATE_IDENTITY",
     "KYC_STATUSES",
     "KYC_TRANSITIONS",
     "MIN_AGE",
+    "REVIEW_REASONS",
     "Outcome",
     "age_on",
     "evaluate",
+    "identity_key",
+    "other_account_matches",
 ]
 
 #: Data dictionary KYCCases.status, plus ``expired`` (PROPOSED, ADR-039): an abandoned or
@@ -44,6 +52,10 @@ KYC_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     }
 )
 MIN_AGE = 18
+#: Why a case is held for a person (ADR-041). Internal only — never shown to the user.
+DUPLICATE_IDENTITY = "DUPLICATE_IDENTITY"
+CHECKS_INCOMPLETE = "CHECKS_INCOMPLETE"
+REVIEW_REASONS = (DUPLICATE_IDENTITY, CHECKS_INCOMPLETE)
 
 #: Didit status → our status, for statuses that need no decision to interpret.
 _PLAIN = {
@@ -80,6 +92,13 @@ class Outcome:
     issuing_country: str | None = None
     #: For the server log only (never shown, never personal data).
     note: str | None = None
+    #: Internal reason a case is held for review (ADR-041); None for the provider's own review.
+    review_reason: str | None = None
+    #: "country|id type|document number" — only to compute ``identity_key``; never stored.
+    document_ref: str | None = None
+
+    def __repr__(self) -> str:  # never print the document reference or identity fields
+        return f"Outcome(status={self.status!r}, review_reason={self.review_reason!r})"
 
 
 def age_on(born: date, today: date) -> int:
@@ -123,27 +142,69 @@ def evaluate(status: str, decision: dict[str, Any] | None, today: date) -> Outco
         if not _all_approved(d, key):
             # The workflow is missing a check the product owner requires, or one is not
             # approved: hold for a person instead of approving (configuration error).
-            return Outcome("under_review", note=f"{key} missing or not approved")
+            return Outcome(
+                "under_review",
+                note=f"{key} missing or not approved",
+                review_reason=CHECKS_INCOMPLETE,
+            )
     if idv is None:  # pragma: no cover - _all_approved above guarantees one
-        return Outcome("under_review", note="no id verification")
+        return Outcome("under_review", note="no id verification", review_reason=CHECKS_INCOMPLETE)
     try:
         born = date.fromisoformat(str(idv.get("date_of_birth") or ""))
     except ValueError:
-        return Outcome("under_review", note="no readable date of birth")
+        return Outcome(
+            "under_review", note="no readable date of birth", review_reason=CHECKS_INCOMPLETE
+        )
     name = (
         str(idv.get("full_name") or "").strip()
         or " ".join(str(idv.get(k) or "").strip() for k in ("first_name", "last_name")).strip()
     )
     if not name:
-        return Outcome("under_review", note="no legal name")
+        return Outcome("under_review", note="no legal name", review_reason=CHECKS_INCOMPLETE)
     country = idv.get("issuing_state")
     if age_on(born, today) < MIN_AGE:
         # Keep nothing about a minor beyond the refusal itself (data minimisation).
         return Outcome("rejected", UNDERAGE, note="under 18")
+    id_type = _ID_TYPES.get(str(idv.get("document_type")), "other")
+    issuer = country if isinstance(country, str) and len(country) == 3 else None
+    number = re.sub(r"[^A-Z0-9]", "", str(idv.get("document_number") or "").upper())
+    if not number:
+        # Without the document number the one-account check (ADR-041) cannot run.
+        return Outcome("under_review", note="no document number", review_reason=CHECKS_INCOMPLETE)
     return Outcome(
         "approved",
         legal_name=name[:255],
         date_of_birth=born,
-        id_type=_ID_TYPES.get(str(idv.get("document_type")), "other"),
-        issuing_country=country if isinstance(country, str) and len(country) == 3 else None,
+        id_type=id_type,
+        issuing_country=issuer,
+        document_ref=f"{issuer or ''}|{id_type}|{number[:64]}",
     )
+
+
+def identity_key(secret: bytes, document_ref: str) -> str:
+    """Keyed hash of one ID document (ADR-041). Not reversible without the secret."""
+    return hmac.new(secret, f"v1|{document_ref}".encode(), hashlib.sha256).hexdigest()
+
+
+def other_account_matches(decision: dict[str, Any] | None, user_id: str) -> bool:
+    """Didit found this face or document in an approved session of another account (ADR-041).
+
+    Uses ``matches`` under ``id_verifications`` and ``liveness_checks`` only; device and IP
+    matches are ignored (families and offices share phones and networks).
+    """
+    for key in ("id_verifications", "liveness_checks"):
+        items = (decision or {}).get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            matches = item.get("matches") if isinstance(item, dict) else None
+            if not isinstance(matches, list):
+                continue
+            for m in matches:
+                if (
+                    isinstance(m, dict)
+                    and m.get("status") == "Approved"
+                    and m.get("vendor_data") != user_id
+                ):
+                    return True
+    return False

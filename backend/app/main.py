@@ -16,6 +16,7 @@ with ``APP_ENV=local`` prints codes to the terminal on a developer's computer (A
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -97,6 +98,7 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         name_check=DevNameCheck() if settings.bank_check_dev else None,
         pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
         kyc_provider=_didit(settings),
+        kyc_identity_key=_kyc_identity_key(settings),
     )
 
 
@@ -122,6 +124,24 @@ def _didit(settings: Settings) -> DiditClient | None:
         settings.didit_base_url,
         settings.didit_callback_url,
     )
+
+
+def _kyc_identity_key(settings: Settings) -> bytes | None:
+    """ADR-041: required with Didit; base64 of exactly 32 bytes."""
+    raw = settings.kyc_identity_key
+    if not raw:
+        if settings.didit_api_key:
+            raise ValueError("KYC_IDENTITY_KEY is required when Didit is configured (ADR-041)")
+        return None
+    if "CHANGE_ME" in raw:
+        raise ValueError("KYC_IDENTITY_KEY is still the .env.example placeholder")
+    try:
+        key = base64.b64decode(raw, validate=True)
+    except ValueError as exc:
+        raise ValueError("KYC_IDENTITY_KEY must be base64") from exc
+    if len(key) != 32:
+        raise ValueError("KYC_IDENTITY_KEY must decode to 32 bytes")
+    return key
 
 
 async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:

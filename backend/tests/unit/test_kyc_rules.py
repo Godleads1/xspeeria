@@ -11,7 +11,7 @@ from datetime import date
 import httpx
 import pytest
 
-from app.domain.kyc_rules import age_on, evaluate
+from app.domain.kyc_rules import age_on, evaluate, identity_key, other_account_matches
 from app.providers.didit import DiditClient, KycProviderError, canonical_json, verify_signature
 
 TODAY = date(2026, 10, 19)
@@ -128,3 +128,81 @@ def test_network_failure_never_leaks_the_key() -> None:
     with pytest.raises(KycProviderError) as e:
         asyncio.run(_client(httpx.MockTransport(boom)).create_session("u", {}))
     assert "key-123" not in str(e.value) and e.value.__cause__ is None
+
+
+# --- one person, one verified account (ADR-041) -------------------------------------------
+
+
+def _decision(number: object = "A1234 5678", **idv: object) -> dict[str, object]:
+    return {
+        "id_verifications": [
+            {
+                "status": "Approved",
+                "date_of_birth": "1990-05-17",
+                "full_name": "Ada Obi",
+                "document_type": "Passport",
+                "issuing_state": "NGA",
+                "document_number": number,
+                **idv,
+            }
+        ],
+        "liveness_checks": [{"status": "Approved"}],
+        "face_matches": [{"status": "Approved"}],
+        "aml_screenings": [{"status": "Approved"}],
+    }
+
+
+def test_approval_carries_a_normalised_document_reference() -> None:
+    out = evaluate("Approved", _decision(), TODAY)
+    assert out is not None and out.status == "approved"
+    assert out.document_ref == "NGA|passport|A12345678"
+    assert "A1234" not in repr(out) and "Ada" not in repr(out)
+
+
+@pytest.mark.parametrize("number", [None, "", " - ", 12])
+def test_missing_document_number_is_held(number: object) -> None:
+    out = evaluate("Approved", _decision(number), TODAY)
+    if number == 12:  # a number is still a document number
+        assert out is not None and out.status == "approved"
+        return
+    assert out is not None and out.status == "under_review"
+    assert out.review_reason == "CHECKS_INCOMPLETE"
+
+
+def test_minor_is_refused_before_the_document_check() -> None:
+    out = evaluate("Approved", _decision(None, date_of_birth="2010-01-01"), TODAY)
+    assert out is not None and out.status == "rejected"
+
+
+def test_identity_key_is_keyed_and_stable() -> None:
+    a = identity_key(b"k" * 32, "NGA|passport|A12345678")
+    assert a == identity_key(b"k" * 32, "NGA|passport|A12345678") and len(a) == 64
+    assert a != identity_key(b"j" * 32, "NGA|passport|A12345678")
+    assert a != identity_key(b"k" * 32, "NGA|national_id|A12345678")
+    assert "A12345678" not in a
+
+
+def test_other_account_matches() -> None:
+    me = "user-1"
+
+    def with_matches(where: str, *matches: dict[str, object]) -> dict[str, object]:
+        d = _decision()
+        d[where] = [{"status": "Approved", "matches": list(matches)}]
+        return d
+
+    assert not other_account_matches(None, me)
+    assert not other_account_matches(_decision(), me)
+    for where in ("id_verifications", "liveness_checks"):
+        assert other_account_matches(
+            with_matches(where, {"status": "Approved", "vendor_data": "user-2"}), me
+        )
+        assert not other_account_matches(
+            with_matches(where, {"status": "Approved", "vendor_data": me}), me
+        )
+        assert not other_account_matches(
+            with_matches(where, {"status": "Declined", "vendor_data": "user-2"}), me
+        )
+    # Device/IP matches are not identity evidence.
+    d = _decision()
+    d["ip_analyses"] = [{"matches": [{"status": "Approved", "vendor_data": "user-2"}]}]
+    assert not other_account_matches(d, me)

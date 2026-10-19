@@ -111,6 +111,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `038-app-escrow-steps.md` | App: escrow steps on a deal — amount + 1% fee + total, the bank's escrow details, 5-minute countdown, steps ticked from bank-confirmed states, "Simulate my transfer" only with the pretend bank; 24-hour hold wording removed (DEC-045) | **PROPOSED** — 2026-10-19 |
 | `039-kyc-1-didit-identity-checks.md` | Milestone KYC-1: Didit identity checks — hosted ID + selfie capture, signed results, server re-checks ID/liveness/face/sanctions and 18+, no ID images stored, market needs an approved check; migration 0010 (DEC-046) | **APPROVED** — 2026-10-19 (details in §4 PROPOSED) |
 | `040-app-identity-check.md` | App: identity check screen — Figma heading, opens Didit's hosted check (https only), re-checks the server on return, plain words per status; Market offers it on AUTH_403_KYC_REQUIRED (DEC-047) | **PROPOSED** — 2026-10-19 |
+| `041-kyc-one-person-one-account.md` | One verified account per person — an approval matching a person already verified on another account (keyed hash of the ID document, or a Didit face/document match) is held for review, not approved; `KYC_IDENTITY_KEY`; migration 0011 (DEC-048) | **APPROVED** — 2026-10-19 (rule; mechanism PROPOSED) |
 
 ### Accounting policy is not architecture
 
