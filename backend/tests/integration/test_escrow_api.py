@@ -217,7 +217,7 @@ async def test_ready_deal_opens_two_escrows_with_fees(
     assert OWNER[0] not in json.dumps(t) and "beneficiar" not in json.dumps(t)
 
 
-async def test_both_pay_then_bank_pays_out_after_security_hold(
+async def test_both_pay_then_bank_pays_out_at_once(
     db_settings: Settings, esc: Escrow, owner: Party, taker: Party, deal: dict[str, Any]
 ) -> None:
     await _open(esc, deal, owner)
@@ -226,16 +226,8 @@ async def test_both_pay_then_bank_pays_out_after_security_hold(
     assert r.json()["you_pay"]["pay_in"] is None
     r = await _pay(taker, deal["match_id"])
     assert r.status_code == 200, r.text
-    assert await _phase(db_settings) == "RELEASING"
-    # New accounts are paid only after their 24-hour hold (ADR-008/022): money waits in escrow.
-    v = (await _view(owner, deal["match_id"])).json()
-    assert v["you_receive"]["state"] == "FUNDED" and v["you_receive"]["paid_after"]
-    await esc.tick()
-    assert await _phase(db_settings) == "RELEASING"
-    esc.env.clock.advance(hours=24, minutes=1)
-    await esc.tick(2)
+    # DEC-044: paid out as soon as both sides have paid in, even to brand-new accounts.
     assert await _phase(db_settings) == "COMPLETED"
-    await owner.relogin()
     v = (await _view(owner, deal["match_id"])).json()
     assert v["you_receive"]["state"] == "PAID_OUT" and v["you_pay"]["state"] == "PAID_OUT"
     events = await _events(db_settings)
@@ -260,7 +252,6 @@ async def test_release_is_decided_once(
     await _open(esc, deal, owner)
     await _pay(owner, deal["match_id"])
     await _pay(taker, deal["match_id"])
-    esc.env.clock.advance(hours=25)
     await esc.tick(3)
     assert (
         await _sql(db_settings, "SELECT count(*) FROM outbox_messages WHERE operation='RELEASE'")
@@ -535,9 +526,8 @@ async def test_failed_release_opens_a_hold_and_never_unwinds(
 ) -> None:
     await _open(esc, deal, owner)
     await _pay(owner, deal["match_id"])
-    await _pay(taker, deal["match_id"])
-    esc.env.clock.advance(hours=25)
     esc.bank.fail_next["RELEASE"] = 99
+    await _pay(taker, deal["match_id"])
     for _ in range(7):
         await esc.tick()
         esc.env.clock.advance(minutes=10)
@@ -559,9 +549,8 @@ async def test_removed_payout_account_is_never_paid(
 ) -> None:
     await _open(esc, deal, owner)
     await _pay(owner, deal["match_id"])
-    await _pay(taker, deal["match_id"])
     await _sql(db_settings, "UPDATE beneficiaries SET removed_at = now() WHERE currency='USD'")
-    esc.env.clock.advance(hours=25)
+    await _pay(taker, deal["match_id"])
     await esc.tick(2)
     assert await _sql(db_settings, "SELECT type FROM settlement_holds") == "RISK"
     assert (

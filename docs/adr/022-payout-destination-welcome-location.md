@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** |
+| **Status** | **APPROVED** — payout-hold row amended 2026-10-19 (DEC-044) |
 | **Date** | 2026-10-18 |
 | **Decision ID** | DEC-028 |
 | **Authority** | Product owner, 2026-10-17/18: Figma frames "Payout Destination", "Send to a New Receipent", Welcome slides 1–4 and the "Let's get started" location prompt; "build it in enterprise standard in mind" — `DOCUMENT_INDEX.md` §1 rank 2 |
@@ -26,7 +26,7 @@ Deliberate deviations from Figma (enterprise standard):
 | "Available Balance: 500 USD", "Use all Available Balance" | "Left to assign: …", "Send the full amount left" | No balance or wallet wording (Standing Standards §2) |
 | Recipients in other people's names | Own name only; the name is not typed, the bank confirms it | Banking spec §3.3; third-party payouts wait for DEC-007 |
 | Full account number shown | Last 4 digits only, also in memory | API Data Dictionary (tokenised `account_ref`) |
-| New account paid immediately | Paid after a **24-hour security hold** | ADR-008 (beneficiary substitution, SEC-025/FX-03) |
+| New account paid immediately | ~~Paid after a 24-hour security hold~~ **Paid immediately; adding the account and choosing it for a deal each need an authenticator code** (DEC-044, 2026-10-19) | ADR-008 as amended; SEC-025/FX-03 |
 | "Request to Fund a USD card", "$3 fee" | Shown; says cards aren't available yet; no fee shown | ADR-012; no card partner or card fee approved |
 | "Save to beneficiary" saves at once | Saved as **pending** only after the 2FA check on Continue | Step-up before beneficiary changes (ADR-008) |
 

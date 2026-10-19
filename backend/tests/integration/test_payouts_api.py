@@ -160,11 +160,11 @@ async def test_add_account_keeps_only_last4_readable(
     assert [x["account_last4"] for x in listed] == ["6789"]
 
 
-async def test_new_accounts_are_held_24_hours(owner: Party) -> None:
+async def test_new_accounts_have_no_waiting_period(owner: Party) -> None:
     a = (
         await owner.add_account(currency="NGN", bank_name="GTBank", account_number="1111111111")
     ).json()
-    assert a["payout_hold_until"] > a["created_at"]
+    assert a["payout_hold_until"] == a["created_at"]  # DEC-044: paid at once
 
 
 @pytest.mark.parametrize(

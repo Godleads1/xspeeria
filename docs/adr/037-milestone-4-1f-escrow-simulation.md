@@ -4,10 +4,10 @@
 |---|---|
 | **Status** | **APPROVED** (decisions in §2) — the details marked PROPOSED in §4 still need confirming |
 | **Date** | 2026-10-19 |
-| **Decision ID** | DEC-043 |
-| **Authority** | Product owner, 2026-10-19: **"Escrow with pretend bank"**, **"Yes, simulation only"**, **"Keep 5 minutes"** (funding window), **"Refund it in full"** (fee on a failed deal). Model in the owner's words: "Xspeeria does not hold money...the user pays the money to a escrow account and the partnering bank settle the payout account". `DOCUMENT_INDEX.md` §1 rank 2. |
+| **Decision ID** | DEC-043; DEC-044 (payouts without a waiting period) |
+| **Authority** | Product owner, 2026-10-19: **"Escrow with pretend bank"**, **"Yes, simulation only"**, **"Keep 5 minutes"** (funding window), **"Refund it in full"** (fee on a failed deal). Then on the 24-hour hold: **"the money is paid immediate all users sent their money to the escrow accounts"**, and after the risk was explained, **"2. but we can comfirm with code"** (DEC-044). Model in the owner's words: "Xspeeria does not hold money...the user pays the money to a escrow account and the partnering bank settle the payout account". `DOCUMENT_INDEX.md` §1 rank 2. |
 | **Resolves** | U-1 (fee on a failed deal: refunded in full) and U-2 (funding window: 5 minutes, no extension) **for the simulation**, by the product owner. ADR-001 §11 also names Legal (U-1) and Risk + the partner's SLA (U-2): they must confirm before a real partner. |
-| **Builds on** | ADR-001 (state machine), ADR-002 (event architecture), ADR-008/022 (24-hour payout hold), ADR-021 (1% fee, split payouts), ADR-035 (payout accounts, preparation) |
+| **Builds on** | ADR-001 (state machine), ADR-002 (event architecture), ADR-008/022 (payout hold — removed by DEC-044), ADR-021 (1% fee, split payouts), ADR-035 (payout accounts, preparation) |
 | **Does not change** | ADR-001 §12 legal gate: **no real partner** may be connected without legal and compliance sign-off. |
 
 ## 1. The model
@@ -41,7 +41,8 @@ Xspeeria never holds money. When a deal is `funding_ready` (ADR-035), the server
 | Money facts | FUNDED / PAID_OUT / RETURNED only from a partner message that passes ADR-002 §3: HMAC-SHA256 over the exact bytes (`X-Xspeeria-Signature`), timestamp within ±5 minutes (`X-Xspeeria-Timestamp`, also inside the body), strict schema, duplicate check (again under the lock), leg owned by that partner, exact amount and currency, allowed transition. |
 | Evidence | Every message from a known partner is kept in `webhook_receipts` with its verdict (append-only). Premature → `pending_events` (re-checked after each acceptance). Impossible or wrong amount → reconciliation exception + blocking hold. Nothing is discarded or "fixed". |
 | Commands | Open / release / return go through `outbox_messages` **after commit** with a deterministic key `sha256(settlement|leg|op|decided_at)`; retries reuse the key. Release failures never unwind on their own: a DISPATCH_FAILURE hold opens. |
-| 24-hour payout hold | Read from ADR-008/022 ("paid after a 24-hour security hold"): if a payee's account is new, or the payee had a 2FA reset or recovery log-in, the release command waits in the outbox until the hold ends; the money stays in escrow and the deal stays RELEASING. The payee sees their own `paid_after`; the other side never sees it. |
+| Payout timing (DEC-044) | **Paid out as soon as both sides have paid into escrow**, also to a brand-new account and also after an authenticator reset or recovery-code log-in. The 24-hour wait of ADR-008/022 is **removed** by the product owner. What protects payouts instead: adding a payout account needs an authenticator code (`beneficiary.add`), choosing accounts for each deal needs another (`payout.confirm`), only own-name, bank-confirmed accounts can be chosen, and a reset or recovery log-in still ends trust on every device and sends an alert. `payout_hold_until` stays as a column, now always equal to the time it was set (wait = 0), so the wait can be restored by changing one value. |
+| Accepted risk (DEC-044) | Someone who takes over an account **and** its authenticator (for example by replacing it after a recovery-code log-in) can add their own account and be paid at once. ADR-008's hold existed for this case; FX-03 (Enterprise Security Standard) stays **open** and must be met before go-live — e.g. risk checks on "new account + immediate payout" and a way to freeze a deal. |
 | Changed account | If a chosen payout account is removed or no longer confirmed when release is due, nothing is paid: a RISK hold opens for a person to decide. |
 | Database | Migration 0009. Triggers allow only ADR-001 phase and leg transitions, set `release_authorized_at` and money-fact times once, keep amounts/parties immutable and forbid deletes; `settlement_events` and `webhook_receipts` are append-only. App role: `partners` SELECT; events, receipts, payout instructions, transactions INSERT+SELECT only. |
 | Ledger | **Not built.** No balance, wallet or accounting table (finance policy P-1/P-2 not approved; ADR-002). Drift guards forbid `ledger_entries`, `balances`, `wallets`. |
@@ -51,7 +52,7 @@ Xspeeria never holds money. When a deal is `funding_ready` (ADR-035), the server
 
 | Route | Who | Notes |
 |---|---|---|
-| `GET /api/v1/matches/{id}/settlement` | the two parties (KYC, per-user limit) | Phase, deadline, my pay-in (amount, fee, total, bank instructions while the window is open), what I receive and my own `paid_after`. Never the other party's identity or accounts. |
+| `GET /api/v1/matches/{id}/settlement` | the two parties (KYC, per-user limit) | Phase, deadline, my pay-in (amount, fee, total, bank instructions while the window is open), what I receive. Never the other party's identity or accounts. |
 | `POST /api/v1/webhooks/partners/{code}` | partner (signature only) | 16 KB limit, 60 a minute per address. Unknown partner → 404, not stored. |
 | `POST /api/v1/dev/matches/{id}/simulate-transfer` | the funder; **only registered with the pretend bank on a developer's computer** | Pretends my transfer of amount + fee arrived; goes through the pretend bank's signed message, never straight to FUNDED. |
 
@@ -75,5 +76,5 @@ referral fee discounts; any real partner (legal gate, ADR-001 §12); partner sec
 
 `backend/tests/integration/test_escrow_api.py` (normal path, timeout cancel, refund with fee,
 late money, forged/old/malformed/foreign/duplicate/racing messages, wrong amounts, quarantine
-then promotion, provisioning and release failures, removed account, payout hold, access rules,
+then promotion, provisioning and release failures, removed account, immediate payout, access rules,
 dev-route absence, DB triggers and grants) and `backend/tests/unit/test_settlement_rules.py`.

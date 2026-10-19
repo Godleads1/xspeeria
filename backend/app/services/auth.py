@@ -860,7 +860,7 @@ class AuthService:
                 raise await self._mfa_failure(user, now, challenge)
             row.used_at = now
             # ADR-008: recovery means the phone may be lost — end trust everywhere, do not
-            # trust this device, and hold payouts for 24 hours.
+            # trust this device (no payout wait since DEC-044).
             await self._repo.revoke_trusted_devices(user.id, now)
             user.payout_hold_until = now + PAYOUT_HOLD
             device_token = None
@@ -979,7 +979,7 @@ class AuthService:
         pending.confirmed_at = now
         pending.last_used_step = step
         self._mfa_success(user)
-        # A reset: end trust everywhere and hold payouts for 24 hours (ADR-008).
+        # A reset: end trust everywhere (ADR-008; no payout wait since DEC-044).
         await self._repo.revoke_trusted_devices(user.id, now)
         user.payout_hold_until = now + PAYOUT_HOLD
         await self._db.commit()

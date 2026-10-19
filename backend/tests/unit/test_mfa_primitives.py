@@ -42,7 +42,7 @@ class TestDecidedValues:
         assert LOGIN_CHALLENGE_TTL == timedelta(minutes=5)  # contract §3.1
         assert ENROL_CHALLENGE_TTL == timedelta(minutes=10)  # ADR-026
         assert (MAX_MFA_TRIES, MFA_LOCK) == (5, timedelta(minutes=15))  # ADR-008
-        assert PAYOUT_HOLD == timedelta(hours=24)  # ADR-008
+        assert PAYOUT_HOLD == timedelta(0)  # DEC-044 (was 24 hours, ADR-008)
         assert STEP_UP_ACTIONS == {
             "beneficiary.add",
             "beneficiary.remove",
