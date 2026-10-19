@@ -269,3 +269,15 @@ class TestMigrationRuntimeSharesTheDatabasePolicy:
             encoding="utf-8"
         )
         assert "require_supported_database_url" in source
+
+
+class TestEnvFileLocation:
+    """The setup guide puts `.env` in the project root; commands run from root or backend/."""
+
+    def test_settings_point_at_the_repository_root(self) -> None:
+        import app.core.config as config
+
+        assert (config._PROJECT_ROOT / "pyproject.toml").is_file()
+        env_files = config.Settings.model_config["env_file"]
+        assert isinstance(env_files, tuple)
+        assert env_files[0] == str(config._PROJECT_ROOT / ".env")
