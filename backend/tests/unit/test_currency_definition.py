@@ -354,6 +354,8 @@ class TestPackageRegistration:
             "settlement_holds",
             "reconciliation_exceptions",
             "outbox_messages",
+            "kyc_cases",
+            "kyc_webhook_events",
         }
 
     @pytest.mark.parametrize(
@@ -362,7 +364,6 @@ class TestPackageRegistration:
             "ledger_entries",  # no ledger: finance policy P-1/P-2 not approved (ADR-037)
             "balances",
             "wallets",
-            "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
         ],  # users: AUTH-1; offers, idempotency_records: 4.1C; matches: 4.1D (ADR-031)
@@ -395,7 +396,8 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'idempotency_records', 'match_payout_selections', "
+            "'currency_definitions', 'idempotency_records', 'kyc_cases', 'kyc_webhook_events', "
+            "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'offers', 'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
@@ -447,4 +449,5 @@ class TestPackageRegistration:
             "0007_matches_4_1d.py",  # Milestone 4.1D (ADR-031)
             "0008_payout_accounts_and_preparation_4_1e.py",  # Milestone 4.1E (ADR-035)
             "0009_escrow_settlement_simulation_4_1f.py",  # Milestone 4.1F (ADR-037)
+            "0010_kyc_cases_didit_kyc_1.py",  # Milestone KYC-1 (ADR-039)
         ]

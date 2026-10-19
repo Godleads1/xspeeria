@@ -16,6 +16,8 @@ money. MILESTONE 4.1C (ADR-029): `Offer`, `IdempotencyRecord`; MILESTONE 4.1D (A
 amounts, not money. MILESTONE 4.1F (ADR-037, simulation only): the escrow settlement records
 -- workflow decisions and partner-confirmed facts, never balances. KycCase belongs to a later
 milestone and must not be added here ahead of its approved batch.
+MILESTONE KYC-1 (ADR-039): `KycCase` (data dictionary KYCCases) and `KycWebhookEvent` --
+identity-check outcomes only; ID images stay with the provider.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
@@ -32,6 +34,7 @@ from app.models.identity import (
     TrustedDevice,
     User,
 )
+from app.models.kyc import KycCase, KycWebhookEvent
 from app.models.marketplace import IdempotencyRecord, Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import (
@@ -49,6 +52,8 @@ from app.models.settlement import (
 )
 
 __all__ = [
+    "KycCase",
+    "KycWebhookEvent",
     "OutboxMessage",
     "Partner",
     "PayoutExecution",

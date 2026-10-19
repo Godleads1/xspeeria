@@ -145,6 +145,15 @@ class Settings(BaseSettings):
     #: ADR-035: how often the server looks for deals whose 30 minutes ran out (0 = never;
     #: expiry then happens only when the offer or deal is next touched).
     preparation_sweep_seconds: int = 30
+    #: KYC-1 (ADR-039): Didit identity checks. All three secrets/ids are needed, or identity
+    #: checks are switched off (503) and only the local KYC_DEV_BYPASS can approve anyone.
+    #: Never logged or returned.
+    didit_api_key: str | None = None
+    didit_workflow_id: str | None = None
+    didit_webhook_secret: str | None = None
+    didit_base_url: str = "https://verification.didit.me"
+    #: Where Didit sends the user after the check (optional; Didit's workflow default if unset).
+    didit_callback_url: str | None = None
     #: ADR-037: the pretend partner bank (escrow simulation). In memory, moves no money.
     #: Refused unless app_env is "local". Real partners need legal sign-off (ADR-001 §12).
     pretend_bank: bool = False

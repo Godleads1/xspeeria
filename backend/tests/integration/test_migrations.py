@@ -64,12 +64,15 @@ APPROVED_TABLES = {
     "settlement_holds",
     "reconciliation_exceptions",
     "outbox_messages",
+    "kyc_cases",
+    "kyc_webhook_events",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
 # Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
 # 4.1C offers (ADR-029) -> "0006"; 4.1D matches (ADR-031) -> "0007";
-# 4.1E payout accounts (ADR-035) -> "0008"; 4.1F escrow simulation (ADR-037) -> "0009".
-EXPECTED_HEAD = "0009"
+# 4.1E payout accounts (ADR-035) -> "0008"; 4.1F escrow simulation (ADR-037) -> "0009";
+# KYC-1 Didit (ADR-039) -> "0010".
+EXPECTED_HEAD = "0010"
 
 
 def _config(database_url: str) -> Config:
@@ -216,7 +219,6 @@ class TestMetadataDriftGuard:
             "ledger_entries",
             "balances",
             "wallets",
-            "kyc_cases",
             "kyc_profiles",
             "beneficiary_accounts",
         }
@@ -313,7 +315,6 @@ class TestAlembicModelDiscovery:
             "ledger_entries",
             "balances",
             "wallets",
-            "kyc_cases",
             "kyc_profiles",
             # users: AUTH-1; offers, idempotency_records: 4.1C; matches: 4.1D
             "beneficiary_accounts",
