@@ -39,6 +39,13 @@ export interface ServerMatch {
   accepted_at: string;
   server_order_key: string;
   your_role: 'taker' | 'offer_owner';
+  /** ADR-035: what this side receives, and the 30-minute payout-account step. */
+  you_receive_currency?: string;
+  you_receive_amount?: string;
+  preparation_state?: 'awaiting_payout_accounts' | 'funding_ready' | 'expired';
+  preparation_deadline?: string | null;
+  you_chose_payout_accounts?: boolean;
+  other_side_chose_payout_accounts?: boolean;
 }
 
 export interface NewOffer {
@@ -85,6 +92,8 @@ export const offersApi = {
       ...x,
     }),
   myMatches: (token: string, x: Extra = {}) => apiRequest<ServerMatch[]>('GET', '/api/v1/matches/mine', { token, ...x }),
+  match: (token: string, matchId: string, x: Extra = {}) =>
+    apiRequest<ServerMatch>('GET', `/api/v1/matches/${encodeURIComponent(matchId)}`, { token, ...x }),
   withdraw: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('DELETE', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),
 };
