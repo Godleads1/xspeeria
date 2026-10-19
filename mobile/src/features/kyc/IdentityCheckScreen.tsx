@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '../../api/client';
-import type { ServerKycCase } from '../../api/kycApi';
+import { COUNTRY_NAME, type KycCountry, type ServerKycCase } from '../../api/kycApi';
 import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState, PrimaryButton, Screen, StatusChip } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
@@ -25,6 +25,11 @@ export const INTRO =
   'To trade on Xspeeria we need to confirm who you are. You will take a photo of a valid government ID (such as your passport, national ID card or driver’s licence) and a short selfie. This is done securely by our verification partner, Didit.';
 
 type Tone = 'success' | 'warning' | 'error' | 'neutral';
+
+/** Intro for a second country's check (ADR-042). */
+export function introFor(country: KycCountry): string {
+  return `To pay in this country’s currency we need to confirm who you are in ${COUNTRY_NAME[country]}. You will take a photo of a valid ID issued by ${COUNTRY_NAME[country]} (such as a passport, driving licence or residence card) and a short selfie. This is done securely by our verification partner, Didit.`;
+}
 
 /** Headline, chip and button for each server status. */
 export function kycCopy(c: ServerKycCase): { title: string; chip: string; tone: Tone; action: string | null } {
@@ -49,7 +54,10 @@ export function IdentityCheckScreen({
   onBack,
   onVerified,
   pollMs = POLL_MS,
+  country = 'NG',
 }: {
+  /** ADR-042: the country this check verifies; the ID must be issued there. */
+  country?: KycCountry;
   source: KycSource;
   onBack: () => void;
   /** Shown as "Go to Market" once verified. */
@@ -128,7 +136,10 @@ export function IdentityCheckScreen({
   return (
     <Screen testID="identity-screen">
       {header}
-      <Heading title={copy.title} body={c.status === 'not_started' ? INTRO : undefined} />
+      <Heading
+        title={copy.title}
+        body={c.status === 'not_started' ? (country === 'NG' ? INTRO : introFor(country)) : undefined}
+      />
       <View testID="identity-status" style={styles.card}>
         <View style={styles.rowTop}>
           <Text style={styles.label}>Identity check</Text>
@@ -147,7 +158,7 @@ export function IdentityCheckScreen({
       {c.status === 'not_started' || copy.action ? (
         <View style={styles.card}>
           <Text style={styles.label}>What you need</Text>
-          <Text style={styles.line}>• A valid government ID with your photo</Text>
+          <Text style={styles.line}>{`• A valid government ID with your photo, issued by ${COUNTRY_NAME[country]}`}</Text>
           <Text style={styles.line}>• Good light and about 2 minutes</Text>
           <Text style={styles.line}>• You must be 18 or older</Text>
           <Text style={styles.small}>

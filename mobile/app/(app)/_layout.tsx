@@ -8,6 +8,8 @@ import { session } from '../../src/features/auth/session';
 import { useIdleLock } from '../../src/features/auth/useIdleLock';
 import { serverNotifications } from '../../src/features/notifications/serverNotifications';
 import { useNotificationWatcher } from '../../src/features/notifications/unread';
+import { serverRegions } from '../../src/features/kyc/serverKyc';
+import { useRegionPrompt } from '../../src/features/kyc/regionPrompt';
 import { color, useThemeMode } from '../../src/theme';
 
 /**
@@ -20,6 +22,10 @@ export default function AppLayout(): ReactElement {
   const router = useRouter();
   // ADR-044: the bell's count, and a banner when something new arrives (server builds only).
   useNotificationWatcher(SERVER_MODE ? serverNotifications : null, (link) => router.push(link as Href));
+  // ADR-042: offer a new country's check when the server sees the user there (once per sign-in).
+  useRegionPrompt(SERVER_MODE ? serverRegions : null, (country) =>
+    router.push({ pathname: '/region/new', params: { country } }),
+  );
   return (
     <View
       style={{ flex: 1 }}

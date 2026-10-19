@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { useRouter } from 'expo-router';
 
+import { SERVER_MODE } from '../../../src/api/config';
 import { SecurityScreen } from '../../../src/features/profile/SecurityScreen';
 import { useThemeMode } from '../../../src/theme';
 
@@ -10,7 +11,12 @@ export default function SecurityRoute(): ReactElement {
   return (
     <SecurityScreen
       onBack={() => router.back()}
-      onOpen={(d) => router.push(d === 'password' ? '/profile/change-password' : '/profile/two-factor')}
+      showDevices={SERVER_MODE}
+      onOpen={(d) =>
+        router.push(
+          d === 'password' ? '/profile/change-password' : d === 'devices' ? '/profile/devices' : '/profile/two-factor',
+        )
+      }
     />
   );
 }

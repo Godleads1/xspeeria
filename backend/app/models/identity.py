@@ -107,7 +107,7 @@ class AuthSession(Base):
         ),
         CheckConstraint(
             "revoke_reason IS NULL OR revoke_reason IN "
-            "('logout', 'revoked_by_user', 'token_reuse', 'replaced')",
+            "('logout', 'revoked_by_user', 'token_reuse', 'replaced', 'pin_change', 'pin_reset')",
             name="revoke_reason_allowed",
         ),
         Index("ix_auth_sessions_user_id", "user_id"),
@@ -159,6 +159,9 @@ class PhoneVerification(Base):
         CheckConstraint("code_digest ~ '^[0-9a-f]{64}$'", name="code_digest_format"),
         CheckConstraint("attempts BETWEEN 0 AND 5", name="attempts_range"),
         CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        CheckConstraint(
+            "purpose IN ('signup', 'pin_reset', 'phone_change')", name="purpose_allowed"
+        ),
         Index("ix_phone_verifications_phone_created_at", "phone", "created_at"),
     )
 
@@ -169,6 +172,10 @@ class PhoneVerification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-046: a sign-up code never resets a PIN and a reset code never activates an account.
+    purpose: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'signup'"), default="signup"
+    )
 
 
 # --- AUTH-2: second factor (ADR-008, ADR-026) ------------------------------------------------

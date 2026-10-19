@@ -15,6 +15,8 @@ export class ApiError extends Error {
     readonly status: number,
     message: string,
     readonly retryAfterSeconds: number | null = null,
+    /** Extra facts from the server's error (e.g. `country` for a per-country KYC refusal). */
+    readonly details: Record<string, unknown> | null = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -71,11 +73,16 @@ export async function apiRequest<T>(
   }
   if (response.ok) return data as T;
 
-  const err = (data as { error?: { code?: unknown; message?: unknown; details?: { retry_after_seconds?: unknown } } } | null)?.error;
+  const err = (
+    data as {
+      error?: { code?: unknown; message?: unknown; details?: { retry_after_seconds?: unknown } & Record<string, unknown> };
+    } | null
+  )?.error;
   const code = typeof err?.code === 'string' ? err.code : `HTTP_${response.status}`;
   const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
   const retry = err?.details?.retry_after_seconds;
-  throw new ApiError(code, response.status, message, typeof retry === 'number' && retry > 0 ? retry : null);
+  const details = err?.details && typeof err.details === 'object' ? (err.details as Record<string, unknown>) : null;
+  throw new ApiError(code, response.status, message, typeof retry === 'number' && retry > 0 ? retry : null, details);
 }
 
 /** Wording for the user. Server messages are already written for users; a few are tuned. */

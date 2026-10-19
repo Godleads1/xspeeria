@@ -43,6 +43,7 @@ import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull }
 import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
+import { isKycCountry, type KycCountry } from "../../api/kycApi";
 
 export type Side = "buy" | "sell";
 
@@ -67,6 +68,11 @@ const MENU: readonly { key: MenuKey; label: string; hint?: string }[] = [
 
 const ADVERT = require("../../../assets/images/market-advert.png");
 
+function kycCountryOf(e: unknown): KycCountry | null {
+  const c = e instanceof ApiError ? e.details?.country : null;
+  return isKycCountry(c) ? c : null;
+}
+
 export function MarketScreen({
   initialSide = "buy",
   onCreate,
@@ -88,7 +94,8 @@ export function MarketScreen({
   onCreate?: (request: TradeRequest) => void;
   onTakeListing?: (listing: Listing, side: Side) => void;
   /** Server builds: opens the identity check when the server says KYC is needed (ADR-040). */
-  onVerifyIdentity?: () => void;
+  /** Opens the identity check; with a country when the server asked for that one (ADR-042). */
+  onVerifyIdentity?: (country?: KycCountry) => void;
   /** Opens the notification centre (ADR-044). */
   onNotifications?: () => void;
   unread?: number;
@@ -105,6 +112,8 @@ export function MarketScreen({
   const [serverRows, setServerRows] = useState<Listing[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kycNeeded, setKycNeeded] = useState(false);
+  // ADR-042: which country's check the server asked for (from the refusal), if any.
+  const [kycCountry, setKycCountry] = useState<KycCountry | null>(null);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
@@ -152,6 +161,7 @@ export function MarketScreen({
         if (!live) return;
         setLoadError(messageFor(e));
         setKycNeeded(e instanceof ApiError && e.code === "AUTH_403_KYC_REQUIRED");
+        setKycCountry(kycCountryOf(e));
       });
     return () => {
       live = false;
@@ -202,6 +212,7 @@ export function MarketScreen({
     } catch (e) {
       setNotice({ ok: false, text: messageFor(e) });
       setKycNeeded(e instanceof ApiError && e.code === "AUTH_403_KYC_REQUIRED");
+        setKycCountry(kycCountryOf(e));
     } finally {
       setBusy(false);
     }
@@ -417,7 +428,7 @@ export function MarketScreen({
           </Text>
         ) : null}
         {notice && !notice.ok && kycNeeded && onVerifyIdentity ? (
-          <Pressable testID="market-notice-verify" accessibilityRole="button" onPress={onVerifyIdentity} hitSlop={8}>
+          <Pressable testID="market-notice-verify" accessibilityRole="button" onPress={() => onVerifyIdentity(kycCountry ?? undefined)} hitSlop={8}>
             <Text style={styles.detailsText}>Verify your identity</Text>
           </Pressable>
         ) : null}
@@ -450,7 +461,7 @@ export function MarketScreen({
             {loadError}
           </Text>
           {kycNeeded && onVerifyIdentity ? (
-            <Pressable testID="market-verify-identity" accessibilityRole="button" onPress={onVerifyIdentity} hitSlop={8}>
+            <Pressable testID="market-verify-identity" accessibilityRole="button" onPress={() => onVerifyIdentity(kycCountry ?? undefined)} hitSlop={8}>
               <Text style={styles.detailsText}>Verify your identity</Text>
             </Pressable>
           ) : null}

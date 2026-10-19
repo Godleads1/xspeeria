@@ -46,6 +46,10 @@ export interface ServerMatch {
   preparation_deadline?: string | null;
   you_chose_payout_accounts?: boolean;
   other_side_chose_payout_accounts?: boolean;
+  /** ADR-045: the amount in `counter_currency` (decimal text). */
+  counter_amount?: string | null;
+  /** ADR-045: escrow phase on "my matches"; null before the escrow opens. */
+  settlement_phase?: string | null;
 }
 
 export interface NewOffer {

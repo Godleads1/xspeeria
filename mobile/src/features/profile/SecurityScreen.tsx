@@ -15,7 +15,7 @@ import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { securitySettings, useSecuritySettings } from './securitySettings';
 
-export type SecurityDestination = 'password' | 'twoFactor';
+export type SecurityDestination = 'password' | 'twoFactor' | 'devices';
 
 function LinkRow({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }): ReactElement {
   return (
@@ -35,9 +35,12 @@ function LinkRow({ label, onPress, testID }: { label: string; onPress: () => voi
 export function SecurityScreen({
   onBack,
   onOpen,
+  showDevices = false,
 }: {
   onBack: () => void;
   onOpen?: (destination: SecurityDestination) => void;
+  /** Server builds: the signed-in devices list (ADR-025/026). */
+  showDevices?: boolean;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const { allowScreenshots } = useSecuritySettings();
@@ -60,6 +63,9 @@ export function SecurityScreen({
       <View style={styles.list}>
         <LinkRow testID="security-password" label="Change Password" onPress={() => open('password', 'Change Password')} />
         <LinkRow testID="security-2fa" label="2 FA authentication" onPress={() => open('twoFactor', '2 FA authentication')} />
+        {showDevices ? (
+          <LinkRow testID="security-devices" label="Signed-in devices" onPress={() => open('devices', 'Signed-in devices')} />
+        ) : null}
         <View style={styles.row}>
           <Text style={styles.label}>Allow Screenshot</Text>
           <Switch

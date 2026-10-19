@@ -455,4 +455,5 @@ class TestPackageRegistration:
             "0011_kyc_one_person_one_account.py",  # one person, one account (ADR-041)
             "0012_kyc_per_country.py",  # identity checks per country (ADR-042)
             "0013_notifications_n1.py",  # in-app notifications (ADR-044)
+            "0014_pin_change_and_reset.py",  # PIN change and reset (ADR-046)
         ]
