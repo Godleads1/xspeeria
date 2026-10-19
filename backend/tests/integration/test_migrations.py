@@ -73,8 +73,8 @@ APPROVED_TABLES = {
 # 4.1C offers (ADR-029) -> "0006"; 4.1D matches (ADR-031) -> "0007";
 # 4.1E payout accounts (ADR-035) -> "0008"; 4.1F escrow simulation (ADR-037) -> "0009";
 # KYC-1 Didit (ADR-039) -> "0010"; one person, one account (ADR-041) -> "0011";
-# per country (ADR-042) -> "0012"; notifications (ADR-044) -> "0013".
-EXPECTED_HEAD = "0013"
+# per country (ADR-042) -> "0012"; notifications (ADR-044) -> "0013"; PIN (ADR-046) -> "0014".
+EXPECTED_HEAD = "0014"
 
 
 def _config(database_url: str) -> Config:

@@ -30,4 +30,4 @@ Evidence: `test_escrow_api.py::test_my_deals_show_both_amounts_and_the_escrow_ph
 
 ## Still to connect (later parts)
 
-Change PIN and forgot PIN (server + app; ADR-025: no reset without 2FA), profile edits (phone change re-verifies; email changes only through Support — contract), biometric unlock. Not planned without a decision: profile photo storage, referral rewards, support tickets.
+Change PIN and forgot PIN — done, ADR-046. Profile edits (phone change re-verifies; email changes only through Support — contract), biometric unlock. Not planned without a decision: profile photo storage, referral rewards, support tickets.

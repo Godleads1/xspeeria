@@ -22,12 +22,15 @@ from app.domain.auth_rules import STEP_UP_TTL
 from app.schemas.auth import (
     ChallengeRequest,
     ChallengeResponse,
+    ChangePinRequest,
     EnrolConfirmRequest,
     EnrolConfirmResponse,
     EnrolStartResponse,
     LoginRequest,
     MfaVerifyRequest,
     OtpCodeRequest,
+    PinResetConfirmRequest,
+    PinResetStartRequest,
     ProfileResponse,
     RecoveryCodesResponse,
     RegisterRequest,
@@ -312,4 +315,49 @@ async def revoke_trusted_device(
     trusted_device_id: uuid.UUID, principal: CurrentPrincipal, service: Service
 ) -> Response:
     await service.revoke_trusted_device(principal, trusted_device_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- PIN change and reset (ADR-046) ----------------------------------------------------------
+
+
+@router.post(
+    "/users/me/pin",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["users"],
+    summary="Change my PIN (step-up: pin.change); other devices are signed out",
+)
+async def change_pin(
+    body: ChangePinRequest,
+    principal: CurrentPrincipal,
+    service: Service,
+    step_up_token: StepUpToken = None,
+) -> Response:
+    await service.change_pin(principal, body.current_pin, body.new_pin, step_up_token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/auth/pin-reset/start",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Forgot PIN: send a reset code by SMS (same answer for any number)",
+)
+async def pin_reset_start(body: PinResetStartRequest, service: Service) -> dict[str, str]:
+    await service.pin_reset_start(body.phone)
+    return {"status": "code_sent_if_account_exists"}
+
+
+@router.post(
+    "/auth/pin-reset/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Forgot PIN: SMS code + authenticator or recovery code + new PIN",
+)
+async def pin_reset_confirm(body: PinResetConfirmRequest, service: Service) -> Response:
+    await service.pin_reset_confirm(
+        body.phone,
+        body.code,
+        body.new_pin,
+        otp_code=body.otp_code,
+        recovery_code=body.recovery_code,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -112,6 +112,27 @@ class MfaVerifyRequest(_Strict):
     device_id: str | None = Field(default=None, pattern=_DEVICE_ID)
 
 
+class ChangePinRequest(_Strict):
+    """ADR-046: signed in, with an authenticator approval for ``pin.change``."""
+
+    current_pin: str = Field(min_length=1, max_length=16)
+    new_pin: str = Field(min_length=1, max_length=16)
+
+
+class PinResetStartRequest(_Strict):
+    phone: str = Field(min_length=1, max_length=32)
+
+
+class PinResetConfirmRequest(_Strict):
+    """ADR-046: the SMS code plus exactly one of ``otp_code`` or ``recovery_code``."""
+
+    phone: str = Field(min_length=1, max_length=32)
+    code: str = Field(pattern=r"^[0-9]{6}$")
+    new_pin: str = Field(min_length=1, max_length=16)
+    otp_code: str | None = Field(default=None, pattern=r"^[0-9]{6}$")
+    recovery_code: str | None = Field(default=None, min_length=8, max_length=16)
+
+
 StepUpAction = Literal[
     "beneficiary.add",
     "beneficiary.remove",
