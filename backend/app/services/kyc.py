@@ -50,6 +50,7 @@ from app.domain.kyc_rules import (
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.providers.didit import KycProviderError, KycSessionProvider, verify_signature
 from app.services.auth import Principal
+from app.services.notifications import notify
 
 __all__ = ["KycService", "WebhookResult", "case_view"]
 
@@ -71,6 +72,14 @@ def _other_check_open() -> AppError:
         status_code=status.HTTP_409_CONFLICT,
     )
 
+
+#: ADR-044: which status changes the user hears about.
+_NOTIFY = {
+    "approved": "kyc.approved",
+    "rejected": "kyc.rejected",
+    "under_review": "kyc.in_review",
+    "expired": "kyc.expired",
+}
 
 _WORDS = {
     "pending_documents": "Not finished yet. Continue your identity check.",
@@ -412,6 +421,18 @@ class KycService:
                     log(
                         "kyc_outcome_note",
                         extra={"kyc_case_id": str(case.id), "note": outcome.note},
+                    )
+                event = _NOTIFY.get(outcome.status)
+                if event is not None:
+                    # ADR-044: in the same transaction as the status change; once per status.
+                    await notify(
+                        self._db,
+                        user_id=case.user_id,
+                        event=event,
+                        dedupe_key=f"kyc:{case.id}:{outcome.status}",
+                        now=now,
+                        kyc_case_id=str(case.id),
+                        country=case.country,
                     )
                 _logger.info(
                     "kyc_status_changed",

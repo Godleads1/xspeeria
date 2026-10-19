@@ -36,6 +36,7 @@ from app.models.identity import (
 )
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.models.marketplace import IdempotencyRecord, Match, Offer
+from app.models.notifications import Notification
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import (
     OutboxMessage,
@@ -54,6 +55,7 @@ from app.models.settlement import (
 __all__ = [
     "KycCase",
     "KycWebhookEvent",
+    "Notification",
     "OutboxMessage",
     "Partner",
     "PayoutExecution",

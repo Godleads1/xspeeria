@@ -77,6 +77,7 @@ from app.models.settlement import (
 )
 from app.providers.pretend_bank import LegCommand, PartnerError, PayoutLine, PretendBank
 from app.services.auth import Principal
+from app.services.notifications import notify_settlement
 from app.services.offers import money_text
 
 __all__ = ["IngestResult", "SettlementService", "settlement_view"]
@@ -191,11 +192,15 @@ class SettlementService:
         )
         return settlement, legs
 
-    def _set_phase(self, settlement: Settlement, phase: str, reason: str | None = None) -> None:
+    async def _set_phase(
+        self, settlement: Settlement, phase: str, reason: str | None = None
+    ) -> None:
         settlement.phase = phase
         if reason is not None:
             settlement.closure_reason = reason
         settlement.updated_at = self._clock()
+        # ADR-044: both parties hear about it, in the same transaction as the change.
+        await notify_settlement(self._db, settlement, self._clock())
 
     def _move_leg(self, leg: SettlementLeg, state: str) -> None:
         if (leg.state, state) not in LEG_TRANSITIONS:  # pragma: no cover - callers check first
@@ -507,7 +512,7 @@ class SettlementService:
                     if settlement.phase == "INITIALIZING" and not any(
                         x.state == "FUNDED" for x in legs
                     ):
-                        self._set_phase(settlement, "CANCELLED", "PROVISION_FAILED")
+                        await self._set_phase(settlement, "CANCELLED", "PROVISION_FAILED")
                         self._event(
                             settlement.id,
                             None,
@@ -779,8 +784,8 @@ class SettlementService:
         now = self._clock()
         states = [leg.state for leg in legs]
         if settlement.phase == "INITIALIZING" and all(s == "ESCROW_PROVISIONED" for s in states):
-            self._set_phase(settlement, "AWAITING_FUNDING")
             settlement.funding_deadline = now + FUNDING_WINDOW
+            await self._set_phase(settlement, "AWAITING_FUNDING")
         if (
             settlement.phase == "AWAITING_FUNDING"
             and all(s == "FUNDED" for s in states)
@@ -790,19 +795,19 @@ class SettlementService:
         ):
             # ADR-001 §6(a): one atomic decision.
             settlement.release_authorized_at = now
-            self._set_phase(settlement, "RELEASING")
+            await self._set_phase(settlement, "RELEASING")
             self._event(settlement.id, None, "ReleaseAuthorized", {"at": now.isoformat()})
             for leg in legs:
                 self._outbox(settlement, leg, "RELEASE", now)
         if settlement.phase == "RELEASING" and all(s == "PAID_OUT" for s in states):
-            self._set_phase(settlement, "COMPLETED")
+            await self._set_phase(settlement, "COMPLETED")
             self._event(settlement.id, None, "SettlementCompleted", {})
         if settlement.phase == "UNWINDING":
             for leg in legs:  # money that arrives while unwinding goes straight back
                 if leg.state == "FUNDED" and not await self._has_outbox(leg.leg_id, "RETURN"):
                     self._outbox(settlement, leg, "RETURN", now)
             if not any(s in ("FUNDED", "RETURN_SENT") for s in states):
-                self._set_phase(settlement, "CLOSED_UNWOUND", "TIMEOUT")
+                await self._set_phase(settlement, "CLOSED_UNWOUND", "TIMEOUT")
                 self._event(settlement.id, None, "SettlementUnwound", {})
                 await self._return_capacity(settlement)
 
@@ -838,12 +843,12 @@ class SettlementService:
                 continue
             self._event(settlement.id, None, "FundingWindowExpired", {})
             if any(leg.state == "FUNDED" for leg in legs):
-                self._set_phase(settlement, "UNWINDING")
+                await self._set_phase(settlement, "UNWINDING")
                 for leg in legs:
                     if leg.state == "FUNDED":
                         self._outbox(settlement, leg, "RETURN", now)
             else:
-                self._set_phase(settlement, "CANCELLED", "TIMEOUT")
+                await self._set_phase(settlement, "CANCELLED", "TIMEOUT")
                 self._event(settlement.id, None, "SettlementCancelled", {"reason": "TIMEOUT"})
                 await self._return_capacity(settlement)
             await self._db.commit()

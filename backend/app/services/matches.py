@@ -58,6 +58,7 @@ from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Of
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
+from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
 from app.services.settlement import SettlementService
 
@@ -285,6 +286,16 @@ class MatchService:
         offer.version += 1
         await self._db.flush()
         await self._db.refresh(match, ["server_order_key"])
+        # ADR-044: the offer's owner hears that someone took it (same transaction).
+        await notify(
+            self._db,
+            user_id=offer.user_id,
+            event="match.created",
+            dedupe_key=f"match:{match.id}:created",
+            now=now,
+            match_id=str(match.id),
+            offer_id=str(offer.id),
+        )
 
         # 6 + 11. The remembered answer, committed with everything else.
         body = match_view(match, offer, principal.user_id)

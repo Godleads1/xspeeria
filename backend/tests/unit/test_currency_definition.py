@@ -356,6 +356,7 @@ class TestPackageRegistration:
             "outbox_messages",
             "kyc_cases",
             "kyc_webhook_events",
+            "notifications",
         }
 
     @pytest.mark.parametrize(
@@ -398,7 +399,8 @@ class TestPackageRegistration:
             "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
             "'currency_definitions', 'idempotency_records', 'kyc_cases', 'kyc_webhook_events', "
             "'match_payout_selections', "
-            "'matches', 'mfa_challenges', 'mfa_factors', 'offers', 'outbox_messages', "
+            "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', 'offers', "
+            "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
@@ -452,4 +454,5 @@ class TestPackageRegistration:
             "0010_kyc_cases_didit_kyc_1.py",  # Milestone KYC-1 (ADR-039)
             "0011_kyc_one_person_one_account.py",  # one person, one account (ADR-041)
             "0012_kyc_per_country.py",  # identity checks per country (ADR-042)
+            "0013_notifications_n1.py",  # in-app notifications (ADR-044)
         ]
