@@ -12,8 +12,8 @@
 |---|---|---|
 | **N-1 (this ADR)** | Server: notification centre — messages recorded with the facts they report; list and mark read | nothing outside |
 | N-2 | App: bell badge, notification centre screen (Figma), in-app banner (Figma "Incorrect Password" style) | — |
-| N-3 | Phone push (data dictionary *Devices*: push tokens; Expo push) | push setup in the Expo/Firebase accounts |
-| N-4 | Email and SMS | a provider for each — **not chosen** |
+| N-3 | Phone push (data dictionary *Devices*: push tokens) via Expo's push service, which delivers through Firebase Cloud Messaging (Android) and Apple Push Notification service (iOS) — **proposed**, not yet confirmed | Expo account; Firebase project (FCM key uploaded to Expo); Apple Developer account for iOS |
+| N-4 | Email (**Resend** — product owner, 2026-10-19) and SMS (later; provider not chosen) | Resend account, a verified sending domain, API key in `.env` |
 
 Channel policy (which events go to push/SMS/email) is "not frozen" in the design spec and is decided at N-3/N-4.
 

@@ -58,7 +58,8 @@ Last updated: 19 Oct 2026.
 - [x] **Confirm the Nigerian ID rule** — *You*: confirmed 2026-10-19: the Nigerian check needs a **Nigerian-issued ID**; a foreign passport does not count (ADR-042).
 - [ ] **App: country choice and region screens** — *Build*: the app still starts only the Nigerian check; UK/US users need the Figma "Trade in Your New Location" and "KYC approved regions" screens connected (ADR-042).
 - [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
-- [ ] **Choose email and SMS providers** — *You*: needed for notifications N-4 (ADR-044); e.g. an email service and a Nigerian-capable SMS service.
+- [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
+- [ ] **SMS provider** — *You*: later (ADR-044 N-4).
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).
 - [ ] **Languages** — *You*: share the Figma link with the language screens; Yoruba, Igbo, Hausa, French, Arabic and Swahili texts need native-speaker review before launch.
 - [ ] **Ghana and Kenya deals** — *You*: decide which deals (cedi/shilling ⇄ naira, or ⇄ UK/US). Canada and UAE fit today's model; all four are after the MVP.
