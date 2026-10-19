@@ -47,3 +47,11 @@ Channel policy (which events go to push/SMS/email) is "not frozen" in the design
 
 - Retention period for notifications (with SEC-028 retention decisions).
 - Swipe-to-dismiss (design spec §5.3) — no server "dismissed" state yet; N-2 decides with the Figma.
+
+## N-2 (app) — built 2026-10-19
+
+- **Bell** on Home and Market opens the notification centre and shows the unread count (numeric pill, "9+" cap, hidden at zero; design spec §4.3). The count is asked from the server on sign-in, every 30 seconds and when the app returns to the foreground.
+- **Notification centre** (`/notifications`, design spec §5.3): Today / This week / Earlier, newest first; unread rows bold with a dot and read "Unread: …" to screen readers; tapping marks read (shown unread again if saving fails) and opens the linked screen; "You’re all caught up" when empty; inline retry on error; more rows load at the end. Swipe-to-dismiss is **not** built (no server state for it yet).
+- **In-app banner** in the Figma "Incorrect Password" style (coloured icon, bold title, one line, close button; goes after 5 seconds). Shown when a new unread message arrives while the app is open — not for messages already waiting at sign-in (the bell covers those). `showBanner` is available to replace other alerts later.
+- **Words live in the app** (`notificationCopy.ts`), English for now, ready for translation; unknown events show "Update". Links are built only from validated ids (`/profile/kyc`, `/market/deals`, `/market/escrow?match=<uuid>`).
+- Evidence: `mobile/__tests__/notifications.test.tsx` (14 tests); `navigation.test.tsx` bell test updated (the bell was disabled before). Not yet run against a live server in a browser.

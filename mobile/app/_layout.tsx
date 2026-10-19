@@ -9,10 +9,15 @@ import { StepUpHost } from '../src/features/security/StepUpHost';
 import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { UnavailableBuild } from '../src/features/auth/ui';
+import { BannerHost } from '../src/components/Banner';
+import { installWebAlert } from '../src/components/webAlert';
 import { session, useSession } from '../src/features/auth/session';
 import { SERVER_MODE } from '../src/api/config';
 import { serverAuth } from '../src/features/auth/serverAuth';
 import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useThemeMode } from '../src/theme';
+
+// Browser builds: make Alert.alert visible (it is a no-op on web).
+installWebAlert();
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
 // system face first.
@@ -65,6 +70,8 @@ export default function RootLayout(): ReactElement | null {
       </Stack>
       {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
       {signedIn ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
+      {/* ADR-044: in-app banner (Figma message style). */}
+      <BannerHost />
       {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}
     </>
   );

@@ -10,6 +10,7 @@ import {
 } from '../../../src/fixtures';
 import { DEMO_HOME_ACTIVITY, DEMO_HOME_BALANCE } from '../../../src/features/demo/figmaDemo';
 import { useProfile } from '../../../src/features/profile/profileStore';
+import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { useThemeMode } from '../../../src/theme';
 
 /** Mock data only (DEC-008): no API, auth or money flow exists yet. */
@@ -17,6 +18,7 @@ export default function HomeRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const profile = useProfile();
+  const unread = useUnreadCount();
   return (
     <HomeScreen
       user={{ name: profile.fullName, initials: profile.initials, avatarUri: profile.avatarUri }}
@@ -26,6 +28,8 @@ export default function HomeRoute(): ReactElement {
       activity={ACTIVITY_ITEMS}
       onCreateOffer={() => router.push('/marketplace')}
       onViewAll={() => router.push('/history')}
+      onNotifications={() => router.push('/notifications')}
+      unread={unread}
       // Exact Figma for design review (ADR-023): demo figures exist only in development builds.
       demoHero={DEMO_HOME_BALANCE}
       demoActivity={DEMO_HOME_ACTIVITY}

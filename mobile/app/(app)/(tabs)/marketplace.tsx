@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactElement } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer } from '../../../src/features/market/serverOffers';
@@ -19,6 +20,7 @@ import { useThemeMode } from '../../../src/theme';
 export default function MarketplaceRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
+  const unread = useUnreadCount();
   // Fetch server offers again whenever the tab comes back into view (e.g. after My Offers).
   const [refresh, setRefresh] = useState(0);
   useFocusEffect(useCallback(() => setRefresh((n) => n + 1), []));
@@ -27,6 +29,8 @@ export default function MarketplaceRoute(): ReactElement {
       server={SERVER_MODE ? marketServer : null}
       refreshSignal={refresh}
       onVerifyIdentity={SERVER_MODE ? () => router.push('/profile/kyc') : undefined}
+      onNotifications={() => router.push('/notifications')}
+      unread={unread}
       onMenu={
         SERVER_MODE
           ? (key) => {

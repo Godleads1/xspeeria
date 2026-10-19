@@ -44,6 +44,7 @@ export function HomeScreen({
   onViewAll,
   onHelp,
   onNotifications,
+  unread = 0,
   demoHero = null,
   demoActivity = [],
   showReadiness = true,
@@ -59,6 +60,8 @@ export function HomeScreen({
   onViewAll?: () => void;
   onHelp?: () => void;
   onNotifications?: () => void;
+  /** Unread notifications for the bell (ADR-044). */
+  unread?: number;
   /** Figma's demo balance card (development builds only, ADR-023). */
   demoHero?: DemoHeroFigure | null;
   /** Figma's demo transaction rows (development builds only, ADR-023). */
@@ -73,6 +76,7 @@ export function HomeScreen({
         avatarUri={user.avatarUri ?? null}
         onHelp={onHelp}
         onNotifications={onNotifications}
+        unread={unread}
       />
 
       {status === 'loading' ? <LoadingState label="Loading your account" /> : null}

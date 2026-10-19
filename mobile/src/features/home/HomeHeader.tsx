@@ -5,15 +5,16 @@
  * The Figma avatar is a photo: the user's own photo when set (ADR-011), otherwise initials
  * on the brand fill. The spec's gradient avatar is not used: no gradient runtime is a dependency.
  *
- * Help and notifications have no destination yet. They stay in the layout but are
- * disabled and drawn in the disabled colour rather than looking available and doing
- * nothing when tapped. Nothing in this header renders or implies a balance.
+ * The bell opens the notification centre and shows the unread count (ADR-044). Help has no
+ * destination yet: it stays in the layout but is disabled and drawn in the disabled colour
+ * rather than looking available and doing nothing. Nothing here renders or implies a balance.
  */
 
 import type { ReactElement } from 'react';
 import { Pressable, Text, View, Image } from 'react-native';
 
 import { Icon, type IconName } from '../../components/icons';
+import { NotificationBadge as Badge } from '../../components/NotificationBadge';
 import { color, typography, themed } from '../../theme';
 
 function HeaderButton({
@@ -21,11 +22,14 @@ function HeaderButton({
   label,
   testID,
   onPress,
+  badge = 0,
 }: {
   icon: IconName;
   label: string;
   testID: string;
   onPress?: () => void;
+  /** Unread count shown on the icon (ADR-044); 0 hides it. */
+  badge?: number;
 }): ReactElement {
   const available = onPress !== undefined;
   return (
@@ -40,6 +44,7 @@ function HeaderButton({
       style={({ pressed }) => [styles.control, pressed ? styles.controlPressed : null]}
     >
       <Icon name={icon} color={available ? color.text.primary : color.text.disabled} size={22} />
+      <Badge count={badge} />
     </Pressable>
   );
 }
@@ -50,6 +55,7 @@ export function HomeHeader({
   avatarUri = null,
   onHelp,
   onNotifications,
+  unread = 0,
 }: {
   name: string;
   initials: string;
@@ -57,6 +63,8 @@ export function HomeHeader({
   avatarUri?: string | null;
   onHelp?: () => void;
   onNotifications?: () => void;
+  /** Unread notifications (ADR-044). */
+  unread?: number;
 }): ReactElement {
   return (
     <View style={styles.bar}>
@@ -78,9 +86,10 @@ export function HomeHeader({
         <HeaderButton icon="help" label="Help" testID="home-help" onPress={onHelp} />
         <HeaderButton
           icon="bell"
-          label="Notifications"
+          label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
           testID="home-notifications"
           onPress={onNotifications}
+          badge={unread}
         />
       </View>
     </View>
