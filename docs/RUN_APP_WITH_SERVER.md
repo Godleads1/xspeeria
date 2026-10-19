@@ -94,6 +94,10 @@ Needs `KYC_DEV_BYPASS=true` in `.env` and the currency command from step 3.
    have paid, the pretend bank pays out at once and the deal says **Done**. If only one side
    pays, that side is refunded in full, fee included.
 
+7. **Verify your identity** (needs a Didit account; see ADR-039): **Profile › KYC and limits ›
+   Verify my identity** opens Didit's secure check. Without Didit keys the button says it isn't
+   available, and `KYC_DEV_BYPASS=true` keeps the Market usable on your computer.
+
 Buy requests are not built yet; the app says "coming soon". The pretend bank only exists on
 your computer and forgets everything when the server restarts. No real money moves.
 

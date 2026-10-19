@@ -54,7 +54,8 @@ Last updated: 19 Oct 2026.
 - [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
 - [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039)
 - [ ] **Set up Didit** — *You*: create the workflow (ID + liveness + face match + AML), then put `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET` in your own `.env` (never in chat or Git).
-- [ ] **App screens for the identity check** — *Build* — next.
+- [x] **App screens for the identity check** — *Build* — done 19 Oct 2026 for development builds (ADR-040).
+- [ ] **Test Didit end to end** — *You + Build*: with your Didit keys and a temporary tunnel for the webhook.
 - [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
