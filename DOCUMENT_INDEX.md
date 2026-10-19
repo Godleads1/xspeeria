@@ -110,6 +110,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `037-milestone-4-1f-escrow-simulation.md` | Milestone 4.1F: escrow steps with a pretend partner bank only (local) — two domestic legs, amount + 1% in, signed partner messages as the only money facts, 5-minute funding window, failed deal refunded in full incl. fee, release once, 24-hour payout hold respected; migration 0009; no ledger; sets U-1/U-2 for the simulation (DEC-043); payouts immediate, 24-hour hold of ADR-008/022 removed (DEC-044) | **APPROVED** — 2026-10-19 (simulation only; details in §4 PROPOSED) |
 | `038-app-escrow-steps.md` | App: escrow steps on a deal — amount + 1% fee + total, the bank's escrow details, 5-minute countdown, steps ticked from bank-confirmed states, "Simulate my transfer" only with the pretend bank; 24-hour hold wording removed (DEC-045) | **PROPOSED** — 2026-10-19 |
 | `039-kyc-1-didit-identity-checks.md` | Milestone KYC-1: Didit identity checks — hosted ID + selfie capture, signed results, server re-checks ID/liveness/face/sanctions and 18+, no ID images stored, market needs an approved check; migration 0010 (DEC-046) | **APPROVED** — 2026-10-19 (details in §4 PROPOSED) |
+| `040-app-identity-check.md` | App: identity check screen — Figma heading, opens Didit's hosted check (https only), re-checks the server on return, plain words per status; Market offers it on AUTH_403_KYC_REQUIRED (DEC-047) | **PROPOSED** — 2026-10-19 |
 
 ### Accounting policy is not architecture
 

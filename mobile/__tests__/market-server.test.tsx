@@ -107,6 +107,30 @@ describe('Market screen with a server (ADR-030)', () => {
     expect(screen.getByTestId('listing-a1')).toBeTruthy();
   });
 
+  it('offers the identity check when the server says KYC is needed (ADR-040)', async () => {
+    const server = fakeServer();
+    server.offersFor.mockRejectedValueOnce(
+      new ApiError('AUTH_403_KYC_REQUIRED', 403, 'Please complete identity verification before using the marketplace.'),
+    );
+    const onVerifyIdentity = jest.fn();
+    await render(<MarketScreen server={server} onVerifyIdentity={onVerifyIdentity} />);
+    await fireEvent.press(screen.getByTestId('market-currency'));
+    await fireEvent.press(screen.getByTestId('currency-USD'));
+    await flush();
+    await fireEvent.press(screen.getByTestId('market-verify-identity'));
+    expect(onVerifyIdentity).toHaveBeenCalled();
+  });
+
+  it('shows no identity link for other errors', async () => {
+    const server = fakeServer();
+    server.offersFor.mockRejectedValueOnce(new ApiError('NETWORK', 0, 'Can’t reach Xspeeria.'));
+    await render(<MarketScreen server={server} onVerifyIdentity={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId('market-currency'));
+    await fireEvent.press(screen.getByTestId('currency-USD'));
+    await flush();
+    expect(screen.queryByTestId('market-verify-identity')).toBeNull();
+  });
+
   it('opens Take offer for someone else’s offer, but not for your own', async () => {
     const server = fakeServer([offer(), offer({ offer_id: 'own1', is_own: true, desired_rate: '1330.00' })]);
     const onTake = jest.fn();

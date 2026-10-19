@@ -26,6 +26,7 @@ export default function MarketplaceRoute(): ReactElement {
     <MarketScreen
       server={SERVER_MODE ? marketServer : null}
       refreshSignal={refresh}
+      onVerifyIdentity={SERVER_MODE ? () => router.push('/profile/kyc') : undefined}
       onMenu={
         SERVER_MODE
           ? (key) => {
