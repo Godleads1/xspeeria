@@ -3,8 +3,8 @@
  * yours, newest first, from the server (`GET /v1/matches/mine`, ADR-031).
  *
  * A deal is a record of who agreed to exchange how much at what rate — information, not
- * money. Payout accounts and paying into the partner bank's escrow are later steps, so each
- * deal says what comes next. No Figma frame exists yet; it reuses the My Offers styles.
+ * money. Each deal says what comes next: choosing payout accounts, then the escrow steps
+ * (ADR-037), where both sides pay into the partner bank's escrow. No Figma frame exists yet; it reuses the My Offers styles.
  */
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
@@ -48,11 +48,11 @@ export function dealHeadline(m: ServerMatch): string {
   return m.your_role === "taker" ? `You get ${amount}${other}` : `You give ${amount}${other}`;
 }
 
-/** Where the deal stands in the 30-minute payout-account step (ADR-035/036). */
-export function dealStep(m: ServerMatch, now: number): { text: string; canChoose: boolean } {
+/** Where the deal stands: the 30-minute payout-account step (ADR-035/036), then escrow (ADR-037). */
+export function dealStep(m: ServerMatch, now: number): { text: string; canChoose: boolean; canOpenEscrow?: boolean } {
   switch (m.preparation_state) {
     case 'funding_ready':
-      return { text: 'Payout accounts chosen by both sides. Next: paying into escrow — coming soon.', canChoose: false };
+      return { text: 'Payout accounts chosen by both sides. Next: pay into escrow.', canChoose: false, canOpenEscrow: true };
     case 'expired':
       return { text: 'Cancelled: payout accounts were not chosen within 30 minutes. Nothing was paid.', canChoose: false };
     case 'awaiting_payout_accounts': {
@@ -63,7 +63,7 @@ export function dealStep(m: ServerMatch, now: number): { text: string; canChoose
         : { text: `Choose your payout account — ${left}.`, canChoose: true };
     }
     default:
-      return { text: 'Next: payout account and escrow payment — coming soon.', canChoose: false };
+      return { text: 'Next: choose your payout account, then pay into escrow.', canChoose: false };
   }
 }
 
@@ -71,12 +71,15 @@ export function MyDealsScreen({
   source,
   onBack,
   onChoose,
+  onEscrow,
   refreshSignal = 0,
 }: {
   source: MyDealsSource;
   onBack: () => void;
   /** Opens "choose payout accounts" for a deal (ADR-036). */
   onChoose?: (matchId: string) => void;
+  /** Opens the escrow steps for a deal (ADR-037). */
+  onEscrow?: (matchId: string) => void;
   refreshSignal?: number;
 }): ReactElement {
   const [deals, setDeals] = useState<ServerMatch[] | null>(null);
@@ -138,6 +141,17 @@ export function MyDealsScreen({
                         <Text style={styles.chooseText}>
                           {m.you_chose_payout_accounts ? 'Change payout account' : 'Choose payout account'}
                         </Text>
+                      </Pressable>
+                    ) : null}
+                    {step.canOpenEscrow && onEscrow ? (
+                      <Pressable
+                        testID={`deal-${m.match_id}-escrow`}
+                        accessibilityRole="button"
+                        onPress={() => onEscrow(m.match_id)}
+                        hitSlop={8}
+                        style={styles.choose}
+                      >
+                        <Text style={styles.chooseText}>Escrow steps</Text>
                       </Pressable>
                     ) : null}
                   </>

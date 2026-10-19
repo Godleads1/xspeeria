@@ -11,7 +11,7 @@
  * - Accounts must be in the user's own name (Banking spec §3.3); payouts to other people
  *   wait for DEC-007. The account name is never typed: the bank confirms it.
  * - Account numbers are shown and kept as the last 4 digits only.
- * - A new account is paid only after a 24-hour security hold (ADR-008), and is saved as a
+ * - A new account is paid as soon as both sides have paid in (DEC-044), and is saved as a
  *   beneficiary only if the user asks, after the 2FA check on Continue.
  * - "Fund Card" is shown but cards are not available yet (ADR-012).
  * Everything here is re-checked by the server; nothing on this screen is trusted.
@@ -39,7 +39,7 @@ export interface Recipient {
   readonly last4: string;
   /** Minor units of the currency received. */
   readonly amountMinor: number;
-  /** Added here, not yet verified by the bank: 24-hour hold. */
+  /** Added here, not yet verified by the bank. */
   readonly isNew: boolean;
   /** Save it as a beneficiary once the order is confirmed. */
   readonly save: boolean;
@@ -145,7 +145,7 @@ export function PayoutDestinationScreen({
               <Text style={styles.cardName}>{r.name}</Text>
               <Text style={styles.cardBank}>{`${r.bank} •••• ${r.last4}`}</Text>
               {r.isNew ? (
-                <Text testID={`payout-hold-${r.key}`} style={styles.hold}>New account: paid after a 24-hour security hold</Text>
+                <Text testID={`payout-hold-${r.key}`} style={styles.hold}>New account: confirmed with your authenticator code</Text>
               ) : null}
             </View>
             <Text testID={`payout-amount-${r.key}`} style={styles.cardAmount}>{`${formatHundredths(r.amountMinor)} ${currency}`}</Text>
@@ -371,7 +371,7 @@ export function NewRecipientSheet({
                   <Text style={styles.readonlyText}>Confirmed by your bank</Text>
                 </View>
               </OutlinedField>
-              <Text style={styles.help}>{`The account must be in your own name (${ownerName}). New accounts are paid after a 24-hour security hold.`}</Text>
+              <Text style={styles.help}>{`The account must be in your own name (${ownerName}). Adding it needs your authenticator code.`}</Text>
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Save to beneficiary</Text>
                 <Switch testID="payout-new-save" accessibilityLabel="Save to beneficiary" value={save} onValueChange={setSave} />

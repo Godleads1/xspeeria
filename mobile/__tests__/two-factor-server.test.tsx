@@ -83,7 +83,7 @@ describe('2 FA screen with the server (ADR-034)', () => {
     const server = fake();
     const onReplace = await openScreen(server);
     await fireEvent.press(screen.getByTestId('two-factor-authenticator'));
-    expect(screen.getByTestId('server-code-sheet')).toHaveTextContent(/held for 24 hours/);
+    expect(screen.getByTestId('server-code-sheet')).toHaveTextContent(/will need a code again/);
     await fireEvent.changeText(screen.getByTestId('server-code-input'), '123456');
     await fireEvent.press(screen.getByTestId('server-code-confirm'));
     await flush();

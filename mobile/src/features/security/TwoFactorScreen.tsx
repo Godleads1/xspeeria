@@ -150,7 +150,7 @@ export function TwoFactorScreen({
           <Text style={styles.rule}>• 2 FA cannot be turned off. It is required to trade.</Text>
           <Text style={styles.rule}>• We never send codes by SMS, and Xspeeria staff will never ask for your codes.</Text>
           <Text style={styles.rule}>• After 5 wrong codes, 2 FA is locked for 15 minutes.</Text>
-          <Text style={styles.rule}>• Payouts to a new beneficiary, or after a 2 FA reset, are held for 24 hours.</Text>
+          <Text style={styles.rule}>• Adding a beneficiary and choosing where a deal is paid each need a code.</Text>
         </View>
       </ScrollView>
 
@@ -158,7 +158,7 @@ export function TwoFactorScreen({
         visible={asking !== null}
         reason={
           asking === 'replace'
-            ? 'Replace your authenticator app. Logging in on any phone will need a code again, and payouts are held for 24 hours.'
+            ? 'Replace your authenticator app. Logging in on any phone will need a code again.'
             : 'Get new recovery codes. Your old codes will stop working.'
         }
         onCancel={() => setAsking(null)}

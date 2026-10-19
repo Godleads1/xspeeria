@@ -93,7 +93,7 @@ export const FAQ: readonly FaqItem[] = [
     topic: 'payments',
     question: 'When will I receive my money?',
     answer:
-      'Once both sides have paid, the partner bank pays your beneficiary account. You can follow every step in History. For your safety, payouts to a newly added beneficiary are held for 24 hours.',
+      'Once both sides have paid, the partner bank pays your beneficiary account. You can follow every step in History. For your safety, adding a beneficiary and choosing where a deal is paid each need your authenticator code.',
   },
   {
     id: 'countries',

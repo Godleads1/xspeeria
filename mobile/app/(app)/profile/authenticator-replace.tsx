@@ -38,7 +38,7 @@ export default function AuthenticatorReplaceRoute(): ReactElement {
         router.back();
         Alert.alert(
           'Authenticator replaced',
-          'Your new app is now the one we ask for. Payouts are held for 24 hours, and logging in on any phone will need a code again.',
+          'Your new app is now the one we ask for. Logging in on any phone will need a code again.',
         );
       }}
     />

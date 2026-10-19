@@ -19,7 +19,7 @@ export interface PayoutShare {
   readonly amountMinor: number;
   /**
    * A new account added for this payout (not yet verified by the bank). Payouts to a new
-   * account are held for 24 hours (`docs/adr/008-two-factor-authentication.md`).
+   * account are paid at once (DEC-044; the 24-hour hold of ADR-008 was removed).
    */
   readonly isNew?: boolean;
 }
