@@ -87,7 +87,11 @@ class K:
 
 
 async def _make(
-    db_settings: Settings, *, provider: bool = True, bypass: bool = False
+    db_settings: Settings,
+    *,
+    provider: bool = True,
+    bypass: bool = False,
+    country_header: str | None = None,
 ) -> AsyncIterator[K]:
     clock = Clock()
     didit = FakeDidit()
@@ -101,6 +105,7 @@ async def _make(
         database_url=db_settings.database_url,
         app_env="local",
         kyc_dev_bypass=bypass,
+        client_country_header=country_header,
     )
     app = create_app(settings, auth_runtime=runtime)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -129,6 +134,8 @@ def _approved(
     status: str = "Approved",
     document: str = "A12345678",
     seen_for: str | None = None,
+    issuer: str = "NGA",
+    name: str = "Ada Obi",
 ) -> dict[str, Any]:
     decision: dict[str, Any] = {
         "session_id": sid,
@@ -140,9 +147,9 @@ def _approved(
                 "age": 99,  # ignored: the server computes age itself
                 "first_name": "Ada",
                 "last_name": "Obi",
-                "full_name": "Ada Obi",
+                "full_name": name,
                 "document_type": "Passport",
-                "issuing_state": "NGA",
+                "issuing_state": issuer,
                 "document_number": document,
                 # Didit: approved sessions of the same document (vendor_data = their account).
                 "matches": (
@@ -209,6 +216,7 @@ async def test_approved_check_unlocks_the_market(db_settings: Settings, k: K) ->
     v = (await k.env.get("/kyc/cases/current", token=token)).json()
     assert v == {
         "kyc_case_id": case["kyc_case_id"],
+        "country": "NG",
         "status": "approved",
         "message": "Verified.",
         "verification_url": None,
@@ -543,3 +551,183 @@ async def test_identity_key_is_set_once_and_one_approval_per_document(
             "legal_name = 'Ada Obi', date_of_birth = '1990-05-17' "
             "WHERE status = 'under_review'",
         )
+
+
+# --- identity checks per country (ADR-042) ------------------------------------------------
+
+
+async def _country_check(k: K, token: str, uid: str, country: str, **kw: Any) -> dict[str, Any]:
+    r = await k.env.client.post(
+        "/api/v1/kyc/cases",
+        json={"country": country},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    await k.post_webhook(_approved(k.didit.sessions[uid], uid, **kw))
+    k.didit.finish(uid)
+    r = await k.env.get(f"/kyc/cases/current?country={country}", token=token)
+    return dict(r.json())
+
+
+async def test_uk_check_with_a_uk_id_is_added_to_the_same_account(k: K) -> None:
+    token, uid, _ = await _verify(k, OWNER)
+    k.didit.finish(uid)
+    # Middle name only on one ID, different letter case and accents: same person.
+    v = await _country_check(
+        k, token, uid, "GB", issuer="GBR", document="UK123456", name="ADA Chiọma OBI"
+    )
+    assert v["country"] == "GB" and v["status"] == "approved"
+    regions = (await k.env.get("/kyc/regions", token=token)).json()
+    assert regions == {
+        "regions": [
+            {"country": "NG", "status": "approved"},
+            {"country": "GB", "status": "approved"},
+            {"country": "US", "status": "not_started"},
+        ],
+        "suggested_country": None,
+    }
+
+
+async def test_a_country_needs_an_id_issued_there(db_settings: Settings, k: K) -> None:
+    token, uid = await _user(k)
+    v = await _country_check(k, token, uid, "US", issuer="NGA")
+    assert v["status"] == "rejected"
+    assert v["message"] == "Please use an ID issued by the United States."
+    assert await _sql(db_settings, "SELECT legal_name FROM kyc_cases") is None
+    # Same rule for Nigeria: a UK passport does not verify the Nigerian side.
+    token2, uid2 = await _user(k, TAKER)
+    v = await _country_check(k, token2, uid2, "NG", issuer="GBR", document="Z9")
+    assert v["status"] == "rejected" and "Nigeria" in v["message"]
+
+
+@pytest.mark.parametrize(
+    ("change", "value"), [("dob", "1991-05-17"), ("name", "Bola Obi"), ("name", "Ada")]
+)
+async def test_second_country_must_be_the_same_person(
+    db_settings: Settings, k: K, change: str, value: str
+) -> None:
+    token, uid, _ = await _verify(k, OWNER)
+    k.didit.finish(uid)
+    v = await _country_check(k, token, uid, "GB", issuer="GBR", document="UK1", **{change: value})
+    assert v["status"] == "under_review"
+    assert (
+        await _sql(db_settings, "SELECT review_reason FROM kyc_cases WHERE country = 'GB'")
+        == "IDENTITY_MISMATCH"
+    )
+
+
+async def test_one_open_check_at_a_time_across_countries(k: K) -> None:
+    token, _ = await _user(k)
+    assert (await _start(k, token)).status_code == 200  # NG, unfinished
+    calls = k.didit.calls
+    r = await k.env.client.post(
+        "/api/v1/kyc/cases", json={"country": "GB"}, headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 409 and r.json()["error"]["code"] == "KYC_409_CASE_ALREADY_ACTIVE"
+    assert k.didit.calls == calls  # Didit is not called (no cost)
+
+
+async def test_country_input_is_checked(k: K) -> None:
+    token, _ = await _user(k)
+    h = {"Authorization": f"Bearer {token}"}
+    for body in ({"country": "FR"}, {"country": "gb"}, {"country": "GB", "user_id": "x"}):
+        r = await k.env.client.post("/api/v1/kyc/cases", json=body, headers=h)
+        assert r.status_code == 422, body
+    r = await k.env.client.get("/api/v1/kyc/cases/current?country=FR", headers=h)
+    assert r.status_code == 422
+
+
+async def _suggested(x: K, token: str, header: str | None) -> Any:
+    h = {"Authorization": f"Bearer {token}"}
+    if header is not None:
+        h["CF-IPCountry"] = header
+    r = await x.env.client.get("/api/v1/kyc/regions", headers=h)
+    return r.json()["suggested_country"]
+
+
+async def test_new_country_is_only_suggested(db_settings: Settings, clean: None) -> None:
+    async for x in _make(db_settings, country_header="CF-IPCountry"):
+        token, uid = await _user(x)
+        # Not verified anywhere yet: the normal first check, no suggestion.
+        assert await _suggested(x, token, "GB") is None
+        await _start(x, token)
+        await x.post_webhook(_approved(x.didit.sessions[uid], uid))
+        assert await _suggested(x, token, "GB") == "GB"
+        assert await _suggested(x, token, "gb") == "GB"
+        assert await _suggested(x, token, "NG") is None  # already verified there
+        assert await _suggested(x, token, "FR") is None  # not a supported country
+        assert await _suggested(x, token, "XXX") is None
+        assert await _suggested(x, token, None) is None
+        # A suggestion grants nothing and stores nothing.
+        n = await _sql(db_settings, "SELECT count(*) FROM kyc_cases WHERE country = 'GB'")
+        assert n == 0
+
+
+async def test_header_is_ignored_unless_configured(k: K) -> None:
+    token, uid, _ = await _verify(k, OWNER)
+    r = await k.env.client.get(
+        "/api/v1/kyc/regions", headers={"Authorization": f"Bearer {token}", "CF-IPCountry": "GB"}
+    )
+    assert r.json()["suggested_country"] is None
+
+
+# --- you need verification in the country you pay from ------------------------------------
+
+
+@pytest_asyncio.fixture
+async def market(db_settings: Settings, k: K) -> K:
+    from app.cli.currency_definitions import ensure_currency_definitions
+    from app.db.session import build_engine
+
+    engine = build_engine(db_settings)
+    try:
+        async with engine.begin() as conn:
+            await ensure_currency_definitions(conn)
+    finally:
+        await engine.dispose()
+    return k
+
+
+async def _publish(k: K, token: str, source: str, target: str) -> Response:
+    return await k.env.client.post(
+        "/api/v1/offers",
+        json={
+            "source_currency": source,
+            "target_currency": target,
+            "source_amount": "250000.00" if source == "NGN" else "500.00",
+            "desired_rate": "1765.00" if "GBP" in (source, target) else "1320.50",
+        },
+        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
+    )
+
+
+async def test_posting_an_offer_needs_the_pay_from_country(market: K) -> None:
+    k = market
+    token, uid, _ = await _verify(k, OWNER)
+    # Pays naira, receives pounds into her own UK account: Nigeria is enough.
+    assert (await _publish(k, token, "NGN", "GBP")).status_code == 201
+    r = await _publish(k, token, "GBP", "NGN")
+    assert r.status_code == 403
+    assert r.json()["error"]["code"] == "AUTH_403_KYC_REQUIRED"
+    assert r.json()["error"]["details"] == {"country": "GB"}
+    assert "United Kingdom" in r.json()["error"]["message"]
+    k.didit.finish(uid)
+    await _country_check(k, token, uid, "GB", issuer="GBR", document="UK1")
+    assert (await _publish(k, token, "GBP", "NGN")).status_code == 201
+    assert (await _publish(k, token, "USD", "NGN")).json()["error"]["details"] == {"country": "US"}
+
+
+async def test_taking_an_offer_needs_the_country_you_pay_in(market: K) -> None:
+    k = market
+    maker, _, _ = await _verify(k, OWNER)
+    offer = (await _publish(k, maker, "NGN", "GBP")).json()
+    taker, tuid, _ = await _verify(k, TAKER, document="B7", name="Tunde Bello")
+    url = f"/api/v1/offers/{offer['offer_id']}/accept"
+    h = {"Authorization": f"Bearer {taker}", "Idempotency-Key": str(uuid.uuid4())}
+    # The taker pays the offer's target currency (GBP): needs the UK check.
+    r = await k.env.client.post(url, json={"accepted_amount": "100.00"}, headers=h)
+    assert r.status_code == 403 and r.json()["error"]["details"] == {"country": "GB"}
+    k.didit.finish(tuid)
+    await _country_check(k, taker, tuid, "GB", issuer="GBR", document="UK7", name="Tunde Bello")
+    r = await k.env.client.post(url, json={"accepted_amount": "100.00"}, headers=h)
+    assert r.json().get("error", {}).get("code") != "AUTH_403_KYC_REQUIRED"

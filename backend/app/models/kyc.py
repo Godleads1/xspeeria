@@ -49,16 +49,19 @@ class KycCase(Base):
             name="decided_iff_decision",
         ),
         Index("uq_kyc_cases_provider_session", "provider", "provider_session_id", unique=True),
-        # Contract §3.3: one non-terminal case per user at a time.
+        # Contract §3.3: one non-terminal case per user at a time — per country (ADR-042).
         Index(
             "uq_kyc_cases_one_active",
             "user_id",
+            "country",
             unique=True,
             postgresql_where=text("status IN ('pending_documents', 'under_review')"),
         ),
+        CheckConstraint("country IN ('NG', 'GB', 'US')", name="country_allowed"),
         Index("ix_kyc_cases_user_created", "user_id", "created_at"),
         CheckConstraint(
-            "review_reason IS NULL OR review_reason IN ('DUPLICATE_IDENTITY', 'CHECKS_INCOMPLETE')",
+            "review_reason IS NULL OR review_reason IN "
+            "('DUPLICATE_IDENTITY', 'CHECKS_INCOMPLETE', 'IDENTITY_MISMATCH')",
             name="review_reason_allowed",
         ),
         # ADR-041: one approved case per ID document (backstop to the advisory lock).
@@ -76,6 +79,8 @@ class KycCase(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: ADR-042: the country this check verifies (ISO alpha-2); set once.
+    country: Mapped[str] = mapped_column(CHAR(2), nullable=False)
     provider_session_id: Mapped[str] = mapped_column(String(64), nullable=False)
     #: The provider's own status word, as last received (for support; not personal data).
     provider_status: Mapped[str] = mapped_column(String(32), nullable=False)

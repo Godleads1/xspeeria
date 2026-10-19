@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -21,7 +22,9 @@ from typing import Any
 __all__ = [
     "ACTIVE_STATUSES",
     "CHECKS_INCOMPLETE",
+    "COUNTRIES",
     "DUPLICATE_IDENTITY",
+    "IDENTITY_MISMATCH",
     "KYC_STATUSES",
     "KYC_TRANSITIONS",
     "MIN_AGE",
@@ -30,6 +33,7 @@ __all__ = [
     "age_on",
     "evaluate",
     "identity_key",
+    "names_match",
     "other_account_matches",
 ]
 
@@ -55,7 +59,17 @@ MIN_AGE = 18
 #: Why a case is held for a person (ADR-041). Internal only — never shown to the user.
 DUPLICATE_IDENTITY = "DUPLICATE_IDENTITY"
 CHECKS_INCOMPLETE = "CHECKS_INCOMPLETE"
-REVIEW_REASONS = (DUPLICATE_IDENTITY, CHECKS_INCOMPLETE)
+#: ADR-042: a second country's check does not match the identity already on the account.
+IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
+REVIEW_REASONS = (DUPLICATE_IDENTITY, CHECKS_INCOMPLETE, IDENTITY_MISMATCH)
+
+#: ADR-042/043: countries a user can be verified in (MVP corridors), ISO alpha-2 → the
+#: alpha-3 code Didit reports as the ID's ``issuing_state``, and the name shown to users.
+COUNTRIES: dict[str, tuple[str, str]] = {
+    "NG": ("NGA", "Nigeria"),
+    "GB": ("GBR", "the United Kingdom"),
+    "US": ("USA", "the United States"),
+}
 
 #: Didit status → our status, for statuses that need no decision to interpret.
 _PLAIN = {
@@ -79,6 +93,7 @@ DECLINED = "We could not verify your identity. Please try again with a valid ID 
 UNDERAGE = "You must be 18 or older to use Xspeeria."
 EXPIRED = "Your identity check was not finished in time. Please start again."
 KYC_EXPIRED = "Your identity check has expired. Please verify again."
+WRONG_COUNTRY = "Please use an ID issued by {country}."
 
 
 @dataclass(frozen=True)
@@ -122,8 +137,13 @@ def _all_approved(decision: dict[str, Any], key: str) -> bool:
     )
 
 
-def evaluate(status: str, decision: dict[str, Any] | None, today: date) -> Outcome | None:
-    """What a provider status (and its decision, when present) means. None = unknown status."""
+def evaluate(
+    status: str, decision: dict[str, Any] | None, today: date, country: str = "NG"
+) -> Outcome | None:
+    """What a provider status (and its decision, when present) means. None = unknown status.
+
+    ``country`` is the country this check verifies (ADR-042): the ID must be issued there.
+    """
     if status == "Kyc Expired":
         return Outcome("expired", KYC_EXPIRED)
     if status in ("Abandoned", "Expired"):
@@ -161,12 +181,20 @@ def evaluate(status: str, decision: dict[str, Any] | None, today: date) -> Outco
     )
     if not name:
         return Outcome("under_review", note="no legal name", review_reason=CHECKS_INCOMPLETE)
-    country = idv.get("issuing_state")
+    issuing = idv.get("issuing_state")
     if age_on(born, today) < MIN_AGE:
         # Keep nothing about a minor beyond the refusal itself (data minimisation).
         return Outcome("rejected", UNDERAGE, note="under 18")
     id_type = _ID_TYPES.get(str(idv.get("document_type")), "other")
-    issuer = country if isinstance(country, str) and len(country) == 3 else None
+    issuer = issuing if isinstance(issuing, str) and len(issuing) == 3 else None
+    expected, country_name = COUNTRIES[country]
+    if issuer is None:
+        return Outcome("under_review", note="no issuing country", review_reason=CHECKS_INCOMPLETE)
+    if issuer != expected:
+        # ADR-042: proof for a country is an ID issued by that country. Nothing is kept.
+        return Outcome(
+            "rejected", WRONG_COUNTRY.format(country=country_name), note="id from another country"
+        )
     number = re.sub(r"[^A-Z0-9]", "", str(idv.get("document_number") or "").upper())
     if not number:
         # Without the document number the one-account check (ADR-041) cannot run.
@@ -179,6 +207,23 @@ def evaluate(status: str, decision: dict[str, Any] | None, today: date) -> Outco
         issuing_country=issuer,
         document_ref=f"{issuer or ''}|{id_type}|{number[:64]}",
     )
+
+
+def _name_tokens(name: str) -> set[str]:
+    plain = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return set(re.findall(r"[a-z]+", plain.casefold()))
+
+
+def names_match(a: str, b: str) -> bool:
+    """Same person's name on two IDs (ADR-042): the shorter name's words all appear in the
+    longer one (middle names may be missing) and it has at least two words — unless both are
+    a single, identical word. Accents and letter case are ignored. Anything else goes to a
+    person."""
+    ta, tb = _name_tokens(a), _name_tokens(b)
+    if ta == tb:
+        return bool(ta)
+    small, large = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return len(small) >= 2 and small <= large
 
 
 def identity_key(secret: bytes, document_ref: str) -> str:
