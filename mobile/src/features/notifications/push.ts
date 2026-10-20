@@ -6,17 +6,44 @@
  * is open the in-app banner (ADR-044) shows news instead of a system pop-up. Tapping a push
  * opens the screen for that notification; its contents are untrusted, so the link is rebuilt
  * from the event name and validated ids (`notificationCopy`), never taken from the push.
+ *
+ * `expo-notifications` is loaded only when needed and never in Expo Go: Expo Go on Android has
+ * no push support and lacks some of its native parts, so importing it there would crash the app.
  */
 
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsModule from 'expo-notifications';
 
 import { notificationsApi } from '../../api/notificationsApi';
 import { serverAuth } from '../auth/serverAuth';
 import { notificationCopy } from './notificationCopy';
+
+type Notifications = typeof NotificationsModule;
+let loaded: Notifications | null | undefined;
+
+/** The notifications module, or null where push cannot work (Expo Go, web, missing native parts). */
+export function notificationsModule(): Notifications | null {
+  if (loaded !== undefined) return loaded;
+  if (Platform.OS === 'web' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    loaded = null;
+    return loaded;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    loaded = require('expo-notifications') as Notifications;
+  } catch {
+    loaded = null;
+  }
+  return loaded;
+}
+
+/** Tests only. */
+export function resetNotificationsModule(): void {
+  loaded = undefined;
+}
 
 export type PushOutcome = 'registered' | 'denied' | 'unsupported' | 'failed';
 
@@ -66,18 +93,25 @@ function projectId(): string | undefined {
   return extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 }
 
+function need(): Notifications {
+  const n = notificationsModule();
+  if (!n) throw new Error('push unavailable here');
+  return n;
+}
+
 export const realPushDeps: PushDeps = {
   platform: Platform.OS,
   isDevice: Device.isDevice,
-  permission: async () => (await Notifications.getPermissionsAsync()).granted,
-  ask: async () => (await Notifications.requestPermissionsAsync()).granted,
+  permission: async () => (await need().getPermissionsAsync()).granted,
+  ask: async () => (await need().requestPermissionsAsync()).granted,
   channel: async () => {
-    await Notifications.setNotificationChannelAsync('default', {
+    const n = need();
+    await n.setNotificationChannelAsync('default', {
       name: 'Xspeeria',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: n.AndroidImportance.HIGH,
     });
   },
-  token: async () => (await Notifications.getExpoPushTokenAsync({ projectId: projectId() })).data,
+  token: async () => (await need().getExpoPushTokenAsync({ projectId: projectId() })).data,
   register: async (token, platform) => {
     const access = serverAuth.accessToken();
     if (!access) throw new Error('signed out');
@@ -88,7 +122,8 @@ export const realPushDeps: PushDeps = {
 /** Signed-in layout (server builds): register this phone and open tapped pushes. */
 export function usePushNotifications(enabled: boolean, open: (link: string) => void): void {
   useEffect(() => {
-    if (!enabled || Platform.OS === 'web') return undefined;
+    const Notifications = enabled ? notificationsModule() : null;
+    if (!Notifications) return undefined;
     // The in-app banner covers news while the app is open.
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
