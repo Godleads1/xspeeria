@@ -33,6 +33,7 @@ from app.models.identity import (
     StepUpGrant,
     TrustedDevice,
     User,
+    VerificationCheck,
 )
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.models.marketplace import IdempotencyRecord, Match, Offer
@@ -84,4 +85,5 @@ __all__ = [
     "StepUpGrant",
     "TrustedDevice",
     "User",
+    "VerificationCheck",
 ]

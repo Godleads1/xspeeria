@@ -1,7 +1,8 @@
 /**
  * Screens used only when the app talks to the real server (ADR-027):
  * - `ServerCodeScreen`: the SMS code sent by the server at sign-up (checked by the server).
- * - `MfaScreen`: the authenticator code — or a recovery code — after the PIN at log-in.
+ * - `CheckScreen`: the second check after the PIN or the SMS code (ADR-054): email/SMS codes
+ *   or a face check.
  *
  * The server owns every rule (tries, expiry, locks, resend wait); these screens show its
  * answers. Codes are never stored or logged.
@@ -11,16 +12,19 @@ import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { Check } from '../../api/authApi';
 import { PrimaryButton } from '../../components/primitives';
 import { ApiError, messageFor } from '../../api/client';
+import { CheckFields } from '../security/CheckFields';
+import type { CheckOutcome } from './serverAuth';
 import { color, space, themed, typography } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
-import { AuthTop, GhostButton, Heading } from './ui';
+import { AuthTop, Heading } from './ui';
 import { tr } from "../../i18n";
 
 const RESEND_WAIT_S = 60;
 
-function Frame({ testID, top, children, footer }: { testID: string; top: ReactNode; children: ReactNode; footer: ReactNode }): ReactElement {
+function Frame({ testID, top, children, footer }: { testID: string; top: ReactNode; children: ReactNode; footer: ReactNode | null }): ReactElement {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView testID={testID} style={[styles.screen, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -28,7 +32,7 @@ function Frame({ testID, top, children, footer }: { testID: string; top: ReactNo
         {top}
         {children}
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>{footer}</View>
+      {footer ? <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>{footer}</View> : <View style={{ height: insets.bottom + space.sm }} />}
     </KeyboardAvoidingView>
   );
 }
@@ -124,85 +128,41 @@ export function ServerCodeScreen({
   );
 }
 
-/* ---------------------------------------------------------- 2FA at log-in */
+/* ------------------------------------------------- the second check (ADR-054) */
 
-export function MfaScreen({
-  verify,
+export function CheckScreen({
+  check,
+  codes,
+  faceStart,
+  faceFinish,
+  openUrl,
   onDone,
   onRestart,
 }: {
-  verify: (code: { otp: string } | { recovery: string }) => Promise<void>;
-  onDone: () => void;
-  /** Back to the log-in screen (challenge expired, or the user goes back). */
-  onRestart: () => void;
+  check: Check;
+  codes: (email: string, sms: string | null) => Promise<CheckOutcome>;
+  faceStart: () => Promise<string | null>;
+  faceFinish: () => Promise<CheckOutcome>;
+  openUrl: (url: string) => Promise<void>;
+  onDone: (outcome: CheckOutcome) => void;
+  /** Back to the log-in screen (check expired or failed, or the user goes back). */
+  onRestart: (message?: string) => void;
 }): ReactElement {
-  const [useRecovery, setUseRecovery] = useState(false);
-  const [value, setValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const ready = useRecovery ? value.replace(/[\s-]/g, '').length === 8 : value.length === 6;
-
-  const submit = async (): Promise<void> => {
-    const typed = value;
-    setValue('');
-    setBusy(true);
-    try {
-      await verify(useRecovery ? { recovery: typed } : { otp: typed });
-      onDone();
-    } catch (e) {
-      if (e instanceof ApiError && (e.code === 'AUTH_410_CHALLENGE_EXPIRED' || e.status === 410)) {
-        onRestart();
-        return;
-      }
-      setError(messageFor(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const signup = check.purpose === 'signup';
+  const title = signup ? tr("Confirm your email") : check.method === 'face' ? tr("Confirm it’s you with a selfie") : tr("Confirm it’s you");
+  const body = signup ? tr("One last step: confirm the email on your account.") : tr("This is a new phone for your account.");
   return (
-    <Frame
-      testID="mfa-screen"
-      top={<AuthTop onBack={onRestart} />}
-      footer={
-        <View style={styles.actions}>
-          <PrimaryButton testID="mfa-verify" label={tr("Continue")} onPress={() => void submit()} disabled={!ready || busy} />
-          <GhostButton
-            testID="mfa-toggle"
-            label={useRecovery ? tr("Use my authenticator app") : tr("Use a recovery code")}
-            onPress={() => {
-              setUseRecovery((v) => !v);
-              setValue('');
-              setError(null);
-            }}
-          />
-        </View>
-      }
-    >
-      <Heading
-        title={tr("Confirm it’s you")}
-        body={
-          useRecovery
-            ? tr("Enter one of the recovery codes you saved when you set up 2FA. Each code works once. For your safety, every other phone will need a code again.")
-            : tr("This is a new phone for your account. Enter the 6-digit code from your authenticator app.")
-        }
+    <Frame testID="check-screen" top={<AuthTop onBack={() => onRestart()} step={signup ? 3 : undefined} />} footer={null}>
+      <Heading title={title} body={body} />
+      <CheckFields
+        check={check}
+        submitLabel={tr("Continue")}
+        onCodes={async (email, sms) => onDone(await codes(email, sms))}
+        onFaceStart={faceStart}
+        onFaceFinish={async () => onDone(await faceFinish())}
+        openUrl={openUrl}
+        onEnded={(message) => onRestart(message)}
       />
-      {useRecovery ? (
-        <OutlinedField label={tr("Recovery code *")} invalid={Boolean(error)}>
-          <FieldInput
-            testID="mfa-recovery-input"
-            accessibilityLabel={tr("Recovery code")}
-            value={value}
-            onChangeText={(t) => { setValue(t.toUpperCase().slice(0, 10)); setError(null); }}
-            maxLength={10}
-            placeholder="XXXX-XXXX"
-          />
-        </OutlinedField>
-      ) : (
-        <CodeField testID="mfa-code-input" value={value} onChange={(v) => { setValue(v); setError(null); }} invalid={Boolean(error)} />
-      )}
-      {error ? <Text testID="mfa-error" style={styles.error}>{error}</Text> : null}
     </Frame>
   );
 }
@@ -211,7 +171,6 @@ const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   body: { paddingHorizontal: space.md, paddingBottom: space.lg, gap: space.sm },
   footer: { paddingHorizontal: space.md, paddingTop: space.sm },
-  actions: { gap: 12 },
   text: { ...typography.body, fontSize: 14, color: color.text.secondary },
   error: { ...typography.caption, color: color.error.text },
   link: { paddingVertical: space.xs },

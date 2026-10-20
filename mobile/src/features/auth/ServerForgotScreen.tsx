@@ -1,34 +1,50 @@
 /**
- * Forgot PIN against the real server (ADR-046; ADR-025: no reset without the second factor).
+ * Forgot PIN against the real server (ADR-046; ADR-054: no reset without a second check).
  *
  * 1. Phone number → the server texts a code (same answer whether or not an account exists).
- * 2. SMS code + authenticator code (or a recovery code) + new PIN twice → done; every device
- *    is signed out, so the user logs in again. Codes and PINs live only in this screen's state.
+ * 2. SMS code + new PIN twice.
+ * 3. The second check: a face check after the identity check, an email code before it →
+ *    done; every device is signed out, so the user logs in again. Codes and PINs live only in
+ *    this screen's state.
  */
 
 import { useState, type ReactElement } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { Check } from '../../api/authApi';
 import { messageFor } from '../../api/client';
 import { PrimaryButton } from '../../components/primitives';
-import { brandWeight, color, space, themed, typography } from '../../theme';
+import { color, space, themed, typography } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
+import { CheckFields } from '../security/CheckFields';
 import { normalisePhone } from '../profile/verification';
 import type { PinSource } from './serverPin';
 import { AuthTop, Heading, PhoneInput, fullPhone } from './ui';
 import { tr } from "../../i18n";
 
-type Step = 'phone' | 'reset' | 'done';
+type Step = 'phone' | 'reset' | 'check' | 'done';
 
-export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBack: () => void }): ReactElement {
+async function openLink(url: string): Promise<void> {
+  await Linking.openURL(url);
+}
+
+export function ServerForgotScreen({
+  source,
+  onBack,
+  openUrl = openLink,
+}: {
+  source: PinSource;
+  onBack: () => void;
+  openUrl?: (url: string) => Promise<void>;
+}): ReactElement {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [e164, setE164] = useState<string | null>(null);
   const [sms, setSms] = useState('');
-  const [second, setSecond] = useState('');
-  const [useRecovery, setUseRecovery] = useState(false);
+  const [check, setCheck] = useState<Check | null>(null);
   const [pin, setPin] = useState('');
   const [pin2, setPin2] = useState('');
   const [busy, setBusy] = useState(false);
@@ -58,24 +74,23 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
 
   const reset = (): void => {
     if (!/^\d{6}$/.test(sms)) return setError(tr("Enter the 6-digit code from the SMS"));
-    if (!useRecovery && !/^\d{6}$/.test(second)) return setError(tr("Enter the 6-digit code from your authenticator app"));
-    if (useRecovery && second.trim().length < 8) return setError(tr("Enter one of your recovery codes"));
     if (!/^\d{6}$/.test(pin)) return setError(tr("Your new PIN must be 6 digits"));
     if (pin !== pin2) return setError(tr("The two PINs do not match"));
-    const typed = { sms, second: second.trim(), pin };
+    const typed = sms;
     void run(async () => {
-      await source.resetConfirm(
-        e164 ?? '',
-        typed.sms,
-        typed.pin,
-        useRecovery ? { recovery_code: typed.second } : { otp_code: typed.second },
-      );
       setSms('');
-      setSecond('');
-      setPin('');
-      setPin2('');
-      setStep('done');
+      setCheck(await source.resetVerify(e164 ?? '', typed));
+      setStep('check');
     });
+  };
+
+  const finish = async (emailCode: string | null): Promise<void> => {
+    if (!check) return;
+    await source.resetConfirm(check.check_id, pin, emailCode);
+    setPin('');
+    setPin2('');
+    setCheck(null);
+    setStep('done');
   };
 
   const field = (
@@ -119,26 +134,27 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
           </>
         ) : step === 'reset' ? (
           <>
-            <Heading
-              title={tr("Set a new PIN")}
-              body={tr("If this number has an account, we have sent a code by SMS. You also need your authenticator app or a recovery code.")}
-            />
+            <Heading title={tr("Set a new PIN")} body={tr("If this number has an account, we have sent a code by SMS.")} />
             {field(tr("SMS code"), sms, setSms, 'forgot-sms', { digits: true })}
-            {useRecovery
-              ? field(tr("Recovery code"), second, setSecond, 'forgot-recovery')
-              : field(tr("Authenticator code"), second, setSecond, 'forgot-otp', { digits: true })}
-            <Pressable
-              testID="forgot-toggle-recovery"
-              accessibilityRole="button"
-              onPress={() => {
-                setUseRecovery((v) => !v);
-                setSecond('');
-              }}
-            >
-              <Text style={styles.link}>{useRecovery ? tr("Use my authenticator app instead") : tr("Lost your phone? Use a recovery code")}</Text>
-            </Pressable>
             {field(tr("New PIN"), pin, setPin, 'forgot-pin', { digits: true, secure: true })}
             {field(tr("Confirm new PIN"), pin2, setPin2, 'forgot-pin2', { digits: true, secure: true })}
+          </>
+        ) : step === 'check' && check ? (
+          <>
+            <Heading title={tr("Confirm it’s you")} body={tr("One more check before your new PIN is saved.")} />
+            <CheckFields
+              check={check}
+              submitLabel={tr("Reset PIN")}
+              onCodes={(email) => finish(email)}
+              onFaceStart={() => source.resetFaceStart(check.check_id)}
+              onFaceFinish={() => finish(null)}
+              openUrl={openUrl}
+              onEnded={(message) => {
+                setCheck(null);
+                setStep('phone');
+                setError(message);
+              }}
+            />
           </>
         ) : (
           <>
@@ -155,8 +171,8 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
         {step === 'phone' ? (
           <PrimaryButton testID="forgot-submit" label={busy ? tr("Sending…") : tr("Send code")} onPress={sendCode} disabled={busy} />
         ) : step === 'reset' ? (
-          <PrimaryButton testID="forgot-reset" label={busy ? tr("Saving…") : tr("Reset PIN")} onPress={reset} disabled={busy} />
-        ) : (
+          <PrimaryButton testID="forgot-reset" label={busy ? tr("Checking…") : tr("Continue")} onPress={reset} disabled={busy} />
+        ) : step === 'check' ? null : (
           <PrimaryButton testID="forgot-back-login" label={tr("Back to log in")} onPress={onBack} />
         )}
       </View>
@@ -167,7 +183,6 @@ export function ServerForgotScreen({ source, onBack }: { source: PinSource; onBa
 const styles = themed(() => ({
   screen: { flex: 1, backgroundColor: color.bg.canvas },
   body: { paddingHorizontal: space.md, gap: space.sm },
-  link: { ...typography.caption, ...brandWeight('700'), fontSize: 13, color: color.brand.secondaryText },
   error: { ...typography.caption, color: color.error.text },
   footer: { paddingHorizontal: space.md },
 }));

@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { useApplyScreenCapturePreference } from '../src/features/profile/securitySettings';
+import { ServerConfirmHost } from '../src/features/security/ServerConfirmHost';
 import { StepUpHost } from '../src/features/security/StepUpHost';
 import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
@@ -71,8 +72,10 @@ export default function RootLayout(): ReactElement | null {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
-      {/* ADR-008: the single "Confirm it's you" sheet for step-up checks. */}
-      {signedIn ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
+      {/* ADR-008/054: the single "Confirm it's you" sheet for step-up checks. Server builds:
+          Fingerprint/Face ID, a face check or an email code; demo builds: the on-device mock. */}
+      {signedIn && SERVER_MODE ? <ServerConfirmHost /> : null}
+      {signedIn && !SERVER_MODE ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
       {/* ADR-044: in-app banner (Figma message style). */}
       <BannerHost />
       {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}

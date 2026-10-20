@@ -1,5 +1,5 @@
 /**
- * ADR-027: the app talking to the real sign-in and 2FA server — config, request client,
+ * ADR-027/054: the app talking to the real sign-in server and its second check — config, request client,
  * secure token storage, the sign-in orchestration and the server-mode screens.
  * The server is a scripted fake `fetch`; its rules are tested on the server itself.
  */
@@ -9,10 +9,9 @@ import { ApiError, apiRequest, messageFor } from '../src/api/client';
 import { parseApiUrl } from '../src/api/config';
 import { secureTokens } from '../src/api/secureTokens';
 import { LoginScreen } from '../src/features/auth/LoginScreen';
-import { MfaScreen, ServerCodeScreen } from '../src/features/auth/ServerScreens';
+import { CheckScreen, ServerCodeScreen } from '../src/features/auth/ServerScreens';
 import { KEEP_ALIVE_MS, serverAuth } from '../src/features/auth/serverAuth';
 import { session } from '../src/features/auth/session';
-import { AuthenticatorSetupScreen } from '../src/features/security/AuthenticatorSetupScreen';
 
 const mockStore = new Map<string, string>();
 jest.mock('expo-secure-store', () => ({
@@ -46,7 +45,15 @@ function fakeServer(routes: Record<string, Handler>): { fetch: typeof fetch; cal
   return { fetch: impl as unknown as typeof fetch, calls };
 }
 
-const TOKENS = { access_token: 'acc-1', refresh_token: 'ref-1', token_type: 'bearer', mfa_required: false };
+const TOKENS = { access_token: 'acc-1', refresh_token: 'ref-1', token_type: 'bearer', check_required: false };
+const check = (purpose: string, method: string, id = 'c1') => ({
+  check_required: true,
+  check_id: id,
+  purpose,
+  method,
+  email_hint: method === 'face' ? null : 'a***@example.com',
+  phone_hint: method === 'sms_email' ? '***2222' : null,
+});
 const ME = { user_id: 'u1', phone: '+2348031112222', email: 'ada@example.com', status: 'active' };
 const err = (code: string, status: number, message = 'Nope', retry?: number): [number, unknown] => [
   status,
@@ -136,45 +143,66 @@ describe('sign-in orchestration', () => {
     expect(serverAuth.accessToken()).toBe('acc-1');
   });
 
-  it('a new device gets the 2FA step, then a session and a trusted-device token', async () => {
-    useServer({
-      '/api/v1/auth/login': () => [200, { mfa_required: true, mfa_challenge_id: 'c1', enrolment_required: false }],
-      '/api/v1/auth/mfa/verify': (b) => (b?.otp_code === '123456' ? [200, { ...TOKENS, device_token: 'new-device-token-abcdefgh' }] : err('AUTH_401_INVALID_OTP', 401, 'That code is not right.')),
+  it('a new phone before the identity check needs the SMS and email codes', async () => {
+    const s = useServer({
+      '/api/v1/auth/login': () => [200, check('login', 'sms_email')],
+      '/api/v1/auth/checks/c1/codes': (b) =>
+        b?.email_code === '123456' && b?.sms_code === '654321'
+          ? [200, { ...TOKENS, device_token: 'new-device-token-abcdefgh' }]
+          : err('AUTH_401_INVALID_OTP', 401, 'That code is not right.'),
     });
-    await expect(serverAuth.login(ME.phone, '482613', T0)).resolves.toBe('mfa');
+    await expect(serverAuth.login(ME.phone, '482613', T0)).resolves.toBe('check');
+    expect(serverAuth.check()).toMatchObject({ method: 'sms_email', phone_hint: '***2222' });
     expect(session.get().signedIn).toBe(false);
-    await expect(serverAuth.verifyMfa({ otp: '000000' }, T0)).rejects.toMatchObject({ code: 'AUTH_401_INVALID_OTP' });
-    await serverAuth.verifyMfa({ otp: '123456' }, T0);
+    await expect(serverAuth.checkCodes('123456', null, T0)).rejects.toMatchObject({ code: 'AUTH_401_INVALID_OTP' });
+    await expect(serverAuth.checkCodes('123456', '654321', T0)).resolves.toBe('signedIn');
     expect(session.get().signedIn).toBe(true);
     expect(await secureTokens.deviceToken()).toBe('new-device-token-abcdefgh');
+    expect(serverAuth.hasCheck()).toBe(false);
+    expect(s.calls[2].body).toEqual({ email_code: '123456', sms_code: '654321' });
   });
 
-  it('an unfinished sign-up is sent to authenticator set-up', async () => {
-    useServer({ '/api/v1/auth/login': () => [200, { mfa_required: true, mfa_challenge_id: 'c2', enrolment_required: true }] });
-    await expect(serverAuth.login(ME.phone, '482613', T0)).resolves.toBe('enrol');
-    expect(serverAuth.hasChallenge()).toBe(true);
+  it('a new phone after the identity check needs the face check', async () => {
+    let done = false;
+    useServer({
+      '/api/v1/auth/login': () => [200, check('login', 'face')],
+      '/api/v1/auth/checks/c1/face': () => [200, { url: 'https://verify.didit.me/s/1' }],
+      '/api/v1/auth/checks/c1/face/result': () =>
+        done ? [200, TOKENS] : err('AUTH_409_FACE_CHECK_PENDING', 409, 'Your face check is not finished yet.'),
+    });
+    await serverAuth.login(ME.phone, '482613', T0);
+    await expect(serverAuth.faceStart()).resolves.toBe('https://verify.didit.me/s/1');
+    await expect(serverAuth.faceFinish(T0)).rejects.toMatchObject({ status: 409 });
+    expect(serverAuth.hasCheck()).toBe(true); // still open: try again after the selfie
+    done = true;
+    await expect(serverAuth.faceFinish(T0)).resolves.toBe('signedIn');
+    expect(session.get().signedIn).toBe(true);
   });
 
-  it('sign-up: phone code → authenticator → recovery codes → session only at the end', async () => {
+  it('with no open check, the check calls fail cleanly', async () => {
+    useServer({});
+    await expect(serverAuth.checkCodes('123456', null, T0)).rejects.toMatchObject({ status: 410 });
+    await expect(serverAuth.faceStart()).rejects.toMatchObject({ status: 410 });
+  });
+
+  it('sign-up: phone code → email code → session only on the last screen', async () => {
     const s = useServer({
       '/api/v1/auth/register': () => [201, { status: 'pending_verification' }],
-      '/api/v1/auth/verify-phone': () => [200, { mfa_required: true, mfa_challenge_id: 'c3', enrolment_required: true }],
-      '/api/v1/auth/mfa/enrol/start': () => [200, { secret: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/x' }],
-      '/api/v1/auth/mfa/enrol/confirm': () => [200, { ...TOKENS, device_token: 'dt-abcdefghijklmnopqrst', recovery_codes: ['AAAA-BBBB'] }],
+      '/api/v1/auth/verify-phone': () => [200, check('signup', 'email', 'c3')],
+      '/api/v1/auth/checks/c3/codes': () => [200, { ...TOKENS, device_token: 'dt-abcdefghijklmnopqrst' }],
     });
     await serverAuth.register({ phone: ME.phone, email: ME.email, pin: '482613' });
     await serverAuth.verifyPhone(ME.phone, '123456');
-    await expect(serverAuth.enrolStart()).resolves.toEqual({ secret: 'JBSWY3DPEHPK3PXP', uri: 'otpauth://totp/x' });
-    await expect(serverAuth.enrolConfirm('654321')).resolves.toEqual(['AAAA-BBBB']);
-    expect(session.get().signedIn).toBe(false); // recovery codes still on screen
+    expect(serverAuth.check()).toMatchObject({ purpose: 'signup', method: 'email' });
+    await expect(serverAuth.checkCodes('654321', null, T0)).resolves.toBe('signedUp');
+    expect(session.get().signedIn).toBe(false);
     expect(serverAuth.hasPending()).toBe(true);
     await serverAuth.finish(T0, { newAccount: true });
     expect(session.get().signedIn).toBe(true);
     expect(s.calls.map((c) => c.path)).toEqual([
       '/api/v1/auth/register',
       '/api/v1/auth/verify-phone',
-      '/api/v1/auth/mfa/enrol/start',
-      '/api/v1/auth/mfa/enrol/confirm',
+      '/api/v1/auth/checks/c3/codes',
       '/api/v1/users/me',
     ]);
   });
@@ -251,11 +279,11 @@ describe('sign-in orchestration', () => {
 describe('server-mode screens', () => {
   const props = { onDone: jest.fn(), onSignUp: jest.fn(), onForgot: jest.fn(), now: () => T0 };
 
-  it('log-in: success, 2FA step, and the server’s error shown', async () => {
+  it('log-in: success, the second check, and the server’s error shown', async () => {
     const login = jest
       .fn()
       .mockResolvedValueOnce('signedIn')
-      .mockResolvedValueOnce('mfa')
+      .mockResolvedValueOnce('check')
       .mockRejectedValueOnce(new ApiError('AUTH_401_INVALID_CREDENTIALS', 401, 'The phone number, email or PIN is incorrect.'));
     const onSecondFactor = jest.fn();
     await render(<LoginScreen {...props} server={{ login }} onSecondFactor={onSecondFactor} />);
@@ -271,36 +299,94 @@ describe('server-mode screens', () => {
     expect(props.onDone).toHaveBeenCalledTimes(1);
     expect(login).toHaveBeenCalledWith('+2348031112222', '482613', T0);
     await enter();
-    expect(onSecondFactor).toHaveBeenCalledWith('mfa');
+    expect(onSecondFactor).toHaveBeenCalledTimes(1);
     await enter();
     expect(screen.getByTestId('login-error').props.children).toBe('The phone number, email or PIN is incorrect.');
   });
 
-  it('2FA screen: code, recovery code, and an expired step goes back to log-in', async () => {
-    const verify = jest
+  it('check screen (codes): both codes, the server’s error, and an expired check restarts', async () => {
+    const codes = jest
       .fn()
       .mockRejectedValueOnce(new ApiError('AUTH_401_INVALID_OTP', 401, 'That code is not right.'))
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'Expired'));
+      .mockResolvedValueOnce('signedIn')
+      .mockRejectedValueOnce(new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please start again.'));
     const onDone = jest.fn();
     const onRestart = jest.fn();
-    await render(<MfaScreen verify={verify} onDone={onDone} onRestart={onRestart} />);
-    await fireEvent.changeText(screen.getByTestId('mfa-code-input'), '111111');
-    await fireEvent.press(screen.getByTestId('mfa-verify'));
-    await act(async () => undefined);
-    expect(screen.getByTestId('mfa-error').props.children).toBe('That code is not right.');
+    const ui = { codes, faceStart: jest.fn(), faceFinish: jest.fn(), openUrl: jest.fn(), onDone, onRestart };
+    await render(<CheckScreen check={check('login', 'sms_email') as never} {...ui} />);
+    expect(screen.getByTestId('check-text')).toHaveTextContent(/number ending 2222 and a code to a\*\*\*@example\.com/);
+    const enter = async (): Promise<void> => {
+      await fireEvent.changeText(screen.getByTestId('check-sms'), '111111');
+      await fireEvent.changeText(screen.getByTestId('check-email'), '222222');
+      await fireEvent.press(screen.getByTestId('check-submit'));
+      await act(async () => undefined);
+    };
+    expect(screen.getByTestId('check-submit')).toBeDisabled();
+    await enter();
+    expect(screen.getByTestId('check-error').props.children).toBe('That code is not right.');
+    expect(screen.getByTestId('check-email').props.value).toBe(''); // each code works once
+    await enter();
+    expect(codes).toHaveBeenLastCalledWith('222222', '111111');
+    expect(onDone).toHaveBeenCalledWith('signedIn');
+    await enter();
+    expect(onRestart).toHaveBeenCalledWith('This step has expired. Please start again.');
+  });
 
-    await fireEvent.press(screen.getByTestId('mfa-toggle'));
-    await fireEvent.changeText(screen.getByTestId('mfa-recovery-input'), 'abcd-2345');
-    await fireEvent.press(screen.getByTestId('mfa-verify'));
+  it('check screen (face): opens only an https page, then asks for the result', async () => {
+    const faceStart = jest.fn().mockResolvedValueOnce('http://evil.example/x').mockResolvedValueOnce('https://verify.didit.me/s/1');
+    const faceFinish = jest
+      .fn()
+      .mockRejectedValueOnce(new ApiError('AUTH_409_FACE_CHECK_PENDING', 409, 'Your face check is not finished yet.'))
+      .mockResolvedValueOnce('signedIn');
+    const openUrl = jest.fn(async () => undefined);
+    const onDone = jest.fn();
+    await render(
+      <CheckScreen check={check('login', 'face') as never} codes={jest.fn()} faceStart={faceStart} faceFinish={faceFinish} openUrl={openUrl} onDone={onDone} onRestart={jest.fn()} />,
+    );
+    expect(screen.queryByTestId('check-email')).toBeNull();
+    await fireEvent.press(screen.getByTestId('check-face'));
     await act(async () => undefined);
-    expect(verify).toHaveBeenLastCalledWith({ recovery: 'ABCD-2345' });
-    expect(onDone).toHaveBeenCalled();
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(screen.getByTestId('check-error')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await act(async () => undefined);
+    expect(openUrl).toHaveBeenCalledWith('https://verify.didit.me/s/1');
+    await fireEvent.press(screen.getByTestId('check-face')); // "I’ve taken the selfie"
+    await act(async () => undefined);
+    expect(screen.getByTestId('check-error').props.children).toBe('Your face check is not finished yet.');
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await act(async () => undefined);
+    expect(onDone).toHaveBeenCalledWith('signedIn');
+  });
 
-    await fireEvent.changeText(screen.getByTestId('mfa-recovery-input'), 'ABCD-2345');
-    await fireEvent.press(screen.getByTestId('mfa-verify'));
+  it('check screen (face, local developer check): no page, straight to the result', async () => {
+    const faceFinish = jest.fn().mockResolvedValue('signedIn');
+    const openUrl = jest.fn();
+    await render(
+      <CheckScreen check={check('login', 'face') as never} codes={jest.fn()} faceStart={jest.fn().mockResolvedValue(null)} faceFinish={faceFinish} openUrl={openUrl} onDone={jest.fn()} onRestart={jest.fn()} />,
+    );
+    await fireEvent.press(screen.getByTestId('check-face'));
     await act(async () => undefined);
-    expect(onRestart).toHaveBeenCalled();
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(faceFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed face check sends the user back to log in', async () => {
+    const onRestart = jest.fn();
+    await render(
+      <CheckScreen
+        check={check('login', 'face') as never}
+        codes={jest.fn()}
+        faceStart={jest.fn().mockResolvedValue(null)}
+        faceFinish={jest.fn().mockRejectedValue(new ApiError('AUTH_401_FACE_CHECK_FAILED', 401, 'We could not match your face to your identity check. Please try again.'))}
+        openUrl={jest.fn()}
+        onDone={jest.fn()}
+        onRestart={onRestart}
+      />,
+    );
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await act(async () => undefined);
+    expect(onRestart).toHaveBeenCalledWith('We could not match your face to your identity check. Please try again.');
   });
 
   it('SMS code screen: verifies with the server and shows its errors', async () => {
@@ -315,23 +401,5 @@ describe('server-mode screens', () => {
       await act(async () => undefined);
     }
     expect(onVerified).toHaveBeenCalledTimes(1);
-  });
-
-  it('authenticator set-up uses the server’s secret and shows its recovery codes', async () => {
-    const engine = {
-      begin: jest.fn().mockResolvedValue({ secret: 'JBSWY3DPEHPK3PXP', uri: 'otpauth://totp/Xspeeria:x?secret=JBSWY3DPEHPK3PXP' }),
-      confirm: jest.fn().mockRejectedValueOnce(new ApiError('AUTH_401_INVALID_OTP', 401, 'That code is not right.')).mockResolvedValueOnce(['AAAA-BBBB', 'CCCC-DDDD']),
-      messageFor,
-    };
-    await render(<AuthenticatorSetupScreen account="" random={() => new Uint8Array(20)} engine={engine} onBack={jest.fn()} onDone={jest.fn()} />);
-    await act(async () => undefined);
-    expect(screen.getByTestId('authenticator-key').props.children).toBe('JBSW Y3DP EHPK 3PXP');
-    for (let i = 0; i < 2; i++) {
-      await fireEvent.changeText(screen.getByTestId('authenticator-code'), '123456');
-      await fireEvent.press(screen.getByTestId('authenticator-verify'));
-      await act(async () => undefined);
-    }
-    expect(engine.confirm).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('AAAA-BBBB')).toBeTruthy();
   });
 });

@@ -108,16 +108,21 @@ export function SecurityScreen({
 
       <View style={styles.list}>
         <LinkRow testID="security-password" label={tr("Change Password")} onPress={() => open('password', tr("Change Password"))} />
-        <LinkRow testID="security-2fa" label={tr("2 FA authentication")} onPress={() => open('twoFactor', tr("2 FA authentication"))} />
+        {/* ADR-054: server builds explain the face check, Fingerprint/Face ID and email codes. */}
+        <LinkRow
+          testID="security-2fa"
+          label={biometric ? tr("How we check it’s you") : tr("2 FA authentication")}
+          onPress={() => open('twoFactor', biometric ? tr("How we check it’s you") : tr("2 FA authentication"))}
+        />
         {showDevices ? (
           <LinkRow testID="security-devices" label={tr("Signed-in devices")} onPress={() => open('devices', tr("Signed-in devices"))} />
         ) : null}
         {biometric ? (
           <View style={styles.row}>
-            <Text style={styles.label}>{tr("Unlock with Face ID / fingerprint")}</Text>
+            <Text style={styles.label}>{tr("Face ID / fingerprint")}</Text>
             <Switch
               testID="security-biometric"
-              accessibilityLabel={tr("Unlock with Face ID or fingerprint")}
+              accessibilityLabel={tr("Use Face ID or fingerprint")}
               value={bioOn}
               disabled={bioBusy}
               onValueChange={(v) => void toggleBiometric(v)}

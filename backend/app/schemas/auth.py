@@ -19,15 +19,14 @@ __all__ = [
     "BiometricEnableRequest",
     "BiometricEnableResponse",
     "BiometricUnlockRequest",
-    "ChallengeRequest",
-    "ChallengeResponse",
-    "EnrolConfirmRequest",
-    "EnrolConfirmResponse",
-    "EnrolStartResponse",
+    "CheckCodesRequest",
+    "CheckResponse",
+    "DeviceRequest",
+    "EmailCodeRequest",
+    "FaceStartResponse",
     "LoginRequest",
-    "MfaVerifyRequest",
-    "OtpCodeRequest",
-    "RecoveryCodesResponse",
+    "PinResetVerifyRequest",
+    "StepUpCheckRequest",
     "StepUpRequest",
     "StepUpResponse",
     "TrustedDeviceResponse",
@@ -79,51 +78,56 @@ class LoginRequest(_Strict):
     identifier: str = Field(min_length=1, max_length=254)
     pin: str = Field(min_length=1, max_length=16)
     device_id: str | None = Field(default=None, pattern=_DEVICE_ID)
-    #: Returned after a 2FA check; PIN-only log-in on this device for 30 days (ADR-026).
+    #: Returned after the second check; PIN-only log-in on this phone for 30 days.
     device_token: str | None = Field(default=None, pattern=_URLSAFE_PATTERN)
 
 
-class ChallengeResponse(BaseModel):
-    mfa_required: Literal[True] = True
-    mfa_challenge_id: uuid.UUID
-    #: True at sign-up (or an unfinished sign-up): add an authenticator first.
-    enrolment_required: bool
+_CODE = r"^[0-9]{6}$"
 
 
-class ChallengeRequest(_Strict):
-    mfa_challenge_id: uuid.UUID
+class CheckResponse(BaseModel):
+    """ADR-054: the second check still needed. ``method``: ``email`` (a code to the email),
+    ``sms_email`` (an SMS code and an email code) or ``face`` (a face check)."""
+
+    check_required: Literal[True] = True
+    check_id: uuid.UUID
+    purpose: Literal["signup", "login", "step_up", "pin_reset"]
+    method: Literal["email", "sms_email", "face"]
+    #: Masked, for the screen ("d***@example.com", "***3838").
+    email_hint: str | None = None
+    phone_hint: str | None = None
 
 
-class EnrolStartResponse(BaseModel):
-    #: Base32 secret and otpauth link for the authenticator app. Shown once.
-    secret: str
-    otpauth_uri: str
-
-
-class EnrolConfirmRequest(_Strict):
-    mfa_challenge_id: uuid.UUID
-    otp_code: str = Field(pattern=r"^[0-9]{6}$")
+class CheckCodesRequest(_Strict):
+    email_code: str = Field(pattern=_CODE)
+    #: Only for ``sms_email`` checks.
+    sms_code: str | None = Field(default=None, pattern=_CODE)
     device_id: str | None = Field(default=None, pattern=_DEVICE_ID)
 
 
-class MfaVerifyRequest(_Strict):
-    """Contract §3.1. Exactly one of ``otp_code`` or ``recovery_code``."""
-
-    mfa_challenge_id: uuid.UUID
-    otp_code: str | None = Field(default=None, pattern=r"^[0-9]{6}$")
-    recovery_code: str | None = Field(default=None, min_length=8, max_length=16)
+class DeviceRequest(_Strict):
     device_id: str | None = Field(default=None, pattern=_DEVICE_ID)
+
+
+class FaceStartResponse(BaseModel):
+    #: The provider's selfie page; open it once, never store it. None: the local developer
+    #: check, which needs no page.
+    url: str | None
+
+
+class EmailCodeRequest(_Strict):
+    email_code: str = Field(pattern=_CODE)
 
 
 class ChangePinRequest(_Strict):
-    """ADR-046: signed in, with an authenticator approval for ``pin.change``."""
+    """ADR-046: signed in, with an approval for ``pin.change`` (ADR-054)."""
 
     current_pin: str = Field(min_length=1, max_length=16)
     new_pin: str = Field(min_length=1, max_length=16)
 
 
 class BiometricEnableRequest(_Strict):
-    """ADR-048: the trusted-device token proves this phone passed 2FA (ADR-008)."""
+    """ADR-048: the trusted-device token proves this phone passed the second check."""
 
     device_token: str = Field(min_length=1, max_length=128)
 
@@ -142,14 +146,20 @@ class PinResetStartRequest(_Strict):
     phone: str = Field(min_length=1, max_length=32)
 
 
-class PinResetConfirmRequest(_Strict):
-    """ADR-046: the SMS code plus exactly one of ``otp_code`` or ``recovery_code``."""
+class PinResetVerifyRequest(_Strict):
+    """Forgot PIN, step 2: the SMS code."""
 
     phone: str = Field(min_length=1, max_length=32)
-    code: str = Field(pattern=r"^[0-9]{6}$")
+    code: str = Field(pattern=_CODE)
+
+
+class PinResetConfirmRequest(_Strict):
+    """Forgot PIN, step 3 (ADR-054): the check from step 2, the email code when that check
+    is by email (none for a face check), and the new PIN."""
+
+    check_id: uuid.UUID
     new_pin: str = Field(min_length=1, max_length=16)
-    otp_code: str | None = Field(default=None, pattern=r"^[0-9]{6}$")
-    recovery_code: str | None = Field(default=None, min_length=8, max_length=16)
+    email_code: str | None = Field(default=None, pattern=_CODE)
 
 
 class PhoneChangeStartRequest(_Strict):
@@ -166,31 +176,28 @@ StepUpAction = Literal[
     "beneficiary.remove",
     "contact.change",
     "pin.change",
-    "mfa.change",
-    "recovery_codes.regenerate",
     "trade.accept",
     "payout.confirm",
 ]
 
 
 class StepUpRequest(_Strict):
+    """ADR-054: fingerprint/Face ID on a trusted phone releases the session's unlock key."""
+
     action: StepUpAction
-    otp_code: str = Field(pattern=r"^[0-9]{6}$")
+    unlock_key: str = Field(min_length=1, max_length=128)
+
+
+class StepUpCheckRequest(_Strict):
+    """No fingerprint: start a face check (or an email code before the identity check)."""
+
+    action: StepUpAction
 
 
 class StepUpResponse(BaseModel):
     step_up_token: str
     action: str
     expires_in_seconds: int
-
-
-class OtpCodeRequest(_Strict):
-    otp_code: str = Field(pattern=r"^[0-9]{6}$")
-
-
-class RecoveryCodesResponse(BaseModel):
-    #: Shown once. Each works once.
-    recovery_codes: list[str]
 
 
 class TrustedDeviceResponse(BaseModel):
@@ -206,13 +213,9 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: Literal["bearer"] = "bearer"
-    mfa_required: Literal[False] = False
+    check_required: Literal[False] = False
     #: Present when this device has just become trusted (30 days). Store it securely.
     device_token: str | None = None
-
-
-class EnrolConfirmResponse(TokenResponse):
-    recovery_codes: list[str]
 
 
 class ProfileResponse(BaseModel):

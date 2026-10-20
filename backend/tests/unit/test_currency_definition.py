@@ -359,6 +359,7 @@ class TestPackageRegistration:
             "notifications",
             "push_tokens",
             "push_deliveries",
+            "verification_checks",
         }
 
     @pytest.mark.parametrize(
@@ -407,7 +408,8 @@ class TestPackageRegistration:
             "'push_deliveries', 'push_tokens', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
-            "'transactions', 'trusted_devices', 'users', 'webhook_receipts']"
+            "'transactions', 'trusted_devices', 'users', 'verification_checks', "
+            "'webhook_receipts']"
         )
 
     def test_registration_opens_no_connection(self) -> None:
@@ -461,4 +463,5 @@ class TestPackageRegistration:
             "0014_pin_change_and_reset.py",  # PIN change and reset (ADR-046)
             "0015_biometric_unlock.py",  # biometric unlock (ADR-048)
             "0016_push_tokens_n3.py",  # phone push (ADR-052)
+            "0017_verification_checks.py",  # face check (ADR-054)
         ]

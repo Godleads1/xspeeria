@@ -4,9 +4,8 @@
  * Status, the two qualifying methods (authenticator app; passkey coming with the next app
  * build), recovery codes, and the rules. 2FA cannot be switched off.
  *
- * Demo builds use the on-device mock. With `server` (ADR-034) 2FA is always on (it is set up
- * at sign-up), "Replace" and "Get new codes" each ask for the current code, which the server
- * checks, and the new recovery codes come from the server.
+ * Demo builds only (the on-device mock). Server builds replaced the authenticator with the
+ * face check, Fingerprint/Face ID and email codes (ADR-054): see `SecondCheckInfoScreen`.
  */
 
 import { useState, type ReactElement } from 'react';
@@ -17,8 +16,6 @@ import { Icon, type IconName } from '../../components/icons';
 import { MenuIcon } from '../../components/menuIcons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { RecoveryCodes } from './RecoveryCodes';
-import { ServerCodeSheet } from './ServerCodeSheet';
-import type { ServerTwoFactor } from './serverTwoFactor';
 import type { StepUp } from './stepUp';
 import { RECOVERY_CODE_COUNT, twoFactor, useTwoFactor, type RandomBytes } from './twoFactorStore';
 import { tr } from "../../i18n";
@@ -67,13 +64,7 @@ export function TwoFactorScreen({
   onSetUpAuthenticator,
   stepUp,
   random,
-  server = null,
-  onReplaceAuthenticator,
 }: {
-  /** Real server (ADR-034). Null: the on-device demo. */
-  server?: ServerTwoFactor | null;
-  /** Server builds: opens the new-authenticator screen once the replacement has started. */
-  onReplaceAuthenticator?: () => void;
   onBack: () => void;
   onSetUpAuthenticator: () => void;
   stepUp: StepUp;
@@ -81,15 +72,10 @@ export function TwoFactorScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const tf = useTwoFactor();
-  const enrolled = server ? true : tf.authenticatorSecret !== null;
+  const enrolled = tf.authenticatorSecret !== null;
   const [newCodes, setNewCodes] = useState<readonly string[] | null>(null);
-  const [asking, setAsking] = useState<'replace' | 'codes' | null>(null);
 
   const regenerate = async (): Promise<void> => {
-    if (server) {
-      setAsking('codes');
-      return;
-    }
     if (await stepUp(tr("Get new recovery codes. Your old codes will stop working."))) {
       setNewCodes(twoFactor.regenerateRecoveryCodes(random));
     }
@@ -125,8 +111,8 @@ export function TwoFactorScreen({
           title={tr("Authenticator app")}
           detail={enrolled ? tr("On") : tr("Codes from an app like Google Authenticator")}
           done={enrolled}
-          action={server ? 'Replace' : enrolled ? undefined : tr("Set up")}
-          onPress={server ? () => setAsking('replace') : enrolled ? undefined : onSetUpAuthenticator}
+          action={enrolled ? undefined : tr("Set up")}
+          onPress={enrolled ? undefined : onSetUpAuthenticator}
         />
         <MethodRow
           testID="two-factor-passkey"
@@ -139,7 +125,7 @@ export function TwoFactorScreen({
             testID="two-factor-recovery"
             icon="document"
             title={tr("Recovery codes")}
-            detail={server ? tr("Each code works once") : tr("{{length}} of {{RECOVERY_CODE_COUNT}} unused", { length: tf.recoveryCodes.length, RECOVERY_CODE_COUNT })}
+            detail={tr("{{length}} of {{RECOVERY_CODE_COUNT}} unused", { length: tf.recoveryCodes.length, RECOVERY_CODE_COUNT })}
             action={tr("Get new codes")}
             onPress={() => {
               void regenerate();
@@ -154,28 +140,6 @@ export function TwoFactorScreen({
           <Text style={styles.rule}>{tr("• Adding a beneficiary and choosing where a deal is paid each need a code.")}</Text>
         </View>
       </ScrollView>
-
-      <ServerCodeSheet
-        visible={asking !== null}
-        reason={
-          asking === 'replace'
-            ? tr("Replace your authenticator app. Logging in on any phone will need a code again.")
-            : tr("Get new recovery codes. Your old codes will stop working.")
-        }
-        onCancel={() => setAsking(null)}
-        onSubmit={async (code) => {
-          if (!server) return;
-          if (asking === 'replace') {
-            await server.startReplace(code);
-            setAsking(null);
-            onReplaceAuthenticator?.();
-          } else {
-            const codes = await server.regenerate(code);
-            setAsking(null);
-            setNewCodes(codes);
-          }
-        }}
-      />
 
       <Modal visible={newCodes !== null} animationType="slide" onRequestClose={() => undefined}>
         <ScrollView contentContainerStyle={[styles.modalBody, { paddingTop: insets.top + space.md }]}>

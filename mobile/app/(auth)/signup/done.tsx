@@ -19,8 +19,8 @@ export default function SignupDoneRoute(): ReactElement {
   const draft = useSignup();
 
   if (SERVER_MODE) {
-    // ADR-027: the server already holds the account; the session starts now that the
-    // recovery codes have been saved.
+    // ADR-027/054: the server already holds the account (phone and email confirmed); the
+    // session starts here.
     if (!serverAuth.hasPending()) return <Redirect href="/signup/start" />;
     return (
       <DoneScreen

@@ -47,7 +47,7 @@ function source(): jest.Mocked<TakeSource> {
   let n = 0;
   return {
     offer: jest.fn(async (_id: string) => OFFER),
-    approve: jest.fn(async (_code: string) => `approval-${++n}`),
+    approve: jest.fn(async (_reason: string): Promise<string | null> => `approval-${++n}`),
     accept: jest.fn(async (_o: string, _a: string, _k: string, _t: string | null) => MATCH),
     newKey: jest.fn(() => `key-${++n}`),
   };
@@ -79,10 +79,9 @@ describe('Take offer screen (ADR-032)', () => {
     expect(src.offer).toHaveBeenCalledWith('o-1');
     await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
     expect(screen.getByTestId('take-ngn')).toHaveTextContent('Works out to NGN 264,100.00');
-    await fireEvent.changeText(screen.getByTestId('take-code'), '123456');
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
-    expect(src.approve).toHaveBeenCalledWith('123456');
+    expect(src.approve).toHaveBeenCalledWith('Take 200.00 USD at NGN 1,320.50');
     expect(src.accept).toHaveBeenCalledWith('o-1', '200.00', expect.stringMatching(/^key-/), expect.stringMatching(/^approval-/));
     expect(screen.getByTestId('take-match')).toHaveTextContent(/200\.00 USD/);
     expect(screen.getByTestId('take-done-screen')).toHaveTextContent(/never holds your money/);
@@ -105,7 +104,6 @@ describe('Take offer screen (ADR-032)', () => {
     src.accept.mockRejectedValueOnce(new ApiError('NETWORK', 0, 'Can’t reach Xspeeria.'));
     await open(src);
     await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
-    await fireEvent.changeText(screen.getByTestId('take-code'), '123456');
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     expect(screen.getByTestId('take-error')).toHaveTextContent(/Can’t reach/);
@@ -118,23 +116,31 @@ describe('Take offer screen (ADR-032)', () => {
     expect(screen.getByTestId('take-match')).toBeTruthy();
   });
 
-  it('asks for a new code when the approval is refused, and shows server refusals', async () => {
+  it('asks again when the approval is refused, and shows server refusals', async () => {
     const src = source();
     src.accept
-      .mockRejectedValueOnce(new ApiError('AUTH_403_FORBIDDEN', 403, 'Please confirm with your authenticator code first.'))
+      .mockRejectedValueOnce(new ApiError('AUTH_403_FORBIDDEN', 403, 'Please confirm it\'s you first.'))
       .mockRejectedValueOnce(new ApiError('RES_409_INSUFFICIENT_REMAINING', 409, 'Only 100.00 USD is left on this offer.'));
     await open(src);
     await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
-    await fireEvent.changeText(screen.getByTestId('take-code'), '123456');
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
-    expect(screen.getByTestId('take-error')).toHaveTextContent(/authenticator code/);
-    expect(screen.getByTestId('take-submit')).toBeDisabled(); // code cleared
-    await fireEvent.changeText(screen.getByTestId('take-code'), '654321');
+    expect(screen.getByTestId('take-error')).toHaveTextContent(/confirm it's you/);
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     expect(src.approve).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId('take-error')).toHaveTextContent('Only 100.00 USD is left on this offer.');
+  });
+
+  it('cancelling "Confirm it’s you" records nothing', async () => {
+    const src = source();
+    src.approve.mockResolvedValueOnce(null);
+    await open(src);
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
+    await fireEvent.press(screen.getByTestId('take-submit'));
+    await flush();
+    expect(src.accept).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('take-error')).toBeNull();
   });
 
   it('a new amount is a new take (new key)', async () => {
@@ -142,7 +148,6 @@ describe('Take offer screen (ADR-032)', () => {
     src.accept.mockRejectedValueOnce(new ApiError('NETWORK', 0, 'x'));
     await open(src);
     await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
-    await fireEvent.changeText(screen.getByTestId('take-code'), '123456');
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     await fireEvent.changeText(screen.getByTestId('take-amount'), '150');

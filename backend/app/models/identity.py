@@ -42,6 +42,7 @@ __all__ = [
     "REVOKE_REASONS",
     "USER_STATUSES",
     "User",
+    "VerificationCheck",
 ]
 
 USER_STATUSES = ("pending_verification", "active")
@@ -332,3 +333,63 @@ class StepUpGrant(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class VerificationCheck(Base):
+    """The second check after the PIN (ADR-054), one row per attempt at it.
+
+    ``purpose``: ``signup`` and ``login`` end in a session; ``step_up`` in a one-action
+    approval; ``pin_reset`` lets a new PIN be set. ``method``: ``email`` (a code to the
+    account email), ``sms_email`` (a code by SMS and one by email) or ``face`` (a live selfie
+    matched to the identity-check photo by the provider). Codes are kept only as keyed
+    digests; the provider session id is kept to fetch the face result, never its URL.
+    """
+
+    __tablename__ = "verification_checks"
+    __table_args__ = (
+        CheckConstraint(
+            "purpose IN ('signup', 'login', 'step_up', 'pin_reset')", name="purpose_allowed"
+        ),
+        CheckConstraint("method IN ('email', 'sms_email', 'face')", name="method_allowed"),
+        CheckConstraint("attempts BETWEEN 0 AND 5", name="attempts_range"),
+        CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        CheckConstraint(
+            "(purpose = 'step_up') = (action IS NOT NULL AND session_id IS NOT NULL)",
+            name="step_up_has_action",
+        ),
+        CheckConstraint(
+            "method <> 'face' OR (email_code_digest IS NULL AND sms_code_digest IS NULL)",
+            name="face_has_no_codes",
+        ),
+        CheckConstraint(
+            "face_result IS NULL OR face_result IN ('approved', 'declined')",
+            name="face_result_allowed",
+        ),
+        Index("ix_verification_checks_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(12), nullable=False)
+    method: Mapped[str] = mapped_column(String(12), nullable=False)
+    #: Step-up only: the action approved and the session it is approved for.
+    action: Mapped[str | None] = mapped_column(String(48))
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_sessions.id", ondelete="RESTRICT")
+    )
+    email_code_digest: Mapped[str | None] = mapped_column(CHAR(64))
+    sms_code_digest: Mapped[str | None] = mapped_column(CHAR(64))
+    face_session_id: Mapped[str | None] = mapped_column(String(64))
+    face_result: Mapped[str | None] = mapped_column(String(10))
+    device_id: Mapped[str | None] = mapped_column(String(128))
+    user_agent: Mapped[str | None] = mapped_column(String(256))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+    attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default=text("0"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: When the codes matched or the face was approved.
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: When the result was used (session opened, approval issued, PIN set).
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

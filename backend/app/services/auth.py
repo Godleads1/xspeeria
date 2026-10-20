@@ -35,28 +35,21 @@ from app.core.auth_tokens import (
 )
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.core.mfa import (
-    SecretBox,
-    SecretBoxError,
-    match_step,
-    new_recovery_codes,
-    new_totp_secret,
-    normalise_recovery_code,
-    otpauth_uri,
-)
+from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.domain.auth_rules import (
+    CHECK_CODE_TTL,
+    CHECKS_PER_DAY,
+    CHECKS_PER_HOUR,
     CODE_RESEND_WAIT,
     CODE_TTL,
-    ENROL_CHALLENGE_TTL,
+    FACE_CHECK_TTL,
     IDLE_TIMEOUT,
-    LOGIN_CHALLENGE_TTL,
     MAX_CODE_TRIES,
     MAX_MFA_TRIES,
     MAX_PIN_TRIES,
     MFA_LOCK,
-    PAYOUT_HOLD,
     PIN_LOCK,
     SESSION_MAX,
     SMS_PER_DAY,
@@ -73,16 +66,16 @@ from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.models.identity import (
     AuthRefreshToken,
     AuthSession,
-    MfaChallenge,
-    MfaFactor,
     PhoneVerification,
-    RecoveryCode,
     StepUpGrant,
     TrustedDevice,
     User,
+    VerificationCheck,
 )
 from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
+from app.providers.email import EmailSender, mask_email
+from app.providers.face import FaceCheckError, FaceCheckProvider, NoReferenceFace
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import PushSender
 from app.providers.sms import SmsSender
@@ -90,8 +83,7 @@ from app.repositories.identity import IdentityRepository
 
 __all__ = [
     "AuthRuntime",
-    "Challenge",
-    "EnrolledSession",
+    "CheckStarted",
     "SignedIn",
     "AuthService",
     "DeviceInfo",
@@ -143,6 +135,37 @@ def _invalid_code() -> AppError:
     return _err("AUTH_401_INVALID_OTP", "That code is not right.", status.HTTP_401_UNAUTHORIZED)
 
 
+def _check_unavailable() -> AppError:
+    return _err(
+        "SYS_503_SERVICE_UNAVAILABLE",
+        "We can't send a code right now. Please try again later.",
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+
+
+def _face_unavailable() -> AppError:
+    return _err(
+        "SYS_503_SERVICE_UNAVAILABLE",
+        "The face check is not available right now. Please try again later.",
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+
+
+def _face_failed() -> AppError:
+    return _err(
+        "AUTH_401_FACE_CHECK_FAILED",
+        "We could not match your face to your identity check. Please try again.",
+        status.HTTP_401_UNAUTHORIZED,
+    )
+
+
+#: Which checks each route may finish (ADR-054).
+SIGN_IN_PURPOSES = frozenset({"signup", "login"})
+FACE_START_PURPOSES = frozenset({"login", "pin_reset"})
+STEP_UP_PURPOSE = frozenset({"step_up"})
+PIN_RESET_PURPOSE = frozenset({"pin_reset"})
+
+
 def sms_unavailable() -> AppError:
     return _err(
         "SYS_503_SERVICE_UNAVAILABLE",
@@ -161,11 +184,18 @@ class TokenPair:
 
 
 @dataclass(frozen=True)
-class Challenge:
-    """First factor passed; the second is still needed (ADR-026)."""
+class CheckStarted:
+    """The PIN (or SMS code) passed; the second check is still needed (ADR-054).
 
-    challenge_id: uuid.UUID
-    enrolment_required: bool
+    ``method``: ``email`` (a code to the account email), ``sms_email`` (an SMS code and an
+    email code) or ``face`` (a face check). The hints are masked, for the screen.
+    """
+
+    check_id: uuid.UUID
+    purpose: str
+    method: str
+    email_hint: str | None
+    phone_hint: str | None
 
 
 @dataclass(frozen=True)
@@ -173,12 +203,6 @@ class SignedIn:
     tokens: TokenPair
     #: Present when this device became trusted (30 days); shown once.
     device_token: str | None
-
-
-@dataclass(frozen=True)
-class EnrolledSession:
-    signed_in: SignedIn
-    recovery_codes: list[str]
 
 
 @dataclass(frozen=True)
@@ -201,7 +225,7 @@ class AuthRuntime:
     """Process-wide sign-in dependencies, held on ``app.state.auth``."""
 
     keys: TokenKeys | None
-    #: Seals TOTP secrets (ADR-026). Without it no session can be created.
+    #: Sealed the old authenticator secrets (ADR-026; unused since ADR-054). Optional.
     secret_box: SecretBox | None
     hasher: PinHasher
     sms: SmsSender | None
@@ -223,6 +247,10 @@ class AuthRuntime:
     pretend_bank: PretendBank | None = None
     #: ADR-052: phone push. None: notifications stay in-app only.
     push_sender: PushSender | None = None
+    #: ADR-054: email codes and "was this you?" alerts. None: sign-up and code checks are off.
+    email: EmailSender | None = None
+    #: ADR-054: the face check (Didit biometric authentication). None: face checks are off.
+    face: FaceCheckProvider | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(
@@ -236,13 +264,12 @@ class AuthRuntime:
 
 class AuthService:
     def __init__(self, db: AsyncSession, runtime: AuthRuntime) -> None:
-        if runtime.keys is None or runtime.secret_box is None:
+        if runtime.keys is None:
             raise sms_unavailable()  # pragma: no cover - guarded by the dependency
         self._db = db
         self._repo = IdentityRepository(db)
         self._rt = runtime
         self._keys: TokenKeys = runtime.keys
-        self._box: SecretBox = runtime.secret_box
 
     def _now(self) -> datetime:
         return self._rt.clock()
@@ -261,7 +288,7 @@ class AuthService:
         problem = pin_problem(pin)
         if problem is not None:
             raise _err("VAL_422_WEAK_PASSWORD", problem, status.HTTP_422_UNPROCESSABLE_ENTITY)
-        if self._rt.sms is None:
+        if self._rt.sms is None or self._rt.email is None:
             raise sms_unavailable()
 
         now = self._now()
@@ -346,11 +373,11 @@ class AuthService:
             await self._db.rollback()
             raise _rate_limited(timedelta(days=1))
 
-    async def verify_phone(self, phone_raw: str, code: str, device: DeviceInfo) -> Challenge:
+    async def verify_phone(self, phone_raw: str, code: str, device: DeviceInfo) -> CheckStarted:
         """Confirm the number with the latest code and activate the account.
 
-        No session yet: 2FA is set up at sign-up, always (ADR-026), so the answer is an
-        enrolment challenge.
+        No session yet: a code goes to the account email next (ADR-054), so both the phone
+        and the email are proven before the first session.
         """
         phone = normalise_phone(phone_raw)
         if phone is None:
@@ -388,7 +415,8 @@ class AuthService:
         user.phone_verified_at = now
         try:
             await self._db.flush()  # the email unique index decides here
-            challenge = self._new_challenge(user, "enrol", device, now)
+            check, email_code, _ = await self._new_check(user, "signup", device, now)
+            started = self._started(check, user)
             await self._db.commit()
         except IntegrityError as exc:
             # Only the email clash is translated: another account activated with the same
@@ -403,14 +431,16 @@ class AuthService:
                 status.HTTP_400_BAD_REQUEST,
             ) from None
         _logger.info("phone_verified", extra={"user_id": str(user.id)})
-        return challenge
+        await self._send_codes(user, email_code, None)
+        return started
 
     # --- log-in -------------------------------------------------------------------------
 
     async def login(
         self, identifier: str, pin: str, device: DeviceInfo, device_token: str | None = None
-    ) -> Challenge | SignedIn:
-        """PIN first. Then a session only on a trusted device; otherwise a 2FA challenge."""
+    ) -> CheckStarted | SignedIn:
+        """PIN first. Then a session only on a trusted device; otherwise the second check:
+        SMS + email codes before the identity check, a face check after it (ADR-054)."""
         now = self._now()
         phone = normalise_phone(identifier)
         email = None if phone else normalise_email(identifier)
@@ -455,12 +485,6 @@ class AuthService:
         if self._rt.hasher.needs_rehash(user.pin_hash):
             user.pin_hash = self._rt.hasher.hash(pin)
 
-        if await self._repo.active_factor(user.id) is None:
-            # Sign-up stopped before the authenticator was added: finish it now.
-            challenge = self._new_challenge(user, "enrol", device, now)
-            await self._db.commit()
-            return challenge
-
         trusted = await self._trusted_device_for(user.id, device_token, now)
         if trusted is not None:
             trusted.last_used_at = now
@@ -469,9 +493,11 @@ class AuthService:
             _logger.info("login", extra={"user_id": str(user.id), "second_factor": "trusted"})
             return SignedIn(tokens=pair, device_token=None)
 
-        challenge = self._new_challenge(user, "login", device, now)
+        check, email_code, sms_code = await self._new_check(user, "login", device, now)
+        started = self._started(check, user)
         await self._db.commit()
-        return challenge
+        await self._send_codes(user, email_code, sms_code)
+        return started
 
     async def _open_session(
         self,
@@ -486,7 +512,7 @@ class AuthService:
             device_id=device.device_id,
             user_agent=device.user_agent,
             ip_address=device.ip_address,
-            # The 7-day limit counts from the PIN check, not from the 2FA step after it.
+            # The 7-day limit counts from the PIN check, not from the second check after it.
             pin_verified_at=pin_verified_at or now,
             expires_at=(pin_verified_at or now) + SESSION_MAX,
             last_active_at=now,
@@ -630,51 +656,7 @@ class AuthService:
             session.revoke_reason = "revoked_by_user"
         await self._db.commit()
 
-    # --- second factor (ADR-008, ADR-026) -------------------------------------------------
-
-    def _new_challenge(
-        self, user: User, purpose: str, device: DeviceInfo, now: datetime
-    ) -> Challenge:
-        ttl = ENROL_CHALLENGE_TTL if purpose == "enrol" else LOGIN_CHALLENGE_TTL
-        row = MfaChallenge(
-            id=uuid.uuid4(),
-            user_id=user.id,
-            purpose=purpose,
-            device_id=device.device_id,
-            user_agent=device.user_agent,
-            ip_address=device.ip_address,
-            attempts=0,
-            created_at=now,
-            expires_at=now + ttl,
-        )
-        self._repo.add(row)
-        return Challenge(challenge_id=row.id, enrolment_required=purpose == "enrol")
-
-    async def _open_challenge(
-        self, challenge_id: uuid.UUID, purpose: str, now: datetime
-    ) -> tuple[MfaChallenge, User]:
-        """Load and check a challenge; refuse expired, used, over-tried or locked ones."""
-        row = await self._repo.challenge(challenge_id)
-        if row is None or row.purpose != purpose or row.consumed_at is not None:
-            await self._db.rollback()
-            raise _invalid_code()
-        if now >= row.expires_at:
-            await self._db.rollback()
-            raise _err(
-                "AUTH_410_CHALLENGE_EXPIRED",
-                "This step has expired. Please log in again.",
-                status.HTTP_410_GONE,
-            )
-        user = await self._repo.user_for_update(row.user_id)
-        if user is None or user.status != "active":  # pragma: no cover - FK and activation
-            await self._db.rollback()
-            raise _invalid_code()
-        await self._refuse_if_mfa_locked(user, now)
-        if row.attempts >= MAX_MFA_TRIES:
-            remaining = row.expires_at - now
-            await self._db.rollback()
-            raise _rate_limited(remaining)
-        return row, user
+    # --- the second check after the PIN (ADR-054) -------------------------------------------
 
     async def _refuse_if_mfa_locked(self, user: User, now: datetime) -> None:
         locked_until = user.mfa_locked_until
@@ -683,68 +665,43 @@ class AuthService:
             raise _rate_limited(locked_until - now)
 
     async def _mfa_failure(
-        self, user: User, now: datetime, challenge: MfaChallenge | None = None
+        self,
+        user: User,
+        now: datetime,
+        check: VerificationCheck | None = None,
+        wrong: AppError | None = None,
     ) -> AppError:
-        """Count a wrong code. The 5th wrong code locks 2FA for 15 minutes (ADR-008)."""
-        if challenge is not None:
-            challenge.attempts += 1
+        """Count a failed check. The 5th failure locks checks for 15 minutes (ADR-008)."""
+        if check is not None:
+            check.attempts = min(check.attempts + 1, MAX_MFA_TRIES)
         user.mfa_failed_attempts += 1
         locked = user.mfa_failed_attempts >= MAX_MFA_TRIES
         if locked:
             user.mfa_failed_attempts = 0
             user.mfa_locked_until = now + MFA_LOCK
-        user_id = str(user.id)
         await self._db.commit()
         if locked:
-            self._alert(user_id, "mfa_locked")
+            await self._alert(user, "checks_locked")
             return _rate_limited(MFA_LOCK)
-        return _invalid_code()
+        return wrong or _invalid_code()
 
     def _mfa_success(self, user: User) -> None:
         user.mfa_failed_attempts = 0
         user.mfa_locked_until = None
 
-    @staticmethod
-    def _alert(user_id: str, kind: str) -> None:
-        """ADR-008 asks for an email; no provider exists yet, so this is the audit trail."""
-        _logger.warning("security_alert", extra={"user_id": user_id, "alert": kind})
-
-    def _check_code(self, factor: MfaFactor, user: User, code: str, now: datetime) -> int | None:
+    async def _alert(self, user: User, kind: str, device: DeviceInfo | None = None) -> None:
+        """ADR-054: a "was this you?" email, sent after the change is committed. A failed
+        send is logged, never undoes the change."""
+        _logger.warning("security_alert", extra={"user_id": str(user.id), "alert": kind})
+        if self._rt.email is None:
+            return
         try:
-            secret = self._box.open(factor.secret_sealed, bound_to=str(user.id))
-        except SecretBoxError:
-            _logger.error("mfa_secret_unreadable", extra={"user_id": str(user.id)})
-            return None
-        return match_step(secret, code, now, factor.last_used_step)
-
-    def _new_factor(self, user: User, now: datetime) -> tuple[MfaFactor, str]:
-        secret = new_totp_secret()
-        factor = MfaFactor(
-            id=uuid.uuid4(),
-            user_id=user.id,
-            kind="totp",
-            secret_sealed=self._box.seal(secret, bound_to=str(user.id)),
-            created_at=now,
-        )
-        self._repo.add(factor)
-        return factor, otpauth_uri(secret, mask_phone(user.phone))
-
-    async def _issue_recovery_codes(self, user: User, now: datetime) -> list[str]:
-        await self._repo.revoke_recovery_codes(user.id, now)
-        codes = new_recovery_codes()
-        for code in codes:
-            normalised = normalise_recovery_code(code)
-            if normalised is None:  # pragma: no cover - generated codes are always valid
-                raise RuntimeError("generated recovery code failed normalisation")
-            self._repo.add(
-                RecoveryCode(
-                    id=uuid.uuid4(),
-                    user_id=user.id,
-                    code_digest=self._keys.recovery_digest(user.id, normalised),
-                    created_at=now,
-                )
+            await self._rt.email.send_alert(user.email, kind, device.user_agent if device else None)
+        except Exception as exc:  # noqa: BLE001 - an alert must never break the request
+            _logger.error(
+                "security_alert_not_sent",
+                extra={"user_id": str(user.id), "alert": kind, "error": type(exc).__name__},
             )
-        return codes
 
     def _trust_device(
         self, user: User, device_id: str | None, agent: str | None, now: datetime
@@ -778,132 +735,269 @@ class AuthService:
             return None
         return row
 
-    async def enrol_start(self, challenge_id: uuid.UUID) -> tuple[str, str]:
-        """New authenticator secret for a sign-up (or unfinished sign-up). Shown once."""
-        now = self._now()
-        challenge, user = await self._open_challenge(challenge_id, "enrol", now)
-        if await self._repo.active_factor(user.id) is not None:
+    async def _method_for(self, user: User, purpose: str) -> str:
+        """ADR-054: after an approved identity check, the face; before it, codes."""
+        if purpose == "signup":
+            return "email"
+        if await self._repo.has_approved_kyc(user.id):
+            return "face"
+        return "sms_email" if purpose == "login" else "email"
+
+    async def _new_check(
+        self,
+        user: User,
+        purpose: str,
+        device: DeviceInfo | None,
+        now: datetime,
+        *,
+        action: str | None = None,
+        session_id: uuid.UUID | None = None,
+    ) -> tuple[VerificationCheck, str | None, str | None]:
+        """Record a check and make its codes. The caller commits, then ``_send_codes``."""
+        await self._refuse_if_mfa_locked(user, now)
+        since_hour = await self._repo.checks_since(user.id, now - timedelta(hours=1))
+        since_day = await self._repo.checks_since(user.id, now - timedelta(days=1))
+        if since_hour >= CHECKS_PER_HOUR or since_day >= CHECKS_PER_DAY:
+            await self._db.rollback()
+            raise _rate_limited(
+                timedelta(hours=1) if since_hour >= CHECKS_PER_HOUR else timedelta(days=1)
+            )
+        method = await self._method_for(user, purpose)
+        if method != "face" and self._rt.email is None:
+            await self._db.rollback()
+            raise _check_unavailable()
+        if method == "sms_email" and self._rt.sms is None:
+            await self._db.rollback()
+            raise _check_unavailable()
+        if method == "face" and self._rt.face is None:
+            await self._db.rollback()
+            raise _face_unavailable()
+        check_id = uuid.uuid4()
+        email_code = generate_code() if method != "face" else None
+        sms_code = generate_code() if method == "sms_email" else None
+        row = VerificationCheck(
+            id=check_id,
+            user_id=user.id,
+            purpose=purpose,
+            method=method,
+            action=action,
+            session_id=session_id,
+            email_code_digest=(
+                self._keys.code_digest(f"check:{check_id}:email", email_code)
+                if email_code
+                else None
+            ),
+            sms_code_digest=(
+                self._keys.code_digest(f"check:{check_id}:sms", sms_code) if sms_code else None
+            ),
+            device_id=device.device_id if device else None,
+            user_agent=device.user_agent if device else None,
+            ip_address=device.ip_address if device else None,
+            attempts=0,
+            created_at=now,
+            expires_at=now + (FACE_CHECK_TTL if method == "face" else CHECK_CODE_TTL),
+        )
+        self._repo.add(row)
+        return row, email_code, sms_code
+
+    async def _send_codes(self, user: User, email_code: str | None, sms_code: str | None) -> None:
+        """After the commit: a failed send leaves a check the user can start again."""
+        if email_code is not None and self._rt.email is not None:
+            await self._rt.email.send_code(user.email, email_code)
+        if sms_code is not None and self._rt.sms is not None:
+            await self._rt.sms.send_code(user.phone, sms_code)
+
+    @staticmethod
+    def _started(row: VerificationCheck, user: User) -> CheckStarted:
+        return CheckStarted(
+            check_id=row.id,
+            purpose=row.purpose,
+            method=row.method,
+            email_hint=mask_email(user.email) if row.method != "face" else None,
+            phone_hint=mask_phone(user.phone) if row.method == "sms_email" else None,
+        )
+
+    async def _open_check(
+        self,
+        check_id: uuid.UUID,
+        purposes: frozenset[str],
+        now: datetime,
+        principal: Principal | None = None,
+    ) -> tuple[VerificationCheck, User]:
+        """Load a live check; refuse used, expired, over-tried, failed or someone else's."""
+        row = await self._repo.check(check_id)
+        if (
+            row is None
+            or row.purpose not in purposes
+            or row.consumed_at is not None
+            or (row.purpose == "step_up") != (principal is not None)
+            or (
+                principal is not None
+                and (row.user_id != principal.user_id or row.session_id != principal.session_id)
+            )
+        ):
+            await self._db.rollback()
+            raise _invalid_code()
+        if now >= row.expires_at:
             await self._db.rollback()
             raise _err(
-                "AUTH_403_FORBIDDEN",
-                "An authenticator is already set up.",
-                status.HTTP_403_FORBIDDEN,
+                "AUTH_410_CHALLENGE_EXPIRED",
+                "This step has expired. Please start again.",
+                status.HTTP_410_GONE,
             )
-        if challenge.factor_id is not None:  # started again: the earlier secret is dropped
-            earlier = await self._repo.factor_by_id(challenge.factor_id)
-            if earlier is not None and earlier.confirmed_at is None:
-                earlier.revoked_at = now
-        factor, uri = self._new_factor(user, now)
-        await self._db.flush()
-        challenge.factor_id = factor.id
-        secret = self._box.open(factor.secret_sealed, bound_to=str(user.id))
-        await self._db.commit()
-        return secret, uri
-
-    async def enrol_confirm(
-        self, challenge_id: uuid.UUID, code: str, device: DeviceInfo
-    ) -> EnrolledSession:
-        """First code from the new authenticator: 2FA is on, the user is signed in."""
-        now = self._now()
-        challenge, user = await self._open_challenge(challenge_id, "enrol", now)
-        factor = (
-            await self._repo.factor_by_id(challenge.factor_id)
-            if challenge.factor_id is not None
-            else None
-        )
-        if factor is None or factor.revoked_at is not None or factor.confirmed_at is not None:
+        user = await self._repo.user_for_update(row.user_id)
+        if user is None or user.status != "active":  # pragma: no cover - FK and activation
             await self._db.rollback()
             raise _invalid_code()
-        step = self._check_code(factor, user, code, now)
-        if step is None:
-            raise await self._mfa_failure(user, now, challenge)
+        await self._refuse_if_mfa_locked(user, now)
+        if row.face_result == "declined":
+            await self._db.rollback()
+            raise _face_failed()
+        if row.attempts >= MAX_MFA_TRIES:
+            remaining = row.expires_at - now
+            await self._db.rollback()
+            raise _rate_limited(remaining)
+        return row, user
 
-        factor.confirmed_at = now
-        factor.last_used_step = step
-        challenge.consumed_at = now
-        self._mfa_success(user)
-        codes = await self._issue_recovery_codes(user, now)
-        device_token = self._trust_device(user, device.device_id, device.user_agent, now)
-        pair = await self._open_session(user, device, now, pin_verified_at=challenge.created_at)
-        await self._db.commit()
-        _logger.info("mfa_enrolled", extra={"user_id": str(user.id)})
-        return EnrolledSession(SignedIn(pair, device_token), codes)
-
-    async def mfa_verify(
+    async def _match_codes(
         self,
-        challenge_id: uuid.UUID,
-        device: DeviceInfo,
-        *,
-        otp_code: str | None = None,
-        recovery_code: str | None = None,
-    ) -> SignedIn:
-        """Contract §3.1: finish log-in with the authenticator code or a recovery code."""
-        if (otp_code is None) == (recovery_code is None):
-            raise _invalid_code()
-        now = self._now()
-        challenge, user = await self._open_challenge(challenge_id, "login", now)
-        factor = await self._repo.active_factor(user.id, lock=True)
-        if factor is None:  # pragma: no cover - login only issues "login" challenges with one
+        row: VerificationCheck,
+        user: User,
+        now: datetime,
+        email_code: str | None,
+        sms_code: str | None,
+    ) -> None:
+        if row.method == "face" or row.email_code_digest is None:
             await self._db.rollback()
             raise _invalid_code()
-
-        if otp_code is not None:
-            step = self._check_code(factor, user, otp_code, now)
-            if step is None:
-                raise await self._mfa_failure(user, now, challenge)
-            factor.last_used_step = step
-            device_token: str | None = self._trust_device(
-                user, device.device_id, device.user_agent, now
+        ok = email_code is not None and self._keys.code_matches(
+            f"check:{row.id}:email", email_code, row.email_code_digest
+        )
+        if row.method == "sms_email":
+            ok = (
+                ok
+                and sms_code is not None
+                and row.sms_code_digest is not None
+                and self._keys.code_matches(f"check:{row.id}:sms", sms_code, row.sms_code_digest)
             )
-        else:
-            normalised = normalise_recovery_code(recovery_code or "")
-            row = (
-                await self._repo.unused_recovery_code(
-                    user.id, self._keys.recovery_digest(user.id, normalised)
-                )
-                if normalised
-                else None
-            )
-            if row is None:
-                raise await self._mfa_failure(user, now, challenge)
-            row.used_at = now
-            # ADR-008: recovery means the phone may be lost — end trust everywhere, do not
-            # trust this device (no payout wait since DEC-044).
-            await self._repo.revoke_trusted_devices(user.id, now)
-            user.payout_hold_until = now + PAYOUT_HOLD
-            device_token = None
-            self._alert(str(user.id), "recovery_code_used")
-
-        challenge.consumed_at = now
+        if not ok:
+            raise await self._mfa_failure(user, now, row)
+        row.completed_at = now
         self._mfa_success(user)
-        pair = await self._open_session(user, device, now, pin_verified_at=challenge.created_at)
+
+    async def _match_face(self, row: VerificationCheck, user: User, now: datetime) -> None:
+        """Ask the provider for the result. Fails closed (ADR-054)."""
+        if row.completed_at is not None:
+            return
+        if row.method != "face" or row.face_session_id is None:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_FACE_CHECK_NOT_STARTED",
+                "Please take the face check first.",
+                status.HTTP_409_CONFLICT,
+            )
+        if self._rt.face is None:
+            await self._db.rollback()
+            raise _face_unavailable()
+        try:
+            outcome = await self._rt.face.outcome(row.face_session_id, str(user.id))
+        except FaceCheckError as exc:
+            await self._db.rollback()
+            _logger.error("face_check_unavailable", extra={"error": str(exc)})
+            raise _face_unavailable() from None
+        if outcome == "pending":
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_FACE_CHECK_PENDING",
+                "Your face check is not finished yet.",
+                status.HTTP_409_CONFLICT,
+            )
+        if outcome != "approved":
+            row.face_result = "declined"
+            raise await self._mfa_failure(user, now, row, _face_failed())
+        row.face_result = "approved"
+        row.completed_at = now
+        self._mfa_success(user)
+
+    async def face_start(
+        self, check_id: uuid.UUID, principal: Principal | None = None
+    ) -> str | None:
+        """Open the provider's selfie page for a face check. Starting again counts as a try.
+
+        Returns the page link (shown once, never stored), or None for the local developer
+        check, which needs no page.
+        """
+        now = self._now()
+        purposes = STEP_UP_PURPOSE if principal is not None else FACE_START_PURPOSES
+        row, user = await self._open_check(check_id, purposes, now, principal)
+        if row.method != "face" or row.completed_at is not None:
+            await self._db.rollback()
+            raise _invalid_code()
+        if self._rt.face is None:
+            await self._db.rollback()
+            raise _face_unavailable()
+        try:
+            session = await self._rt.face.start(
+                str(user.id), {"check_id": str(row.id), "purpose": row.purpose}
+            )
+        except NoReferenceFace:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_NO_FACE_ON_FILE",
+                "We have no identity-check photo to compare with. Please contact Support.",
+                status.HTTP_409_CONFLICT,
+            ) from None
+        except FaceCheckError as exc:
+            await self._db.rollback()
+            _logger.error("face_check_unavailable", extra={"error": str(exc)})
+            raise _face_unavailable() from None
+        if row.face_session_id is not None:
+            row.attempts = min(row.attempts + 1, MAX_MFA_TRIES)
+        row.face_session_id = session.session_id
         await self._db.commit()
-        if device_token is not None:
-            self._alert(str(user.id), "new_device_sign_in")
+        _logger.info("face_check_started", extra={"user_id": str(user.id)})
+        return session.url
+
+    async def _finish_sign_in(
+        self, row: VerificationCheck, user: User, device: DeviceInfo, now: datetime
+    ) -> SignedIn:
+        row.consumed_at = now
+        device_token = self._trust_device(user, device.device_id, device.user_agent, now)
+        pair = await self._open_session(user, device, now, pin_verified_at=row.created_at)
+        await self._db.commit()
+        _logger.info("signed_in", extra={"user_id": str(user.id), "check": row.method})
+        if row.purpose == "login":
+            await self._alert(user, "new_device_sign_in", device)
         return SignedIn(pair, device_token)
 
-    # --- step-up and account security -------------------------------------------------------
-
-    async def step_up(self, principal: Principal, action: str, code: str) -> str:
-        """One fresh code → one approval for one action, valid 5 minutes (ADR-026)."""
-        if action not in STEP_UP_ACTIONS:
-            raise _err("AUTH_403_FORBIDDEN", "Unknown action.", status.HTTP_403_FORBIDDEN)
+    async def check_codes(
+        self,
+        check_id: uuid.UUID,
+        device: DeviceInfo,
+        email_code: str | None,
+        sms_code: str | None = None,
+    ) -> SignedIn:
+        """Sign-up (email code) or log-in before the identity check (SMS + email codes)."""
         now = self._now()
-        user = await self._repo.user_for_update(principal.user_id)
-        if user is None:  # pragma: no cover
-            raise _unauthorized()
-        await self._refuse_if_mfa_locked(user, now)
-        factor = await self._repo.active_factor(user.id, lock=True)
-        step = self._check_code(factor, user, code, now) if factor is not None else None
-        if factor is None or step is None:
-            raise await self._mfa_failure(user, now)
-        factor.last_used_step = step
-        self._mfa_success(user)
+        row, user = await self._open_check(check_id, SIGN_IN_PURPOSES, now)
+        await self._match_codes(row, user, now, email_code, sms_code)
+        return await self._finish_sign_in(row, user, device, now)
+
+    async def face_finish(self, check_id: uuid.UUID, device: DeviceInfo) -> SignedIn:
+        """Log-in on a new phone after the identity check: the face check result."""
+        now = self._now()
+        row, user = await self._open_check(check_id, SIGN_IN_PURPOSES, now)
+        await self._match_face(row, user, now)
+        return await self._finish_sign_in(row, user, device, now)
+
+    # --- step-up: one approval for one sensitive action (ADR-026, ADR-054) --------------------
+
+    def _grant(self, principal: Principal, action: str, now: datetime) -> str:
         token = generate_refresh_token()
         self._repo.add(
             StepUpGrant(
                 id=uuid.uuid4(),
-                user_id=user.id,
+                user_id=principal.user_id,
                 session_id=principal.session_id,
                 action=action,
                 token_hash=hash_refresh_token(token),
@@ -911,8 +1005,102 @@ class AuthService:
                 expires_at=now + STEP_UP_TTL,
             )
         )
+        return token
+
+    @staticmethod
+    def _known_action(action: str) -> None:
+        if action not in STEP_UP_ACTIONS:
+            raise _err("AUTH_403_FORBIDDEN", "Unknown action.", status.HTTP_403_FORBIDDEN)
+
+    async def step_up_biometric(self, principal: Principal, action: str, unlock_key: str) -> str:
+        """Fingerprint/Face ID on a trusted phone: the key the phone released after it.
+
+        The key is the one this session holds for unlocking (ADR-048); it only works while
+        the phone it was given to is still trusted.
+        """
+        self._known_action(action)
+        now = self._now()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        await self._refuse_if_mfa_locked(user, now)
+        session = await self._repo.session_by_id(principal.session_id, lock=True)
+        if session is None or session.unlock_key_hash is None or session.unlock_device_id is None:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_403_BIOMETRIC_OFF",
+                "Fingerprint or Face ID is not turned on for this phone.",
+                status.HTTP_403_FORBIDDEN,
+            )
+        device = await self._repo.trusted_device_by_id(session.unlock_device_id)
+        if (
+            device is None
+            or device.user_id != principal.user_id
+            or device.revoked_at is not None
+            or now >= device.expires_at
+        ):
+            await self._db.rollback()
+            raise _err(
+                "AUTH_403_BIOMETRIC_OFF",
+                "Fingerprint or Face ID is not turned on for this phone.",
+                status.HTTP_403_FORBIDDEN,
+            )
+        if (
+            not unlock_key
+            or len(unlock_key) > 128
+            or not secrets.compare_digest(session.unlock_key_hash, hash_refresh_token(unlock_key))
+        ):
+            raise await self._mfa_failure(
+                user,
+                now,
+                wrong=_err(
+                    "AUTH_401_BIOMETRIC_FAILED",
+                    "Fingerprint or Face ID could not confirm this. Please try the face check.",
+                    status.HTTP_401_UNAUTHORIZED,
+                ),
+            )
+        self._mfa_success(user)
+        token = self._grant(principal, action, now)
         await self._db.commit()
         return token
+
+    async def step_up_check(self, principal: Principal, action: str) -> CheckStarted:
+        """No fingerprint: a face check (after the identity check) or an email code."""
+        self._known_action(action)
+        now = self._now()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        row, email_code, _ = await self._new_check(
+            user, "step_up", None, now, action=action, session_id=principal.session_id
+        )
+        started = self._started(row, user)
+        await self._db.commit()
+        await self._send_codes(user, email_code, None)
+        return started
+
+    async def step_up_codes(
+        self, principal: Principal, check_id: uuid.UUID, email_code: str
+    ) -> tuple[str, str]:
+        now = self._now()
+        row, user = await self._open_check(check_id, STEP_UP_PURPOSE, now, principal)
+        await self._match_codes(row, user, now, email_code, None)
+        return await self._finish_step_up(principal, row, now)
+
+    async def step_up_face(self, principal: Principal, check_id: uuid.UUID) -> tuple[str, str]:
+        now = self._now()
+        row, user = await self._open_check(check_id, STEP_UP_PURPOSE, now, principal)
+        await self._match_face(row, user, now)
+        return await self._finish_step_up(principal, row, now)
+
+    async def _finish_step_up(
+        self, principal: Principal, row: VerificationCheck, now: datetime
+    ) -> tuple[str, str]:
+        action = str(row.action)
+        row.consumed_at = now
+        token = self._grant(principal, action, now)
+        await self._db.commit()
+        return token, action
 
     async def consume_step_up(self, principal: Principal, action: str, token: str | None) -> None:
         """Spend a step-up approval for ``action``. The caller commits with its own work."""
@@ -933,65 +1121,11 @@ class AuthService:
             await self._db.rollback()
             raise _err(
                 "AUTH_403_FORBIDDEN",
-                "Please confirm with your authenticator code first.",
+                "Please confirm it's you first.",
                 status.HTTP_403_FORBIDDEN,
                 step_up_action=action,
             )
         grant.used_at = now
-
-    async def regenerate_recovery_codes(
-        self, principal: Principal, step_up_token: str | None
-    ) -> list[str]:
-        await self.consume_step_up(principal, "recovery_codes.regenerate", step_up_token)
-        user = await self._repo.user_for_update(principal.user_id)
-        if user is None:  # pragma: no cover
-            raise _unauthorized()
-        codes = await self._issue_recovery_codes(user, self._now())
-        await self._db.commit()
-        self._alert(str(user.id), "recovery_codes_regenerated")
-        return codes
-
-    async def replace_start(
-        self, principal: Principal, step_up_token: str | None
-    ) -> tuple[str, str]:
-        """Begin replacing the authenticator. Needs a step-up for ``mfa.change``."""
-        await self.consume_step_up(principal, "mfa.change", step_up_token)
-        now = self._now()
-        user = await self._repo.user_for_update(principal.user_id)
-        if user is None:  # pragma: no cover
-            raise _unauthorized()
-        factor, uri = self._new_factor(user, now)
-        await self._db.flush()
-        secret = self._box.open(factor.secret_sealed, bound_to=str(user.id))
-        await self._db.commit()
-        return secret, uri
-
-    async def replace_confirm(self, principal: Principal, code: str) -> None:
-        """First code from the new authenticator: it replaces the old one (ADR-008)."""
-        now = self._now()
-        user = await self._repo.user_for_update(principal.user_id)
-        if user is None:  # pragma: no cover
-            raise _unauthorized()
-        await self._refuse_if_mfa_locked(user, now)
-        pending = await self._repo.latest_pending_factor(user.id, now - ENROL_CHALLENGE_TTL)
-        if pending is None:
-            await self._db.rollback()
-            raise _invalid_code()
-        step = self._check_code(pending, user, code, now)
-        if step is None:
-            raise await self._mfa_failure(user, now)
-        old = await self._repo.active_factor(user.id, lock=True)
-        if old is not None:
-            old.revoked_at = now
-            await self._db.flush()  # free the one-active-factor index before confirming
-        pending.confirmed_at = now
-        pending.last_used_step = step
-        self._mfa_success(user)
-        # A reset: end trust everywhere (ADR-008; no payout wait since DEC-044).
-        await self._repo.revoke_trusted_devices(user.id, now)
-        user.payout_hold_until = now + PAYOUT_HOLD
-        await self._db.commit()
-        self._alert(str(user.id), "authenticator_replaced")
 
     # --- PIN change and reset (ADR-046) --------------------------------------------------
 
@@ -1014,7 +1148,7 @@ class AuthService:
     async def change_pin(
         self, principal: Principal, current_pin: str, new_pin: str, step_up_token: str | None
     ) -> None:
-        """Signed in, with an authenticator approval (``pin.change``) and the current PIN.
+        """Signed in, with an approval (``pin.change``) and the current PIN.
 
         Other devices are signed out; this one stays. A wrong current PIN counts towards the
         PIN lock exactly like a wrong log-in.
@@ -1050,7 +1184,7 @@ class AuthService:
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_change", keep=principal.session_id)
         await self._db.commit()
-        self._alert(str(user.id), "pin_changed")
+        await self._alert(user, "pin_changed")
 
     async def pin_reset_start(self, phone_raw: str) -> None:
         """Send a reset code by SMS. Same answer whether or not the number has an account."""
@@ -1076,20 +1210,9 @@ class AuthService:
             await self._rt.sms.send_code(phone, code)
             _logger.info("pin_reset_code_sent", extra={"phone": mask_phone(phone)})
 
-    async def pin_reset_confirm(
-        self,
-        phone_raw: str,
-        sms_code: str,
-        new_pin: str,
-        *,
-        otp_code: str | None = None,
-        recovery_code: str | None = None,
-    ) -> None:
-        """ADR-025/046: a new PIN needs the SMS code AND the second factor (authenticator code
-        or a recovery code). Every session ends and trusted devices are forgotten."""
-        if (otp_code is None) == (recovery_code is None):
-            raise _invalid_code()
-        self._pin_or_422(new_pin)
+    async def pin_reset_verify(self, phone_raw: str, sms_code: str) -> CheckStarted:
+        """Forgot PIN, step 2: the SMS code is right; the second check comes next (ADR-054):
+        a face check after the identity check, an email code before it."""
         phone = normalise_phone(phone_raw)
         if phone is None:
             raise _invalid_code()
@@ -1117,37 +1240,33 @@ class AuthService:
         if user is None or user.status != "active":  # pragma: no cover - code is unusable then
             await self._db.rollback()
             raise _invalid_code()
-        await self._refuse_if_mfa_locked(user, now)
-        factor = await self._repo.active_factor(user.id, lock=True)
-        if factor is None:  # pragma: no cover - every active account has one (ADR-026)
-            await self._db.rollback()
-            raise _invalid_code()
-        if otp_code is not None:
-            step = self._check_code(factor, user, otp_code, now)
-            if step is None:
-                raise await self._mfa_failure(user, now)
-            factor.last_used_step = step
-        else:
-            normalised = normalise_recovery_code(recovery_code or "")
-            used = (
-                await self._repo.unused_recovery_code(
-                    user.id, self._keys.recovery_digest(user.id, normalised)
-                )
-                if normalised
-                else None
-            )
-            if used is None:
-                raise await self._mfa_failure(user, now)
-            used.used_at = now
         row.consumed_at = now
-        self._mfa_success(user)
+        check, email_code, _ = await self._new_check(user, "pin_reset", None, now)
+        started = self._started(check, user)
+        await self._db.commit()
+        await self._send_codes(user, email_code, None)
+        return started
+
+    async def pin_reset_confirm(
+        self, check_id: uuid.UUID, new_pin: str, email_code: str | None = None
+    ) -> None:
+        """Forgot PIN, step 3: the email code (or the face check result) and the new PIN.
+        Every session ends and trusted devices are forgotten (ADR-046)."""
+        self._pin_or_422(new_pin)
+        now = self._now()
+        row, user = await self._open_check(check_id, PIN_RESET_PURPOSE, now)
+        if row.method == "face":
+            await self._match_face(row, user, now)
+        else:
+            await self._match_codes(row, user, now, email_code, None)
+        row.consumed_at = now
         user.pin_hash = self._rt.hasher.hash(new_pin)
         user.failed_pin_attempts = 0
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_reset")
         await self._repo.revoke_trusted_devices(user.id, now)
         await self._db.commit()
-        self._alert(str(user.id), "pin_reset")
+        await self._alert(user, "pin_reset")
 
     # --- phone number change (ADR-047) ------------------------------------------------------
 
@@ -1235,7 +1354,7 @@ class AuthService:
                 "This number is already used by another account.",
                 status.HTTP_409_CONFLICT,
             ) from None
-        self._alert(str(principal.user_id), "phone_changed")
+        await self._alert(user, "phone_changed")
         _logger.info(
             "phone_changed", extra={"user_id": str(principal.user_id), "old": mask_phone(old)}
         )
@@ -1269,8 +1388,8 @@ class AuthService:
             await self._db.rollback()
             raise _err(
                 "AUTH_403_DEVICE_NOT_TRUSTED",
-                "Fingerprint or Face ID unlock needs a trusted device. Log in with your "
-                "authenticator code and choose to trust this device first.",
+                "Fingerprint or Face ID needs a trusted phone. Log out and log in again on "
+                "this phone to trust it.",
                 status.HTTP_403_FORBIDDEN,
             )
         key = generate_refresh_token()

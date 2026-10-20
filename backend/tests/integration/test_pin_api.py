@@ -1,6 +1,6 @@
 # ruff: noqa: F811  -- pytest fixtures are imported by name and used as parameters
-"""ADR-046: change PIN (signed in, authenticator approval, current PIN) and forgot PIN (SMS code
-plus authenticator or recovery code). Against PostgreSQL."""
+"""ADR-046: change PIN (signed in, an approval, current PIN) and forgot PIN (SMS code plus,
+since ADR-054, an email code or a face check). Against PostgreSQL."""
 
 from __future__ import annotations
 
@@ -26,10 +26,7 @@ NEW = "736195"
 
 
 async def _approve(env: Env, token: str, action: str = "pin.change") -> str:
-    env.clock.advance(seconds=31)
-    r = await env.post("/auth/step-up", {"action": action, "otp_code": env.totp()}, token=token)
-    assert r.status_code == 200, r.text
-    return str(r.json()["step_up_token"])
+    return await env.approve(token, action)
 
 
 async def _change(env: Env, token: str, body: dict[str, Any], approval: str | None) -> Any:
@@ -95,16 +92,20 @@ async def _reset_code(env: Env, phone: str = PHONE) -> str:
     return code
 
 
-async def test_reset_with_sms_and_authenticator_ends_every_session(
-    db_settings: Settings, env: Env
-) -> None:
+async def _reset(env: Env, code: str, new_pin: str = NEW) -> Any:
+    r = await env.post("/auth/pin-reset/verify", {"phone": PHONE, "code": code})
+    assert r.status_code == 200, r.text
+    check = r.json()["check_id"]
+    return await env.post(
+        "/auth/pin-reset/confirm",
+        {"check_id": check, "new_pin": new_pin, "email_code": env.email_code()},
+    )
+
+
+async def test_reset_ends_every_session_and_forgets_trust(db_settings: Settings, env: Env) -> None:
     me = (await env.sign_up())["access_token"]
     code = await _reset_code(env)
-    env.clock.advance(seconds=31)
-    r = await env.post(
-        "/auth/pin-reset/confirm",
-        {"phone": PHONE, "code": code, "new_pin": NEW, "otp_code": env.totp()},
-    )
+    r = await _reset(env, code)
     assert r.status_code == 204, r.text
     assert (await env.get("/users/me", token=me)).status_code == 401
     assert (
@@ -118,63 +119,41 @@ async def test_reset_with_sms_and_authenticator_ends_every_session(
         >= 1
     )
     assert (await env.login(pin=NEW, trusted=False)).status_code == 200
-    # The code worked once.
-    r = await env.post(
-        "/auth/pin-reset/confirm",
-        {"phone": PHONE, "code": code, "new_pin": "952741", "otp_code": env.totp()},
-    )
+    # The SMS code worked once.
+    r = await env.post("/auth/pin-reset/verify", {"phone": PHONE, "code": code})
     assert r.status_code == 401
 
 
-async def test_reset_with_a_recovery_code(env: Env) -> None:
-    body = await env.sign_up()
-    code = await _reset_code(env)
-    r = await env.post(
-        "/auth/pin-reset/confirm",
-        {"phone": PHONE, "code": code, "new_pin": NEW, "recovery_code": body["recovery_codes"][0]},
-    )
-    assert r.status_code == 204, r.text
-
-
-async def test_reset_needs_the_second_factor(env: Env) -> None:
+async def test_reset_needs_the_second_check(env: Env) -> None:
     await env.sign_up()
     code = await _reset_code(env)
+    r = await env.post("/auth/pin-reset/verify", {"phone": PHONE, "code": code})
+    check = r.json()["check_id"]
     for body in (
-        {"phone": PHONE, "code": code, "new_pin": NEW},  # neither
-        {
-            "phone": PHONE,
-            "code": code,
-            "new_pin": NEW,
-            "otp_code": "000000",
-            "recovery_code": "x" * 10,
-        },
+        {"check_id": check, "new_pin": NEW},  # no email code
+        {"check_id": check, "new_pin": NEW, "email_code": "000000"},
     ):
         r = await env.post("/auth/pin-reset/confirm", body)
-        assert r.status_code in (401, 422), body
+        assert r.status_code == 401, body
+    # The old phone+code+PIN body is refused, never half-read.
     r = await env.post(
         "/auth/pin-reset/confirm",
-        {"phone": PHONE, "code": code, "new_pin": NEW, "otp_code": "000000"},
+        {"phone": PHONE, "code": code, "new_pin": NEW, "otp_code": "123456"},
     )
-    assert r.status_code == 401
+    assert r.status_code == 422
     assert (await env.login(pin=PIN)).status_code == 200  # PIN unchanged
 
 
 async def test_wrong_sms_code_and_sign_up_code_do_not_work(env: Env) -> None:
     await env.sign_up()
     await _reset_code(env)
-    r = await env.post(
-        "/auth/pin-reset/confirm",
-        {"phone": PHONE, "code": "000000", "new_pin": NEW, "otp_code": env.totp()},
-    )
+    r = await env.post("/auth/pin-reset/verify", {"phone": PHONE, "code": "000000"})
     assert r.status_code == 401
     # A reset code never activates an account, and a sign-up code never resets a PIN.
     other = "+2348031111111"
     r = await env.post("/auth/register", {"phone": other, "email": "x@example.com", "pin": PIN})
     signup_code = env.sms.last_code_for(other)
-    r = await env.post(
-        "/auth/pin-reset/confirm",
-        {"phone": other, "code": signup_code, "new_pin": NEW, "otp_code": "123456"},
-    )
+    r = await env.post("/auth/pin-reset/verify", {"phone": other, "code": signup_code})
     assert r.status_code == 401
 
 

@@ -1,4 +1,4 @@
-/** Typed calls to the sign-in and 2FA endpoints (ADR-025, ADR-026). */
+/** Typed calls to the sign-in endpoints (ADR-025) and the second check (ADR-054). */
 
 import { apiRequest, type Fetch, type RequestOptions } from './client';
 
@@ -10,10 +10,23 @@ export interface Tokens {
   device_token?: string | null;
 }
 
-export interface Challenge {
-  mfa_required: true;
-  mfa_challenge_id: string;
-  enrolment_required: boolean;
+/**
+ * ADR-054: the second check still needed. `email`: a code sent to the email; `sms_email`: an
+ * SMS code and an email code; `face`: a face check matched to the identity-check photo.
+ */
+export interface Check {
+  check_required: true;
+  check_id: string;
+  purpose: 'signup' | 'login' | 'step_up' | 'pin_reset';
+  method: 'email' | 'sms_email' | 'face';
+  email_hint: string | null;
+  phone_hint: string | null;
+}
+
+export interface StepUpApproval {
+  step_up_token: string;
+  action: string;
+  expires_in_seconds: number;
 }
 
 export interface Profile {
@@ -51,30 +64,29 @@ export const authApi = {
   /** ADR-046: forgot PIN — always the same answer, whether or not the number has an account. */
   pinResetStart: (phone: string, x: Extra = {}) =>
     apiRequest<{ status: string }>('POST', '/api/v1/auth/pin-reset/start', { body: { phone }, ...x }),
-  pinResetConfirm: (
-    body: { phone: string; code: string; new_pin: string; otp_code?: string; recovery_code?: string },
-    x: Extra = {},
-  ) => apiRequest<void>('POST', '/api/v1/auth/pin-reset/confirm', { body, ...x }),
+  /** Forgot PIN, step 2: the SMS code → the second check (email code or face check). */
+  pinResetVerify: (phone: string, code: string, x: Extra = {}) =>
+    apiRequest<Check>('POST', '/api/v1/auth/pin-reset/verify', { body: { phone, code }, ...x }),
+  pinResetConfirm: (body: { check_id: string; new_pin: string; email_code?: string }, x: Extra = {}) =>
+    apiRequest<void>('POST', '/api/v1/auth/pin-reset/confirm', { body, ...x }),
   register: (body: { phone: string; email: string; pin: string }, x: Extra = {}) =>
     apiRequest<{ status: string }>('POST', '/api/v1/auth/register', { body, ...x }),
   verifyPhone: (body: { phone: string; code: string; device_id?: string }, x: Extra = {}) =>
-    apiRequest<Challenge>('POST', '/api/v1/auth/verify-phone', { body, ...x }),
-  enrolStart: (challengeId: string, x: Extra = {}) =>
-    apiRequest<{ secret: string; otpauth_uri: string }>('POST', '/api/v1/auth/mfa/enrol/start', {
-      body: { mfa_challenge_id: challengeId },
-      ...x,
-    }),
-  enrolConfirm: (challengeId: string, otpCode: string, x: Extra = {}) =>
-    apiRequest<Tokens & { recovery_codes: string[] }>('POST', '/api/v1/auth/mfa/enrol/confirm', {
-      body: { mfa_challenge_id: challengeId, otp_code: otpCode },
-      ...x,
-    }),
+    apiRequest<Check>('POST', '/api/v1/auth/verify-phone', { body, ...x }),
   login: (body: { identifier: string; pin: string; device_token?: string }, x: Extra = {}) =>
-    apiRequest<Tokens | Challenge>('POST', '/api/v1/auth/login', { body, ...x }),
-  mfaVerify: (
-    body: { mfa_challenge_id: string; otp_code?: string; recovery_code?: string },
-    x: Extra = {},
-  ) => apiRequest<Tokens>('POST', '/api/v1/auth/mfa/verify', { body, ...x }),
+    apiRequest<Tokens | Check>('POST', '/api/v1/auth/login', { body, ...x }),
+  /** Sign-up or log-in: the email code (and the SMS code for an `sms_email` check). */
+  checkCodes: (checkId: string, body: { email_code: string; sms_code?: string }, x: Extra = {}) =>
+    apiRequest<Tokens>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/codes`, { body, ...x }),
+  /** Log-in or PIN reset: open the face check. `url` is null for the local developer check. */
+  faceStart: (checkId: string, x: Extra = {}) =>
+    apiRequest<{ url: string | null }>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/face`, x),
+  /** Log-in: the face check result (409 while it is still running). */
+  faceResult: (checkId: string, x: Extra = {}) =>
+    apiRequest<Tokens>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/face/result`, {
+      body: {},
+      ...x,
+    }),
   refresh: (refreshToken: string, x: Extra = {}) =>
     apiRequest<Tokens>('POST', '/api/v1/auth/refresh', { token: refreshToken, ...x }),
   /** ADR-048: a new unlock key for this session; trusted devices only. */
@@ -94,37 +106,37 @@ export const authApi = {
     }),
   logout: (accessToken: string, x: Extra = {}) =>
     apiRequest<void>('POST', '/api/v1/auth/logout', { token: accessToken, ...x }),
-  /** One fresh authenticator code → a one-use approval for one action, valid 5 minutes. */
-  stepUp: (accessToken: string, action: string, otpCode: string, x: Extra = {}) =>
-    apiRequest<{ step_up_token: string; action: string; expires_in_seconds: number }>(
+  /** Fingerprint/Face ID released the session's key → a one-use approval, valid 5 minutes. */
+  stepUp: (accessToken: string, action: string, unlockKey: string, x: Extra = {}) =>
+    apiRequest<StepUpApproval>('POST', '/api/v1/auth/step-up', {
+      token: accessToken,
+      body: { action, unlock_key: unlockKey },
+      ...x,
+    }),
+  /** No fingerprint: a face check (or, before the identity check, an email code). */
+  stepUpCheck: (accessToken: string, action: string, x: Extra = {}) =>
+    apiRequest<Check>('POST', '/api/v1/auth/step-up/checks', { token: accessToken, body: { action }, ...x }),
+  stepUpCode: (accessToken: string, checkId: string, emailCode: string, x: Extra = {}) =>
+    apiRequest<StepUpApproval>('POST', `/api/v1/auth/step-up/checks/${encodeURIComponent(checkId)}/code`, {
+      token: accessToken,
+      body: { email_code: emailCode },
+      ...x,
+    }),
+  stepUpFaceStart: (accessToken: string, checkId: string, x: Extra = {}) =>
+    apiRequest<{ url: string | null }>('POST', `/api/v1/auth/step-up/checks/${encodeURIComponent(checkId)}/face`, {
+      token: accessToken,
+      ...x,
+    }),
+  stepUpFaceResult: (accessToken: string, checkId: string, x: Extra = {}) =>
+    apiRequest<StepUpApproval>(
       'POST',
-      '/api/v1/auth/step-up',
-      { token: accessToken, body: { action, otp_code: otpCode }, ...x },
+      `/api/v1/auth/step-up/checks/${encodeURIComponent(checkId)}/face/result`,
+      { token: accessToken, ...x },
     ),
-  /** New recovery codes; the old ones stop working (step-up: recovery_codes.regenerate). */
-  regenerateRecoveryCodes: (accessToken: string, stepUpToken: string, x: Extra = {}) =>
-    apiRequest<{ recovery_codes: string[] }>('POST', '/api/v1/users/me/recovery-codes', {
-      token: accessToken,
-      headers: { 'X-Step-Up-Token': stepUpToken },
-      ...x,
-    }),
-  /** A new authenticator secret, not active until confirmed (step-up: mfa.change). */
-  replaceStart: (accessToken: string, stepUpToken: string, x: Extra = {}) =>
-    apiRequest<{ secret: string; otpauth_uri: string }>('POST', '/api/v1/users/me/mfa/replace/start', {
-      token: accessToken,
-      headers: { 'X-Step-Up-Token': stepUpToken },
-      ...x,
-    }),
-  replaceConfirm: (accessToken: string, otpCode: string, x: Extra = {}) =>
-    apiRequest<void>('POST', '/api/v1/users/me/mfa/replace/confirm', {
-      token: accessToken,
-      body: { otp_code: otpCode },
-      ...x,
-    }),
   me: (accessToken: string, x: Extra = {}) =>
     apiRequest<Profile>('GET', '/api/v1/users/me', { token: accessToken, ...x }),
 };
 
-export function isChallenge(r: Tokens | Challenge): r is Challenge {
-  return (r as Challenge).mfa_required === true;
+export function isCheck(r: Tokens | Check): r is Check {
+  return (r as Check).check_required === true;
 }

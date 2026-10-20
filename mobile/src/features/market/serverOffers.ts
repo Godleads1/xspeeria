@@ -10,9 +10,9 @@
 import * as Crypto from 'expo-crypto';
 
 import { ApiError } from '../../api/client';
-import { authApi } from '../../api/authApi';
 import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersApi';
 import { serverAuth } from '../auth/serverAuth';
+import { confirmIdentity } from '../security/serverConfirm';
 import type { Listing } from './data';
 import { formatHundredths, parseToHundredths } from './money';
 import { tr } from "../../i18n";
@@ -112,8 +112,8 @@ export const myOffers = {
 /** Taking an offer (ADR-031): read it fresh, get an approval, accept. */
 export interface TakeSource {
   offer(offerId: string): Promise<ServerOffer>;
-  /** A 6-digit authenticator code → a one-use `trade.accept` approval. */
-  approve(code: string): Promise<string>;
+  /** "Confirm it's you" → a one-use `trade.accept` approval; null when cancelled. */
+  approve(reason: string): Promise<string | null>;
   /** Same key → same answer; a retry never makes a second Match. */
   accept(offerId: string, amount: string, key: string, stepUpToken: string | null): Promise<ServerMatch>;
   newKey(): string;
@@ -121,8 +121,7 @@ export interface TakeSource {
 
 export const takeServer: TakeSource = {
   offer: async (offerId) => offersApi.get(token(), offerId, serverAuth.apiOptions()),
-  approve: async (code) =>
-    (await authApi.stepUp(token(), 'trade.accept', code, serverAuth.apiOptions())).step_up_token,
+  approve: async (reason) => confirmIdentity('trade.accept', reason),
   accept: async (offerId, amount, key, stepUpToken) =>
     offersApi.accept(token(), offerId, amount, key, stepUpToken, serverAuth.apiOptions()),
   newKey: () => Crypto.randomUUID(),

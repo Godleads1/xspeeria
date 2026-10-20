@@ -1,8 +1,8 @@
 """Milestones AUTH-1 and AUTH-2 end to end, over HTTP, against PostgreSQL (ADR-024/025/026).
 
-Since AUTH-2 every sign-up ends by adding an authenticator; ``Env.sign_up`` does that and
+Every sign-up ends with a code sent to the email (ADR-054); ``Env.sign_up`` does that and
 keeps the device token, so later log-ins in these tests are on a trusted device unless a
-test says otherwise. Second-factor cases live in ``test_two_factor_api.py``.
+test says otherwise. Second-check cases live in ``test_second_check_api.py``.
 
 Normal, failure and abuse cases for sign-up, log-in, refresh, idle and 7-day limits,
 log-out, device sessions, rate limits and the logging rule. The clock is injected, the SMS
@@ -18,7 +18,6 @@ from collections.abc import AsyncIterator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import pyotp
 import pytest
 import pytest_asyncio
 from alembic import command
@@ -34,6 +33,8 @@ from app.core.rate_limit import SlidingWindowLimiter
 from app.db.session import build_engine, dispose_engine
 from app.domain.auth_rules import MAX_PIN_TRIES, PIN_LOCK
 from app.main import create_app
+from app.providers.email import RecordingEmailSender
+from app.providers.face import RecordingFaceCheck
 from app.providers.sms import RecordingSmsSender
 from app.services.auth import AuthRuntime
 from tests.integration.test_migrations import ALEMBIC_INI, MIGRATIONS_DIR
@@ -43,13 +44,14 @@ pytestmark = pytest.mark.integration
 T0 = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
 #: A throwaway signing key made at import time (no secret-shaped literal in the repo).
 KEY = "t" * 48
-#: Throwaway 2FA sealing key, built at import time.
+#: Throwaway sealing key, built at import time.
 MFA_KEY = base64.b64encode(bytes(range(32))).decode()
 PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
-    "push_deliveries, push_tokens, notifications, kyc_webhook_events, kyc_cases, "
+    "verification_checks, push_deliveries, push_tokens, notifications, kyc_webhook_events, "
+    "kyc_cases, "
     "outbox_messages, reconciliation_exceptions, settlement_holds, pending_events, "
     "settlement_events, webhook_receipts, payout_executions, settlement_legs, settlements, "
     "transactions, partners, "
@@ -103,22 +105,60 @@ def _runtime(clock: Clock, sms: RecordingSmsSender | None, address_limit: int) -
         clock=clock,
         address_limiter=SlidingWindowLimiter(limit=address_limit, window=timedelta(minutes=1)),
         unknown_identifier_limiter=SlidingWindowLimiter(limit=MAX_PIN_TRIES, window=PIN_LOCK),
+        email=RecordingEmailSender(),
+        face=RecordingFaceCheck(),
     )
 
 
 class Env:
     def __init__(self, client: AsyncClient, clock: Clock, sms: RecordingSmsSender) -> None:
         self.client, self.clock, self.sms = client, clock, sms
-        #: Per account (phone and email): authenticator secret and trusted-device token.
-        self.secrets: dict[str, str] = {}
+        #: Per account (phone and email): trusted-device token.
         self.device_tokens: dict[str, str] = {}
+        #: Per access token: the fingerprint/Face ID key for that session.
+        self.unlock_keys: dict[str, str] = {}
+
+    @property
+    def runtime(self) -> AuthRuntime:
+        app = self.client._transport.app  # type: ignore[attr-defined]
+        runtime: AuthRuntime = app.state.auth
+        return runtime
+
+    @property
+    def email(self) -> RecordingEmailSender:
+        sender = self.runtime.email
+        assert isinstance(sender, RecordingEmailSender)
+        return sender
+
+    @property
+    def face(self) -> RecordingFaceCheck:
+        provider = self.runtime.face
+        assert isinstance(provider, RecordingFaceCheck)
+        return provider
+
+    def email_code(self, email: str = EMAIL) -> str:
+        code = self.email.last_code_for(email)
+        assert code is not None
+        return code
 
     @staticmethod
     def _key(identifier: str) -> str:
         return identifier.replace(" ", "").lower()
 
-    def totp(self, identifier: str = PHONE, *, at: datetime | None = None) -> str:
-        return pyotp.TOTP(self.secrets[self._key(identifier)]).at(at or self.clock.now)
+    async def approve(self, token: str, action: str, identifier: str = PHONE) -> str:
+        """One step-up approval, the everyday way: fingerprint/Face ID on a trusted phone."""
+        key = self.unlock_keys.get(token)
+        if key is None:
+            r = await self.post(
+                "/auth/biometric",
+                {"device_token": self.device_tokens[self._key(identifier)]},
+                token=token,
+            )
+            assert r.status_code == 200, r.text
+            key = self.unlock_keys[token] = str(r.json()["unlock_key"])
+        r = await self.post("/auth/step-up", {"action": action, "unlock_key": key}, token=token)
+        assert r.status_code == 200, r.text
+        return str(r.json()["step_up_token"])
 
     async def post(
         self, path: str, body: dict[str, Any] | None = None, token: str | None = None
@@ -139,16 +179,10 @@ class Env:
         assert code is not None
         r = await self.post("/auth/verify-phone", {"phone": phone, "code": code})
         assert r.status_code == 200, r.text
-        challenge = r.json()
-        assert challenge["mfa_required"] is True and challenge["enrolment_required"] is True
-        cid = challenge["mfa_challenge_id"]
-        r = await self.post("/auth/mfa/enrol/start", {"mfa_challenge_id": cid})
-        assert r.status_code == 200, r.text
-        secret = r.json()["secret"]
-        for key in (self._key(phone), self._key(email)):
-            self.secrets[key] = secret
+        check = r.json()
+        assert check["check_required"] is True and check["method"] == "email"
         r = await self.post(
-            "/auth/mfa/enrol/confirm", {"mfa_challenge_id": cid, "otp_code": self.totp(phone)}
+            f"/auth/checks/{check['check_id']}/codes", {"email_code": self.email_code(email)}
         )
         assert r.status_code == 200, r.text
         body: dict[str, Any] = r.json()
@@ -213,7 +247,7 @@ async def _sql(db_settings: Settings, sql: str, **params: Any) -> Any:
 @pytest.mark.asyncio
 async def test_sign_up_verify_and_read_my_profile(env: Env) -> None:
     tokens = await env.sign_up()
-    assert tokens["mfa_required"] is False and tokens["token_type"] == "bearer"
+    assert tokens["check_required"] is False and tokens["token_type"] == "bearer"
     r = await env.get("/users/me", tokens["access_token"])
     assert r.status_code == 200
     assert r.json() | {"user_id": None, "created_at": None} == {
@@ -604,6 +638,7 @@ async def test_logs_never_carry_pins_codes_tokens_or_full_numbers(
     caplog.set_level(logging.DEBUG)
     t = await env.sign_up()
     await env.login(pin="739152")
+    await env.login(trusted=False)  # SMS + email codes for a new phone
     await env.get("/users/me", t["access_token"])
     await env.post("/auth/refresh", token=t["refresh_token"])
     text_out = " ".join(f"{r.getMessage()} {r.__dict__}" for r in caplog.records)
@@ -615,8 +650,8 @@ async def test_logs_never_carry_pins_codes_tokens_or_full_numbers(
         t["access_token"],
         t["refresh_token"],
         t["device_token"],
-        env.secrets[PHONE],
-        *t["recovery_codes"],
+        *[e.code for e in env.email.sent if e.code],
+        *[m.code for m in env.sms.sent],
         PHONE,
         EMAIL,
     ]:

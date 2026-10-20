@@ -2,7 +2,7 @@
  * Add a payout account (server builds, ADR-036). Reuses the approved bank-details fields
  * (ADR-022) and their format checks; the server checks again and asks the bank to confirm
  * the account (a pretend check on a developer's computer). The holder's name is never typed:
- * it comes from the bank. Needs your authenticator code.
+ * it comes from the bank. Needs "Confirm it's you" (ADR-054).
  */
 
 import { useState, type ReactElement } from 'react';
@@ -13,9 +13,9 @@ import type { NewPayoutAccount } from '../../api/payoutsApi';
 import { Icon } from '../../components/icons';
 import { PrimaryButton, Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
-import { FieldInput, OutlinedField } from '../market/controls';
 import { BankAccountFields } from '../profile/BankAccountFields';
 import { validateBankForm, type BankFormValues } from '../profile/data';
+import { confirmIdentity, type ConfirmIdentity } from '../security/serverConfirm';
 import type { PayoutSource } from './serverPayouts';
 import { tr } from "../../i18n";
 
@@ -39,8 +39,11 @@ export function AddPayoutAccountScreen({
   initialCurrency = 'NGN',
   onBack,
   onAdded,
+  confirmWith = confirmIdentity,
 }: {
   source: PayoutSource;
+  /** Tests inject this. */
+  confirmWith?: ConfirmIdentity;
   initialCurrency?: string;
   onBack: () => void;
   onAdded: () => void;
@@ -50,7 +53,6 @@ export function AddPayoutAccountScreen({
   );
   const [values, setValues] = useState<BankFormValues>({});
   const [shown, setShown] = useState(false);
-  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,13 +61,13 @@ export function AddPayoutAccountScreen({
 
   const save = async (): Promise<void> => {
     setShown(true);
-    if (!valid || code.length !== 6) return;
+    if (!valid) return;
     setBusy(true);
     setError(null);
-    const typed = code;
-    setCode(''); // each code works once
     try {
-      await source.add(toNewAccount(currency, values), typed);
+      const approval = await confirmWith('beneficiary.add', tr("Add a {{currency}} payout account.", { currency }));
+      if (!approval) return;
+      await source.add(toNewAccount(currency, values), approval);
       setValues({}); // the full number leaves memory as soon as it is sent
       onAdded();
     } catch (e) {
@@ -112,21 +114,6 @@ export function AddPayoutAccountScreen({
         onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
       />
 
-      <OutlinedField label={tr("Authenticator code *")}>
-        <FieldInput
-          testID="add-payout-code"
-          accessibilityLabel={tr("6-digit code from your authenticator app")}
-          value={code}
-          onChangeText={(t) => {
-            setCode(t.replace(/[^0-9]/g, '').slice(0, 6));
-            setError(null);
-          }}
-          placeholder="123456"
-          keyboardType="number-pad"
-          inputMode="numeric"
-          maxLength={6}
-        />
-      </OutlinedField>
       {error ? (
         <Text testID="add-payout-error" accessibilityRole="alert" style={styles.error}>
           {error}
@@ -136,7 +123,7 @@ export function AddPayoutAccountScreen({
         testID="add-payout-save"
         label={busy ? tr("Checking with the bank…") : tr("Add account")}
         onPress={() => void save()}
-        disabled={busy || code.length !== 6}
+        disabled={busy}
       />
     </Screen>
   );

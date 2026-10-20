@@ -2,7 +2,7 @@
  * Payout accounts (Profile › Manage Beneficiaries in server builds, ADR-036).
  *
  * Your own accounts that the partner bank pays into from escrow. Only the last 4 digits are
- * ever shown (the server never returns more). Removing one asks for your authenticator code.
+ * ever shown (the server never returns more). Removing one asks "Confirm it's you" (ADR-054).
  */
 
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
@@ -13,7 +13,8 @@ import type { ServerPayoutAccount } from '../../api/payoutsApi';
 import { Icon } from '../../components/icons';
 import { EmptyState, ErrorState, LoadingState, PrimaryButton, Screen, StatusChip } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
-import { ServerCodeSheet } from '../security/ServerCodeSheet';
+import { ServerConfirm } from '../security/ServerConfirm';
+import type { ConfirmIdentity } from '../security/serverConfirm';
 import { accountStatus, type PayoutSource } from './serverPayouts';
 import { tr } from "../../i18n";
 
@@ -22,7 +23,10 @@ export function PayoutAccountsScreen({
   onBack,
   onAdd,
   refreshSignal = 0,
+  confirmWith,
 }: {
+  /** Tests inject this. */
+  confirmWith?: ConfirmIdentity;
   /** Changes when the screen comes back into view (after adding an account). */
   refreshSignal?: number;
   source: PayoutSource;
@@ -49,7 +53,7 @@ export function PayoutAccountsScreen({
         <Text accessibilityRole="header" style={styles.title}>{tr("Payout accounts")}</Text>
         <View style={styles.spacer} />
       </View>
-      <Text style={styles.intro}>{tr("Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you choose. Adding or removing an account needs your authenticator code.")}</Text>
+      <Text style={styles.intro}>{tr("Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you choose. Adding or removing an account needs you to confirm it’s you.")}</Text>
       {notice ? (
         <Text testID="payout-accounts-notice" accessibilityRole="alert" style={styles.notice}>
           {notice}
@@ -92,13 +96,15 @@ export function PayoutAccountsScreen({
 
       <PrimaryButton testID="payout-accounts-add" label={tr("Add payout account")} onPress={onAdd} />
 
-      <ServerCodeSheet
+      <ServerConfirm
         visible={removing !== null}
+        action="beneficiary.remove"
+        confirm={confirmWith}
         reason={removing ? tr("Remove {{bank_name}} •••• {{account_last4}}. Deals that already use it keep it.", { bank_name: removing.bank_name, account_last4: removing.account_last4 }) : ''}
         onCancel={() => setRemoving(null)}
-        onSubmit={async (code) => {
+        onSubmit={async (approval) => {
           if (!removing) return;
-          await source.remove(removing.payout_account_id, code);
+          await source.remove(removing.payout_account_id, approval);
           setRemoving(null);
           setNotice(tr("Account removed."));
           load();
