@@ -356,6 +356,9 @@ class TestPackageRegistration:
             "outbox_messages",
             "kyc_cases",
             "kyc_webhook_events",
+            "notifications",
+            "push_tokens",
+            "push_deliveries",
         }
 
     @pytest.mark.parametrize(
@@ -398,8 +401,10 @@ class TestPackageRegistration:
             "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
             "'currency_definitions', 'idempotency_records', 'kyc_cases', 'kyc_webhook_events', "
             "'match_payout_selections', "
-            "'matches', 'mfa_challenges', 'mfa_factors', 'offers', 'outbox_messages', "
+            "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', 'offers', "
+            "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
+            "'push_deliveries', 'push_tokens', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
             "'transactions', 'trusted_devices', 'users', 'webhook_receipts']"
@@ -450,4 +455,10 @@ class TestPackageRegistration:
             "0008_payout_accounts_and_preparation_4_1e.py",  # Milestone 4.1E (ADR-035)
             "0009_escrow_settlement_simulation_4_1f.py",  # Milestone 4.1F (ADR-037)
             "0010_kyc_cases_didit_kyc_1.py",  # Milestone KYC-1 (ADR-039)
+            "0011_kyc_one_person_one_account.py",  # one person, one account (ADR-041)
+            "0012_kyc_per_country.py",  # identity checks per country (ADR-042)
+            "0013_notifications_n1.py",  # in-app notifications (ADR-044)
+            "0014_pin_change_and_reset.py",  # PIN change and reset (ADR-046)
+            "0015_biometric_unlock.py",  # biometric unlock (ADR-048)
+            "0016_push_tokens_n3.py",  # phone push (ADR-052)
         ]

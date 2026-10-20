@@ -7,15 +7,26 @@
  * specifics are Open Decision 2, so those rows say they are coming. MOCK ONLY.
  */
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { messageFor } from '../../api/client';
+import { confirmWithBiometrics, type BiometricOutcome } from '../auth/biometrics';
+import { useSession } from '../auth/session';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { securitySettings, useSecuritySettings } from './securitySettings';
+import { tr } from "../../i18n";
 
-export type SecurityDestination = 'password' | 'twoFactor';
+/** Server builds (ADR-048): Face ID/fingerprint unlock after the 5-minute idle lock. */
+export interface BiometricControl {
+  supported: () => boolean;
+  enable: () => Promise<void>;
+  disable: () => Promise<void>;
+}
+
+export type SecurityDestination = 'password' | 'twoFactor' | 'devices';
 
 function LinkRow({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }): ReactElement {
   return (
@@ -35,36 +46,96 @@ function LinkRow({ label, onPress, testID }: { label: string; onPress: () => voi
 export function SecurityScreen({
   onBack,
   onOpen,
+  showDevices = false,
+  biometric = null,
+  biometrics = confirmWithBiometrics,
 }: {
   onBack: () => void;
   onOpen?: (destination: SecurityDestination) => void;
+  /** Server builds: the signed-in devices list (ADR-025/026). */
+  showDevices?: boolean;
+  biometric?: BiometricControl | null;
+  biometrics?: (prompt: string) => Promise<BiometricOutcome>;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const { allowScreenshots } = useSecuritySettings();
+  const s = useSession();
+  const bioOn = s.biometricFor !== null && s.biometricFor === s.account.phone;
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+
+  const toggleBiometric = async (on: boolean): Promise<void> => {
+    if (!biometric) return;
+    setBioError(null);
+    if (on && !biometric.supported()) {
+      setBioError(tr("Face ID or fingerprint isn’t set up on this phone."));
+      return;
+    }
+    setBioBusy(true);
+    try {
+      if (on) {
+        // The person holding the phone proves it is them before it is turned on.
+        const r = await biometrics(tr("Turn on Face ID for Xspeeria"));
+        if (r !== 'ok') {
+          if (r === 'unavailable') setBioError(tr("Face ID or fingerprint isn’t set up on this phone."));
+          return;
+        }
+        await biometric.enable();
+      } else {
+        await biometric.disable();
+      }
+    } catch (e) {
+      setBioError(messageFor(e));
+    } finally {
+      setBioBusy(false);
+    }
+  };
 
   const open = (d: SecurityDestination, title: string): void => {
     if (onOpen) onOpen(d);
-    else Alert.alert(title, `${title} is one of the next screens to be built.`);
+    else Alert.alert(title, tr("{{title}} is one of the next screens to be built.", { title }));
   };
 
   return (
     <View testID="security-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="security-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="security-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Security</Text>
+        <Text style={styles.title}>{tr("Security")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.list}>
-        <LinkRow testID="security-password" label="Change Password" onPress={() => open('password', 'Change Password')} />
-        <LinkRow testID="security-2fa" label="2 FA authentication" onPress={() => open('twoFactor', '2 FA authentication')} />
+        <LinkRow testID="security-password" label={tr("Change Password")} onPress={() => open('password', tr("Change Password"))} />
+        <LinkRow testID="security-2fa" label={tr("2 FA authentication")} onPress={() => open('twoFactor', tr("2 FA authentication"))} />
+        {showDevices ? (
+          <LinkRow testID="security-devices" label={tr("Signed-in devices")} onPress={() => open('devices', tr("Signed-in devices"))} />
+        ) : null}
+        {biometric ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>{tr("Unlock with Face ID / fingerprint")}</Text>
+            <Switch
+              testID="security-biometric"
+              accessibilityLabel={tr("Unlock with Face ID or fingerprint")}
+              value={bioOn}
+              disabled={bioBusy}
+              onValueChange={(v) => void toggleBiometric(v)}
+              trackColor={{ true: color.brand.secondary, false: color.border.strong }}
+              thumbColor={color.bg.canvas}
+            />
+          </View>
+        ) : null}
+        {bioError ? (
+          <Text testID="security-biometric-error" accessibilityRole="alert" style={styles.error}>
+            {bioError}
+          </Text>
+        ) : null}
         <View style={styles.row}>
-          <Text style={styles.label}>Allow Screenshot</Text>
+          <Text style={styles.label}>{tr("Allow Screenshot")}</Text>
           <Switch
             testID="security-screenshot"
-            accessibilityLabel="Allow Screenshot"
+            accessibilityLabel={tr("Allow Screenshot")}
             value={allowScreenshots}
             onValueChange={(v) => securitySettings.setAllowScreenshots(v)}
             trackColor={{ true: color.brand.secondary, false: color.border.strong }}
@@ -81,6 +152,7 @@ const styles = themed(() => ({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, minHeight: 44 },
   title: { flex: 1, textAlign: 'center', ...typography.headline, ...brandWeight('700'), fontSize: 18, color: color.text.primary },
   headerSpacer: { width: 22 },
+  error: { ...typography.caption, fontSize: 13, color: color.error.text, paddingVertical: space.xs },
   list: { paddingHorizontal: space.md, paddingTop: space.md },
   row: {
     flexDirection: 'row',

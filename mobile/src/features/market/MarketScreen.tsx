@@ -43,6 +43,8 @@ import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull }
 import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
+import { isKycCountry, type KycCountry } from "../../api/kycApi";
+import { tr, k } from "../../i18n";
 
 export type Side = "buy" | "sell";
 
@@ -59,13 +61,18 @@ const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
 /** Figma Market ⋮ menu (product-owner reference, 2026-10-17). */
 export type MenuKey = "requests" | "offers" | "deals" | "disputes" | "forecast";
 const MENU: readonly { key: MenuKey; label: string; hint?: string }[] = [
-  { key: "requests", label: "My Requests", hint: "(Buy)" },
-  { key: "offers", label: "My Offers", hint: "(Sell)" },
-  { key: "disputes", label: "Disputes" },
-  { key: "forecast", label: "AI Rate Forecasting" },
+  { key: "requests", label: k("My Requests"), hint: k("(Buy)") },
+  { key: "offers", label: k("My Offers"), hint: k("(Sell)") },
+  { key: "disputes", label: k("Disputes") },
+  { key: "forecast", label: k("AI Rate Forecasting") },
 ];
 
 const ADVERT = require("../../../assets/images/market-advert.png");
+
+function kycCountryOf(e: unknown): KycCountry | null {
+  const c = e instanceof ApiError ? e.details?.country : null;
+  return isKycCountry(c) ? c : null;
+}
 
 export function MarketScreen({
   initialSide = "buy",
@@ -73,6 +80,8 @@ export function MarketScreen({
   onTakeListing,
   onMenu,
   onVerifyIdentity,
+  onNotifications,
+  unread = 0,
   server = null,
   refreshSignal = 0,
 }: {
@@ -86,7 +95,11 @@ export function MarketScreen({
   onCreate?: (request: TradeRequest) => void;
   onTakeListing?: (listing: Listing, side: Side) => void;
   /** Server builds: opens the identity check when the server says KYC is needed (ADR-040). */
-  onVerifyIdentity?: () => void;
+  /** Opens the identity check; with a country when the server asked for that one (ADR-042). */
+  onVerifyIdentity?: (country?: KycCountry) => void;
+  /** Opens the notification centre (ADR-044). */
+  onNotifications?: () => void;
+  unread?: number;
 }): ReactElement {
   const [side, setSide] = useState<Side>(initialSide);
   const [buyCurrency, setBuyCurrency] = useState<Currency | null>(null);
@@ -100,6 +113,8 @@ export function MarketScreen({
   const [serverRows, setServerRows] = useState<Listing[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kycNeeded, setKycNeeded] = useState(false);
+  // ADR-042: which country's check the server asked for (from the refusal), if any.
+  const [kycCountry, setKycCountry] = useState<KycCountry | null>(null);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
@@ -120,9 +135,9 @@ export function MarketScreen({
     foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths) : null;
   const rateError =
     problem === "above-official" && foreign && official !== null
-      ? `Your rate can’t be above the official rate of NGN ${formatHundredths(official)} per ${foreign.code}.`
+      ? tr("Your rate can’t be above the official rate of NGN {{official}} per {{code}}.", { official: formatHundredths(official), code: foreign.code })
       : problem === "official-unavailable"
-        ? `There’s no official rate for ${foreign?.code ?? "this currency"} yet, so you can’t trade it for now.`
+        ? tr("There’s no official rate for {{value}} yet, so you can’t trade it for now.", { value: foreign?.code ?? tr("this currency") })
         : null;
   // An amount whose NGN value cannot be computed safely is not a valid request (FIN-06).
   const ready =
@@ -147,6 +162,7 @@ export function MarketScreen({
         if (!live) return;
         setLoadError(messageFor(e));
         setKycNeeded(e instanceof ApiError && e.code === "AUTH_403_KYC_REQUIRED");
+        setKycCountry(kycCountryOf(e));
       });
     return () => {
       live = false;
@@ -192,11 +208,12 @@ export function MarketScreen({
       setRate("");
       setNotice({
         ok: true,
-        text: `Your offer to sell ${formatHundredths(amt)} ${code} at NGN ${formatHundredths(rt)} is live. See it under ⋮ › My Offers.`,
+        text: tr("Your offer to sell {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", { amt: formatHundredths(amt), code, rt: formatHundredths(rt) }),
       });
     } catch (e) {
       setNotice({ ok: false, text: messageFor(e) });
       setKycNeeded(e instanceof ApiError && e.code === "AUTH_403_KYC_REQUIRED");
+        setKycCountry(kycCountryOf(e));
     } finally {
       setBusy(false);
     }
@@ -209,7 +226,7 @@ export function MarketScreen({
       if (side === "buy") {
         setNotice({
           ok: false,
-          text: "Buy requests are coming soon. For now you can see the offers below.",
+          text: tr("Buy requests are coming soon. For now you can see the offers below."),
         });
         return;
       }
@@ -221,7 +238,7 @@ export function MarketScreen({
 
   const take = (listing: Listing): void => {
     if (server && listing.own) {
-      setNotice({ ok: false, text: "This is your offer. Manage it under ⋮ › My Offers." });
+      setNotice({ ok: false, text: tr("This is your offer. Manage it under ⋮ › My Offers.") });
       return;
     }
     // Server mode: the route opens Take offer (ADR-032), which reads the offer fresh.
@@ -231,20 +248,20 @@ export function MarketScreen({
 
   const trendText =
     band && foreign
-      ? `Current Market Trend:  ${formatHundredths(band.low)} - ${formatHundredths(band.high)} NGN = 1 ${foreign.code}`
-      : "Current Market Trend:  -----------";
+      ? tr("Current Market Trend:  {{low}} - {{high}} NGN = 1 {{code}}", { low: formatHundredths(band.low), high: formatHundredths(band.high), code: foreign.code })
+      : tr("Current Market Trend:  -----------");
 
   const amountField = (
     <OutlinedField
       label={
         side === "buy"
-          ? `Amount in “${foreign?.code ?? "USD"}” *`
-          : `Amount in “${SELL_CURRENCY.code}” to sell *`
+          ? tr("Amount in “{{value}}” *", { value: foreign?.code ?? "USD" })
+          : tr("Amount in “{{code}}” to sell *", { code: SELL_CURRENCY.code })
       }
     >
       <FieldInput
         testID="market-amount"
-        accessibilityLabel={`Amount in ${foreign?.code ?? "USD"}`}
+        accessibilityLabel={tr("Amount in {{value}}", { value: foreign?.code ?? "USD" })}
         value={amount}
         onChangeText={editAmount}
       />
@@ -255,8 +272,8 @@ export function MarketScreen({
     <OutlinedField
       label={
         side === "buy"
-          ? "Select Currency to buy *"
-          : "Select Currency to Receive *"
+          ? tr("Select Currency to buy *")
+          : tr("Select Currency to Receive *")
       }
     >
       <Pressable
@@ -264,8 +281,8 @@ export function MarketScreen({
         accessibilityRole="button"
         accessibilityLabel={
           side === "buy"
-            ? "Select currency to buy"
-            : "Select currency to receive"
+            ? tr("Select currency to buy")
+            : tr("Select currency to receive")
         }
         onPress={() => setSheet(true)}
         style={styles.select}
@@ -296,12 +313,14 @@ export function MarketScreen({
           <CurrencyChip currency={side === "buy" ? NGN : SELL_CURRENCY} />
           <RoundButton
             icon="bell"
-            label="Notifications"
+            label={unread > 0 ? tr("Notifications, {{unread}} unread", { unread }) : tr("Notifications")}
             testID="market-notifications"
+            onPress={onNotifications}
+            badge={unread}
           />
           <RoundButton
             icon="more"
-            label="More options"
+            label={tr("More options")}
             testID="market-more"
             onPress={() => setMenu(true)}
           />
@@ -321,23 +340,23 @@ export function MarketScreen({
               accessibilityRole="button"
               onPress={() =>
                 Alert.alert(
-                  "Current market trend",
-                  "The range of rates in recent matched trades on Xspeeria. Rates inside it are more likely to find a match. Illustrative data.",
+                  tr("Current market trend"),
+                  tr("The range of rates in recent matched trades on Xspeeria. Rates inside it are more likely to find a match. Illustrative data."),
                 )
               }
               hitSlop={8}
               style={styles.details}
             >
               <Icon name="info" color={color.error.text} size={14} />
-              <Text style={styles.detailsText}>See Details</Text>
+              <Text style={styles.detailsText}>{tr("See Details")}</Text>
             </Pressable>
           ) : null}
         </View>
 
-        <OutlinedField label="Rate *" invalid={rateError !== null}>
+        <OutlinedField label={tr("Rate *")} invalid={rateError !== null}>
           <FieldInput
             testID="market-rate"
-            accessibilityLabel={`Rate in NGN per ${foreign?.code ?? "unit"}`}
+            accessibilityLabel={tr("Rate in NGN per {{value}}", { value: foreign?.code ?? "unit" })}
             value={rate}
             onChangeText={editRate}
             trailing={
@@ -362,7 +381,7 @@ export function MarketScreen({
                       },
                     ]}
                   >
-                    {`${potential}% Match Potential`}
+                    {tr("{{potential}}% Match Potential", { potential })}
                   </Text>
                 </View>
               ) : null
@@ -371,7 +390,7 @@ export function MarketScreen({
         </OutlinedField>
         {foreign && official !== null ? (
           <Text testID="market-official" style={styles.official}>
-            {`Official rate (CBN, ${OFFICIAL_RATE_AS_OF}): NGN ${formatHundredths(official)} per ${foreign.code}. Your rate must be this or lower.`}
+            {tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
           </Text>
         ) : null}
         {rateError ? (
@@ -397,7 +416,7 @@ export function MarketScreen({
           ]}
         >
           <Text style={styles.createLabel}>
-            {busy ? "Publishing…" : side === "buy" ? "Create request" : "Create Offer"}
+            {busy ? tr("Publishing…") : side === "buy" ? tr("Create request") : tr("Create Offer")}
           </Text>
         </Pressable>
         {notice ? (
@@ -410,8 +429,8 @@ export function MarketScreen({
           </Text>
         ) : null}
         {notice && !notice.ok && kycNeeded && onVerifyIdentity ? (
-          <Pressable testID="market-notice-verify" accessibilityRole="button" onPress={onVerifyIdentity} hitSlop={8}>
-            <Text style={styles.detailsText}>Verify your identity</Text>
+          <Pressable testID="market-notice-verify" accessibilityRole="button" onPress={() => onVerifyIdentity(kycCountry ?? undefined)} hitSlop={8}>
+            <Text style={styles.detailsText}>{tr("Verify your identity")}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -419,16 +438,16 @@ export function MarketScreen({
       <View style={styles.listHeader}>
         <SectionLabel>
           {side === "buy"
-            ? "Available offers"
-            : `Available ${SELL_CURRENCY.code} request`}
+            ? tr("Available offers")
+            : tr("Available {{code}} request", { code: SELL_CURRENCY.code })}
         </SectionLabel>
         <Pressable
           testID="market-sort"
           accessibilityRole="button"
           accessibilityLabel={
             cheapestFirst
-              ? "Sorted by best rate. Reverse order"
-              : "Reversed. Sort by best rate"
+              ? tr("Sorted by best rate. Reverse order")
+              : tr("Reversed. Sort by best rate")
           }
           onPress={() => setCheapestFirst((v) => !v)}
           hitSlop={10}
@@ -443,8 +462,8 @@ export function MarketScreen({
             {loadError}
           </Text>
           {kycNeeded && onVerifyIdentity ? (
-            <Pressable testID="market-verify-identity" accessibilityRole="button" onPress={onVerifyIdentity} hitSlop={8}>
-              <Text style={styles.detailsText}>Verify your identity</Text>
+            <Pressable testID="market-verify-identity" accessibilityRole="button" onPress={() => onVerifyIdentity(kycCountry ?? undefined)} hitSlop={8}>
+              <Text style={styles.detailsText}>{tr("Verify your identity")}</Text>
             </Pressable>
           ) : null}
           <Pressable
@@ -453,20 +472,18 @@ export function MarketScreen({
             onPress={() => setReload((n) => n + 1)}
             hitSlop={8}
           >
-            <Text style={styles.detailsText}>Try again</Text>
+            <Text style={styles.detailsText}>{tr("Try again")}</Text>
           </Pressable>
         </View>
       ) : server && side === "buy" && foreign && serverRows === null ? (
-        <Text testID="market-loading" style={styles.empty}>
-          Loading offers…
-        </Text>
+        <Text testID="market-loading" style={styles.empty}>{tr("Loading offers…")}</Text>
       ) : listings.length === 0 ? (
         <Text testID="market-empty" style={styles.empty}>
           {server && side === "sell"
-            ? "Buy requests are coming soon."
+            ? tr("Buy requests are coming soon.")
             : foreign
-              ? `No ${side === "buy" ? "offers" : "requests"} for ${foreign.code} right now`
-              : "Select a currency to buy to see available offers"}
+              ? (side === "buy" ? tr("No offers for {{code}} right now", { code: foreign.code }) : tr("No requests for {{code}} right now", { code: foreign.code }))
+              : tr("Select a currency to buy to see available offers")}
         </Text>
       ) : (
         <View testID="market-listings">
@@ -482,7 +499,7 @@ export function MarketScreen({
               owner; the stock photo needs a confirmed licence before release. */}
           <Image
             source={ADVERT}
-            accessibilityLabel="Place advert here"
+            accessibilityLabel={tr("Place advert here")}
             resizeMode="cover"
             style={styles.advertImage}
           />
@@ -495,17 +512,18 @@ export function MarketScreen({
         onClose={() => setMenu(false)}
         actions={(server
           ? // Server builds also list the deals you made or received (ADR-033).
-            [...MENU.slice(0, 2), { key: "deals" as const, label: "My Deals" }, ...MENU.slice(2)]
+            [...MENU.slice(0, 2), { key: "deals" as const, label: tr("My Deals") }, ...MENU.slice(2)]
           : MENU
         ).map((item) => ({
           ...item,
+          label: tr(item.label),
           onPress: () => {
             setMenu(false);
             if (onMenu) onMenu(item.key);
             else
               Alert.alert(
-                item.label,
-                `${item.label} is one of the next screens to be built.`,
+                tr(item.label),
+                tr("{{label}} is one of the next screens to be built.", { label: tr(item.label) }),
               );
           },
         }))}
@@ -515,8 +533,8 @@ export function MarketScreen({
         visible={sheet}
         title={
           side === "buy"
-            ? "Currencies you can buy"
-            : "Currencies you are licensed to receive"
+            ? tr("Currencies you can buy")
+            : tr("Currencies you are licensed to receive")
         }
         currencies={side === "buy" ? BUYABLE : RECEIVABLE}
         onClose={() => setSheet(false)}

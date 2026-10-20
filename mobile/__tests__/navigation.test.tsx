@@ -51,7 +51,7 @@ describe('Cards (ADR-012, exact Figma demo ADR-023)', () => {
   it('renders the Figma layout: three card designs, actions and history, no Create yours', async () => {
     await render(<CardsScreen />);
     expect(screen.getByText('Debit Cards')).toBeTruthy();
-    expect(screen.getByTestId('cards-label').props.children.join('')).toBe('USD Card');
+    expect([screen.getByTestId('cards-label').props.children].flat().join('')).toBe('USD Card');
     for (const d of CARD_DESIGNS) expect(screen.getByTestId(`card-${d.currency}`)).toBeTruthy();
     for (const t of ['Details', 'Freeze Card', 'More', 'Transaction History']) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.queryByText('Create yours')).toBeNull();
@@ -138,12 +138,12 @@ describe('Phase 1 screen actions', () => {
     expect(mockPush).toHaveBeenCalledWith('/history');
   });
 
-  it('leaves the Home notification control disabled while no notification centre exists', async () => {
+  it('opens the notification centre from the Home bell (ADR-044)', async () => {
     await render(<HomeRoute />);
     const bell = screen.getByTestId('home-notifications');
-    expect(bell.props.accessibilityState).toEqual({ disabled: true });
-    fireEvent.press(bell);
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(bell.props.accessibilityState).toEqual({ disabled: false });
+    await fireEvent.press(bell);
+    expect(mockPush).toHaveBeenCalledWith('/notifications');
   });
 
   it('opens a History row receipt', async () => {

@@ -83,6 +83,7 @@ let lastActiveAt = 0;
 
 let state: State = INITIAL;
 const signOutHandlers = new Set<() => void>();
+const idleHandlers = new Set<() => void>();
 const listeners = new Set<() => void>();
 const userChangeHandlers = new Set<() => void>();
 
@@ -122,6 +123,12 @@ export const session = {
 
   /** True when biometric log-in is on for the current account. */
   biometricOn: (): boolean => state.biometricFor !== null && state.biometricFor === state.account.phone,
+
+  /**
+   * Server builds: biometric unlock was turned on here (ADR-048). The account is not known
+   * before the unlock after an app restart; the server binds the key to its own session.
+   */
+  biometricSaved: (): boolean => state.biometricFor !== null,
 
   /** A user-scoped store registers its reset here (log-out, new account). */
   onUserChange(handler: () => void): () => void {
@@ -219,8 +226,10 @@ export const session = {
     }
     if (now - lastActiveAt >= IDLE_LOCK_MS) {
       set({ signedIn: false, endedBy: 'idle' });
-      // The server's own 5-minute idle limit has ended its session too (ADR-024).
-      for (const h of signOutHandlers) h();
+      // Server builds decide what the idle lock keeps (ADR-048): with biometric unlock on,
+      // the session stays for Face ID/fingerprint; otherwise it ends as on log-out.
+      if (idleHandlers.size > 0) for (const h of idleHandlers) h();
+      else for (const h of signOutHandlers) h();
       return 'idle';
     }
     return null;
@@ -251,6 +260,30 @@ export const session = {
       endedBy: null,
       newRegion: null,
     });
+  },
+
+  /**
+   * Face ID/fingerprint resumed the server session after the idle lock (ADR-048). The same
+   * person: data is kept and the 7-day limit still counts from the PIN log-in.
+   */
+  serverUnlocked(now: number, account: { phone: string; email: string }): void {
+    if (account.phone !== state.account.phone) clearUserData();
+    lastActiveAt = now;
+    // After an app restart the device has no PIN log-in time; the server still enforces the
+    // 7-day limit and ends the session through `serverEnded`.
+    set({
+      account: { phone: account.phone, email: account.email, pin: '' },
+      signedIn: true,
+      failed: 0,
+      endedBy: null,
+      signedInAt: state.signedInAt || now,
+    });
+  },
+
+  /** Runs when the idle lock fires (server builds). */
+  onIdleLock(handler: () => void): () => void {
+    idleHandlers.add(handler);
+    return () => idleHandlers.delete(handler);
   },
 
   /** The server ended the session (refresh refused): same as reaching the 7-day limit. */

@@ -119,7 +119,7 @@ describe('Change phone / email', () => {
     await act(async () => fireEvent.press(screen.getByTestId('change-contact-send')));
     expect(stepUp).toHaveBeenCalledWith(expect.stringMatching(/\+234 ••• ••• 2222/));
     expect(profileStore.get().phone).toBe('+234 803 838 3838');
-    const code = String(screen.getByTestId('change-contact-devcode').props.children.join('')).match(/(\d{6})/)?.[1] as string;
+    const code = String([screen.getByTestId('change-contact-devcode').props.children].flat().join('')).match(/(\d{6})/)?.[1] as string;
 
     await fireEvent.changeText(screen.getByTestId('change-contact-code'), code === '000000' ? '111111' : '000000');
     await fireEvent.press(screen.getByTestId('change-contact-verify'));

@@ -15,6 +15,7 @@ import { normaliseEmail, normalisePhone } from '../profile/verification';
 import { DEMO_ACCOUNT } from './demo';
 import { ModeTabs } from './LoginScreen';
 import { AuthTop, DemoNote, Heading, PhoneInput, fullPhone } from './ui';
+import { tr } from "../../i18n";
 
 export function ForgotScreen({ onBack }: { onBack: () => void }): ReactElement {
   const insets = useSafeAreaInsets();
@@ -26,7 +27,7 @@ export function ForgotScreen({ onBack }: { onBack: () => void }): ReactElement {
 
   const submit = (): void => {
     const ok = mode === 'phone' ? normalisePhone(fullPhone('NG', phone)) : normaliseEmail(email);
-    if (!ok) return setError(mode === 'phone' ? 'Enter a valid phone number' : 'Enter a valid email address');
+    if (!ok) return setError(mode === 'phone' ? tr("Enter a valid phone number") : tr("Enter a valid email address"));
     setError(null);
     setSent(true);
   };
@@ -35,24 +36,22 @@ export function ForgotScreen({ onBack }: { onBack: () => void }): ReactElement {
     <KeyboardAvoidingView testID="forgot-screen" style={[styles.screen, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <AuthTop onBack={onBack} />
-        <Heading title="Forgot Password" body="Enter your phone number/ Email Address associated with your Xspeeria account to recover your password" />
+        <Heading title={tr("Forgot Password")} body={tr("Enter your phone number/ Email Address associated with your Xspeeria account to recover your password")} />
         {sent ? (
           <>
-            <Text testID="forgot-sent" style={styles.text}>
-              If an account matches those details, we have sent instructions to reset your PIN. Check your messages.
-            </Text>
-            <DemoNote>Demo app: no message is sent. The demo PIN is {DEMO_ACCOUNT.pin}.</DemoNote>
+            <Text testID="forgot-sent" style={styles.text}>{tr("If an account matches those details, we have sent instructions to reset your PIN. Check your messages.")}</Text>
+            <DemoNote>{tr("Demo app: no message is sent. The demo PIN is {{pin}}.", { pin: DEMO_ACCOUNT.pin })}</DemoNote>
           </>
         ) : (
           <>
             <ModeTabs mode={mode} onChange={(m) => { setMode(m); setError(null); }} />
             {mode === 'phone' ? (
-              <OutlinedField label="Phone Number" invalid={Boolean(error)}>
+              <OutlinedField label={tr("Phone Number")} invalid={Boolean(error)}>
                 <PhoneInput testID="forgot-phone" country="NG" value={phone} onChange={setPhone} />
               </OutlinedField>
             ) : (
-              <OutlinedField label="Email Address" invalid={Boolean(error)}>
-                <FieldInput testID="forgot-email" accessibilityLabel="Email address" value={email} onChangeText={setEmail} keyboardType="email-address" inputMode="text" maxLength={254} placeholder="enter email address" />
+              <OutlinedField label={tr("Email Address")} invalid={Boolean(error)}>
+                <FieldInput testID="forgot-email" accessibilityLabel={tr("Email address")} value={email} onChangeText={setEmail} keyboardType="email-address" inputMode="text" maxLength={254} placeholder={tr("enter email address")} />
               </OutlinedField>
             )}
             {error ? <Text testID="forgot-error" style={styles.error}>{error}</Text> : null}
@@ -61,9 +60,9 @@ export function ForgotScreen({ onBack }: { onBack: () => void }): ReactElement {
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
         {sent ? (
-          <PrimaryButton testID="forgot-back-login" label="Back to log in" onPress={onBack} />
+          <PrimaryButton testID="forgot-back-login" label={tr("Back to log in")} onPress={onBack} />
         ) : (
-          <PrimaryButton testID="forgot-submit" label="Reset Password" onPress={submit} />
+          <PrimaryButton testID="forgot-submit" label={tr("Reset Password")} onPress={submit} />
         )}
       </View>
     </KeyboardAvoidingView>

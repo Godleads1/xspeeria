@@ -10,6 +10,7 @@ import { DoneScreen } from '../../../src/features/auth/SignupScreens';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { profileStore } from '../../../src/features/profile/profileStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /** Finishing sign-up signs the user in; the root guard then shows Home. */
 export default function SignupDoneRoute(): ReactElement {
@@ -32,7 +33,7 @@ export default function SignupDoneRoute(): ReactElement {
               signup.clear();
             },
             (e: unknown) => {
-              Alert.alert('Couldn’t sign you in', messageFor(e));
+              Alert.alert(tr("Couldn’t sign you in"), messageFor(e));
               router.replace('/login');
             },
           );

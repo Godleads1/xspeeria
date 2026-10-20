@@ -14,6 +14,7 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { CURRENT_KYC_TIER, KYC_TIERS, groupThousands, type KycTier } from './data';
+import { tr } from "../../i18n";
 
 function TierCard({
   tier,
@@ -29,22 +30,22 @@ function TierCard({
   return (
     <View testID={`kyc-tier-${tier.level}`} style={styles.card}>
       <View style={styles.cardHead}>
-        <Text accessibilityRole="header" style={styles.tierTitle}>Tier {tier.level}</Text>
+        <Text accessibilityRole="header" style={styles.tierTitle}>{tr("Tier {{level}}", { level: tier.level })}</Text>
         {isCurrent ? (
           <View testID={`kyc-tier-${tier.level}-current`} style={styles.pill}>
-            <Text style={styles.pillText}>Current Level</Text>
+            <Text style={styles.pillText}>{tr("Current Level")}</Text>
           </View>
         ) : null}
       </View>
-      <Text style={styles.limit}>Limit: {groupThousands(tier.monthlyLimitNaira)} Naira per month</Text>
+      <Text style={styles.limit}>{tr("Limit: {{monthlyLimitNaira}} Naira per month", { monthlyLimitNaira: groupThousands(tier.monthlyLimitNaira) })}</Text>
       <View style={styles.reqs}>
         {tier.requirements.map((r) => (
-          <Text key={r} style={styles.req}>{r}</Text>
+          <Text key={r} style={styles.req}>{tr(r)}</Text>
         ))}
       </View>
       {isAbove ? (
         <View style={styles.button}>
-          <PrimaryButton testID={`kyc-tier-${tier.level}-upgrade`} label="Upgrade" onPress={() => onUpgrade(tier)} />
+          <PrimaryButton testID={`kyc-tier-${tier.level}-upgrade`} label={tr("Upgrade")} onPress={() => onUpgrade(tier)} />
         </View>
       ) : null}
     </View>
@@ -63,16 +64,16 @@ export function KycLimitsScreen({
   const insets = useSafeAreaInsets();
   const upgrade = (t: KycTier): void => {
     if (onUpgrade) onUpgrade(t);
-    else Alert.alert(`Upgrade to Tier ${t.level}`, 'Verification for higher tiers is one of the next screens to be built.');
+    else Alert.alert(tr("Upgrade to Tier {{level}}", { level: t.level }), tr("Verification for higher tiers is one of the next screens to be built."));
   };
 
   return (
     <View testID="kyc-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="kyc-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="kyc-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>KYC and limits</Text>
+        <Text style={styles.title}>{tr("KYC and limits")}</Text>
         <View style={styles.headerSpacer} />
       </View>
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}>

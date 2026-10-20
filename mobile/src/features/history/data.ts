@@ -9,6 +9,7 @@
  */
 
 import { divRoundHalfEven } from '../market/money';
+import { k } from "../../i18n";
 
 export type TradeSide = 'buy' | 'sell';
 export type TradeStatus = 'completed' | 'pending' | 'failed';
@@ -77,13 +78,13 @@ export const COORDINATION_FEE_LABEL = `${COORDINATION_FEE_BPS / 100}%`;
  * match → ESCROW_PROVISIONED → FUNDED (each leg) → payout accounts → RELEASE_SENT → PAID_OUT.
  */
 export const STAGES = [
-  'You accepted the offer',
-  'Partner bank opened escrow',
-  'You funded escrow',
-  'Counterparty funded escrow',
-  'Payout accounts added',
-  'Bank released the funds',
-  'Paid out',
+  k("You accepted the offer"),
+  k("Partner bank opened escrow"),
+  k("You funded escrow"),
+  k("Counterparty funded escrow"),
+  k("Payout accounts added"),
+  k("Bank released the funds"),
+  k("Paid out"),
 ] as const;
 
 function steps(reached: number, times: readonly string[]): readonly ProgressStep[] {

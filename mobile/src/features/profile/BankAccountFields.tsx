@@ -13,6 +13,7 @@ import { Icon } from '../../components/icons';
 import { color, typography, themed } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
 import { ACCOUNT_TYPES, BANK_FORMS, type BankField, type BankFieldKey, type BankFormValues } from './data';
+import { tr } from "../../i18n";
 
 export function BankAccountFields({
   currency,
@@ -38,12 +39,12 @@ export function BankAccountFields({
         const error = errors[f.key];
         return (
           <View key={f.key} style={styles.fieldWrap}>
-            <OutlinedField label={`${f.label} *`} invalid={Boolean(error)}>
+            <OutlinedField label={`${tr(f.label)} *`} invalid={Boolean(error)}>
               {f.kind === 'select' ? (
                 <Pressable
                   testID={`field-${f.key}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`${f.label}${values[f.key] ? `, ${values[f.key]}` : ''}`}
+                  accessibilityLabel={`${tr(f.label)}${values[f.key] ? `, ${values[f.key]}` : ''}`}
                   onPress={() => setTypeSheet(true)}
                   style={styles.select}
                 >
@@ -53,7 +54,7 @@ export function BankAccountFields({
               ) : (
                 <FieldInput
                   testID={`field-${f.key}`}
-                  accessibilityLabel={f.label}
+                  accessibilityLabel={tr(f.label)}
                   value={values[f.key] ?? ''}
                   onChangeText={(t) => set(f, t)}
                   keyboardType={f.kind === 'digits' ? 'number-pad' : 'default'}

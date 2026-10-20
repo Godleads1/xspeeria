@@ -2,11 +2,13 @@ import { useCallback, useState, type ReactElement } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer } from '../../../src/features/market/serverOffers';
 import { tradeStore } from '../../../src/features/trade/tradeStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /**
  * Market tab (ADR-005). Mock data only. "Create" opens Select Match for the request typed;
@@ -19,6 +21,7 @@ import { useThemeMode } from '../../../src/theme';
 export default function MarketplaceRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
+  const unread = useUnreadCount();
   // Fetch server offers again whenever the tab comes back into view (e.g. after My Offers).
   const [refresh, setRefresh] = useState(0);
   useFocusEffect(useCallback(() => setRefresh((n) => n + 1), []));
@@ -26,13 +29,19 @@ export default function MarketplaceRoute(): ReactElement {
     <MarketScreen
       server={SERVER_MODE ? marketServer : null}
       refreshSignal={refresh}
-      onVerifyIdentity={SERVER_MODE ? () => router.push('/profile/kyc') : undefined}
+      onVerifyIdentity={
+        SERVER_MODE
+          ? (country) => router.push(country ? { pathname: '/profile/kyc', params: { country } } : '/profile/kyc')
+          : undefined
+      }
+      onNotifications={() => router.push('/notifications')}
+      unread={unread}
       onMenu={
         SERVER_MODE
           ? (key) => {
               if (key === 'offers') router.push('/market/my-offers');
               else if (key === 'deals') router.push('/market/deals');
-              else Alert.alert('Coming soon', 'This is one of the next screens to be built.');
+              else Alert.alert(tr("Coming soon"), tr("This is one of the next screens to be built."));
             }
           : undefined
       }

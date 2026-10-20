@@ -5,6 +5,7 @@
  */
 
 import { FAQ, type FaqItem } from '../faq/data';
+import { tr, k } from "../../i18n";
 
 export const SUPPORT_EMAIL = 'Xspeeria@intelyticslimited.com';
 
@@ -14,17 +15,25 @@ export interface QuickReply {
 }
 
 export const QUICK_REPLIES: readonly QuickReply[] = [
-  { label: 'Opening an account', faqId: 'create-account' },
-  { label: 'How to sell', faqId: 'how-to-sell' },
-  { label: 'Fees', faqId: 'cost' },
-  { label: 'Is my money safe?', faqId: 'hold-money' },
+  { label: k("Opening an account"), faqId: 'create-account' },
+  { label: k("How to sell"), faqId: 'how-to-sell' },
+  { label: k("Fees"), faqId: 'cost' },
+  { label: k("Is my money safe?"), faqId: 'hold-money' },
 ];
 
 export function greeting(firstName: string): string {
-  return `Hi ${firstName}, let me know if you need help. You can ask me any questions.`;
+  return tr("Hi {{firstName}}, let me know if you need help. You can ask me any questions.", { firstName });
 }
 
-export const FALLBACK = `I couldn't find an answer to that. Chat with our support team isn't available in this version of the app yet. You can email ${SUPPORT_EMAIL}.`;
+const FALLBACK_KEY = k("I couldn't find an answer to that. Chat with our support team isn't available in this version of the app yet. You can email {{SUPPORT_EMAIL}}.");
+
+/** In the current language. */
+export function fallbackAnswer(): string {
+  return tr(FALLBACK_KEY, { SUPPORT_EMAIL });
+}
+
+/** English (tests and older callers). */
+export const FALLBACK = k(FALLBACK_KEY, { SUPPORT_EMAIL });
 
 const STOP = new Set(['what', 'when', 'where', 'which', 'with', 'that', 'this', 'have', 'does', 'your', 'from', 'about', 'there', 'would', 'could', 'should', 'xspeeria', 'please', 'help']);
 
@@ -85,7 +94,7 @@ export function sensitiveWarning(message: string): string | null {
   const pinNearDigits = /\bPIN\b\D{0,12}\d{4,6}(?!\d)|(?<!\d)\d{4,6}\D{0,8}\bPIN\b/;
   const passwordValue = /\b(?:PASSWORD|PASSCODE)\b\s*(?:IS\b|[:=])?\s*(?=\S*[\d!@#$%^&*])\S{4,}|\b(?:PASSWORD|PASSCODE|PIN)\b\s*[:=]/;
   if (pinNearDigits.test(text) || passwordValue.test(text)) {
-    return 'Never share your password or PIN, not even with Xspeeria support.';
+    return tr("Never share your password or PIN, not even with Xspeeria support.");
   }
 
   // XXXX-XXXX in any case or separator, or 8 recovery symbols together that include a digit
@@ -93,27 +102,27 @@ export function sensitiveWarning(message: string): string | null {
   const hyphenated = new RegExp(`(?<![0-9A-Z])${RC}{4}[\\s\\-_.]?${RC}{4}(?![0-9A-Z])`, 'g');
   for (const m of text.matchAll(hyphenated)) {
     if (/[\s\-_.]/.test(m[0]) || /\d/.test(m[0])) {
-      return 'That looks like a recovery code. Never share it with anyone, including Xspeeria support.';
+      return tr("That looks like a recovery code. Never share it with anyone, including Xspeeria support.");
     }
   }
 
   // Authenticator key: 16+ Base32 symbols, possibly in groups, containing a digit 2–7.
   for (const m of text.matchAll(/(?<![0-9A-Z])(?:[A-Z2-7]{4}[\s\-]?){4,}(?![0-9A-Z])/g)) {
     if (/[2-7]/.test(m[0])) {
-      return 'That looks like an authenticator key. Never share it with anyone, including Xspeeria support.';
+      return tr("That looks like an authenticator key. Never share it with anyone, including Xspeeria support.");
     }
   }
 
   const digits = text.replace(/[\s-]/g, '');
   if (/\d{8,}/.test(digits)) {
-    return 'Please don’t send full account or card numbers in chat. The last 4 digits are enough.';
+    return tr("Please don’t send full account or card numbers in chat. The last 4 digits are enough.");
   }
 
   // 6 digits, also as authenticator apps show them ("123 456") or spaced one by one.
   for (const m of text.matchAll(/(?<![\d,.])(?:\d{6}|\d{3} \d{3}|\d(?: \d){5})(?![\d,.])/g)) {
     const start = m.index ?? 0;
     if (!nearCurrency(text, start, start + m[0].length)) {
-      return 'That looks like a 2 FA code. Never share codes with anyone, including Xspeeria support.';
+      return tr("That looks like a 2 FA code. Never share codes with anyone, including Xspeeria support.");
     }
   }
   return null;

@@ -16,6 +16,7 @@ import { Icon } from "../../components/icons";
 import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTone } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { groupedRate } from "./serverOffers";
+import { tr, k } from "../../i18n";
 
 export interface MyOffersSource {
   list(): Promise<ServerOffer[]>;
@@ -23,12 +24,12 @@ export interface MyOffersSource {
 }
 
 const STATUS: Record<ServerOffer["status"], { label: string; tone: StatusTone }> = {
-  open: { label: "Open", tone: "success" },
-  partially_matched: { label: "Partly matched", tone: "warning" },
-  fully_matched: { label: "Fully matched", tone: "neutral" },
-  withdrawn: { label: "Withdrawn", tone: "neutral" },
-  cancelled: { label: "Cancelled", tone: "neutral" },
-  expired: { label: "Expired", tone: "neutral" },
+  open: { label: k("Open"), tone: "success" },
+  partially_matched: { label: k("Partly matched"), tone: "warning" },
+  fully_matched: { label: k("Fully matched"), tone: "neutral" },
+  withdrawn: { label: k("Withdrawn"), tone: "neutral" },
+  cancelled: { label: k("Cancelled"), tone: "neutral" },
+  expired: { label: k("Expired"), tone: "neutral" },
 };
 
 const ACTIVE = new Set<ServerOffer["status"]>(["open", "partially_matched"]);
@@ -68,7 +69,7 @@ export function MyOffersScreen({
     try {
       const updated = await source.withdraw(id);
       setOffers((list) => (list ?? []).map((o) => (o.offer_id === id ? updated : o)));
-      setNotice("Offer withdrawn.");
+      setNotice(tr("Offer withdrawn."));
     } catch (e) {
       setNotice(messageFor(e));
     } finally {
@@ -83,15 +84,13 @@ export function MyOffersScreen({
         <Pressable
           testID="my-offers-back"
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={tr("Back")}
           onPress={onBack}
           hitSlop={12}
         >
           <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          My Offers
-        </Text>
+        <Text accessibilityRole="header" style={styles.title}>{tr("My Offers")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -104,9 +103,9 @@ export function MyOffersScreen({
       {error ? (
         <ErrorState title={error} onRetry={load} />
       ) : offers === null ? (
-        <LoadingState label="Loading your offers" />
+        <LoadingState label={tr("Loading your offers")} />
       ) : offers.length === 0 ? (
-        <EmptyState title="You have no offers yet. Create one from Market › Sell." />
+        <EmptyState title={tr("You have no offers yet. Create one from Market › Sell.")} />
       ) : (
         <View testID="my-offers-list" style={styles.list}>
           {offers.map((o) => {
@@ -118,15 +117,15 @@ export function MyOffersScreen({
               <View key={o.offer_id} testID={`my-offer-${o.offer_id}`} style={styles.row}>
                 <View style={styles.rowTop}>
                   <Text style={styles.strong}>
-                    {`Sell ${grouped(o.source_amount)} ${o.source_currency} → ${o.target_currency}`}
+                    {tr("Sell {{source_amount}} {{source_currency}} → {{target_currency}}", { source_amount: grouped(o.source_amount), source_currency: o.source_currency, target_currency: o.target_currency })}
                   </Text>
-                  <StatusChip label={status.label} tone={status.tone} />
+                  <StatusChip label={tr(status.label)} tone={status.tone} />
                 </View>
-                <Text style={styles.line}>{`Rate: NGN ${groupedRate(o.desired_rate)} /${foreign}`}</Text>
+                <Text style={styles.line}>{tr("Rate: NGN {{desired_rate}} /{{foreign}}", { desired_rate: groupedRate(o.desired_rate), foreign })}</Text>
                 <Text style={styles.line}>
                   {active
-                    ? `Matched: ${grouped(o.matched_amount)} · Left: ${grouped(o.remaining_amount)} ${o.source_currency}`
-                    : `Matched: ${grouped(o.matched_amount)} ${o.source_currency}`}
+                    ? tr("Matched: {{matched_amount}} · Left: {{remaining_amount}} {{source_currency}}", { matched_amount: grouped(o.matched_amount), remaining_amount: grouped(o.remaining_amount), source_currency: o.source_currency })
+                    : tr("Matched: {{matched_amount}} {{source_currency}}", { matched_amount: grouped(o.matched_amount), source_currency: o.source_currency })}
                 </Text>
                 {active ? (
                   <Pressable
@@ -138,7 +137,7 @@ export function MyOffersScreen({
                     style={({ pressed }) => [styles.withdraw, asking ? styles.withdrawConfirm : null, pressed ? styles.pressed : null]}
                   >
                     <Text style={[styles.withdrawLabel, asking ? styles.withdrawConfirmLabel : null]}>
-                      {working === o.offer_id ? "Withdrawing…" : asking ? "Tap again to withdraw" : "Withdraw"}
+                      {working === o.offer_id ? "Withdrawing…" : asking ? tr("Tap again to withdraw") : "Withdraw"}
                     </Text>
                   </Pressable>
                 ) : null}

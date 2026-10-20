@@ -49,7 +49,7 @@ PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
-    "kyc_webhook_events, kyc_cases, "
+    "push_deliveries, push_tokens, notifications, kyc_webhook_events, kyc_cases, "
     "outbox_messages, reconciliation_exceptions, settlement_holds, pending_events, "
     "settlement_events, webhook_receipts, payout_executions, settlement_legs, settlements, "
     "transactions, partners, "

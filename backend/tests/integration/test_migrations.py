@@ -66,13 +66,18 @@ APPROVED_TABLES = {
     "outbox_messages",
     "kyc_cases",
     "kyc_webhook_events",
+    "notifications",
+    "push_tokens",
+    "push_deliveries",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
 # Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
 # 4.1C offers (ADR-029) -> "0006"; 4.1D matches (ADR-031) -> "0007";
 # 4.1E payout accounts (ADR-035) -> "0008"; 4.1F escrow simulation (ADR-037) -> "0009";
-# KYC-1 Didit (ADR-039) -> "0010".
-EXPECTED_HEAD = "0010"
+# KYC-1 Didit (ADR-039) -> "0010"; one person, one account (ADR-041) -> "0011";
+# per country (ADR-042) -> "0012"; notifications (ADR-044) -> "0013"; PIN (ADR-046) -> "0014";
+# biometric unlock (ADR-048) -> "0015"; phone push (ADR-052) -> "0016".
+EXPECTED_HEAD = "0016"
 
 
 def _config(database_url: str) -> Config:

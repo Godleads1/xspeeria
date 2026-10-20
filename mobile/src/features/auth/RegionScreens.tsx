@@ -31,14 +31,16 @@ import { FieldInput, OutlinedField } from "../market/controls";
 import { pickDocument, type PickOutcome } from "../profile/photos";
 import { DEMO_MODE } from "./demo";
 import { AuthTop, DemoNote, GhostButton, Heading } from "./ui";
+import { trRich } from "../../i18n/rich";
+import { tr, k } from "../../i18n";
 
-export const US_REGION = { flag: "USD", name: "United States" } as const;
+export const US_REGION = { flag: "USD", name: k("United States") } as const;
 
 export type IdDocument = "state-id" | "passport" | "drivers-license";
 export const ID_DOCUMENTS: readonly { key: IdDocument; label: string }[] = [
-  { key: "state-id", label: "State ID Card" },
-  { key: "passport", label: "Passport" },
-  { key: "drivers-license", label: "Driver’s License" },
+  { key: "state-id", label: k("State ID Card") },
+  { key: "passport", label: k("Passport") },
+  { key: "drivers-license", label: k("Driver’s License") },
 ];
 
 /** `123456789` → `123-45-6789` as typed. */
@@ -65,7 +67,7 @@ export function isPlausibleSsn(ssn: string): boolean {
 
 /* ------------------------------------------------------------------ New location */
 
-function LocationArt(): ReactElement {
+function LocationArt({ flag = "USD" }: { flag?: string }): ReactElement {
   return (
     <View
       style={styles.art}
@@ -96,7 +98,7 @@ function LocationArt(): ReactElement {
         <Circle cx={150} cy={72} r={30} fill="#FFFFFF" />
       </Svg>
       <View style={styles.flagSpot}>
-        <RoundFlag code="USD" size={52} />
+        <RoundFlag code={flag} size={52} />
       </View>
     </View>
   );
@@ -105,9 +107,12 @@ function LocationArt(): ReactElement {
 export function NewLocationScreen({
   onConfirm,
   onSkip,
+  place = { flag: "USD", name: tr("United States of America"), currency: "USD", detected: false },
 }: {
   onConfirm: () => void;
   onSkip: () => void;
+  /** ADR-042: the country the server suggests. Demo builds keep the Figma's USA. */
+  place?: { flag: string; name: string; currency: string; detected: boolean };
 }): ReactElement {
   const insets = useSafeAreaInsets();
   return (
@@ -122,26 +127,18 @@ export function NewLocationScreen({
         <AuthTop />
       </View>
       <View style={styles.center}>
-        <LocationArt />
-        <Text accessibilityRole="header" style={styles.locTitle}>
-          Trade in Your New Location
-        </Text>
-        <Text style={styles.locBody}>
-          We’ve noticed you’re accessing your account from a new location and
-          detected you’re in the{" "}
-          <Text style={styles.strong}>United States of America</Text>. Please
-          confirm, and let us know if you’d like to create a profile that allows
-          you to trade in USD for a smoother and more convenient experience.
-        </Text>
-        <DemoNote>Demo app: the location is simulated, not detected.</DemoNote>
+        <LocationArt flag={place.flag} />
+        <Text accessibilityRole="header" style={styles.locTitle}>{tr("Trade in Your New Location")}</Text>
+        <Text style={styles.locBody}>{trRich("We’ve noticed you’re accessing your account from a new location and detected you’re in the <1>{{place}}</1>. Please confirm, and let us know if you’d like to create a profile that allows you to trade in {{currency}} for a smoother and more convenient experience.", { place: tr(place.name), currency: place.currency }, { 1: (s) => <Text style={styles.strong}>{s}</Text> })}</Text>
+        {place.detected ? null : <DemoNote>{tr("Demo app: the location is simulated, not detected.")}</DemoNote>}
       </View>
       <View style={[styles.pad, styles.actions]}>
         <PrimaryButton
           testID="new-location-confirm"
-          label="Confirm & Create a new profile"
+          label={tr("Confirm & Create a new profile")}
           onPress={onConfirm}
         />
-        <GhostButton testID="new-location-skip" label="Skip" onPress={onSkip} />
+        <GhostButton testID="new-location-skip" label={tr("Skip")} onPress={onSkip} />
       </View>
     </View>
   );
@@ -168,7 +165,7 @@ function TaskRow({
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${done ? "Done" : body}`}
+      accessibilityLabel={`${title}. ${done ? tr("Done") : body}`}
       onPress={onPress}
       style={({ pressed }) => [styles.task, pressed ? styles.pressed : null]}
     >
@@ -223,23 +220,23 @@ export function VerifyRegionScreen({
         setDocAdded(true);
       } else if (r.kind === "denied") {
         Alert.alert(
-          "Allow photo access",
-          "Allow Xspeeria to use your photos in your phone settings to add your ID.",
+          tr("Allow photo access"),
+          tr("Allow Xspeeria to use your photos in your phone settings to add your ID."),
         );
       }
     } catch {
-      Alert.alert("Could not use that photo", "Please try again.");
+      Alert.alert(tr("Could not use that photo"), tr("Please try again."));
     }
   };
 
   const takeSelfie = (): void => {
     if (!DEMO_MODE) return; // Real selfie capture needs the identity provider (ADR-016 §4).
     Alert.alert(
-      "Demo selfie check",
-      "No identity provider is connected. In the real app your camera opens here and your selfie is matched to your ID photo.",
+      tr("Demo selfie check"),
+      tr("No identity provider is connected. In the real app your camera opens here and your selfie is matched to your ID photo."),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Continue as matched", onPress: () => setSelfie(true) },
+        { text: tr("Cancel"), style: "cancel" },
+        { text: tr("Continue as matched"), onPress: () => setSelfie(true) },
       ],
     );
   };
@@ -248,7 +245,7 @@ export function VerifyRegionScreen({
 
   const verify = (): void => {
     if (!isPlausibleSsn(ssn)) {
-      setSsnError("Enter a valid 9-digit Social Security Number");
+      setSsnError(tr("Enter a valid 9-digit Social Security Number"));
       return;
     }
     if (!docType) return;
@@ -272,17 +269,12 @@ export function VerifyRegionScreen({
       >
         <View style={styles.center}>
           <RoundFlag code="USD" size={56} />
-          <Text accessibilityRole="header" style={styles.locTitle}>
-            Submitted for review
-          </Text>
-          <Text style={styles.locBody}>
-            We’ll review your documents and let you know by email. Your United
-            States profile shows as Pending in Account details until then.
-          </Text>
+          <Text accessibilityRole="header" style={styles.locTitle}>{tr("Submitted for review")}</Text>
+          <Text style={styles.locBody}>{tr("We’ll review your documents and let you know by email. Your United States profile shows as Pending in Account details until then.")}</Text>
         </View>
         <PrimaryButton
           testID="verify-region-finish"
-          label="Continue"
+          label={tr("Continue")}
           onPress={onDone}
         />
       </View>
@@ -301,13 +293,13 @@ export function VerifyRegionScreen({
       >
         <AuthTop />
         <Heading
-          title="Verify Your Identity"
-          body="To trade in USD, we need to confirm your identity in the United States. Enter your Social Security Number, then add a photo of a valid ID and a selfie."
+          title={tr("Verify Your Identity")}
+          body={tr("To trade in USD, we need to confirm your identity in the United States. Enter your Social Security Number, then add a photo of a valid ID and a selfie.")}
         />
-        <OutlinedField label="Enter SSN *" invalid={Boolean(ssnError)}>
+        <OutlinedField label={tr("Enter SSN *")} invalid={Boolean(ssnError)}>
           <FieldInput
             testID="verify-region-ssn"
-            accessibilityLabel="Social Security Number"
+            accessibilityLabel={tr("Social Security Number")}
             value={ssn}
             onChangeText={(t) => {
               setSsn(formatSsn(t));
@@ -329,11 +321,11 @@ export function VerifyRegionScreen({
         <TaskRow
           testID="verify-region-id"
           icon="idcard"
-          title="Take A picture of your Valid ID"
+          title={tr("Take A picture of your Valid ID")}
           body={
             docType
-              ? `${ID_DOCUMENTS.find((d) => d.key === docType)?.label} added`
-              : "To check your personal information is correct"
+              ? tr("{{label}} added", { label: tr(ID_DOCUMENTS.find((d) => d.key === docType)?.label ?? "") })
+              : tr("To check your personal information is correct")
           }
           done={docAdded}
           onPress={() => setPicker(true)}
@@ -341,14 +333,12 @@ export function VerifyRegionScreen({
         <TaskRow
           testID="verify-region-selfie"
           icon="camera"
-          title="Take A selfie of yourself"
-          body="To match your face to your ID photo"
+          title={tr("Take A selfie of yourself")}
+          body={tr("To match your face to your ID photo")}
           done={selfie}
           onPress={takeSelfie}
         />
-        <Text style={styles.small}>
-          Your SSN is sent once for this check and never stored on your phone.
-        </Text>
+        <Text style={styles.small}>{tr("Your SSN is sent once for this check and never stored on your phone.")}</Text>
       </ScrollView>
       <View
         style={[
@@ -359,13 +349,13 @@ export function VerifyRegionScreen({
       >
         <PrimaryButton
           testID="verify-region-submit"
-          label="Verify"
+          label={tr("Verify")}
           onPress={verify}
           disabled={!ready}
         />
         <GhostButton
           testID="verify-region-cancel"
-          label="Cancel"
+          label={tr("Cancel")}
           onPress={onCancel}
         />
       </View>
@@ -381,8 +371,8 @@ export function VerifyRegionScreen({
         >
           <AuthTop onBack={() => setPicker(false)} />
           <Heading
-            title="Verify Your Identity"
-            body="Please select a document below"
+            title={tr("Verify Your Identity")}
+            body={tr("Please select a document below")}
           />
           {ID_DOCUMENTS.map((d) => (
             <Pressable
@@ -396,7 +386,7 @@ export function VerifyRegionScreen({
               ]}
             >
               <Icon name="idcard" color={color.text.primary} size={22} />
-              <Text style={styles.docLabel}>{d.label}</Text>
+              <Text style={styles.docLabel}>{tr(d.label)}</Text>
               <Icon
                 name="chevron"
                 color={color.text.primary}

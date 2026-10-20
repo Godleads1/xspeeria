@@ -14,6 +14,7 @@ import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { DESTINATION_COUNTRIES, searchCountries, type DestinationCountry } from './data';
+import { tr } from "../../i18n";
 
 export function SelectCountryScreen({
   onBack,
@@ -29,22 +30,22 @@ export function SelectCountryScreen({
   const choose = (c: DestinationCountry): void => {
     if (!c.available) return;
     if (onSelect) onSelect(c);
-    else Alert.alert(c.name, 'Entering the bank details is the next screen to be built.');
+    else Alert.alert(tr(c.name), tr("Entering the bank details is the next screen to be built."));
   };
 
   return (
     <View testID="select-country-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="select-country-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="select-country-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Manage Beneficiaries</Text>
+        <Text style={styles.title}>{tr("Manage Beneficiaries")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.intro}>
-        <Text accessibilityRole="header" style={styles.heading}>Select Destination Country</Text>
-        <Text style={styles.helper}>Choose the country you want to send money to</Text>
+        <Text accessibilityRole="header" style={styles.heading}>{tr("Select Destination Country")}</Text>
+        <Text style={styles.helper}>{tr("Choose the country you want to send money to")}</Text>
       </View>
 
       <View style={styles.search}>
@@ -53,9 +54,9 @@ export function SelectCountryScreen({
           testID="select-country-search"
           value={query}
           onChangeText={setQuery}
-          placeholder="Search country"
+          placeholder={tr("Search country")}
           placeholderTextColor={color.text.secondary}
-          accessibilityLabel="Search country"
+          accessibilityLabel={tr("Search country")}
           autoCorrect={false}
           maxLength={60}
           style={styles.searchInput}
@@ -64,7 +65,7 @@ export function SelectCountryScreen({
 
       <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + space.lg }]} keyboardShouldPersistTaps="handled">
         {shown.length === 0 ? (
-          <Text testID="select-country-empty" style={styles.empty}>No supported country matches</Text>
+          <Text testID="select-country-empty" style={styles.empty}>{tr("No supported country matches")}</Text>
         ) : (
           shown.map((c) => (
             <Pressable
@@ -72,21 +73,21 @@ export function SelectCountryScreen({
               testID={`country-${c.currency}`}
               accessibilityRole="button"
               accessibilityState={{ disabled: !c.available }}
-              accessibilityLabel={`${c.name}, ${c.currency}${c.note ? `. ${c.note}` : ''}`}
+              accessibilityLabel={`${tr(c.name)}, ${c.currency}${c.note ? `. ${tr(c.note)}` : ''}`}
               disabled={!c.available}
               onPress={() => choose(c)}
               style={({ pressed }) => [styles.row, pressed ? styles.pressed : null, c.available ? null : styles.unavailable]}
             >
               <RoundFlag code={c.currency} size={28} />
               <View style={styles.rowText}>
-                <Text style={styles.name}>{c.name}</Text>
+                <Text style={styles.name}>{tr(c.name)}</Text>
                 <Text style={styles.code}>{c.currency}</Text>
               </View>
-              {c.note ? <Text style={styles.note}>{c.note}</Text> : null}
+              {c.note ? <Text style={styles.note}>{tr(c.note)}</Text> : null}
             </Pressable>
           ))
         )}
-        <Text style={styles.footnote}>More countries will appear as new corridors open.</Text>
+        <Text style={styles.footnote}>{tr("More countries will appear as new corridors open.")}</Text>
       </ScrollView>
     </View>
   );

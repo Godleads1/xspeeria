@@ -24,6 +24,7 @@ import { ListingRow, RoundButton } from "./controls";
 import { listingsFor, type Listing } from "./data";
 import { formatCompact, formatHundredths, quoteMinor } from "./money";
 import type { Side, TradeRequest } from "./MarketScreen";
+import { tr } from "../../i18n";
 
 export function SelectMatchScreen({
   request,
@@ -60,7 +61,7 @@ export function SelectMatchScreen({
         <Pressable
           testID="select-match-back"
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={tr("Back")}
           onPress={onBack}
           hitSlop={12}
           style={styles.back}
@@ -72,10 +73,8 @@ export function SelectMatchScreen({
             weight={2.25}
           />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          Select Match
-        </Text>
-        <RoundButton icon="more" label="More options" />
+        <Text accessibilityRole="header" style={styles.title}>{tr("Select Match")}</Text>
+        <RoundButton icon="more" label={tr("More options")} />
       </View>
 
       <ScrollView
@@ -84,15 +83,15 @@ export function SelectMatchScreen({
       >
         <View testID="select-match-summary" style={styles.summary}>
           <Text style={styles.summaryLine}>
-            {"Amount: "}
+            {tr("Amount: ")}
             <Text style={styles.summaryStrong}>
               {`${formatCompact(request.amountMinor)} ${request.currency}`}
             </Text>
           </Text>
           <View style={styles.rule} />
           <Text style={styles.summaryLine}>
-            {"Rate: "}
-            <Text style={styles.summaryMuted}>NGN </Text>
+            {tr("Rate: ")}
+            <Text style={styles.summaryMuted}>{tr("NGN")}{' '}</Text>
             <Text style={styles.summaryStrong}>
               {formatCompact(request.rateHundredths)}
             </Text>
@@ -100,25 +99,23 @@ export function SelectMatchScreen({
           </Text>
           <View style={styles.rule} />
           <Text testID="select-match-pay" style={styles.summaryLine}>
-            {isBuy ? "Amount to pay: " : "Amount to receive: "}
+            {isBuy ? tr("Amount to pay: ") : tr("Amount to receive: ")}
             <Text
               style={styles.summaryStrong}
             >{`${formatHundredths(payMinor)} NGN`}</Text>
           </Text>
-          <Text style={styles.summaryNote}>
-            Paid into bank escrow, never to Xspeeria.
-          </Text>
+          <Text style={styles.summaryNote}>{tr("Paid into bank escrow, never to Xspeeria.")}</Text>
         </View>
 
         <SectionLabel>
           {matches.length > 0
-            ? `We found some match for your ${isBuy ? "request" : "offer"}`
-            : "No match yet"}
+            ? (isBuy ? tr("We found some match for your request") : tr("We found some match for your offer"))
+            : tr("No match yet")}
         </SectionLabel>
 
         {matches.length === 0 ? (
           <Text style={styles.empty}>
-            {`Your ${isBuy ? "request" : "offer"} stays open. We will notify you when someone matches it.`}
+            {(isBuy ? tr("Your request stays open. We will notify you when someone matches it.") : tr("Your offer stays open. We will notify you when someone matches it."))}
           </Text>
         ) : (
           <View>
@@ -143,11 +140,15 @@ export function SelectMatchScreen({
         {plan.length > 0 ? (
           <View style={styles.selection}>
             <Text testID="select-match-selected" style={styles.selectionText}>
-              {`Selected ${formatHundredths(selected)} of ${formatHundredths(request.amountMinor)} ${request.currency} from ${plan.length} ${plan.length === 1 ? (isBuy ? "offer" : "request") : isBuy ? "offers" : "requests"}`}
+              {(() => {
+                const v = { selected: formatHundredths(selected), amountMinor: formatHundredths(request.amountMinor), currency: request.currency, count: plan.length };
+                if (plan.length === 1) return isBuy ? tr("Selected {{selected}} of {{amountMinor}} {{currency}} from 1 offer", v) : tr("Selected {{selected}} of {{amountMinor}} {{currency}} from 1 request", v);
+                return isBuy ? tr("Selected {{selected}} of {{amountMinor}} {{currency}} from {{count}} offers", v) : tr("Selected {{selected}} of {{amountMinor}} {{currency}} from {{count}} requests", v);
+              })()}
             </Text>
             <PrimaryButton
               testID="select-match-review"
-              label={plan.length === 1 ? "Review trade" : `Review ${plan.length} trades`}
+              label={plan.length === 1 ? tr("Review trade") : tr("Review {{length}} trades", { length: plan.length })}
               onPress={onReview}
               tone={isBuy ? "primary" : "sell"}
             />
@@ -163,7 +164,7 @@ export function SelectMatchScreen({
           ]}
         >
           <Text style={styles.cancelLabel}>
-            {isBuy ? "Cancel request" : "Cancel offer"}
+            {isBuy ? tr("Cancel request") : tr("Cancel offer")}
           </Text>
         </Pressable>
       </View>

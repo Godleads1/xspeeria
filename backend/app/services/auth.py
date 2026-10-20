@@ -84,6 +84,7 @@ from app.models.identity import (
 from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
 from app.providers.pretend_bank import PretendBank
+from app.providers.push import PushSender
 from app.providers.sms import SmsSender
 from app.repositories.identity import IdentityRepository
 
@@ -216,8 +217,12 @@ class AuthRuntime:
     name_check: NameCheck | None = None
     #: ADR-039: the identity-check provider (Didit). None: identity checks are switched off.
     kyc_provider: KycSessionProvider | None = None
+    #: ADR-041: key for the ID-document hash (one person, one verified account).
+    kyc_identity_key: bytes | None = None
     #: ADR-037: the pretend partner bank. None: no escrow is opened (no real partner yet).
     pretend_bank: PretendBank | None = None
+    #: ADR-052: phone push. None: notifications stay in-app only.
+    push_sender: PushSender | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(
@@ -988,6 +993,254 @@ class AuthService:
         await self._db.commit()
         self._alert(str(user.id), "authenticator_replaced")
 
+    # --- PIN change and reset (ADR-046) --------------------------------------------------
+
+    def _pin_or_422(self, pin: str) -> None:
+        problem = pin_problem(pin)
+        if problem is not None:
+            raise _err("VAL_422_WEAK_PASSWORD", problem, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+    async def _end_sessions(
+        self, user_id: uuid.UUID, now: datetime, reason: str, keep: uuid.UUID | None = None
+    ) -> int:
+        ended = 0
+        for s in await self._repo.live_sessions_for(user_id, now):
+            if s.id != keep:
+                s.revoked_at = now
+                s.revoke_reason = reason
+                ended += 1
+        return ended
+
+    async def change_pin(
+        self, principal: Principal, current_pin: str, new_pin: str, step_up_token: str | None
+    ) -> None:
+        """Signed in, with an authenticator approval (``pin.change``) and the current PIN.
+
+        Other devices are signed out; this one stays. A wrong current PIN counts towards the
+        PIN lock exactly like a wrong log-in.
+        """
+        self._pin_or_422(new_pin)
+        now = self._now()
+        await self.consume_step_up(principal, "pin.change", step_up_token)
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        locked_until = user.pin_locked_until
+        if locked_until is not None and now < locked_until:
+            await self._db.rollback()
+            raise _rate_limited(locked_until - now)
+        if not self._rt.hasher.verify(user.pin_hash, current_pin):
+            user.failed_pin_attempts += 1
+            if user.failed_pin_attempts >= MAX_PIN_TRIES:
+                user.failed_pin_attempts = 0
+                user.pin_locked_until = now + PIN_LOCK
+                await self._db.commit()  # the approval is spent too: ask again
+                raise _rate_limited(PIN_LOCK)
+            await self._db.commit()
+            raise _invalid_credentials()
+        if self._rt.hasher.verify(user.pin_hash, new_pin):
+            await self._db.rollback()
+            raise _err(
+                "VAL_422_WEAK_PASSWORD",
+                "Choose a PIN that is different from your current one.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        user.pin_hash = self._rt.hasher.hash(new_pin)
+        user.failed_pin_attempts = 0
+        user.pin_locked_until = None
+        await self._end_sessions(user.id, now, "pin_change", keep=principal.session_id)
+        await self._db.commit()
+        self._alert(str(user.id), "pin_changed")
+
+    async def pin_reset_start(self, phone_raw: str) -> None:
+        """Send a reset code by SMS. Same answer whether or not the number has an account."""
+        phone = normalise_phone(phone_raw)
+        if phone is None:
+            raise _err(
+                "VAL_422_INVALID_PHONE",
+                "Enter the phone number with its country code, for example +2348012345678.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if self._rt.sms is None:
+            raise sms_unavailable()
+        now = self._now()
+        await self._enforce_sms_limits(phone, now)
+        user = await self._repo.user_by_phone(phone)
+        real = user is not None and user.status == "active"
+        code = generate_code() if real else secrets.token_hex(16)
+        row = self._verification(phone, code, now)
+        row.purpose = "pin_reset"
+        self._repo.add(row)
+        await self._db.commit()
+        if real:
+            await self._rt.sms.send_code(phone, code)
+            _logger.info("pin_reset_code_sent", extra={"phone": mask_phone(phone)})
+
+    async def pin_reset_confirm(
+        self,
+        phone_raw: str,
+        sms_code: str,
+        new_pin: str,
+        *,
+        otp_code: str | None = None,
+        recovery_code: str | None = None,
+    ) -> None:
+        """ADR-025/046: a new PIN needs the SMS code AND the second factor (authenticator code
+        or a recovery code). Every session ends and trusted devices are forgotten."""
+        if (otp_code is None) == (recovery_code is None):
+            raise _invalid_code()
+        self._pin_or_422(new_pin)
+        phone = normalise_phone(phone_raw)
+        if phone is None:
+            raise _invalid_code()
+        now = self._now()
+        row = await self._repo.latest_open_code(phone, "pin_reset")
+        if row is None:
+            await self._db.rollback()
+            raise _invalid_code()
+        if now >= row.expires_at:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_410_CHALLENGE_EXPIRED",
+                "That code has expired. Ask for a new one.",
+                status.HTTP_410_GONE,
+            )
+        if row.attempts >= MAX_CODE_TRIES:
+            remaining = row.expires_at - now
+            await self._db.rollback()
+            raise _rate_limited(remaining)
+        if not self._keys.code_matches(phone, sms_code, row.code_digest):
+            row.attempts += 1
+            await self._db.commit()
+            raise _invalid_code()
+        user = await self._repo.user_by_phone(phone, lock=True)
+        if user is None or user.status != "active":  # pragma: no cover - code is unusable then
+            await self._db.rollback()
+            raise _invalid_code()
+        await self._refuse_if_mfa_locked(user, now)
+        factor = await self._repo.active_factor(user.id, lock=True)
+        if factor is None:  # pragma: no cover - every active account has one (ADR-026)
+            await self._db.rollback()
+            raise _invalid_code()
+        if otp_code is not None:
+            step = self._check_code(factor, user, otp_code, now)
+            if step is None:
+                raise await self._mfa_failure(user, now)
+            factor.last_used_step = step
+        else:
+            normalised = normalise_recovery_code(recovery_code or "")
+            used = (
+                await self._repo.unused_recovery_code(
+                    user.id, self._keys.recovery_digest(user.id, normalised)
+                )
+                if normalised
+                else None
+            )
+            if used is None:
+                raise await self._mfa_failure(user, now)
+            used.used_at = now
+        row.consumed_at = now
+        self._mfa_success(user)
+        user.pin_hash = self._rt.hasher.hash(new_pin)
+        user.failed_pin_attempts = 0
+        user.pin_locked_until = None
+        await self._end_sessions(user.id, now, "pin_reset")
+        await self._repo.revoke_trusted_devices(user.id, now)
+        await self._db.commit()
+        self._alert(str(user.id), "pin_reset")
+
+    # --- phone number change (ADR-047) ------------------------------------------------------
+
+    def _phone_or_422(self, phone_raw: str) -> str:
+        phone = normalise_phone(phone_raw)
+        if phone is None:
+            raise _err(
+                "VAL_422_INVALID_PHONE",
+                "Enter the phone number with its country code, for example +2348012345678.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        return phone
+
+    async def phone_change_start(
+        self, principal: Principal, new_phone_raw: str, step_up_token: str | None
+    ) -> None:
+        """Contract: "phone change re-triggers phone verification". With a ``contact.change``
+        approval, a code goes to the NEW number; the change applies only when it is entered.
+        The code is bound to this user, so nobody else can use it."""
+        phone = self._phone_or_422(new_phone_raw)
+        if self._rt.sms is None:
+            raise sms_unavailable()
+        now = self._now()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        if user.phone == phone:
+            await self._db.rollback()
+            raise _err(
+                "VAL_422_INVALID_PHONE",
+                "This is already your phone number.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        await self.consume_step_up(principal, "contact.change", step_up_token)
+        await self._enforce_sms_limits(phone, now)
+        code = generate_code()
+        row = self._verification(phone, code, now)
+        row.code_digest = self._keys.code_digest(f"{phone}#{user.id}", code)
+        row.purpose = "phone_change"
+        self._repo.add(row)
+        await self._db.commit()
+        await self._rt.sms.send_code(phone, code)
+        _logger.info("phone_change_code_sent", extra={"user_id": str(user.id)})
+
+    async def phone_change_confirm(
+        self, principal: Principal, new_phone_raw: str, code: str
+    ) -> str:
+        phone = self._phone_or_422(new_phone_raw)
+        now = self._now()
+        row = await self._repo.latest_open_code(phone, "phone_change")
+        if row is None:
+            await self._db.rollback()
+            raise _invalid_code()
+        if now >= row.expires_at:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_410_CHALLENGE_EXPIRED",
+                "That code has expired. Ask for a new one.",
+                status.HTTP_410_GONE,
+            )
+        if row.attempts >= MAX_CODE_TRIES:
+            remaining = row.expires_at - now
+            await self._db.rollback()
+            raise _rate_limited(remaining)
+        if not self._keys.code_matches(f"{phone}#{principal.user_id}", code, row.code_digest):
+            row.attempts += 1
+            await self._db.commit()
+            raise _invalid_code()
+        user = await self._repo.user_for_update(principal.user_id)
+        if user is None:  # pragma: no cover
+            raise _unauthorized()
+        row.consumed_at = now
+        old = user.phone
+        user.phone = phone
+        user.phone_verified_at = now
+        try:
+            await self._db.commit()
+        except IntegrityError as exc:
+            await self._db.rollback()
+            if "uq_users_phone" not in str(exc.orig):
+                raise
+            # Shown only after the code proved the user holds this number.
+            raise _err(
+                "AUTH_409_PHONE_TAKEN",
+                "This number is already used by another account.",
+                status.HTTP_409_CONFLICT,
+            ) from None
+        self._alert(str(principal.user_id), "phone_changed")
+        _logger.info(
+            "phone_changed", extra={"user_id": str(principal.user_id), "old": mask_phone(old)}
+        )
+        return phone
+
     async def trusted_devices(self, principal: Principal) -> list[TrustedDevice]:
         return await self._repo.live_trusted_devices(principal.user_id, self._now())
 
@@ -998,3 +1251,103 @@ class AuthService:
             raise _err("RES_404_NOT_FOUND", "That device was not found.", status.HTTP_404_NOT_FOUND)
         row.revoked_at = self._now()
         await self._db.commit()
+
+    # --- biometric unlock after the idle lock (ADR-048) -------------------------------------
+
+    async def biometric_enable(self, principal: Principal, device_token: str | None) -> str:
+        """A new unlock key for this session, shown once. Only on a trusted device (ADR-008).
+
+        The phone stores it behind Face ID/fingerprint. Turning it on again replaces the key.
+        """
+        now = self._now()
+        session = await self._repo.session_by_id(principal.session_id, lock=True)
+        if session is None or not self._session_usable(session, now):
+            await self._db.rollback()
+            raise _unauthorized()
+        device = await self._trusted_device_for(principal.user_id, device_token, now)
+        if device is None:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_403_DEVICE_NOT_TRUSTED",
+                "Fingerprint or Face ID unlock needs a trusted device. Log in with your "
+                "authenticator code and choose to trust this device first.",
+                status.HTTP_403_FORBIDDEN,
+            )
+        key = generate_refresh_token()
+        session.unlock_key_hash = hash_refresh_token(key)
+        session.unlock_device_id = device.id
+        await self._db.commit()
+        _logger.info("biometric_unlock_enabled", extra={"user_id": str(principal.user_id)})
+        return key
+
+    async def biometric_disable(self, principal: Principal) -> None:
+        session = await self._repo.session_by_id(principal.session_id, lock=True)
+        if session is not None:
+            session.unlock_key_hash = None
+            session.unlock_device_id = None
+        await self._db.commit()
+
+    async def biometric_unlock(self, refresh_token: str, unlock_key: str) -> TokenPair:
+        """Resume a session past the 5-minute idle limit with the refresh token plus the key
+        the phone released after Face ID/fingerprint. Never past the 7-day limit, never on a
+        revoked or un-trusted device, never while the PIN is locked. A wrong key for a real
+        session means someone holds a copied refresh token: the session ends."""
+        now = self._now()
+        if not refresh_token or len(refresh_token) > 128 or not unlock_key or len(unlock_key) > 128:
+            raise _invalid_refresh()
+        token = await self._repo.refresh_token_by_hash(hash_refresh_token(refresh_token))
+        if token is None:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        session = await self._repo.session_by_id(token.session_id, lock=True)
+        if session is None or session.revoked_at is not None or now >= session.expires_at:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if token.used_at is not None:
+            session.revoked_at = now
+            session.revoke_reason = "token_reuse"
+            await self._db.commit()
+            _logger.warning("refresh_token_reuse", extra={"user_id": str(session.user_id)})
+            raise _invalid_refresh()
+        if session.unlock_key_hash is None or session.unlock_device_id is None:
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if not secrets.compare_digest(session.unlock_key_hash, hash_refresh_token(unlock_key)):
+            session.revoked_at = now
+            session.revoke_reason = "unlock_failed"
+            await self._db.commit()
+            _logger.warning("biometric_unlock_failed", extra={"user_id": str(session.user_id)})
+            raise _invalid_refresh()
+        device = await self._repo.trusted_device_by_id(session.unlock_device_id)
+        if (
+            device is None
+            or device.user_id != session.user_id
+            or device.revoked_at is not None
+            or now >= device.expires_at
+        ):
+            await self._db.rollback()
+            raise _invalid_refresh()
+        user = await self._repo.user_by_id(session.user_id)
+        if user is None or user.status != "active":
+            await self._db.rollback()
+            raise _invalid_refresh()
+        if user.pin_locked_until is not None and now < user.pin_locked_until:
+            retry = user.pin_locked_until - now
+            await self._db.rollback()
+            raise _rate_limited(retry)
+
+        token.used_at = now
+        session.last_active_at = now
+        new_refresh = generate_refresh_token()
+        self._repo.add(
+            AuthRefreshToken(
+                id=uuid.uuid4(),
+                session_id=session.id,
+                token_hash=hash_refresh_token(new_refresh),
+                created_at=now,
+            )
+        )
+        access = self._keys.issue_access(AccessClaims(session.user_id, session.id), now)
+        await self._db.commit()
+        _logger.info("biometric_unlock", extra={"user_id": str(session.user_id)})
+        return TokenPair(access_token=access, refresh_token=new_refresh)

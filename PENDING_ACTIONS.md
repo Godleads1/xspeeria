@@ -52,10 +52,20 @@ Last updated: 19 Oct 2026.
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
 - [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
-- [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039)
-- [ ] **Set up Didit** — *You*: create the workflow (ID + liveness + face match + AML), then put `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET` in your own `.env` (never in chat or Git).
+- [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039). Live run 2026-10-19: Didit's NIMC/FRSC/NIS database check is listed for Nigeria but **locked until the first paid top-up**.
+- [x] **Set up Didit** — *You*: workflow "Compliance workflow" published; keys in your own `.env` (2026-10-19).
+- [ ] **Add `KYC_IDENTITY_KEY`** — *You*: one more line in your own `.env` (ADR-041); the server will not start with Didit on without it.
+- [x] **Confirm the Nigerian ID rule** — *You*: confirmed 2026-10-19: the Nigerian check needs a **Nigerian-issued ID**; a foreign passport does not count (ADR-042).
+- [ ] **App: country choice and region screens** — *Build*: the app still starts only the Nigerian check; UK/US users need the Figma "Trade in Your New Location" and "KYC approved regions" screens connected (ADR-042).
+- [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
+- [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
+- [ ] **SMS provider** — *You*: later (ADR-044 N-4).
+- [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).
+- [ ] **Languages** — *You*: share the Figma link with the language screens; Yoruba, Igbo, Hausa, French, Arabic and Swahili texts need native-speaker review before launch.
+- [ ] **Ghana and Kenya deals** — *You*: decide which deals (cedi/shilling ⇄ naira, or ⇄ UK/US). Canada and UAE fit today's model; all four are after the MVP.
+- [ ] **Decide who clears held identity checks** — *You + Compliance*: a second account for an already-verified person is held for review (ADR-041); the staff review tools wait for the Figma file.
 - [x] **App screens for the identity check** — *Build* — done 19 Oct 2026 for development builds (ADR-040).
-- [ ] **Test Didit end to end** — *You + Build*: with your Didit keys and a temporary tunnel for the webhook.
+- [x] **Test Didit end to end** — *You + Build*: done 2026-10-19 (web build + tunnel); results signed, received (200) and applied; found one person verified on two accounts → ADR-041.
 - [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)

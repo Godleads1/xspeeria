@@ -20,14 +20,22 @@ from app.api.auth_deps import (
 )
 from app.domain.auth_rules import STEP_UP_TTL
 from app.schemas.auth import (
+    BiometricEnableRequest,
+    BiometricEnableResponse,
+    BiometricUnlockRequest,
     ChallengeRequest,
     ChallengeResponse,
+    ChangePinRequest,
     EnrolConfirmRequest,
     EnrolConfirmResponse,
     EnrolStartResponse,
     LoginRequest,
     MfaVerifyRequest,
     OtpCodeRequest,
+    PhoneChangeConfirmRequest,
+    PhoneChangeStartRequest,
+    PinResetConfirmRequest,
+    PinResetStartRequest,
     ProfileResponse,
     RecoveryCodesResponse,
     RegisterRequest,
@@ -313,3 +321,117 @@ async def revoke_trusted_device(
 ) -> Response:
     await service.revoke_trusted_device(principal, trusted_device_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- PIN change and reset (ADR-046) ----------------------------------------------------------
+
+
+@router.post(
+    "/users/me/pin",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["users"],
+    summary="Change my PIN (step-up: pin.change); other devices are signed out",
+)
+async def change_pin(
+    body: ChangePinRequest,
+    principal: CurrentPrincipal,
+    service: Service,
+    step_up_token: StepUpToken = None,
+) -> Response:
+    await service.change_pin(principal, body.current_pin, body.new_pin, step_up_token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/auth/pin-reset/start",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Forgot PIN: send a reset code by SMS (same answer for any number)",
+)
+async def pin_reset_start(body: PinResetStartRequest, service: Service) -> dict[str, str]:
+    await service.pin_reset_start(body.phone)
+    return {"status": "code_sent_if_account_exists"}
+
+
+@router.post(
+    "/auth/pin-reset/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Forgot PIN: SMS code + authenticator or recovery code + new PIN",
+)
+async def pin_reset_confirm(body: PinResetConfirmRequest, service: Service) -> Response:
+    await service.pin_reset_confirm(
+        body.phone,
+        body.code,
+        body.new_pin,
+        otp_code=body.otp_code,
+        recovery_code=body.recovery_code,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- phone number change (ADR-047) -----------------------------------------------------------
+
+
+@router.post(
+    "/users/me/phone/start",
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["users"],
+    summary="Change my phone: text a code to the new number (step-up: contact.change)",
+)
+async def phone_change_start(
+    body: PhoneChangeStartRequest,
+    principal: CurrentPrincipal,
+    service: Service,
+    step_up_token: StepUpToken = None,
+) -> dict[str, str]:
+    await service.phone_change_start(principal, body.new_phone, step_up_token)
+    return {"status": "code_sent"}
+
+
+@router.post(
+    "/users/me/phone/confirm",
+    tags=["users"],
+    summary="Change my phone: the code from the new number applies the change",
+)
+async def phone_change_confirm(
+    body: PhoneChangeConfirmRequest, principal: CurrentPrincipal, service: Service
+) -> dict[str, str]:
+    phone = await service.phone_change_confirm(principal, body.new_phone, body.code)
+    return {"phone": phone}
+
+
+# --- biometric unlock after the idle lock (ADR-048) ------------------------------------------
+
+
+@router.post(
+    "/auth/biometric",
+    response_model=BiometricEnableResponse,
+    tags=["auth"],
+    summary="Turn on Face ID/fingerprint unlock for this session (trusted devices only)",
+)
+async def biometric_enable(
+    body: BiometricEnableRequest, principal: CurrentPrincipal, service: Service
+) -> BiometricEnableResponse:
+    return BiometricEnableResponse(
+        unlock_key=await service.biometric_enable(principal, body.device_token)
+    )
+
+
+@router.delete(
+    "/auth/biometric",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["auth"],
+    summary="Turn off Face ID/fingerprint unlock for this session",
+)
+async def biometric_disable(principal: CurrentPrincipal, service: Service) -> Response:
+    await service.biometric_disable(principal)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/auth/biometric/unlock",
+    response_model=TokenResponse,
+    tags=["auth"],
+    summary="Resume a session after the idle lock with the key Face ID/fingerprint released",
+)
+async def biometric_unlock(body: BiometricUnlockRequest, service: Service) -> TokenResponse:
+    return _tokens(await service.biometric_unlock(body.refresh_token, body.unlock_key))

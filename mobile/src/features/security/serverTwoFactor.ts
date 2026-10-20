@@ -11,10 +11,11 @@ import { ApiError } from '../../api/client';
 import { authApi } from '../../api/authApi';
 import { secureTokens } from '../../api/secureTokens';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 
@@ -46,7 +47,7 @@ export const serverTwoFactor: ServerTwoFactor = {
   },
   hasPendingReplace: () => pending !== null,
   async pendingReplace() {
-    if (!pending) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, 'This step has expired. Please start again.');
+    if (!pending) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please start again."));
     return pending;
   },
   async confirmReplace(code) {

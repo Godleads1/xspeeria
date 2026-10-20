@@ -17,6 +17,7 @@ import { FieldInput, OutlinedField } from '../market/controls';
 import { BankAccountFields } from '../profile/BankAccountFields';
 import { validateBankForm, type BankFormValues } from '../profile/data';
 import type { PayoutSource } from './serverPayouts';
+import { tr } from "../../i18n";
 
 /** Currencies with an approved account form. EUR waits for its form (ADR-035). */
 export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP'] as const;
@@ -77,17 +78,13 @@ export function AddPayoutAccountScreen({
   return (
     <Screen testID="add-payout-account-screen">
       <View style={styles.header}>
-        <Pressable testID="add-payout-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="add-payout-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          Add payout account
-        </Text>
+        <Text accessibilityRole="header" style={styles.title}>{tr("Add payout account")}</Text>
         <View style={styles.spacer} />
       </View>
-      <Text style={styles.intro}>
-        It must be in your own name — your bank confirms the name. Only the last 4 digits are kept visible.
-      </Text>
+      <Text style={styles.intro}>{tr("It must be in your own name — your bank confirms the name. Only the last 4 digits are kept visible.")}</Text>
 
       <View style={styles.tabs} accessibilityRole="tablist">
         {PAYOUT_CURRENCIES.map((c) => (
@@ -115,10 +112,10 @@ export function AddPayoutAccountScreen({
         onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
       />
 
-      <OutlinedField label="Authenticator code *">
+      <OutlinedField label={tr("Authenticator code *")}>
         <FieldInput
           testID="add-payout-code"
-          accessibilityLabel="6-digit code from your authenticator app"
+          accessibilityLabel={tr("6-digit code from your authenticator app")}
           value={code}
           onChangeText={(t) => {
             setCode(t.replace(/[^0-9]/g, '').slice(0, 6));
@@ -137,7 +134,7 @@ export function AddPayoutAccountScreen({
       ) : null}
       <PrimaryButton
         testID="add-payout-save"
-        label={busy ? 'Checking with the bank…' : 'Add account'}
+        label={busy ? tr("Checking with the bank…") : tr("Add account")}
         onPress={() => void save()}
         disabled={busy || code.length !== 6}
       />

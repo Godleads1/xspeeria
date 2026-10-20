@@ -17,6 +17,7 @@ import { otpauthUri } from './totp';
 import { twoFactor, type RandomBytes } from './twoFactorStore';
 import { copySensitive } from './sensitiveClipboard';
 import { useBlockScreenCapture } from './useBlockScreenCapture';
+import { tr } from "../../i18n";
 
 /**
  * Where the secret comes from and where the first code is checked. The default is the demo
@@ -114,7 +115,7 @@ export function AuthenticatorSetupScreen({
       setCodes(result);
       setError(null);
     } else {
-      setError('That code is not right. Check the time on your phone is automatic and try the newest code.');
+      setError(tr("That code is not right. Check the time on your phone is automatic and try the newest code."));
       setCode('');
     }
   };
@@ -126,36 +127,32 @@ export function AuthenticatorSetupScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="authenticator-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="authenticator-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Authenticator app</Text>
+        <Text style={styles.title}>{tr("Authenticator app")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]} keyboardShouldPersistTaps="handled">
         {alreadyEnrolled && !codes ? (
-          <Text testID="authenticator-already" style={styles.text}>
-            Your authenticator app is already set up.
-          </Text>
+          <Text testID="authenticator-already" style={styles.text}>{tr("Your authenticator app is already set up.")}</Text>
         ) : codes ? (
           <RecoveryCodes codes={codes} onDone={onDone} />
         ) : (
           <>
-            <Text style={styles.step}>1. Scan with your authenticator app</Text>
-            <Text style={styles.text}>
-              Use Google Authenticator, Microsoft Authenticator, Authy or similar. Never share this code or key.
-            </Text>
+            <Text style={styles.step}>{tr("1. Scan with your authenticator app")}</Text>
+            <Text style={styles.text}>{tr("Use Google Authenticator, Microsoft Authenticator, Authy or similar. Never share this code or key.")}</Text>
             <View style={styles.qr}>
               {uri ? <QrCode testID="authenticator-qr" value={uri} /> : null}
             </View>
-            <Text style={styles.text}>{"Can't scan? Enter this key instead:"}</Text>
+            <Text style={styles.text}>{tr("Can't scan? Enter this key instead:")}</Text>
             <View style={styles.keyRow}>
               <Text testID="authenticator-key" selectable style={styles.key}>{groupKey(secret)}</Text>
               <Pressable
                 testID="authenticator-copy"
                 accessibilityRole="button"
-                accessibilityLabel="Copy key"
+                accessibilityLabel={tr("Copy key")}
                 hitSlop={8}
                 onPress={() => {
                   copySensitive(secret).then(() => setCopied(true), () => setCopied(false));
@@ -164,9 +161,9 @@ export function AuthenticatorSetupScreen({
                 <Icon name="copy" color={color.brand.primary} size={20} />
               </Pressable>
             </View>
-            {copied ? <Text style={styles.hint}>Key copied. Paste it now: it clears in 1 minute.</Text> : null}
+            {copied ? <Text style={styles.hint}>{tr("Key copied. Paste it now: it clears in 1 minute.")}</Text> : null}
 
-            <Text style={[styles.step, styles.stepGap]}>2. Enter the 6-digit code it shows</Text>
+            <Text style={[styles.step, styles.stepGap]}>{tr("2. Enter the 6-digit code it shows")}</Text>
             <TextInput
               testID="authenticator-code"
               value={code}
@@ -176,7 +173,7 @@ export function AuthenticatorSetupScreen({
               }}
               placeholder="123456"
               placeholderTextColor={color.text.disabled}
-              accessibilityLabel="6-digit code"
+              accessibilityLabel={tr("6-digit code")}
               keyboardType="number-pad"
               autoComplete="one-time-code"
               textContentType="oneTimeCode"
@@ -184,7 +181,7 @@ export function AuthenticatorSetupScreen({
               style={styles.input}
             />
             {error ? <Text testID="authenticator-error" style={styles.error}>{error}</Text> : null}
-            <PrimaryButton testID="authenticator-verify" label="Verify and turn on" onPress={verify} disabled={code.length !== 6 || busy || !secret} />
+            <PrimaryButton testID="authenticator-verify" label={tr("Verify and turn on")} onPress={verify} disabled={code.length !== 6 || busy || !secret} />
           </>
         )}
       </ScrollView>

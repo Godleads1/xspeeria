@@ -8,6 +8,7 @@ import { ConfirmPinScreen } from '../../../src/features/auth/SignupScreens';
 import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 export default function SignupConfirmPinRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
@@ -24,7 +25,7 @@ export default function SignupConfirmPinRoute(): ReactElement {
     serverAuth.register({ phone, email, pin }).then(
       () => router.replace('/signup/otp'),
       (e: unknown) => {
-        Alert.alert('Couldn’t continue', messageFor(e));
+        Alert.alert(tr("Couldn’t continue"), messageFor(e));
         if (e instanceof ApiError && e.code === 'AUTH_400_EMAIL_TAKEN') router.replace('/signup/details');
         else router.replace('/signup/pin');
       },

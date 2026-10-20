@@ -11,6 +11,7 @@ import { orderDraft, useOrderDraft } from '../../../src/features/trade/orderDraf
 import { PayoutDestinationScreen } from '../../../src/features/trade/PayoutDestinationScreen';
 import { orderReceiveMinor, placeOrder, receiveCurrency } from '../../../src/features/trade/placeOrder';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /**
  * Payout Destination (ADR-022). Opens only for an order confirmed on Select Match (a deep
@@ -41,17 +42,18 @@ export default function PayoutRoute(): ReactElement {
       onContinue={async (recipients) => {
         const cur = draft.parts[0].listing.currency;
         const amount = formatHundredths(draft.parts.reduce((s, p) => s + p.amountMinor, 0));
-        const trades = draft.parts.length > 1 ? ` in ${draft.parts.length} trades` : '';
-        const accounts = `${recipients.length} ${recipients.length === 1 ? 'account' : 'accounts'}`;
-        const isNew = recipients.some((r) => r.isNew) ? ', including a new account' : '';
+        const action = draft.side === 'buy' ? tr("Buy {{amount}} {{cur}}", { amount, cur }) : tr("Sell {{amount}} {{cur}}", { amount, cur });
+        const trades = draft.parts.length > 1 ? tr(" in {{count}} trades", { count: draft.parts.length }) : '';
+        const accounts = recipients.length === 1 ? tr("paid to 1 account") : tr("paid to {{count}} accounts", { count: recipients.length });
+        const isNew = recipients.some((r) => r.isNew) ? tr(", including a new account") : '';
         // One 2FA check covers the order and where it is paid (ADR-008).
-        if (!(await requestStepUp(`${draft.side === 'buy' ? 'Buy' : 'Sell'} ${amount} ${cur}${trades}, paid to ${accounts}${isNew}`))) return;
+        if (!(await requestStepUp(tr("{{action}}{{trades}}, {{accounts}}{{isNew}}", { action, trades, accounts, isNew })))) return;
         const result = placeOrder({ draft, recipients, now: Date.now(), random: Crypto.getRandomBytes });
         orderDraft.clear();
         if (result.failed > 0) {
           Alert.alert(
-            'Some trades were not created',
-            `${result.failed} of ${draft.parts.length} ${draft.side === 'buy' ? 'offers were' : 'requests were'} taken by someone else. ${result.created.length > 0 ? 'The others went ahead.' : 'Choose again.'}`,
+            tr("Some trades were not created"),
+            `${draft.side === 'buy' ? tr("{{failed}} of {{count}} offers were taken by someone else.", { failed: result.failed, count: draft.parts.length }) : tr("{{failed}} of {{count}} requests were taken by someone else.", { failed: result.failed, count: draft.parts.length })} ${result.created.length > 0 ? tr("The others went ahead.") : tr("Choose again.")}`,
           );
         }
         if (result.created.length > 0) router.replace({ pathname: '/trade/[id]', params: { id: result.created[0] } });

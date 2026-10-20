@@ -4,6 +4,7 @@
  */
 
 import { divRoundHalfEven } from '../market/money';
+import { tr } from "../../i18n";
 
 export const REFERRAL = {
   /** Server-issued; Figma's sample code. */
@@ -25,5 +26,5 @@ export function referralDiscountMinor(feeMinor: number): number {
 }
 
 export function inviteMessage(code: string): string {
-  return `Join me on Xspeeria to exchange currency with other people. Use my referral code ${code} and we both get 10% off the coordination fee on our next exchange.`;
+  return tr("Join me on Xspeeria to exchange currency with other people. Use my referral code {{code}} and we both get 10% off the coordination fee on our next exchange.", { code });
 }

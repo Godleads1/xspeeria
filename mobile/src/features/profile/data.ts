@@ -1,3 +1,5 @@
+import { dayMonthYear, k, language, monthName, tr } from "../../i18n";
+
 /**
  * MOCK DATA for Profile (ADR-007). Follows the Figma Profile (268:6134) and Account
  * details (1041:11224) frames; the person is kept consistent with Home (David Peters).
@@ -39,22 +41,18 @@ export interface KycRegion {
 }
 
 export const KYC_REGIONS: readonly KycRegion[] = [
-  { flag: 'NGN', name: 'Nigerian', state: 'approved' },
-  { flag: 'GBP', name: 'United Kingdom', state: 'approved' },
-  { flag: 'ETB', name: 'Ethiopia', state: 'pending' },
+  { flag: 'NGN', name: k("Nigeria"), state: 'approved' },
+  { flag: 'GBP', name: k("United Kingdom"), state: 'approved' },
+  { flag: 'ETB', name: k("Ethiopia"), state: 'pending' },
 ];
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-/** `1997-07-12` → `12th July 1997` (Figma format). */
+/** `1997-07-12` → `12th July 1997` (Figma format, English); other languages their own order. */
 export function longDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
+  if (!language.get().startsWith('en')) return dayMonthYear(d, m - 1, y);
   const suffix =
     d % 10 === 1 && d !== 11 ? 'st' : d % 10 === 2 && d !== 12 ? 'nd' : d % 10 === 3 && d !== 13 ? 'rd' : 'th';
-  return `${d}${suffix} ${MONTHS[m - 1]} ${y}`;
+  return language.get() === 'en-US' ? `${monthName(m - 1)} ${d}${suffix}, ${y}` : `${d}${suffix} ${monthName(m - 1)} ${y}`;
 }
 
 /** 486 → `4.86`. */
@@ -132,9 +130,9 @@ export interface DestinationCountry {
 }
 
 export const DESTINATION_COUNTRIES: readonly DestinationCountry[] = [
-  { name: 'Nigeria', currency: 'NGN', available: true },
-  { name: 'United Kingdom', currency: 'GBP', available: true },
-  { name: 'United States', currency: 'USD', available: false, note: 'Coming in Year 2' },
+  { name: k("Nigeria"), currency: 'NGN', available: true },
+  { name: k("United Kingdom"), currency: 'GBP', available: true },
+  { name: k("United States"), currency: 'USD', available: false, note: k("Coming in Year 2") },
 ];
 
 export function searchCountries(list: readonly DestinationCountry[], query: string): DestinationCountry[] {
@@ -162,19 +160,19 @@ export interface BankField {
  */
 export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
   USD: [
-    { key: 'routingNumber', label: 'Routing Number', kind: 'digits', maxLength: 9 },
-    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
-    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 17 },
-    { key: 'accountType', label: 'Account Type', kind: 'select' },
+    { key: 'routingNumber', label: k("Routing Number"), kind: 'digits', maxLength: 9 },
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 17 },
+    { key: 'accountType', label: k("Account Type"), kind: 'select' },
   ],
   NGN: [
-    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
-    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 10 },
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 10 },
   ],
   GBP: [
-    { key: 'sortCode', label: 'Sort Code', kind: 'digits', maxLength: 6 },
-    { key: 'bankName', label: 'Bank Name', kind: 'text', maxLength: 60 },
-    { key: 'accountNumber', label: 'Account Number', kind: 'digits', maxLength: 8 },
+    { key: 'sortCode', label: k("Sort Code"), kind: 'digits', maxLength: 6 },
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 8 },
   ],
 };
 
@@ -205,17 +203,17 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
   for (const f of fields) {
     const value = (v[f.key] ?? '').trim();
     if (value === '') {
-      errors[f.key] = `${f.label} is required`;
+      errors[f.key] = tr("{{label}} is required", { label: tr(f.label) });
       continue;
     }
-    if (f.key === 'bankName' && value.length < 2) errors.bankName = 'Enter the bank name';
-    if (f.key === 'routingNumber' && !isValidRoutingNumber(value)) errors.routingNumber = 'Enter a valid 9-digit routing number';
-    if (f.key === 'sortCode' && !/^\d{6}$/.test(value)) errors.sortCode = 'Sort code is 6 digits';
-    if (f.key === 'accountType' && !(ACCOUNT_TYPES as readonly string[]).includes(value)) errors.accountType = 'Choose an account type';
+    if (f.key === 'bankName' && value.length < 2) errors.bankName = tr("Enter the bank name");
+    if (f.key === 'routingNumber' && !isValidRoutingNumber(value)) errors.routingNumber = tr("Enter a valid 9-digit routing number");
+    if (f.key === 'sortCode' && !/^\d{6}$/.test(value)) errors.sortCode = tr("Sort code is 6 digits");
+    if (f.key === 'accountType' && !(ACCOUNT_TYPES as readonly string[]).includes(value)) errors.accountType = tr("Choose an account type");
     if (f.key === 'accountNumber') {
-      if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = 'Nigerian account numbers are 10 digits';
-      if (currency === 'GBP' && !/^\d{8}$/.test(value)) errors.accountNumber = 'UK account numbers are 8 digits';
-      if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = 'Enter a valid account number';
+      if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = tr("Nigerian account numbers are 10 digits");
+      if (currency === 'GBP' && !/^\d{8}$/.test(value)) errors.accountNumber = tr("UK account numbers are 8 digits");
+      if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
     }
   }
   return errors;
@@ -238,9 +236,9 @@ export interface KycTier {
 }
 
 export const KYC_TIERS: readonly KycTier[] = [
-  { level: 1, monthlyLimitNaira: 50_000, requirements: ['BVN', 'NIN', 'International Passport'] },
-  { level: 2, monthlyLimitNaira: 100_000, requirements: ['BVN', 'NIN', 'International Passport'] },
-  { level: 3, monthlyLimitNaira: 150_000, requirements: ['BVN', 'NIN', 'International Passport'] },
+  { level: 1, monthlyLimitNaira: 50_000, requirements: ['BVN', 'NIN', k("International Passport")] },
+  { level: 2, monthlyLimitNaira: 100_000, requirements: ['BVN', 'NIN', k("International Passport")] },
+  { level: 3, monthlyLimitNaira: 150_000, requirements: ['BVN', 'NIN', k("International Passport")] },
 ];
 
 /** The signed-in user's current tier (mock; the server is authoritative). */

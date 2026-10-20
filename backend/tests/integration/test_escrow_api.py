@@ -678,3 +678,24 @@ async def test_racing_duplicate_deliveries_count_once(
     a, b = await asyncio.gather(esc.post("pretend-us", body), esc.post("pretend-us", body))
     assert sorted([a.json()["verdict"], b.json()["verdict"]]) == ["ACCEPTED", "DUPLICATE"]
     assert await _sql(db_settings, "SELECT count(*) FROM settlement_holds") == 0
+
+
+async def test_my_deals_show_both_amounts_and_the_escrow_phase(
+    esc: Escrow, owner: Party, taker: Party, deal: dict[str, Any]
+) -> None:
+    """ADR-045: History needs the other currency's amount and where the escrow is."""
+
+    async def mine(p: Party) -> dict[str, Any]:
+        r = await p.env.client.get("/api/v1/matches/mine", headers=p._h())
+        assert r.status_code == 200, r.text
+        [m] = [x for x in r.json() if x["match_id"] == deal["match_id"]]
+        return dict(m)
+
+    before = await mine(owner)
+    assert before["settlement_phase"] == "INITIALIZING"
+    assert before["allocated_amount"] == "200.00" and before["counter_amount"] == "264100.00"
+    await _open(esc, deal, owner)
+    await _pay(owner, deal["match_id"])
+    await _pay(taker, deal["match_id"])
+    assert (await mine(owner))["settlement_phase"] == "COMPLETED"
+    assert (await mine(taker))["settlement_phase"] == "COMPLETED"

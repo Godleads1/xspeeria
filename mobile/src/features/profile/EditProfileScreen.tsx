@@ -15,6 +15,7 @@ import { longDate } from './data';
 import { pickPhoto, type PhotoKind, type PickOutcome } from './photos';
 import { ProfileAvatar } from './ProfileAvatar';
 import { profileStore, useProfile } from './profileStore';
+import { tr } from "../../i18n";
 
 export type EditDestination = 'phone' | 'email' | 'dob';
 
@@ -70,9 +71,9 @@ export function EditProfileScreen({
     try {
       const r = await pick(kind);
       if (r.kind === 'picked') (kind === 'avatar' ? profileStore.setAvatar : profileStore.setBanner)(r.uri);
-      else if (r.kind === 'denied') Alert.alert('Allow photo access', 'Allow Xspeeria to use your photos in your phone settings to choose a picture.');
+      else if (r.kind === 'denied') Alert.alert(tr("Allow photo access"), tr("Allow Xspeeria to use your photos in your phone settings to choose a picture."));
     } catch {
-      Alert.alert('Could not use that photo', 'Please try a different picture.');
+      Alert.alert(tr("Could not use that photo"), tr("Please try a different picture."));
     }
   };
 
@@ -84,45 +85,45 @@ export function EditProfileScreen({
         <View style={[styles.banner, { paddingTop: insets.top + space.xs }]}>
           {p.bannerUri ? <Image testID="edit-banner-photo" source={{ uri: p.bannerUri }} style={styles.bannerImage} /> : null}
           <View style={styles.bannerBar}>
-            <Pressable testID="edit-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12} style={styles.roundBtn}>
+            <Pressable testID="edit-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12} style={styles.roundBtn}>
               <Icon name="back" color={color.text.primary} size={20} weight={2.25} />
             </Pressable>
             <Pressable
               testID="edit-banner"
               accessibilityRole="button"
-              accessibilityLabel="Change banner"
+              accessibilityLabel={tr("Change banner")}
               onPress={() => setSheet('banner')}
               style={styles.chip}
             >
               <Icon name="camera" color={color.text.primary} size={16} />
-              <Text style={styles.chipText}>Banner</Text>
+              <Text style={styles.chipText}>{tr("Banner")}</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.avatarWrap}>
-          <Pressable testID="edit-avatar" accessibilityRole="button" accessibilityLabel="Change profile photo" onPress={() => setSheet('avatar')}>
+          <Pressable testID="edit-avatar" accessibilityRole="button" accessibilityLabel={tr("Change profile photo")} onPress={() => setSheet('avatar')}>
             <ProfileAvatar testID="edit-avatar-image" size={112} initials={p.initials} uri={p.avatarUri} ring={4} />
             <View style={styles.cameraBadge}>
               <Icon name="camera" color={color.text.onFill} size={16} />
             </View>
           </Pressable>
-          <Text style={styles.title}>Edit profile</Text>
+          <Text style={styles.title}>{tr("Edit profile")}</Text>
         </View>
 
         <View style={styles.list}>
-          <Row testID="edit-name" label="Full Name" value={p.fullName} note="Verified by KYC. Contact Support to change your legal name." />
-          <Row testID="edit-phone" label="Phone Number" value={p.phone} action="Change" onPress={() => onEdit('phone')} />
-          <Row testID="edit-email" label="Email Address" value={p.email} action="Change" onPress={() => onEdit('email')} />
+          <Row testID="edit-name" label={tr("Full Name")} value={p.fullName} note={tr("Verified by KYC. Contact Support to change your legal name.")} />
+          <Row testID="edit-phone" label={tr("Phone Number")} value={p.phone} action="Change" onPress={() => onEdit('phone')} />
+          <Row testID="edit-email" label={tr("Email Address")} value={p.email} action="Change" onPress={() => onEdit('email')} />
           <Row
             testID="edit-dob"
-            label="Date of birth"
+            label={tr("Date of birth")}
             value={longDate(p.dateOfBirth)}
-            note={p.pendingDob ? `Change to ${longDate(p.pendingDob.dateOfBirth)} is under review` : undefined}
+            note={p.pendingDob ? tr("Change to {{dateOfBirth}} is under review", { dateOfBirth: longDate(p.pendingDob.dateOfBirth) }) : undefined}
             action={p.pendingDob ? undefined : 'Change'}
             onPress={p.pendingDob ? undefined : () => onEdit('dob')}
           />
-          <Row testID="edit-gender" label="Gender" value={p.gender} />
+          <Row testID="edit-gender" label={tr("Gender")} value={p.gender} />
         </View>
       </ScrollView>
 
@@ -131,12 +132,12 @@ export function EditProfileScreen({
         visible={sheet !== null}
         onClose={() => setSheet(null)}
         actions={[
-          { key: 'choose', label: sheet === 'banner' ? 'Choose banner' : 'Choose photo', onPress: () => void choose(sheet ?? 'avatar') },
+          { key: 'choose', label: sheet === 'banner' ? tr("Choose banner") : tr("Choose photo"), onPress: () => void choose(sheet ?? 'avatar') },
           ...(hasPhoto
             ? [
                 {
                   key: 'remove',
-                  label: sheet === 'banner' ? 'Remove banner' : 'Remove photo',
+                  label: sheet === 'banner' ? tr("Remove banner") : tr("Remove photo"),
                   onPress: () => {
                     (sheet === 'banner' ? profileStore.setBanner : profileStore.setAvatar)(null);
                     setSheet(null);

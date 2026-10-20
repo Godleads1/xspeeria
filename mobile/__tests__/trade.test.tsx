@@ -127,7 +127,7 @@ describe('Confirm trade sheet', () => {
 
   it('says plainly when the match fills less than asked', async () => {
     await render(<ConfirmTradeSheet side="buy" requestedMinor={79900} parts={[{ listing: offer, amountMinor: 20000 }]} onAccept={jest.fn()} onClose={jest.fn()} />);
-    expect(screen.getByTestId('confirm-partial').props.children.join('')).toMatch(/You asked for 799.00 USD.*This offer fills.*200.00 USD/);
+    expect([screen.getByTestId('confirm-partial').props.children].flat().join('')).toMatch(/You asked for 799.00 USD.*This offer fills.*200.00 USD/);
   });
 
   it('shows what the user receives and leads to choosing payout accounts', async () => {
@@ -148,7 +148,7 @@ describe('Transaction screens', () => {
     expect(screen.getByText('Please Note:')).toBeTruthy();
     expect(screen.getByTestId('trade-amount').props.children).toBe('NGN 267,650.00');
     expect(screen.getByText(/Do not send real money/)).toBeTruthy();
-    expect(screen.getByTestId('trade-expires').props.children.join('')).toBe('Expires in 05:00 mins');
+    expect([screen.getByTestId('trade-expires').props.children].flat().join('')).toBe('Expires in 05:00 mins');
 
     await fireEvent.press(screen.getByTestId('trade-paid'));
     const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[];
@@ -168,7 +168,7 @@ describe('Transaction screens', () => {
     const onReceipt = jest.fn();
     await render(<TradeScreen id={t.id} onBack={jest.fn()} onReceipt={onReceipt} onFinish={jest.fn()} onSupport={jest.fn()} now={() => T0 + 4 * DEMO_STEP_MS} />);
     expect(screen.getByText('Transaction Completed')).toBeTruthy();
-    expect(screen.getByTestId('trade-done-text').props.children.join('')).toContain(t.reference);
+    expect([screen.getByTestId('trade-done-text').props.children].flat().join('')).toContain(t.reference);
     await fireEvent.press(screen.getByTestId('trade-receipt'));
     expect(onReceipt).toHaveBeenCalled();
     expect(screen.getByTestId('trade-submit-feedback').props.accessibilityState.disabled).toBe(true);

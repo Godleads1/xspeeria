@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { RoundFlag } from "../../components/flags";
+import { NotificationBadge as Badge } from "../../components/NotificationBadge";
 import { Icon, type IconName } from "../../components/icons";
 import {
   brandWeight,
@@ -27,6 +28,7 @@ import {
 } from "../../theme";
 import type { Currency, Listing } from "./data";
 import { formatCompact, formatHundredths } from "./money";
+import { tr } from "../../i18n";
 
 /* ------------------------------------------------------------ Outlined field */
 
@@ -161,11 +163,14 @@ export function RoundButton({
   label,
   onPress,
   testID,
+  badge = 0,
 }: {
   icon: IconName;
   label: string;
   onPress?: () => void;
   testID?: string;
+  /** Unread count on the icon (ADR-044); 0 hides it. */
+  badge?: number;
 }): ReactElement {
   const available = onPress !== undefined;
   return (
@@ -186,6 +191,7 @@ export function RoundButton({
         color={available ? color.text.primary : color.text.disabled}
         size={18}
       />
+      <Badge count={badge} />
     </Pressable>
   );
 }
@@ -198,7 +204,7 @@ export function CurrencyChip({
   return (
     <View
       accessible
-      accessibilityLabel={`Paying in ${currency.name}`}
+      accessibilityLabel={tr("Paying in {{name}}", { name: tr(currency.name) })}
       style={styles.chip}
     >
       <RoundFlag code={currency.code} size={20} />
@@ -233,7 +239,7 @@ export function CurrencySheet({
       <Pressable
         style={styles.scrim}
         onPress={onClose}
-        accessibilityLabel="Close"
+        accessibilityLabel={tr("Close")}
       />
       <View style={styles.sheet}>
         <View style={styles.sheetGroup}>
@@ -252,7 +258,7 @@ export function CurrencySheet({
               <RoundFlag code={c.code} size={26} />
               <Text
                 style={styles.sheetRowLabel}
-              >{`${c.name} (${c.code})`}</Text>
+              >{`${tr(c.name)} (${c.code})`}</Text>
             </Pressable>
           ))}
         </View>
@@ -261,7 +267,7 @@ export function CurrencySheet({
           onPress={onClose}
           style={styles.sheetCancel}
         >
-          <Text style={styles.sheetCancelLabel}>Cancel</Text>
+          <Text style={styles.sheetCancelLabel}>{tr("Cancel")}</Text>
         </Pressable>
       </View>
     </Modal>
@@ -300,7 +306,7 @@ export function ActionSheet({
       <Pressable
         style={styles.scrim}
         onPress={onClose}
-        accessibilityLabel="Close menu"
+        accessibilityLabel={tr("Close menu")}
       />
       <View testID={testID} style={styles.sheet}>
         <View style={styles.sheetGroup}>
@@ -319,7 +325,7 @@ export function ActionSheet({
               <Text style={styles.actionLabel}>
                 {a.label}
                 {a.hint ? (
-                  <Text style={styles.actionHint}>{` ${a.hint}`}</Text>
+                  <Text style={styles.actionHint}>{` ${tr(a.hint)}`}</Text>
                 ) : null}
               </Text>
             </Pressable>
@@ -331,7 +337,7 @@ export function ActionSheet({
           onPress={onClose}
           style={styles.sheetCancel}
         >
-          <Text style={styles.sheetCancelLabel}>Cancel</Text>
+          <Text style={styles.sheetCancelLabel}>{tr("Cancel")}</Text>
         </Pressable>
       </View>
     </Modal>
@@ -375,15 +381,15 @@ export function ListingRow({
       ) : null}
       <View style={styles.listingMain}>
         <Text style={styles.listingLine}>
-          {"Amount available: "}
+          {tr("Amount available: ")}
           <Text style={styles.listingStrong}>
             {`${formatCompact(availableMinor)} ${listing.currency}`}
           </Text>
         </Text>
         <View style={styles.rateRow}>
           <Text style={styles.listingLine}>
-            {"Rate: "}
-            <Text style={styles.listingMuted}>NGN </Text>
+            {tr("Rate: ")}
+            <Text style={styles.listingMuted}>{tr("NGN")}{' '}</Text>
             <Text style={styles.listingRate}>
               {listing.rateLabel ?? formatCompact(listing.rateHundredths)}
             </Text>
@@ -392,7 +398,7 @@ export function ListingRow({
           {listing.best ? (
             <View style={styles.bestPill}>
               <Text style={styles.bestLabel}>
-                {side === "buy" ? "Best Offer" : "Best Deal"}
+                {side === "buy" ? tr("Best Offer") : tr("Best Deal")}
               </Text>
             </View>
           ) : null}
@@ -400,7 +406,7 @@ export function ListingRow({
         <Text style={styles.listingMeta}>{listing.meta}</Text>
         {selected ? (
           <Text testID={`listing-${listing.id}-taking`} style={styles.listingTaking}>
-            {`Taking ${formatHundredths(takingMinor)} ${listing.currency}`}
+            {tr("Taking {{takingMinor}} {{currency}}", { takingMinor: formatHundredths(takingMinor), currency: listing.currency })}
           </Text>
         ) : null}
       </View>
@@ -409,8 +415,8 @@ export function ListingRow({
         accessibilityRole="button"
         accessibilityLabel={
           selected
-            ? `Remove ${formatHundredths(takingMinor)} ${listing.currency} at ${listing.rateLabel ?? formatHundredths(listing.rateHundredths)} NGN from your selection`
-            : `${action} ${formatHundredths(availableMinor)} ${listing.currency} at ${listing.rateLabel ?? formatHundredths(listing.rateHundredths)} NGN`
+            ? tr("Remove {{takingMinor}} {{currency}} at {{rateHundredths}} NGN from your selection", { takingMinor: formatHundredths(takingMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatHundredths(listing.rateHundredths) })
+            : tr("{{action}} {{availableMinor}} {{currency}} at {{rateHundredths}} NGN", { action, availableMinor: formatHundredths(availableMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatHundredths(listing.rateHundredths) })
         }
         accessibilityState={{ selected, disabled: taken }}
         disabled={taken}

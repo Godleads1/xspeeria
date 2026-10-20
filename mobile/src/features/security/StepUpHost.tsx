@@ -11,6 +11,7 @@ import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { stepUpHostRegistry, usePendingStepUp } from './stepUp';
 import { twoFactor, useTwoFactor } from './twoFactorStore';
+import { tr } from "../../i18n";
 
 function minutesLeft(until: number, now: number): number {
   return Math.max(1, Math.ceil((until - now) / 60_000));
@@ -46,26 +47,24 @@ export function StepUpHost({
       return;
     }
     setCode('');
-    if (r.reason === 'locked') setMessage(`Too many wrong codes. Try again in ${minutesLeft(r.lockedUntil, now())} minutes.`);
-    else setMessage(`That code is not right. ${r.attemptsLeft} ${r.attemptsLeft === 1 ? 'try' : 'tries'} left.`);
+    if (r.reason === 'locked') setMessage(tr("Too many wrong codes. Try again in {{value}} minutes.", { value: minutesLeft(r.lockedUntil, now()) }));
+    else setMessage((r.attemptsLeft === 1 ? tr("That code is not right. 1 try left.") : tr("That code is not right. {{count}} tries left.", { count: r.attemptsLeft })));
   };
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={() => request.resolve(false)}>
-      <Pressable style={styles.scrim} accessibilityLabel="Cancel" onPress={() => request.resolve(false)} />
+      <Pressable style={styles.scrim} accessibilityLabel={tr("Cancel")} onPress={() => request.resolve(false)} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View testID="step-up-sheet" style={styles.sheet}>
-          <Text accessibilityRole="header" style={styles.title}>{"Confirm it's you"}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr("Confirm it's you")}</Text>
           <Text style={styles.reason}>{request.reason}</Text>
 
           {!enrolled ? (
             <>
-              <Text testID="step-up-not-enrolled" style={styles.body}>
-                Set up 2 FA authentication first. It protects changes like this and is required to trade.
-              </Text>
+              <Text testID="step-up-not-enrolled" style={styles.body}>{tr("Set up 2 FA authentication first. It protects changes like this and is required to trade.")}</Text>
               <PrimaryButton
                 testID="step-up-setup"
-                label="Set up 2 FA"
+                label={tr("Set up 2 FA")}
                 onPress={() => {
                   request.resolve(false);
                   onSetUp();
@@ -73,12 +72,10 @@ export function StepUpHost({
               />
             </>
           ) : locked ? (
-            <Text testID="step-up-locked" style={styles.error}>
-              Too many wrong codes. Try again in {minutesLeft(tf.lockedUntil, now())} minutes.
-            </Text>
+            <Text testID="step-up-locked" style={styles.error}>{tr("Too many wrong codes. Try again in {{value}} minutes.", { value: minutesLeft(tf.lockedUntil, now()) })}</Text>
           ) : (
             <>
-              <Text style={styles.body}>Enter the 6-digit code from your authenticator app, or a recovery code.</Text>
+              <Text style={styles.body}>{tr("Enter the 6-digit code from your authenticator app, or a recovery code.")}</Text>
               <TextInput
                 testID="step-up-code"
                 value={code}
@@ -88,7 +85,7 @@ export function StepUpHost({
                 }}
                 placeholder="123456"
                 placeholderTextColor={color.text.disabled}
-                accessibilityLabel="Authentication code"
+                accessibilityLabel={tr("Authentication code")}
                 autoFocus
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -98,12 +95,12 @@ export function StepUpHost({
                 style={styles.input}
               />
               {message ? <Text testID="step-up-error" style={styles.error}>{message}</Text> : null}
-              <PrimaryButton testID="step-up-confirm" label="Confirm" onPress={confirm} disabled={code.length < 6} />
+              <PrimaryButton testID="step-up-confirm" label={tr("Confirm")} onPress={confirm} disabled={code.length < 6} />
             </>
           )}
 
           <Pressable testID="step-up-cancel" accessibilityRole="button" onPress={() => request.resolve(false)} style={styles.cancel}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{tr("Cancel")}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

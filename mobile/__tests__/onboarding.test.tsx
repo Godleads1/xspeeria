@@ -221,7 +221,7 @@ describe('Sign-up', () => {
       <CodeScreen testID="c" kind="phone" target="+2348031112222" title="Verify Your Identity" body="b" verifyLabel="Verify OTP" onBack={jest.fn()} onVerified={onVerified} random={rnd} now={() => T0} />,
     );
     expect(screen.getByText(/ending with \*\*\*\*\*\*2222/)).toBeTruthy();
-    const code = (screen.getByTestId('c-demo').props.children as string[]).join('').match(/(\d{6})/)?.[1] as string;
+    const code = [screen.getByTestId('c-demo').props.children].flat().join('').match(/(\d{6})/)?.[1] as string;
     await fireEvent.changeText(screen.getByTestId('c-code'), code === '000000' ? '111111' : '000000');
     await fireEvent.press(screen.getByTestId('c-verify'));
     expect(screen.getByTestId('c-error')).toBeTruthy();

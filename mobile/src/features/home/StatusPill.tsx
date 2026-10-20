@@ -10,6 +10,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { StatusTone } from '../../components/primitives';
 import { color, typography, themed } from '../../theme';
+import { tr } from "../../i18n";
 
 /** A function, not a constant: colours are read per render (light/dark). */
 const TONE = () => ({
@@ -36,7 +37,7 @@ export function StatusPill({ label, tone }: { label: string; tone: StatusTone })
   return (
     <View
       accessible
-      accessibilityLabel={`Status: ${label}`}
+      accessibilityLabel={tr("Status: {{label}}", { label })}
       style={[styles.pill, { backgroundColor: palette.surface }]}
     >
       <Glyph tone={tone} tint={palette.text} />

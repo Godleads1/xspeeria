@@ -12,6 +12,7 @@ import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { copySensitive } from './sensitiveClipboard';
 import { useBlockScreenCapture } from './useBlockScreenCapture';
+import { tr } from "../../i18n";
 
 export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => void }): ReactElement {
   const [saved, setSaved] = useState(false);
@@ -19,11 +20,8 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
   useBlockScreenCapture('recovery-codes');
   return (
     <View testID="recovery-codes" style={styles.wrap}>
-      <Text accessibilityRole="header" style={styles.heading}>Save your recovery codes</Text>
-      <Text style={styles.body}>
-        If you lose your phone, each code lets you in once. Keep them somewhere safe and private. You will not see
-        them again.
-      </Text>
+      <Text accessibilityRole="header" style={styles.heading}>{tr("Save your recovery codes")}</Text>
+      <Text style={styles.body}>{tr("If you lose your phone, each code lets you in once. Keep them somewhere safe and private. You will not see them again.")}</Text>
       <View style={styles.grid}>
         {codes.map((c) => (
           <Text key={c} style={styles.code}>{c}</Text>
@@ -37,7 +35,7 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
         }}
         style={styles.copy}
       >
-        <Text style={styles.copyText}>{copied ? 'Copied: paste them now. They clear in 1 minute.' : 'Copy codes'}</Text>
+        <Text style={styles.copyText}>{copied ? tr("Copied: paste them now. They clear in 1 minute.") : tr("Copy codes")}</Text>
       </Pressable>
       <Pressable
         testID="recovery-saved"
@@ -49,9 +47,9 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
         <View style={[styles.box, saved ? styles.boxOn : null]}>
           {saved ? <Icon name="check" color={color.text.onFill} size={14} weight={2.5} /> : null}
         </View>
-        <Text style={styles.checkText}>{"I've saved these codes somewhere safe"}</Text>
+        <Text style={styles.checkText}>{tr("I've saved these codes somewhere safe")}</Text>
       </Pressable>
-      <PrimaryButton testID="recovery-done" label="Done" onPress={onDone} disabled={!saved} />
+      <PrimaryButton testID="recovery-done" label={tr("Done")} onPress={onDone} disabled={!saved} />
     </View>
   );
 }

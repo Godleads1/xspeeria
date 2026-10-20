@@ -89,6 +89,10 @@ class MatchResponse(BaseModel):
     preparation_deadline: str | None
     you_chose_payout_accounts: bool
     other_side_chose_payout_accounts: bool
+    #: ADR-045: the amount in the counter currency (absent on answers recorded before it).
+    counter_amount: str | None = None
+    #: ADR-045: the escrow phase on "my matches" (None before the escrow opens).
+    settlement_phase: str | None = None
 
 
 class PayoutChoiceIn(_Strict):

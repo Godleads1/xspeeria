@@ -15,6 +15,7 @@ import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ReferralArt } from './ReferralArt';
 import { REFERRAL, inviteMessage } from './data';
+import { tr } from "../../i18n";
 
 export function ReferralScreen({
   onBack,
@@ -33,10 +34,10 @@ export function ReferralScreen({
   return (
     <View testID="referral-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="referral-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="referral-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Referral Program</Text>
+        <Text style={styles.title}>{tr("Referral Program")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -45,21 +46,18 @@ export function ReferralScreen({
           <ReferralArt width={280} />
         </View>
 
-        <Text accessibilityRole="header" style={styles.heading}>Refer a friend, get 10% off!</Text>
-        <Text style={styles.text}>
-          Share your unique referral code, and both you and your friend will get 10% off the coordination fee on your
-          next currency exchange!
-        </Text>
+        <Text accessibilityRole="header" style={styles.heading}>{tr("Refer a friend, get 10% off!")}</Text>
+        <Text style={styles.text}>{tr("Share your unique referral code, and both you and your friend will get 10% off the coordination fee on your next currency exchange!")}</Text>
 
         <View style={styles.codeRow}>
-          <Text style={styles.codeLabel}>Referral Code</Text>
+          <Text style={styles.codeLabel}>{tr("Referral Code")}</Text>
           <View style={styles.codeBox}>
             <Text testID="referral-code" selectable style={styles.code}>{code}</Text>
           </View>
           <Pressable
             testID="referral-copy"
             accessibilityRole="button"
-            accessibilityLabel="Copy referral code"
+            accessibilityLabel={tr("Copy referral code")}
             hitSlop={8}
             onPress={() => {
               Clipboard.setStringAsync(code).then(() => setCopied(true), () => setCopied(false));
@@ -67,12 +65,12 @@ export function ReferralScreen({
             style={styles.copy}
           >
             <Icon name="copy" color={color.text.secondary} size={14} />
-            <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy'}</Text>
+            <Text style={styles.copyText}>{copied ? tr("Copied") : tr("Copy")}</Text>
           </Pressable>
         </View>
 
-        <View style={styles.countBox} accessible accessibilityLabel={`Friends joined: ${friendsJoined}`}>
-          <Text style={styles.countLabel}>Friends joined</Text>
+        <View style={styles.countBox} accessible accessibilityLabel={tr("Friends joined: {{friendsJoined}}", { friendsJoined })}>
+          <Text style={styles.countLabel}>{tr("Friends joined")}</Text>
           <Text testID="referral-count" style={styles.countValue}>{friendsJoined}</Text>
         </View>
       </ScrollView>
@@ -80,7 +78,7 @@ export function ReferralScreen({
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
         <PrimaryButton
           testID="referral-invite"
-          label="Invite Friends"
+          label={tr("Invite Friends")}
           onPress={() => {
             share(inviteMessage(code)).catch(() => undefined);
           }}

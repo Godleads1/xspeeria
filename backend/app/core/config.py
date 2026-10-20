@@ -161,11 +161,24 @@ class Settings(BaseSettings):
     didit_base_url: str = "https://verification.didit.me"
     #: Where Didit sends the user after the check (optional; Didit's workflow default if unset).
     didit_callback_url: str | None = None
+    #: ADR-041: base64 of 32 random bytes; keys the ID-document hash (one person, one
+    #: verified account). Required whenever Didit is configured. Set once per environment.
+    kyc_identity_key: str | None = None
+    #: ADR-042: request header carrying the client's country from a trusted proxy (e.g.
+    #: ``CF-IPCountry``). Only used to suggest a new country's check; grants nothing.
+    client_country_header: str | None = None
     #: ADR-037: the pretend partner bank (escrow simulation). In memory, moves no money.
     #: Refused unless app_env is "local". Real partners need legal sign-off (ADR-001 §12).
     pretend_bank: bool = False
     #: ADR-037: how often escrow background work runs (funding windows, partner commands).
     escrow_tick_seconds: int = 5
+
+    #: ADR-052: send phone push through Expo (FCM/APNs). Off: notifications stay in-app.
+    push_enabled: bool = False
+    #: ADR-052: optional Expo access token ("enhanced push security"). Never logged.
+    expo_access_token: str | None = None
+    #: ADR-052: how often new notifications are pushed.
+    push_tick_seconds: int = 5
 
     cors_allowed_origins: str = ""
 

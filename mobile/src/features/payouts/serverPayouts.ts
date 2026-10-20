@@ -9,10 +9,11 @@ import type { ServerMatch } from '../../api/offersApi';
 import { offersApi } from '../../api/offersApi';
 import { payoutsApi, type NewPayoutAccount, type ServerPayoutAccount } from '../../api/payoutsApi';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 
@@ -43,12 +44,12 @@ export const serverPayouts: PayoutSource = {
 export function accountStatus(a: ServerPayoutAccount): { label: string; tone: 'success' | 'warning' | 'error' | 'neutral' } {
   switch (a.validation_state) {
     case 'validated':
-      return { label: 'Confirmed', tone: 'success' };
+      return { label: tr("Confirmed"), tone: 'success' };
     case 'pending':
-      return { label: 'Bank check pending', tone: 'warning' };
+      return { label: tr("Bank check pending"), tone: 'warning' };
     case 'failed':
-      return { label: 'Bank could not confirm', tone: 'error' };
+      return { label: tr("Bank could not confirm"), tone: 'error' };
     default:
-      return { label: 'No longer valid', tone: 'neutral' };
+      return { label: tr("No longer valid"), tone: 'neutral' };
   }
 }

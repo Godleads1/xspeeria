@@ -70,12 +70,14 @@ class IdentityRepository:
         value: datetime | None = (await self._db.execute(stmt)).scalar_one()
         return value
 
-    async def latest_open_code(self, phone: str) -> PhoneVerification | None:
-        """The newest unused code for a number; older codes stop working when a new one
-        is sent."""
+    async def latest_open_code(
+        self, phone: str, purpose: str = "signup"
+    ) -> PhoneVerification | None:
+        """The newest unused code for a number and purpose; older codes stop working when a
+        new one is sent."""
         stmt = (
             select(PhoneVerification)
-            .where(PhoneVerification.phone == phone)
+            .where(PhoneVerification.phone == phone, PhoneVerification.purpose == purpose)
             .order_by(PhoneVerification.created_at.desc(), PhoneVerification.id.desc())
             .limit(1)
             .with_for_update()

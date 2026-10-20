@@ -1,0 +1,22 @@
+{
+ "Cancelled": "Canceled",
+ "Cancelled — refunded": "Canceled — refunded",
+ "Cancelled: payout accounts were not chosen within 30 minutes. Nothing was paid.": "Canceled: payout accounts were not chosen within 30 minutes. Nothing was paid.",
+ "Deal cancelled": "Deal canceled",
+ "Enter a real date as DD/MM/YYYY": "Enter a real date as DD/MM/YYYY (day first)",
+ "The 30 minutes to choose payout accounts have passed, so this deal was cancelled.": "The 30 minutes to choose payout accounts have passed, so this deal was canceled.",
+ "The 30 minutes to choose payout accounts passed, so this deal was cancelled. Nothing was paid.": "The 30 minutes to choose payout accounts passed, so this deal was canceled. Nothing was paid.",
+ "This deal was cancelled before any money moved.": "This deal was canceled before any money moved.",
+ "This deal was cancelled before money moved.": "This deal was canceled before money moved.",
+ "Time ran out, so this trade was cancelled.": "Time ran out, so this trade was canceled.",
+ "Time ran out: the trade was cancelled": "Time ran out: the trade was canceled",
+ "To pay in this country’s currency we need to confirm who you are in {{country}}. You will take a photo of a valid ID issued by {{country}} (such as a passport, driving licence or residence card) and a short selfie. This is done securely by our verification partner, Didit.": "To pay in this country’s currency we need to confirm who you are in {{country}}. You will take a photo of a valid ID issued by {{country}} (such as a passport, driver’s license or residence card) and a short selfie. This is done securely by our verification partner, Didit.",
+ "To trade on Xspeeria we need to confirm who you are. You will take a photo of a valid government ID (such as your passport, national ID card or driver’s licence) and a short selfie. This is done securely by our verification partner, Didit.": "To trade on Xspeeria we need to confirm who you are. You will take a photo of a valid government ID (such as your passport, national ID card or driver’s license) and a short selfie. This is done securely by our verification partner, Didit.",
+ "Transaction Cancelled": "Transaction Canceled",
+ "You cancelled the trade": "You canceled the trade",
+ "You cancelled this trade.": "You canceled this trade.",
+ "Your date of birth is part of your verified identity ({{dateOfBirth}}). To change it, add a photo of your passport, driver’s licence or national ID showing the correct date.": "Your date of birth is part of your verified identity ({{dateOfBirth}}). To change it, add a photo of your passport, driver’s license or national ID showing the correct date.",
+ "{{day}} {{month}}": "{{month}} {{day}}",
+ "{{day}} {{month}} {{year}}": "{{month}} {{day}}, {{year}}",
+ "{{left}} left. If the time runs out, the deal is cancelled; anything paid comes back in full.": "{{left}} left. If the time runs out, the deal is canceled; anything paid comes back in full."
+}

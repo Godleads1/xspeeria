@@ -37,6 +37,7 @@ import {
   PhoneInput,
   fullPhone,
 } from "./ui";
+import { tr } from "../../i18n";
 
 type Mode = "phone" | "email";
 
@@ -59,7 +60,7 @@ export function ModeTabs({
           style={[styles.tab, mode === m ? styles.tabOn : null]}
         >
           <Text style={[styles.tabText, mode === m ? styles.tabTextOn : null]}>
-            {m === "phone" ? "Phone number" : "E-mail Address"}
+            {m === "phone" ? tr("Phone number") : tr("E-mail Address")}
           </Text>
         </Pressable>
       ))}
@@ -85,7 +86,11 @@ export function LoginScreen({
    * Server mode (ADR-027): log in against the real server. Defaults off; the route turns it
    * on when the app is built with a server address.
    */
-  server?: { login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome> } | null;
+  server?: {
+    login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome>;
+    /** ADR-048: Face ID/fingerprint resumes the session after the idle lock. */
+    unlock?: (now: number) => Promise<boolean>;
+  } | null;
   /** Server mode: the PIN was right and 2FA comes next ("mfa"), or set-up ("enrol"). */
   onSecondFactor?: (step: "mfa" | "enrol") => void;
 }): ReactElement {
@@ -139,35 +144,51 @@ export function LoginScreen({
     if (r.reason === "invalid")
       setError(
         mode === "phone"
-          ? "Enter your phone number"
-          : "Enter a valid email address",
+          ? tr("Enter your phone number")
+          : tr("Enter a valid email address"),
       );
     else if (r.reason === "unavailable")
-      setError("Log-in isn’t available in this version of the app.");
+      setError(tr("Log-in isn’t available in this version of the app."));
     else if (r.reason === "locked")
       setError(
-        `Too many wrong tries. Try again in ${Math.max(1, Math.ceil((r.until - now()) / 60000))} minutes.`,
+        tr("Too many wrong tries. Try again in {{value}} minutes.", { value: Math.max(1, Math.ceil((r.until - now()) / 60000)) }),
       );
     else
       setError(
-        `Those details don’t match an account. ${r.triesLeft} ${r.triesLeft === 1 ? "try" : "tries"} left.`,
+        (r.triesLeft === 1 ? tr("Those details don’t match an account. 1 try left.") : tr("Those details don’t match an account. {{count}} tries left.", { count: r.triesLeft })),
       );
   };
 
+  const serverUnlock = server?.unlock;
+  const showFaceId = server ? Boolean(serverUnlock) && session.biometricSaved() : true;
+
   const faceId = async (): Promise<void> => {
+    if (server) {
+      if (!serverUnlock) return;
+      setBusy(true);
+      setError(null);
+      try {
+        if (await serverUnlock(now())) onDone();
+      } catch (e) {
+        setError(tr("{{message}} Log in with your PIN.", { message: messageFor(e) }));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!session.biometricOn()) {
       Alert.alert(
-        "Face ID is off",
-        "Log in with your PIN first, then turn on Face ID for this phone.",
+        tr("Face ID is off"),
+        tr("Log in with your PIN first, then turn on Face ID for this phone."),
       );
       return;
     }
-    const r = await biometrics("Log in to Xspeeria");
+    const r = await biometrics(tr("Log in to Xspeeria"));
     if (r === "ok" && session.logInWithBiometrics(now())) onDone();
     else if (r === "unavailable")
       Alert.alert(
-        "Not available",
-        "Face ID or fingerprint isn’t set up on this phone.",
+        tr("Not available"),
+        tr("Face ID or fingerprint isn’t set up on this phone."),
       );
   };
 
@@ -194,8 +215,8 @@ export function LoginScreen({
       >
         <AuthTop />
         <Heading
-          title="Welcome Back"
-          body={`Enter your ${mode === "phone" ? "phone number" : "email address"} associated with your Xspeeria to log in`}
+          title={tr("Welcome Back")}
+          body={(mode === "phone" ? tr("Enter your phone number associated with your Xspeeria to log in") : tr("Enter your email address associated with your Xspeeria to log in"))}
         />
         <ModeTabs
           mode={mode}
@@ -205,7 +226,7 @@ export function LoginScreen({
           }}
         />
         {mode === "phone" ? (
-          <OutlinedField label="Phone Number">
+          <OutlinedField label={tr("Phone Number")}>
             <PhoneInput
               testID="login-phone"
               country={country}
@@ -215,20 +236,20 @@ export function LoginScreen({
             />
           </OutlinedField>
         ) : (
-          <OutlinedField label="Email Address">
+          <OutlinedField label={tr("Email Address")}>
             <FieldInput
               testID="login-email"
-              accessibilityLabel="Email address"
+              accessibilityLabel={tr("Email address")}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               inputMode="text"
               maxLength={254}
-              placeholder="enter email address"
+              placeholder={tr("enter email address")}
             />
           </OutlinedField>
         )}
-        <OutlinedField label="PIN *" invalid={Boolean(error)}>
+        <OutlinedField label={tr("PIN *")} invalid={Boolean(error)}>
           <FieldInput
             testID="login-pin"
             accessibilityLabel="PIN"
@@ -247,7 +268,7 @@ export function LoginScreen({
           style={styles.forgot}
           hitSlop={8}
         >
-          <Text style={styles.forgotText}>Forgot PIN?</Text>
+          <Text style={styles.forgotText}>{tr("Forgot PIN?")}</Text>
         </Pressable>
         {error ? (
           <Text testID="login-error" style={styles.error}>
@@ -258,44 +279,37 @@ export function LoginScreen({
           testID="login-remember"
           checked={remember}
           onToggle={() => setRemember((r) => !r)}
-        >
-          Remember me
-        </CheckRow>
+        >{tr("Remember me")}</CheckRow>
 
-        {server ? null : (
+        {!showFaceId ? null : (
         <Pressable
           testID="login-faceid"
           accessibilityRole="button"
+          disabled={busy}
           onPress={() => void faceId()}
           style={styles.face}
         >
           <Icon name="scan" color={color.text.primary} size={30} />
-          <Text style={styles.faceText}>Use face ID</Text>
+          <Text style={styles.faceText}>{tr("Use face ID")}</Text>
         </Pressable>
         )}
 
         {s.endedBy ? (
           <Text testID="login-ended" style={styles.ended} accessibilityLiveRegion="polite">
             {s.endedBy === "idle"
-              ? "For your security, we locked the app after 5 minutes without use. Log in again to continue."
-              : "Your session has ended after 7 days. Please log in with your PIN."}
+              ? tr("For your security, we locked the app after 5 minutes without use. Log in again to continue.")
+              : tr("Your session has ended after 7 days. Please log in with your PIN.")}
           </Text>
         ) : null}
         {server ? (
-          <DemoNote testID="login-server">
-            Development build connected to {API_BASE_URL}. Face ID log-in arrives with passkeys.
-          </DemoNote>
+          <DemoNote testID="login-server">{tr("Development build connected to {{API_BASE_URL}}.", { API_BASE_URL: API_BASE_URL })}</DemoNote>
         ) : (
-        <DemoNote testID="login-demo">
-          Demo app: log in with {DEMO_ACCOUNT.phone} or {DEMO_ACCOUNT.email},
-          PIN {DEMO_ACCOUNT.pin}.{" "}
+        <DemoNote testID="login-demo">{tr("Demo app: log in with {{phone}} or {{email}}, PIN {{pin}}.", { phone: DEMO_ACCOUNT.phone, email: DEMO_ACCOUNT.email, pin: DEMO_ACCOUNT.pin })}{" "}
           <Text
             testID="login-demo-fill"
             onPress={fillDemo}
             style={styles.demoLink}
-          >
-            Fill demo details
-          </Text>
+          >{tr("Fill demo details")}</Text>
           {" · "}
           <Text
             testID="login-demo-us"
@@ -304,22 +318,20 @@ export function LoginScreen({
               fillDemo();
             }}
             style={styles.demoLink}
-          >
-            Log in as if from the United States
-          </Text>
+          >{tr("Log in as if from the United States")}</Text>
         </DemoNote>
         )}
 
         <View style={styles.actions}>
           <PrimaryButton
             testID="login-submit"
-            label="Login"
+            label={tr("Login")}
             onPress={submit}
             disabled={pin.length !== PIN_LENGTH || busy}
           />
           <GhostButton
             testID="login-signup"
-            label="I don’t have a profile"
+            label={tr("I don’t have a profile")}
             onPress={onSignUp}
           />
         </View>
@@ -341,7 +353,7 @@ export function LoginScreen({
           },
           {
             key: "GB",
-            label: "United Kingdom",
+            label: tr("United Kingdom"),
             hint: "+44",
             onPress: () => {
               setCountry("GB");

@@ -6,6 +6,7 @@ import { AddBeneficiaryScreen } from '../../../src/features/profile/AddBeneficia
 import { DESTINATION_COUNTRIES } from '../../../src/features/profile/data';
 import { requestStepUp } from '../../../src/features/security/stepUp';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 /** Route params are untrusted: only a live corridor currency opens the form. */
 export default function BeneficiaryDetailsRoute(): ReactElement {
@@ -21,7 +22,7 @@ export default function BeneficiaryDetailsRoute(): ReactElement {
       stepUp={requestStepUp}
       onDone={() => {
         router.dismissTo('/profile/beneficiaries');
-        Alert.alert('Beneficiary added', 'Your bank will confirm the account name.');
+        Alert.alert(tr("Beneficiary added"), tr("Your bank will confirm the account name."));
       }}
     />
   );

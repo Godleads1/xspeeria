@@ -16,7 +16,8 @@ export type MenuIconName =
   | 'support'
   | 'referral'
   | 'terms'
-  | 'mode';
+  | 'mode'
+  | 'language';
 
 const C = {
   navy: '#1E3A8A',
@@ -176,6 +177,23 @@ function art(name: MenuIconName, p: string): ReactElement {
           <Circle cx={8} cy={8.4} r={0.7} fill={C.white} />
           <Circle cx={6.6} cy={13} r={0.5} fill={C.white} fillOpacity={0.8} />
           <Path d="M6.5 6.2a7 7 0 0 1 3-1.6" stroke={C.white} strokeOpacity={0.45} strokeWidth={1} strokeLinecap="round" fill="none" />
+        </>
+      );
+    case 'language':
+      return (
+        <>
+          <Defs>
+            <Grad id={`${p}-a`} from={C.skyLight} to={C.sky} />
+          </Defs>
+          <Ground />
+          <Circle cx={12} cy={12} r={8.6} fill={g('a')} />
+          <Path
+            d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6S14.4 18.2 12 20.6M12 3.4C9.6 5.8 8.4 8.7 8.4 12s1.2 6.2 3.6 8.6M5 7.6h14M5 16.4h14"
+            stroke={C.white}
+            strokeWidth={1.1}
+            strokeLinecap="round"
+            fill="none"
+          />
         </>
       );
   }

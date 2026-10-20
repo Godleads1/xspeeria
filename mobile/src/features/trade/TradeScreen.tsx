@@ -29,10 +29,12 @@ import { ActionSheet, RoundButton } from "../market/controls";
 import { COORDINATION_FEE_LABEL } from "../history/data";
 import { formatHundredths } from "../market/money";
 import { orderSiblings, progressFor, tradeStore, useTrade, useTrades, type Trade } from "./tradeStore";
+import { trRich } from "../../i18n/rich";
+import { tr, k } from "../../i18n";
 
 /** Demo escrow details — obviously not a real account. */
 export const DEMO_ESCROW = {
-  bank: "Partner bank (demo)",
+  bank: k("Partner bank (demo)"),
   account: "00 0000 0000",
 } as const;
 
@@ -47,7 +49,7 @@ function Step({ label, at }: { label: string; at?: string }): ReactElement {
     <View
       style={styles.step}
       accessible
-      accessibilityLabel={`${label}. ${done ? `Completed ${at}` : "Pending"}`}
+      accessibilityLabel={done ? tr("{{label}}. Completed {{at}}", { label, at }) : tr("{{label}}. Pending", { label })}
     >
       <View style={[styles.stepDot, done ? styles.stepDone : styles.stepTodo]}>
         <Icon name="check" color={color.text.onFill} size={12} weight={3} />
@@ -58,7 +60,7 @@ function Step({ label, at }: { label: string; at?: string }): ReactElement {
           <View style={[styles.stepLine, done ? styles.stepLineDone : null]} />
         </View>
         <Text style={styles.stepTime}>
-          {done ? `Completed . ${at}` : "Pending"}
+          {done ? tr("Completed . {{at}}", { at }) : tr("Pending")}
         </Text>
       </View>
     </View>
@@ -107,10 +109,7 @@ function Completed({
     >
       <View style={styles.doneHead}>
         <DoneArt />
-        <Text testID="trade-done-text" style={styles.doneText}>
-          Your transaction (Ref No. {trade.reference}) has been completed
-          successfully.
-        </Text>
+        <Text testID="trade-done-text" style={styles.doneText}>{tr("Your transaction (Ref No. {{reference}}) has been completed successfully.", { reference: trade.reference })}</Text>
         <Pressable
           testID="trade-receipt"
           accessibilityRole="link"
@@ -119,15 +118,13 @@ function Completed({
           hitSlop={8}
         >
           <Icon name="info" color={color.success.text} size={16} />
-          <Text style={styles.receiptText}>View Receipt</Text>
+          <Text style={styles.receiptText}>{tr("View Receipt")}</Text>
         </Pressable>
       </View>
       <View style={styles.rule} />
-      <Text style={styles.sectionTitle}>RATE THIS TRANSACTION</Text>
+      <Text style={styles.sectionTitle}>{tr("RATE THIS TRANSACTION")}</Text>
       {sent ? (
-        <Text testID="trade-rated" style={styles.thanks}>
-          Thank you for your feedback.
-        </Text>
+        <Text testID="trade-rated" style={styles.thanks}>{tr("Thank you for your feedback.")}</Text>
       ) : (
         <>
           <View style={styles.stars} accessibilityRole="radiogroup">
@@ -136,7 +133,7 @@ function Completed({
                 key={n}
                 testID={`trade-star-${n}`}
                 accessibilityRole="radio"
-                accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`}
+                accessibilityLabel={(n === 1 ? tr("1 star") : tr("{{count}} stars", { count: n }))}
                 accessibilityState={{ checked: stars === n }}
                 onPress={() => setStars(n)}
                 hitSlop={6}
@@ -153,16 +150,16 @@ function Completed({
             ))}
           </View>
           <View style={styles.feedbackBox}>
-            <Text style={styles.feedbackLabel}>Leave a feedback</Text>
+            <Text style={styles.feedbackLabel}>{tr("Leave a feedback")}</Text>
             <TextInput
               testID="trade-feedback"
               value={feedback}
               onChangeText={setFeedback}
-              placeholder="enter feedback"
+              placeholder={tr("enter feedback")}
               placeholderTextColor={color.text.disabled}
               multiline
               maxLength={500}
-              accessibilityLabel="Leave a feedback"
+              accessibilityLabel={tr("Leave a feedback")}
               style={styles.feedbackInput}
             />
           </View>
@@ -172,20 +169,20 @@ function Completed({
         {sent ? (
           <PrimaryButton
             testID="trade-finish"
-            label="Done"
+            label={tr("Done")}
             onPress={onFinish}
           />
         ) : (
           <>
             <PrimaryButton
               testID="trade-submit-feedback"
-              label="Submit Feedback"
+              label={tr("Submit Feedback")}
               disabled={stars === 0}
               onPress={() => {
                 if (tradeStore.rate(trade.id, stars, feedback)) setSent(true);
               }}
             />
-            <GhostButton testID="trade-skip" label="Skip" onPress={onFinish} />
+            <GhostButton testID="trade-skip" label={tr("Skip")} onPress={onFinish} />
           </>
         )}
       </View>
@@ -194,10 +191,10 @@ function Completed({
 }
 
 const PHASE_LABEL: Record<Trade["phase"], string> = {
-  awaiting_payment: "Waiting for your transfer",
-  confirming: "Checking your payment",
-  awaiting_counterparty: "Waiting for the other side",
-  releasing: "Releasing funds",
+  awaiting_payment: k("Waiting for your transfer"),
+  confirming: k("Checking your payment"),
+  awaiting_counterparty: k("Waiting for the other side"),
+  releasing: k("Releasing funds"),
   completed: "Completed",
   expired: "Expired",
   cancelled: "Cancelled",
@@ -211,18 +208,18 @@ function OrderStrip({ trade, onOpenTrade }: { trade: Trade; onOpenTrade?: (id: s
   const total = others.length + 1;
   return (
     <View testID="trade-order" style={styles.order}>
-      <Text style={styles.orderTitle}>{`This order has ${total} trades. Pay each one separately.`}</Text>
+      <Text style={styles.orderTitle}>{tr("This order has {{total}} trades. Pay each one separately.", { total })}</Text>
       {others.map((o) => (
         <Pressable
           key={o.id}
           testID={`trade-order-${o.id}`}
           accessibilityRole="button"
-          accessibilityLabel={`Open trade ${o.reference}, ${formatHundredths(o.amountMinor)} ${o.currency}, ${PHASE_LABEL[o.phase]}`}
+          accessibilityLabel={tr("Open trade {{reference}}, {{amountMinor}} {{currency}}, {{value}}", { reference: o.reference, amountMinor: formatHundredths(o.amountMinor), currency: o.currency, value: tr(PHASE_LABEL[o.phase]) })}
           onPress={onOpenTrade ? () => onOpenTrade(o.id) : undefined}
           style={styles.orderRow}
         >
           <Text style={styles.orderAmount}>{`${formatHundredths(o.amountMinor)} ${o.currency}`}</Text>
-          <Text style={styles.orderPhase}>{PHASE_LABEL[o.phase]}</Text>
+          <Text style={styles.orderPhase}>{tr(PHASE_LABEL[o.phase])}</Text>
         </Pressable>
       ))}
     </View>
@@ -272,12 +269,12 @@ export function TradeScreen({
 
   const confirmPaid = (): void =>
     Alert.alert(
-      "Have you paid?",
-      `Only continue once you have sent exactly ${payLabel} (including the ${COORDINATION_FEE_LABEL} fee) from a bank account in your name.`,
+      tr("Have you paid?"),
+      tr("Only continue once you have sent exactly {{payLabel}} (including the {{COORDINATION_FEE_LABEL}} fee) from a bank account in your name.", { payLabel, COORDINATION_FEE_LABEL }),
       [
-        { text: "Not yet", style: "cancel" },
+        { text: tr("Not yet"), style: "cancel" },
         {
-          text: "Yes, I have paid",
+          text: tr("Yes, I have paid"),
           onPress: () => tradeStore.markPaid(t.id, now()),
         },
       ],
@@ -285,10 +282,10 @@ export function TradeScreen({
 
   const title =
     t.phase === "completed"
-      ? "Transaction Completed"
+      ? tr("Transaction Completed")
       : ended
-        ? "Transaction Cancelled"
-        : "Transaction In Progress";
+        ? tr("Transaction Cancelled")
+        : tr("Transaction In Progress");
 
   return (
     <View
@@ -305,7 +302,7 @@ export function TradeScreen({
           <Pressable
             testID="trade-back"
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={tr("Back")}
             onPress={onBack}
             hitSlop={12}
             style={styles.headerSide}
@@ -323,7 +320,7 @@ export function TradeScreen({
         </Text>
         <RoundButton
           icon="more"
-          label="More options"
+          label={tr("More options")}
           testID="trade-more"
           onPress={() => setMenu(true)}
         />
@@ -335,42 +332,35 @@ export function TradeScreen({
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
           <View style={styles.noteBox}>
-            <Text style={styles.noteTitle}>Please Note:</Text>
+            <Text style={styles.noteTitle}>{tr("Please Note:")}</Text>
             <View style={styles.noteRule} />
-            <Text style={styles.note}>
-              1. All payments <Text style={styles.noteStrong}>MUST</Text> be
-              made from a bank account registered in your name, matching the
-              name on your Xspeeria profile.
-            </Text>
-            <Text style={styles.note}>
-              2. Payments must be completed within the specified time frame to
-              avoid automatic cancellation of the transaction.
-            </Text>
+            <Text style={styles.note}>{trRich("1. All payments <1>MUST</1> be made from a bank account registered in your name, matching the name on your Xspeeria profile.", {}, { 1: (s) => <Text style={styles.noteStrong}>{s}</Text> })}</Text>
+            <Text style={styles.note}>{tr("2. Payments must be completed within the specified time frame to avoid automatic cancellation of the transaction.")}</Text>
           </View>
 
           <View style={styles.transfer}>
             <View style={styles.transferHead}>
-              <Text style={styles.transferLabel}>Transfer </Text>
+              <Text style={styles.transferLabel}>{tr("Transfer")}{' '}</Text>
               <Text testID="trade-amount" style={styles.transferAmount}>
                 {payLabel}
               </Text>
-              <Text style={styles.transferLabel}> to </Text>
+              <Text style={styles.transferLabel}>{' '}{tr("to")}{' '}</Text>
               <Pressable
                 testID="trade-info"
                 accessibilityRole="button"
-                accessibilityLabel="About this account"
+                accessibilityLabel={tr("About this account")}
                 hitSlop={8}
                 onPress={() =>
                   Alert.alert(
-                    "Partner bank escrow",
-                    "This is a local escrow account held by our partner bank. Xspeeria never holds your money; it is released only when both sides have paid.",
+                    tr("Partner bank escrow"),
+                    tr("This is a local escrow account held by our partner bank. Xspeeria never holds your money; it is released only when both sides have paid."),
                   )
                 }
               >
                 <Icon name="info" color={color.text.secondary} size={14} />
               </Pressable>
             </View>
-            <Text style={styles.bank}>{DEMO_ESCROW.bank}</Text>
+            <Text style={styles.bank}>{tr(DEMO_ESCROW.bank)}</Text>
             <View style={styles.accountRow}>
               <Text testID="trade-account" style={styles.account}>
                 {DEMO_ESCROW.account}
@@ -378,7 +368,7 @@ export function TradeScreen({
               <Pressable
                 testID="trade-copy"
                 accessibilityRole="button"
-                accessibilityLabel="Copy account number"
+                accessibilityLabel={tr("Copy account number")}
                 hitSlop={8}
                 onPress={() => {
                   Clipboard.setStringAsync(
@@ -393,18 +383,13 @@ export function TradeScreen({
               </Pressable>
             </View>
             {t.phase === "awaiting_payment" ? (
-              <Text testID="trade-expires" style={styles.expires}>
-                Expires in {countdown(left)} mins
-              </Text>
+              <Text testID="trade-expires" style={styles.expires}>{tr("Expires in {{left}} mins", { left: countdown(left) })}</Text>
             ) : null}
             {copied ? (
-              <Text style={styles.expires}>Account number copied</Text>
+              <Text style={styles.expires}>{tr("Account number copied")}</Text>
             ) : null}
           </View>
-          <DemoNote>
-            Demo app: there is no real bank and no real person on the other
-            side. Do not send real money.
-          </DemoNote>
+          <DemoNote>{tr("Demo app: there is no real bank and no real person on the other side. Do not send real money.")}</DemoNote>
 
           {t.phase === "awaiting_payment" ? (
             <View style={styles.buttonsRow}>
@@ -415,21 +400,21 @@ export function TradeScreen({
                   onPress={() => tradeStore.requestExtension(t.id, now())}
                   style={styles.extend}
                 >
-                  <Text style={styles.extendText}>Request Extension</Text>
+                  <Text style={styles.extendText}>{tr("Request Extension")}</Text>
                 </Pressable>
               ) : (
                 <View testID="trade-extension-state" style={styles.extend}>
                   <Text style={styles.extendMuted}>
                     {t.extension === "requested"
-                      ? "Waiting…"
-                      : `${countdown(left)} mins`}
+                      ? tr("Waiting…")
+                      : tr("{{left}} mins", { left: countdown(left) })}
                   </Text>
                 </View>
               )}
               <View style={styles.flex}>
                 <PrimaryButton
                   testID="trade-paid"
-                  label="I Have Paid"
+                  label={tr("I Have Paid")}
                   onPress={confirmPaid}
                   tone={t.side === "sell" ? "sell" : "primary"}
                 />
@@ -438,11 +423,9 @@ export function TradeScreen({
           ) : t.phase === "confirming" ? (
             <View>
               <View testID="trade-confirming" style={styles.statusBox}>
-                <Text style={styles.statusMuted}>Confirming payment ••••</Text>
+                <Text style={styles.statusMuted}>{tr("Confirming payment ••••")}</Text>
               </View>
-              <Text style={styles.statusCaption}>
-                Payment confirmation usually takes a few minutes
-              </Text>
+              <Text style={styles.statusCaption}>{tr("Payment confirmation usually takes a few minutes")}</Text>
             </View>
           ) : ended ? (
             <View
@@ -451,34 +434,32 @@ export function TradeScreen({
             >
               <Text style={styles.statusErrorText}>
                 {t.phase === "expired"
-                  ? "Time ran out, so this trade was cancelled."
-                  : "You cancelled this trade."}{" "}
-                Nothing was taken from you.
-              </Text>
+                  ? tr("Time ran out, so this trade was cancelled.")
+                  : tr("You cancelled this trade.")}{" "}{tr("Nothing was taken from you.")}</Text>
             </View>
           ) : (
             <View>
               <View testID="trade-received" style={styles.statusBox}>
                 <Icon name="check" color={color.success.text} size={18} />
-                <Text style={styles.statusOk}>Payment received</Text>
+                <Text style={styles.statusOk}>{tr("Payment received")}</Text>
               </View>
               <Text style={styles.statusCaption}>
                 {t.phase === "awaiting_counterparty"
-                  ? `Waiting for the ${t.counterparty}’s payment`
-                  : "Releasing funds to both sides"}
+                  ? tr("Waiting for the {{counterparty}}’s payment", { counterparty: tr(t.counterparty) })
+                  : tr("Releasing funds to both sides")}
               </Text>
             </View>
           )}
 
           <View style={styles.rule} />
-          <Text style={styles.sectionTitle}>TRANSACTION PROGRESS</Text>
+          <Text style={styles.sectionTitle}>{tr("TRANSACTION PROGRESS")}</Text>
           {progressFor(t).map((s, i) => (
             <Step key={`${s.label}-${i}`} label={s.label} at={s.at} />
           ))}
           {ended ? (
             <PrimaryButton
               testID="trade-back-market"
-              label="Back to Market"
+              label={tr("Back to Market")}
               onPress={onFinish}
             />
           ) : null}
@@ -492,7 +473,7 @@ export function TradeScreen({
         actions={[
           {
             key: "support",
-            label: "Contact Support",
+            label: tr("Contact Support"),
             onPress: () => {
               setMenu(false);
               onSupport();
@@ -502,16 +483,16 @@ export function TradeScreen({
             ? [
                 {
                   key: "cancel",
-                  label: "Cancel trade",
+                  label: tr("Cancel trade"),
                   onPress: () => {
                     setMenu(false);
                     Alert.alert(
-                      "Cancel this trade?",
-                      "Only cancel if you have not sent any money.",
+                      tr("Cancel this trade?"),
+                      tr("Only cancel if you have not sent any money."),
                       [
-                        { text: "Keep trade", style: "cancel" },
+                        { text: tr("Keep trade"), style: "cancel" },
                         {
-                          text: "Cancel trade",
+                          text: tr("Cancel trade"),
                           style: "destructive",
                           onPress: () => tradeStore.cancel(t.id, now()),
                         },

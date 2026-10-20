@@ -24,6 +24,7 @@ import {
   type Beneficiary,
   type BeneficiaryFilter,
 } from './data';
+import { tr } from "../../i18n";
 
 function FilterChip({
   value,
@@ -39,11 +40,11 @@ function FilterChip({
       testID={`beneficiary-filter-${value}`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={value === 'All' ? 'All currencies' : value}
+      accessibilityLabel={value === tr("All") ? tr("All currencies") : value}
       onPress={onPress}
       style={[styles.chip, selected ? styles.chipSelected : null]}
     >
-      {value === 'All' ? (
+      {value === tr("All") ? (
         <Icon name="globe" color={color.brand.primary} size={18} />
       ) : (
         <RoundFlag code={value} size={18} />
@@ -56,7 +57,7 @@ function FilterChip({
 function BeneficiaryRow({ item, onDelete }: { item: Beneficiary; onDelete: () => void }): ReactElement {
   return (
     <View testID={`beneficiary-${item.id}`} style={styles.row}>
-      <View accessible accessibilityLabel={`${item.name}, ${item.currency}, ${item.bank}, account ending ${item.accountLast4}${item.status === 'pending' ? ', awaiting bank verification' : ''}`} style={styles.rowMain}>
+      <View accessible accessibilityLabel={tr("{{name}}, {{currency}}, {{bank}}, account ending {{accountLast4}}{{value}}", { name: item.name, currency: item.currency, bank: item.bank, accountLast4: item.accountLast4, value: item.status === 'pending' ? tr(", awaiting bank verification") : '' })} style={styles.rowMain}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initialsOf(item.name)}</Text>
           <View style={styles.flagBadge}>
@@ -68,14 +69,14 @@ function BeneficiaryRow({ item, onDelete }: { item: Beneficiary; onDelete: () =>
           <Text style={styles.meta}>{maskAccount(item.accountLast4)}</Text>
           <Text style={styles.meta}>{item.bank}</Text>
           {item.status === 'pending' ? (
-            <Text testID={`beneficiary-pending-${item.id}`} style={styles.pending}>Awaiting bank verification</Text>
+            <Text testID={`beneficiary-pending-${item.id}`} style={styles.pending}>{tr("Awaiting bank verification")}</Text>
           ) : null}
         </View>
       </View>
       <Pressable
         testID={`beneficiary-delete-${item.id}`}
         accessibilityRole="button"
-        accessibilityLabel={`Delete ${item.name}`}
+        accessibilityLabel={tr("Delete {{name}}", { name: item.name })}
         onPress={onDelete}
         hitSlop={10}
       >
@@ -102,10 +103,10 @@ export function BeneficiariesScreen({
   const shown = useMemo(() => filterBeneficiaries(items, query, filter), [items, query, filter]);
 
   const confirmDelete = (b: Beneficiary): void =>
-    Alert.alert('Delete beneficiary?', `${b.name} (${maskAccount(b.accountLast4)}) will be removed from your saved accounts.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => {
-          void stepUp(`Remove ${b.name} (${maskAccount(b.accountLast4)})`).then((ok) => {
+    Alert.alert(tr("Delete beneficiary?"), tr("{{name}} ({{accountLast4}}) will be removed from your saved accounts.", { name: b.name, accountLast4: maskAccount(b.accountLast4) }), [
+      { text: tr("Cancel"), style: 'cancel' },
+      { text: tr("Delete"), style: 'destructive', onPress: () => {
+          void stepUp(tr("Remove {{name}} ({{accountLast4}})", { name: b.name, accountLast4: maskAccount(b.accountLast4) })).then((ok) => {
             if (ok) beneficiaryStore.remove(b.id);
           });
         },
@@ -114,16 +115,16 @@ export function BeneficiariesScreen({
 
   const add = (): void => {
     if (onAdd) onAdd();
-    else Alert.alert('Add beneficiary', 'Adding a beneficiary is one of the next screens to be built.');
+    else Alert.alert(tr("Add beneficiary"), tr("Adding a beneficiary is one of the next screens to be built."));
   };
 
   return (
     <View testID="beneficiaries-screen" style={[styles.screen, { paddingTop: insets.top + space.xs }]}>
       <View style={styles.header}>
-        <Pressable testID="beneficiaries-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="beneficiaries-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>Manage Beneficiaries</Text>
+        <Text accessibilityRole="header" style={styles.title}>{tr("Manage Beneficiaries")}</Text>
       </View>
 
       <View style={styles.search}>
@@ -132,9 +133,9 @@ export function BeneficiariesScreen({
           testID="beneficiaries-search"
           value={query}
           onChangeText={setQuery}
-          placeholder="Search name"
+          placeholder={tr("Search name")}
           placeholderTextColor={color.text.secondary}
-          accessibilityLabel="Search name"
+          accessibilityLabel={tr("Search name")}
           autoCorrect={false}
           maxLength={60}
           style={styles.searchInput}
@@ -151,7 +152,7 @@ export function BeneficiariesScreen({
 
       <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 96 }]}>
         {shown.length === 0 ? (
-          <Text testID="beneficiaries-empty" style={styles.empty}>No beneficiaries found</Text>
+          <Text testID="beneficiaries-empty" style={styles.empty}>{tr("No beneficiaries found")}</Text>
         ) : (
           shown.map((b) => <BeneficiaryRow key={b.id} item={b} onDelete={() => confirmDelete(b)} />)
         )}
@@ -160,7 +161,7 @@ export function BeneficiariesScreen({
       <Pressable
         testID="beneficiaries-add"
         accessibilityRole="button"
-        accessibilityLabel="Add beneficiary"
+        accessibilityLabel={tr("Add beneficiary")}
         onPress={add}
         style={({ pressed }) => [styles.fab, { bottom: insets.bottom + space.md }, pressed ? styles.fabPressed : null]}
       >

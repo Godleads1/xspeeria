@@ -18,8 +18,10 @@ import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
 import { formatRating, longDate } from './data';
 import { useKycRegions } from './kycRegions';
+import type { KycRegion } from './data';
 import { ProfileAvatar } from './ProfileAvatar';
 import { useProfile } from './profileStore';
+import { tr } from "../../i18n";
 
 function Star(): ReactElement {
   return (
@@ -42,10 +44,20 @@ function Detail({ icon, label, value, note }: { icon: IconName; label: string; v
   );
 }
 
-export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; onEdit?: () => void }): ReactElement {
+export function AccountDetailsScreen({
+  onBack,
+  onEdit,
+  serverRegions,
+}: {
+  onBack: () => void;
+  onEdit?: () => void;
+  /** Server builds: the countries verified on the server (ADR-042) instead of the demo list. */
+  serverRegions?: readonly KycRegion[] | null;
+}): ReactElement {
   const insets = useSafeAreaInsets();
   const user = useProfile();
-  const regions = useKycRegions();
+  const demoRegions = useKycRegions();
+  const regions = serverRegions === undefined ? demoRegions : (serverRegions ?? []);
 
   return (
     <View testID="account-details-screen" style={styles.screen}>
@@ -56,7 +68,7 @@ export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; o
           <Pressable
             testID="account-back"
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={tr("Back")}
             onPress={onBack}
             hitSlop={12}
             style={styles.back}
@@ -64,9 +76,9 @@ export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; o
             <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
           </Pressable>
             {onEdit ? (
-              <Pressable testID="account-edit" accessibilityRole="button" accessibilityLabel="Edit profile" onPress={onEdit} style={styles.editBtn}>
+              <Pressable testID="account-edit" accessibilityRole="button" accessibilityLabel={tr("Edit profile")} onPress={onEdit} style={styles.editBtn}>
                 <Icon name="pencil" color={color.text.primary} size={16} />
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{tr("Edit")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -75,7 +87,7 @@ export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; o
         <View style={styles.identity}>
           <ProfileAvatar testID="account-avatar" size={AVATAR} initials={user.initials} uri={user.avatarUri} ring={4} />
           <Text style={styles.handle}>{user.handle}</Text>
-          <View style={styles.rating} accessible accessibilityLabel={`Rated ${formatRating(user.ratingHundredths)} out of 5`}>
+          <View style={styles.rating} accessible accessibilityLabel={tr("Rated {{ratingHundredths}} out of 5", { ratingHundredths: formatRating(user.ratingHundredths) })}>
             <Star />
             <Text style={styles.ratingText}>
               {formatRating(user.ratingHundredths)}
@@ -86,26 +98,26 @@ export function AccountDetailsScreen({ onBack, onEdit }: { onBack: () => void; o
 
         <View style={styles.body}>
           <View style={styles.card}>
-            <Detail icon="idcard" label="Full Name" value={user.fullName} />
-            <Detail icon="phone" label="Phone Number" value={user.phone} />
-            <Detail icon="mail" label="Email Address" value={user.email} />
+            <Detail icon="idcard" label={tr("Full Name")} value={user.fullName} />
+            <Detail icon="phone" label={tr("Phone Number")} value={user.phone} />
+            <Detail icon="mail" label={tr("Email Address")} value={user.email} />
             <Detail
               icon="calendar"
-              label="Date of birth"
+              label={tr("Date of birth")}
               value={longDate(user.dateOfBirth)}
-              note={user.pendingDob ? `Change to ${longDate(user.pendingDob.dateOfBirth)} under review` : undefined}
+              note={user.pendingDob ? tr("Change to {{dateOfBirth}} under review", { dateOfBirth: longDate(user.pendingDob.dateOfBirth) }) : undefined}
             />
-            <Detail icon="gender" label="Gender" value={user.gender} />
+            <Detail icon="gender" label={tr("Gender")} value={user.gender} />
           </View>
 
-          <SectionLabel>KYC approved regions</SectionLabel>
+          <SectionLabel>{tr("KYC approved regions")}</SectionLabel>
           <View>
             {regions.map((r) => (
               <View key={r.name} testID={`kyc-${r.flag}`} style={styles.region}>
                 <RoundFlag code={r.flag} size={24} />
-                <Text style={styles.regionName}>{r.name}</Text>
+                <Text style={styles.regionName}>{tr(r.name)}</Text>
                 <StatusPill
-                  label={r.state === 'approved' ? 'Approved' : 'Pending'}
+                  label={r.state === 'approved' ? tr("Approved") : tr("Pending")}
                   tone={r.state === 'approved' ? 'success' : 'warning'}
                 />
               </View>

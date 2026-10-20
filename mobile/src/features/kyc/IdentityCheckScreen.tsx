@@ -12,35 +12,41 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '../../api/client';
-import type { ServerKycCase } from '../../api/kycApi';
+import { COUNTRY_NAME, type KycCountry, type ServerKycCase } from '../../api/kycApi';
 import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState, PrimaryButton, Screen, StatusChip } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { Heading } from '../auth/ui';
 import { safeVerificationUrl, type KycSource } from './serverKyc';
+import { tr, k } from "../../i18n";
 
 const POLL_MS = 5_000;
 
 export const INTRO =
-  'To trade on Xspeeria we need to confirm who you are. You will take a photo of a valid government ID (such as your passport, national ID card or driver’s licence) and a short selfie. This is done securely by our verification partner, Didit.';
+  k("To trade on Xspeeria we need to confirm who you are. You will take a photo of a valid government ID (such as your passport, national ID card or driver’s licence) and a short selfie. This is done securely by our verification partner, Didit.");
 
 type Tone = 'success' | 'warning' | 'error' | 'neutral';
+
+/** Intro for a second country's check (ADR-042). */
+export function introFor(country: KycCountry): string {
+  return tr("To pay in this country’s currency we need to confirm who you are in {{country}}. You will take a photo of a valid ID issued by {{country}} (such as a passport, driving licence or residence card) and a short selfie. This is done securely by our verification partner, Didit.", { country: tr(COUNTRY_NAME[country]) });
+}
 
 /** Headline, chip and button for each server status. */
 export function kycCopy(c: ServerKycCase): { title: string; chip: string; tone: Tone; action: string | null } {
   switch (c.status) {
     case 'approved':
-      return { title: 'Your identity is verified', chip: 'Verified', tone: 'success', action: null };
+      return { title: tr("Your identity is verified"), chip: 'Verified', tone: 'success', action: null };
     case 'under_review':
-      return { title: 'We are reviewing your check', chip: 'In review', tone: 'warning', action: null };
+      return { title: tr("We are reviewing your check"), chip: tr("In review"), tone: 'warning', action: null };
     case 'pending_documents':
-      return { title: 'Finish verifying your identity', chip: 'Not finished', tone: 'warning', action: 'Continue verification' };
+      return { title: tr("Finish verifying your identity"), chip: tr("Not finished"), tone: 'warning', action: tr("Continue verification") };
     case 'rejected':
-      return { title: 'We could not verify you', chip: 'Not verified', tone: 'error', action: 'Try again' };
+      return { title: tr("We could not verify you"), chip: tr("Not verified"), tone: 'error', action: tr("Try again") };
     case 'expired':
-      return { title: 'Your check has expired', chip: 'Expired', tone: 'neutral', action: 'Verify again' };
+      return { title: tr("Your check has expired"), chip: 'Expired', tone: 'neutral', action: tr("Verify again") };
     default:
-      return { title: 'Verify Your Identity', chip: 'Not verified', tone: 'neutral', action: 'Verify my identity' };
+      return { title: tr("Verify Your Identity"), chip: tr("Not verified"), tone: 'neutral', action: tr("Verify my identity") };
   }
 }
 
@@ -49,7 +55,10 @@ export function IdentityCheckScreen({
   onBack,
   onVerified,
   pollMs = POLL_MS,
+  country = 'NG',
 }: {
+  /** ADR-042: the country this check verifies; the ID must be issued there. */
+  country?: KycCountry;
   source: KycSource;
   onBack: () => void;
   /** Shown as "Go to Market" once verified. */
@@ -100,7 +109,7 @@ export function IdentityCheckScreen({
         await source.open(url);
       }
     } catch (e) {
-      setError(e instanceof Error && e.message === 'no link' ? 'Something went wrong. Please try again.' : messageFor(e));
+      setError(e instanceof Error && e.message === 'no link' ? tr("Something went wrong. Please try again.") : messageFor(e));
     } finally {
       setBusy(false);
     }
@@ -108,7 +117,7 @@ export function IdentityCheckScreen({
 
   const header = (
     <View style={styles.header}>
-      <Pressable testID="identity-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="identity-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
       <View style={styles.spacer} />
@@ -119,7 +128,7 @@ export function IdentityCheckScreen({
     return (
       <Screen testID="identity-screen">
         {header}
-        {loadError ? <ErrorState title={loadError} onRetry={load} /> : <LoadingState label="Checking your identity status" />}
+        {loadError ? <ErrorState title={loadError} onRetry={load} /> : <LoadingState label={tr("Checking your identity status")} />}
       </Screen>
     );
   }
@@ -128,10 +137,13 @@ export function IdentityCheckScreen({
   return (
     <Screen testID="identity-screen">
       {header}
-      <Heading title={copy.title} body={c.status === 'not_started' ? INTRO : undefined} />
+      <Heading
+        title={copy.title}
+        body={c.status === 'not_started' ? (country === 'NG' ? tr(INTRO) : introFor(country)) : undefined}
+      />
       <View testID="identity-status" style={styles.card}>
         <View style={styles.rowTop}>
-          <Text style={styles.label}>Identity check</Text>
+          <Text style={styles.label}>{tr("Identity check")}</Text>
           <StatusChip label={copy.chip} tone={copy.tone} />
         </View>
         {c.message && c.status !== 'not_started' ? (
@@ -140,20 +152,17 @@ export function IdentityCheckScreen({
           </Text>
         ) : null}
         {c.status === 'approved' && c.legal_name ? (
-          <Text testID="identity-name" style={styles.line}>{`Name on your ID: ${c.legal_name}`}</Text>
+          <Text testID="identity-name" style={styles.line}>{tr("Name on your ID: {{legal_name}}", { legal_name: c.legal_name })}</Text>
         ) : null}
       </View>
 
       {c.status === 'not_started' || copy.action ? (
         <View style={styles.card}>
-          <Text style={styles.label}>What you need</Text>
-          <Text style={styles.line}>• A valid government ID with your photo</Text>
-          <Text style={styles.line}>• Good light and about 2 minutes</Text>
-          <Text style={styles.line}>• You must be 18 or older</Text>
-          <Text style={styles.small}>
-            Didit checks your ID and selfie and screens against sanctions lists. Xspeeria keeps only the result, your name
-            and date of birth — never photos of your ID.
-          </Text>
+          <Text style={styles.label}>{tr("What you need")}</Text>
+          <Text style={styles.line}>{tr("• A valid government ID with your photo, issued by {{country}}", { country: tr(COUNTRY_NAME[country]) })}</Text>
+          <Text style={styles.line}>{tr("• Good light and about 2 minutes")}</Text>
+          <Text style={styles.line}>{tr("• You must be 18 or older")}</Text>
+          <Text style={styles.small}>{tr("Didit checks your ID and selfie and screens against sanctions lists. Xspeeria keeps only the result, your name and date of birth — never photos of your ID.")}</Text>
         </View>
       ) : null}
 
@@ -165,13 +174,13 @@ export function IdentityCheckScreen({
       {copy.action ? (
         <PrimaryButton
           testID="identity-start"
-          label={busy ? 'Opening…' : copy.action}
+          label={busy ? tr("Opening…") : copy.action}
           onPress={() => void start()}
           disabled={busy}
         />
       ) : null}
       {c.status === 'approved' && onVerified ? (
-        <PrimaryButton testID="identity-done" label="Go to Market" onPress={onVerified} />
+        <PrimaryButton testID="identity-done" label={tr("Go to Market")} onPress={onVerified} />
       ) : null}
     </Screen>
   );

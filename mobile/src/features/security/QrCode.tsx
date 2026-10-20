@@ -3,6 +3,7 @@
 import { useMemo, type ReactElement } from 'react';
 import Svg, { Path, Rect } from 'react-native-svg';
 import QRCode from 'qrcode';
+import { tr } from "../../i18n";
 
 export function QrCode({ value, size = 184, testID }: { value: string; size?: number; testID?: string }): ReactElement {
   const { path, count } = useMemo(() => {
@@ -22,7 +23,7 @@ export function QrCode({ value, size = 184, testID }: { value: string; size?: nu
       width={size}
       height={size}
       viewBox={`${-quiet} ${-quiet} ${count + quiet * 2} ${count + quiet * 2}`}
-      accessibilityLabel="QR code for your authenticator app"
+      accessibilityLabel={tr("QR code for your authenticator app")}
       accessibilityRole="image"
     >
       <Rect x={-quiet} y={-quiet} width={count + quiet * 2} height={count + quiet * 2} fill="#FFFFFF" />

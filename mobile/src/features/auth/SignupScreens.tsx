@@ -35,6 +35,8 @@ import { detectCountry } from './location';
 import { PIN_LENGTH, pinProblem, sameSecret } from './pin';
 import { signup, useSignup } from './signupStore';
 import { AuthTop, CheckRow, DemoNote, GhostButton, Heading, PhoneInput, PinPad, fullPhone } from './ui';
+import { trRich } from "../../i18n/rich";
+import { tr, k } from "../../i18n";
 
 function Frame({
   testID,
@@ -92,7 +94,7 @@ export function GetStartedScreen({
   const phone = normalisePhone(fullPhone('NG', local));
 
   const next = (): void => {
-    if (!phone) return setError('Enter the 10-digit number linked to your NIN');
+    if (!phone) return setError(tr("Enter the 10-digit number linked to your NIN"));
     signup.update({ phone });
     onNext();
   };
@@ -103,27 +105,24 @@ export function GetStartedScreen({
       top={<AuthTop step={1} />}
       footer={
         <View style={styles.actions}>
-          <PrimaryButton testID="signup-start-continue" label="Continue" onPress={next} disabled={!aml || !terms || local.trim() === ''} />
-          <GhostButton testID="signup-start-login" label="I have a profile" onPress={onLogIn} />
+          <PrimaryButton testID="signup-start-continue" label={tr("Continue")} onPress={next} disabled={!aml || !terms || local.trim() === ''} />
+          <GhostButton testID="signup-start-login" label={tr("I have a profile")} onPress={onLogIn} />
         </View>
       }
     >
       <Heading
-        title="Let’s get started"
-        body="We require your National Identification Number (NIN) to verify your identity in compliance with regulatory and Anti-Money Laundering (AML) requirements. This helps ensure a secure and trusted platform for all users."
+        title={tr("Let’s get started")}
+        body={tr("We require your National Identification Number (NIN) to verify your identity in compliance with regulatory and Anti-Money Laundering (AML) requirements. This helps ensure a secure and trusted platform for all users.")}
       />
-      <OutlinedField label="Enter Phone Number linked to NIN *" invalid={Boolean(error)}>
+      <OutlinedField label={tr("Enter Phone Number linked to NIN *")} invalid={Boolean(error)}>
         <PhoneInput testID="signup-phone" country="NG" value={local} onChange={(t) => { setLocal(t); setError(null); }} />
       </OutlinedField>
       {error ? <Text testID="signup-start-error" style={styles.error}>{error}</Text> : null}
-      <CheckRow testID="signup-consent-aml" checked={aml} onToggle={() => setAml((v) => !v)}>
-        By continuing, you consent to Xspeeria conducting necessary Anti-Money Laundering (AML) checks in accordance with regulatory requirements. These checks help us maintain a safe and compliant platform for all users.
-      </CheckRow>
-      <CheckRow testID="signup-consent-terms" checked={terms} onToggle={() => setTerms((v) => !v)}>
-        By checking this box, you agree to our{' '}
-        <Text testID="signup-terms-link" style={styles.link} onPress={onTerms}>Terms &amp; Conditions</Text> of service and{' '}
-        <Text style={styles.link} onPress={onTerms}>Privacy Notice</Text> including verification of your identity through a third party and your mobile service provider
-      </CheckRow>
+      <CheckRow testID="signup-consent-aml" checked={aml} onToggle={() => setAml((v) => !v)}>{tr("By continuing, you consent to Xspeeria conducting necessary Anti-Money Laundering (AML) checks in accordance with regulatory requirements. These checks help us maintain a safe and compliant platform for all users.")}</CheckRow>
+      <CheckRow testID="signup-consent-terms" checked={terms} onToggle={() => setTerms((v) => !v)}>{trRich("By checking this box, you agree to our <1>Terms & Conditions</1> of service and <2>Privacy Notice</2> including verification of your identity through a third party and your mobile service provider", {}, {
+        1: (s) => <Text testID="signup-terms-link" style={styles.link} onPress={onTerms}>{s}</Text>,
+        2: (s) => <Text style={styles.link} onPress={onTerms}>{s}</Text>,
+      })}</CheckRow>
     </Frame>
   );
 }
@@ -157,7 +156,7 @@ function Tip({ title, body }: { title: string; body: string }): ReactElement {
 }
 
 export const IDENTITY_BODY =
-  'To complete your identity verification, we need to confirm your NIN. Please take a clear selfie and date of birth for facial verification or enter the OTP sent to your registered number.';
+  k("To complete your identity verification, we need to confirm your NIN. Please take a clear selfie and date of birth for facial verification or enter the OTP sent to your registered number.");
 
 export function VerifyIdentityScreen({ onBack, onVerified, onUseOtp }: { onBack: () => void; onVerified: () => void; onUseOtp: () => void }): ReactElement {
   const [dob, setDob] = useState('');
@@ -165,14 +164,14 @@ export function VerifyIdentityScreen({ onBack, onVerified, onUseOtp }: { onBack:
 
   const openCamera = (): void => {
     const iso = parseDob(dob);
-    if (!iso) return setError('Enter a real date as DD/MM/YYYY');
-    if (iso !== DEMO_NIN_RECORD.dateOfBirth) return setError('This date of birth doesn’t match your NIN record');
+    if (!iso) return setError(tr("Enter a real date as DD/MM/YYYY"));
+    if (iso !== DEMO_NIN_RECORD.dateOfBirth) return setError(tr("This date of birth doesn’t match your NIN record"));
     setError(null);
     if (!DEMO_MODE) return; // The real selfie check needs the identity provider (ADR-013 §3).
-    Alert.alert('Demo selfie check', 'No identity provider is connected. In the real app your camera opens here and your selfie is matched to your NIN photo.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(tr("Demo selfie check"), tr("No identity provider is connected. In the real app your camera opens here and your selfie is matched to your NIN photo."), [
+      { text: tr("Cancel"), style: 'cancel' },
       {
-        text: 'Continue as verified',
+        text: tr("Continue as verified"),
         onPress: () => {
           signup.update({ identityVerified: true });
           onVerified();
@@ -187,16 +186,16 @@ export function VerifyIdentityScreen({ onBack, onVerified, onUseOtp }: { onBack:
       top={<AuthTop onBack={onBack} step={2} />}
       footer={
         <View style={styles.actions}>
-          <PrimaryButton testID="signup-open-camera" label="Open Camera" onPress={openCamera} disabled={dob.length !== 10} />
-          <GhostButton testID="signup-use-otp" label="Verify using OTP" onPress={onUseOtp} />
+          <PrimaryButton testID="signup-open-camera" label={tr("Open Camera")} onPress={openCamera} disabled={dob.length !== 10} />
+          <GhostButton testID="signup-use-otp" label={tr("Verify using OTP")} onPress={onUseOtp} />
         </View>
       }
     >
-      <Heading title="Verify Your Identity" body={IDENTITY_BODY} />
-      <OutlinedField label="Date of birth *" invalid={Boolean(error)}>
+      <Heading title={tr("Verify Your Identity")} body={tr(IDENTITY_BODY)} />
+      <OutlinedField label={tr("Date of birth *")} invalid={Boolean(error)}>
         <FieldInput
           testID="signup-dob"
-          accessibilityLabel="Date of birth, day month year"
+          accessibilityLabel={tr("Date of birth, day month year")}
           value={dob}
           onChangeText={(t) => { setDob(formatDobInput(t)); setError(null); }}
           keyboardType="number-pad"
@@ -207,12 +206,12 @@ export function VerifyIdentityScreen({ onBack, onVerified, onUseOtp }: { onBack:
         />
       </OutlinedField>
       {error ? <Text testID="signup-verify-error" style={styles.error}>{error}</Text> : null}
-      <DemoNote>Demo app: the sample NIN record’s date of birth is 12/07/1997.</DemoNote>
+      <DemoNote>{tr("Demo app: the sample NIN record’s date of birth is 12/07/1997.")}</DemoNote>
       <View style={styles.face}>
         <FaceFrame />
       </View>
-      <Tip title="Good lighting" body="Make sure you are in a well lit area and both ears are uncovered" />
-      <Tip title="Look Straight" body="Hold your phone at eye level and look straight into the camera" />
+      <Tip title={tr("Good lighting")} body={tr("Make sure you are in a well lit area and both ears are uncovered")} />
+      <Tip title={tr("Look Straight")} body={tr("Hold your phone at eye level and look straight into the camera")} />
     </Frame>
   );
 }
@@ -272,8 +271,8 @@ export function CodeScreen({
     if (usedUp) setDead(true);
     setError(
       usedUp
-        ? 'This code can’t be used any more. Ask for a new code.'
-        : `That code is not right. ${r.challenge.triesLeft} ${r.challenge.triesLeft === 1 ? 'try' : 'tries'} left.`,
+        ? tr("This code can’t be used any more. Ask for a new code.")
+        : (r.challenge.triesLeft === 1 ? tr("That code is not right. 1 try left.") : tr("That code is not right. {{count}} tries left.", { count: r.challenge.triesLeft })),
     );
   };
 
@@ -285,7 +284,7 @@ export function CodeScreen({
     setCode('');
   };
 
-  const ending = kind === 'phone' ? `number ending with ******${target.slice(-4)}` : maskContact('email', target);
+  const ending = kind === 'phone' ? tr("number ending with ******{{value}}", { value: target.slice(-4) }) : maskContact('email', target);
 
   return (
     <Frame
@@ -299,11 +298,11 @@ export function CodeScreen({
       }
     >
       <Heading title={title} body={body} />
-      <Text style={styles.text}>Enter OTP sent to {ending}</Text>
-      <OutlinedField label="OTP *" invalid={Boolean(error)}>
+      <Text style={styles.text}>{tr("Enter OTP sent to {{ending}}", { ending: ending })}</Text>
+      <OutlinedField label={tr("OTP *")} invalid={Boolean(error)}>
         <FieldInput
           testID={`${testID}-code`}
-          accessibilityLabel="6-digit code"
+          accessibilityLabel={tr("6-digit code")}
           value={code}
           onChangeText={(t) => { setCode(t.replace(/\D/g, '')); setError(null); }}
           keyboardType="number-pad"
@@ -314,12 +313,10 @@ export function CodeScreen({
       {error ? <Text testID={`${testID}-error`} style={styles.error}>{error}</Text> : null}
       <Pressable testID={`${testID}-resend`} accessibilityRole="button" disabled={wait > 0} onPress={resend} style={styles.resend}>
         <Text style={wait > 0 ? styles.resendWait : styles.resendText}>
-          {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
+          {wait > 0 ? tr("Send a new code in {{wait}}s", { wait }) : tr("Send a new code")}
         </Text>
       </Pressable>
-      <DemoNote testID={`${testID}-demo`}>
-        Demo app: no {kind === 'phone' ? 'SMS' : 'email'} service is connected. Your code is {challenge.code}.
-      </DemoNote>
+      <DemoNote testID={`${testID}-demo`}>{(kind === 'phone' ? tr("Demo app: no SMS service is connected. Your code is {{code}}.", { code: challenge.code }) : tr("Demo app: no email service is connected. Your code is {{code}}.", { code: challenge.code }))}</DemoNote>
     </Frame>
   );
 }
@@ -330,7 +327,7 @@ function ReadOnly({ label, value, testID }: { label: string; value: string; test
   return (
     <View style={styles.readonly}>
       <OutlinedField label={`${label} *`}>
-        <Text testID={testID} style={styles.readonlyText} accessibilityLabel={`${label}: ${value}. From your NIN record`}>{value}</Text>
+        <Text testID={testID} style={styles.readonlyText} accessibilityLabel={tr("{{label}}: {{value}}. From your NIN record", { label, value })}>{value}</Text>
       </OutlinedField>
     </View>
   );
@@ -344,33 +341,31 @@ export function DetailsScreen({ onBack, onNext }: { onBack: () => void; onNext: 
 
   const next = (): void => {
     const e = normaliseEmail(email);
-    if (!e) return setError('Enter a valid email address');
+    if (!e) return setError(tr("Enter a valid email address"));
     signup.update({ email: e, newsletter, emailVerified: false });
     onNext();
   };
 
   return (
-    <Frame testID="signup-details" top={<AuthTop onBack={onBack} step={2} />} footer={<PrimaryButton testID="signup-details-continue" label="Continue" onPress={next} disabled={email.trim() === ''} />}>
-      <Heading title="Let’s get started" body="Verify Your identity and provide your e-mail address" />
-      <ReadOnly testID="signup-first" label="First name" value={DEMO_NIN_RECORD.firstName} />
-      <ReadOnly testID="signup-last" label="Last name" value={DEMO_NIN_RECORD.lastName} />
-      <OutlinedField label="Email Address *" invalid={Boolean(error)}>
-        <FieldInput testID="signup-email" accessibilityLabel="Email address" value={email} onChangeText={(t) => { setEmail(t); setError(null); }} keyboardType="email-address" inputMode="text" maxLength={254} />
+    <Frame testID="signup-details" top={<AuthTop onBack={onBack} step={2} />} footer={<PrimaryButton testID="signup-details-continue" label={tr("Continue")} onPress={next} disabled={email.trim() === ''} />}>
+      <Heading title={tr("Let’s get started")} body={tr("Verify Your identity and provide your e-mail address")} />
+      <ReadOnly testID="signup-first" label={tr("First name")} value={DEMO_NIN_RECORD.firstName} />
+      <ReadOnly testID="signup-last" label={tr("Last name")} value={DEMO_NIN_RECORD.lastName} />
+      <OutlinedField label={tr("Email Address *")} invalid={Boolean(error)}>
+        <FieldInput testID="signup-email" accessibilityLabel={tr("Email address")} value={email} onChangeText={(t) => { setEmail(t); setError(null); }} keyboardType="email-address" inputMode="text" maxLength={254} />
       </OutlinedField>
       {error ? <Text testID="signup-details-error" style={styles.error}>{error}</Text> : null}
-      <ReadOnly testID="signup-dob-ro" label="Date of Birth" value={longDate(DEMO_NIN_RECORD.dateOfBirth)} />
-      <ReadOnly testID="signup-gender" label="Gender" value={DEMO_NIN_RECORD.gender} />
-      <Text style={styles.small}>Name, date of birth and gender come from your NIN record and can’t be changed here.</Text>
-      <CheckRow testID="signup-newsletter" checked={newsletter} onToggle={() => setNewsletter((v) => !v)}>
-        Subscribe to our newsletter for exclusive insights, tips, and updates delivered straight to your inbox. Be the first to know.
-      </CheckRow>
+      <ReadOnly testID="signup-dob-ro" label={tr("Date of Birth")} value={longDate(DEMO_NIN_RECORD.dateOfBirth)} />
+      <ReadOnly testID="signup-gender" label={tr("Gender")} value={DEMO_NIN_RECORD.gender} />
+      <Text style={styles.small}>{tr("Name, date of birth and gender come from your NIN record and can’t be changed here.")}</Text>
+      <CheckRow testID="signup-newsletter" checked={newsletter} onToggle={() => setNewsletter((v) => !v)}>{tr("Subscribe to our newsletter for exclusive insights, tips, and updates delivered straight to your inbox. Be the first to know.")}</CheckRow>
     </Frame>
   );
 }
 
 /* ------------------------------------------------------- 4. Create / Confirm PIN */
 
-const PIN_BODY = 'Use your PIN to safely log in to the app. Be sure to remember it and keep it to yourself.';
+const PIN_BODY = k("Use your PIN to safely log in to the app. Be sure to remember it and keep it to yourself.");
 
 function PinScreen({ testID, title, onComplete, error }: { testID: string; title: string; onComplete: (pin: string) => void; error: string | null }): ReactElement {
   const insets = useSafeAreaInsets();
@@ -390,7 +385,7 @@ function PinScreen({ testID, title, onComplete, error }: { testID: string; title
         }}
       />
       {error ? <Text testID={`${testID}-error`} style={[styles.error, styles.center]}>{error}</Text> : null}
-      <Text style={styles.pinBody}>{PIN_BODY}</Text>
+      <Text style={styles.pinBody}>{tr(PIN_BODY)}</Text>
     </View>
   );
 }
@@ -400,7 +395,7 @@ export function CreatePinScreen({ onNext }: { onNext: () => void }): ReactElemen
   return (
     <PinScreen
       testID="signup-create-pin"
-      title="Create PIN"
+      title={tr("Create PIN")}
       error={error}
       onComplete={(p) => {
         const problem = pinProblem(p);
@@ -419,14 +414,14 @@ export function ConfirmPinScreen({ onNext, onRestart }: { onNext: () => void; on
   return (
     <PinScreen
       testID="signup-confirm-pin"
-      title="Confirm PIN"
+      title={tr("Confirm PIN")}
       error={error}
       onComplete={(p) => {
         if (draft.pin && sameSecret(p, draft.pin)) {
           signup.update({ pinConfirmed: true });
           return onNext();
         }
-        setError('PINs didn’t match. Create your PIN again.');
+        setError(tr("PINs didn’t match. Create your PIN again."));
         signup.update({ pin: null, pinConfirmed: false });
         setTimeout(onRestart, 900);
       }}
@@ -460,26 +455,24 @@ export function EnableBiometricsScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const turnOn = async (): Promise<void> => {
-    const r = await biometrics('Turn on Face ID for Xspeeria');
+    const r = await biometrics(tr("Turn on Face ID for Xspeeria"));
     if (r === 'ok') {
       enable();
       onNext();
     } else if (r === 'unavailable') {
-      Alert.alert('Not available', 'Face ID or fingerprint isn’t set up on this phone. You can log in with your PIN.', [{ text: 'OK', onPress: onNext }]);
+      Alert.alert(tr("Not available"), tr("Face ID or fingerprint isn’t set up on this phone. You can log in with your PIN."), [{ text: 'OK', onPress: onNext }]);
     }
   };
   return (
     <View testID="signup-biometrics" style={[styles.screen, styles.center, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.sm, paddingHorizontal: space.md }]}>
-      <Text accessibilityRole="header" style={styles.pinTitle}>Enable Face ID</Text>
+      <Text accessibilityRole="header" style={styles.pinTitle}>{tr("Enable Face ID")}</Text>
       <View style={styles.bioArt}>
         <FaceIdArt />
       </View>
-      <Text style={styles.pinBody}>
-        Secure your account and enjoy quick, seamless logins using Face ID.{'\n'}Your face is your password—easy, fast, and secure.
-      </Text>
+      <Text style={styles.pinBody}>{tr("Secure your account and enjoy quick, seamless logins using Face ID.")}{'\n'}{tr("Your face is your password—easy, fast, and secure.")}</Text>
       <View style={[styles.actions, styles.stretch]}>
-        <PrimaryButton testID="signup-enable-faceid" label="Enable Face ID" onPress={() => void turnOn()} />
-        <GhostButton testID="signup-not-now" label="Not now" onPress={onNext} />
+        <PrimaryButton testID="signup-enable-faceid" label={tr("Enable Face ID")} onPress={() => void turnOn()} />
+        <GhostButton testID="signup-not-now" label={tr("Not now")} onPress={onNext} />
       </View>
     </View>
   );
@@ -504,10 +497,10 @@ export function DoneScreen({ onFinish }: { onFinish: () => void }): ReactElement
     <View testID="signup-done" style={[styles.screen, { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.sm, paddingHorizontal: space.md }]}>
       <View style={[styles.center, styles.grow]}>
         <CheerArt />
-        <Text accessibilityRole="header" style={styles.congrats}>Congratulations!</Text>
-        <Text style={styles.pinBody}>You have successfully created an Xspeeria profile</Text>
+        <Text accessibilityRole="header" style={styles.congrats}>{tr("Congratulations!")}</Text>
+        <Text style={styles.pinBody}>{tr("You have successfully created an Xspeeria profile")}</Text>
       </View>
-      <PrimaryButton testID="signup-finish" label="Proceed to Home" onPress={onFinish} />
+      <PrimaryButton testID="signup-finish" label={tr("Proceed to Home")} onPress={onFinish} />
     </View>
   );
 }

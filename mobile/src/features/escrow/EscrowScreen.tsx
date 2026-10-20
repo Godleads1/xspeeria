@@ -20,6 +20,7 @@ import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState, PrimaryButton, Screen, StatusChip } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import type { EscrowSource } from './serverEscrow';
+import { tr } from "../../i18n";
 
 const POLL_MS = 3_000;
 
@@ -51,50 +52,50 @@ export function escrowStatus(s: ServerSettlement, now: number): { title: string;
   const iPaid = (['FUNDED', 'RELEASE_SENT', 'PAID_OUT', 'RETURN_SENT', 'RETURNED'] as LegState[]).includes(s.you_pay.state);
   if (s.on_hold && !['COMPLETED', 'CANCELLED', 'CLOSED_UNWOUND'].includes(s.phase)) {
     return {
-      title: 'Paused for a check',
-      detail: 'Something did not match, so our team will check this deal. No money moves until it is resolved.',
+      title: tr("Paused for a check"),
+      detail: tr("Something did not match, so our team will check this deal. No money moves until it is resolved."),
       tone: 'warning',
       done: false,
     };
   }
   switch (s.phase) {
     case 'INITIALIZING':
-      return { title: 'Opening escrow', detail: 'The bank is opening an escrow account for each side.', tone: 'neutral', done: false };
+      return { title: tr("Opening escrow"), detail: tr("The bank is opening an escrow account for each side."), tone: 'neutral', done: false };
     case 'AWAITING_FUNDING':
       if (iPaid) {
         return {
-          title: 'Your payment arrived',
-          detail: left ? `Waiting for the other side to pay — ${left} left.` : 'Waiting for the other side to pay.',
+          title: tr("Your payment arrived"),
+          detail: left ? tr("Waiting for the other side to pay — {{left}} left.", { left }) : tr("Waiting for the other side to pay."),
           tone: 'success',
           done: false,
         };
       }
       return {
-        title: `Pay ${pay} into escrow`,
+        title: tr("Pay {{pay}} into escrow", { pay }),
         detail: left
-          ? `${left} left. If the time runs out, the deal is cancelled; anything paid comes back in full.`
-          : 'The time to pay has passed.',
+          ? tr("{{left}} left. If the time runs out, the deal is cancelled; anything paid comes back in full.", { left })
+          : tr("The time to pay has passed."),
         tone: 'warning',
         done: false,
       };
     case 'RELEASING':
-      return { title: 'Both sides paid', detail: `The bank is paying ${get} into your account.`, tone: 'success', done: false };
+      return { title: tr("Both sides paid"), detail: tr("The bank is paying {{get}} into your account.", { get }), tone: 'success', done: false };
     case 'COMPLETED':
-      return { title: 'Done', detail: `${get} was paid into your account.`, tone: 'success', done: true };
+      return { title: 'Done', detail: tr("{{get}} was paid into your account.", { get }), tone: 'success', done: true };
     case 'UNWINDING':
       return iPaid
-        ? { title: 'Deal not completed', detail: `The other side did not pay in time. Your ${pay} is being returned in full, fee included.`, tone: 'warning', done: false }
-        : { title: 'Deal not completed', detail: 'The time to pay ran out. The deal is being closed.', tone: 'warning', done: false };
+        ? { title: tr("Deal not completed"), detail: tr("The other side did not pay in time. Your {{pay}} is being returned in full, fee included.", { pay }), tone: 'warning', done: false }
+        : { title: tr("Deal not completed"), detail: tr("The time to pay ran out. The deal is being closed."), tone: 'warning', done: false };
     case 'CLOSED_UNWOUND':
       return s.you_pay.state === 'RETURNED'
-        ? { title: 'Cancelled — refunded', detail: `Your ${pay} was returned in full, fee included.`, tone: 'neutral', done: true }
-        : { title: 'Cancelled', detail: 'You did not pay in time. The other side was refunded. Nothing was paid out.', tone: 'neutral', done: true };
+        ? { title: tr("Cancelled — refunded"), detail: tr("Your {{pay}} was returned in full, fee included.", { pay }), tone: 'neutral', done: true }
+        : { title: 'Cancelled', detail: tr("You did not pay in time. The other side was refunded. Nothing was paid out."), tone: 'neutral', done: true };
     case 'CANCELLED':
       return s.closure_reason === 'PROVISION_FAILED'
-        ? { title: 'Cancelled', detail: 'The bank could not open escrow for this deal. Nothing was paid.', tone: 'neutral', done: true }
-        : { title: 'Cancelled', detail: 'Nobody paid within 5 minutes. Nothing was paid.', tone: 'neutral', done: true };
+        ? { title: 'Cancelled', detail: tr("The bank could not open escrow for this deal. Nothing was paid."), tone: 'neutral', done: true }
+        : { title: 'Cancelled', detail: tr("Nobody paid within 5 minutes. Nothing was paid."), tone: 'neutral', done: true };
     default:
-      return { title: 'Being checked', detail: 'Our team is looking at this deal.', tone: 'warning', done: false };
+      return { title: tr("Being checked"), detail: tr("Our team is looking at this deal."), tone: 'warning', done: false };
   }
 }
 
@@ -104,10 +105,10 @@ export function escrowSteps(s: ServerSettlement): { label: string; done: boolean
   const paid = ['FUNDED', 'RELEASE_SENT', 'PAID_OUT'].includes(s.you_pay.state);
   const otherPaid = ['FUNDED', 'RELEASE_SENT', 'PAID_OUT'].includes(s.you_receive.state);
   return [
-    { label: 'Escrow opened by the bank', done: opened },
-    { label: 'You paid in', done: paid },
-    { label: 'The other side paid in', done: otherPaid },
-    { label: 'The bank paid you out', done: s.you_receive.state === 'PAID_OUT' },
+    { label: tr("Escrow opened by the bank"), done: opened },
+    { label: tr("You paid in"), done: paid },
+    { label: tr("The other side paid in"), done: otherPaid },
+    { label: tr("The bank paid you out"), done: s.you_receive.state === 'PAID_OUT' },
   ];
 }
 
@@ -165,7 +166,7 @@ export function EscrowScreen({
     return (
       <Screen testID="escrow-screen">
         <Header onBack={onBack} />
-        <LoadingState label="Loading the escrow steps" />
+        <LoadingState label={tr("Loading the escrow steps")} />
       </Screen>
     );
   }
@@ -191,9 +192,7 @@ export function EscrowScreen({
     <Screen testID="escrow-screen">
       <Header onBack={onBack} />
       {s.simulated ? (
-        <Text testID="escrow-simulated" style={styles.simulated}>
-          Pretend bank on a developer&apos;s computer — no real money moves.
-        </Text>
+        <Text testID="escrow-simulated" style={styles.simulated}>{tr("Pretend bank on a developer's computer — no real money moves.")}</Text>
       ) : null}
 
       <View style={styles.card} testID="escrow-status">
@@ -201,7 +200,7 @@ export function EscrowScreen({
           <Text accessibilityRole="header" style={styles.strong} testID="escrow-title">
             {status.title}
           </Text>
-          <StatusChip label={status.done ? 'Finished' : 'In progress'} tone={status.tone} />
+          <StatusChip label={status.done ? tr("Finished") : tr("In progress")} tone={status.tone} />
         </View>
         <Text style={styles.line} testID="escrow-detail">
           {status.detail}
@@ -209,28 +208,26 @@ export function EscrowScreen({
       </View>
 
       <View style={styles.card} testID="escrow-you-pay">
-        <Text style={styles.label}>You pay into escrow</Text>
-        <Line label="Amount" value={money(s.you_pay.amount, s.you_pay.currency)} />
-        <Line label="Xspeeria fee (1%)" value={money(s.you_pay.fee, s.you_pay.currency)} />
-        <Line label="Total to transfer" value={money(s.you_pay.total, s.you_pay.currency)} testID="escrow-total" strong />
+        <Text style={styles.label}>{tr("You pay into escrow")}</Text>
+        <Line label={tr("Amount")} value={money(s.you_pay.amount, s.you_pay.currency)} />
+        <Line label={tr("Xspeeria fee (1%)")} value={money(s.you_pay.fee, s.you_pay.currency)} />
+        <Line label={tr("Total to transfer")} value={money(s.you_pay.total, s.you_pay.currency)} testID="escrow-total" strong />
         {payIn ? (
           <View testID="escrow-pay-in" style={styles.payIn}>
-            <Text style={styles.label}>Transfer exactly the total to</Text>
-            <Line label="Bank" value={payIn.bank_name} />
-            <Line label="Account name" value={payIn.account_name} />
-            <Line label="Account number" value={payIn.account_number} testID="escrow-account-number" />
-            <Line label="Reference" value={payIn.reference} testID="escrow-reference" />
-            <Text style={styles.small}>
-              Use the reference so the bank can match your payment. Transfer from an account in your own name.
-            </Text>
+            <Text style={styles.label}>{tr("Transfer exactly the total to")}</Text>
+            <Line label={tr("Bank")} value={payIn.bank_name} />
+            <Line label={tr("Account name")} value={payIn.account_name} />
+            <Line label={tr("Account number")} value={payIn.account_number} testID="escrow-account-number" />
+            <Line label={tr("Reference")} value={payIn.reference} testID="escrow-reference" />
+            <Text style={styles.small}>{tr("Use the reference so the bank can match your payment. Transfer from an account in your own name.")}</Text>
           </View>
         ) : null}
       </View>
 
       <View style={styles.card} testID="escrow-you-receive">
-        <Text style={styles.label}>You receive</Text>
+        <Text style={styles.label}>{tr("You receive")}</Text>
         <Text style={styles.strong}>{money(s.you_receive.amount, s.you_receive.currency)}</Text>
-        <Text style={styles.small}>Paid by the bank into the payout account(s) you chose.</Text>
+        <Text style={styles.small}>{tr("Paid by the bank into the payout account(s) you chose.")}</Text>
       </View>
 
       <View style={styles.card} testID="escrow-steps">
@@ -253,7 +250,7 @@ export function EscrowScreen({
       {canSimulate ? (
         <PrimaryButton
           testID="escrow-simulate"
-          label={busy ? 'Sending to the pretend bank…' : 'Simulate my transfer'}
+          label={busy ? tr("Sending to the pretend bank…") : tr("Simulate my transfer")}
           onPress={() => void simulate()}
           disabled={busy}
         />
@@ -265,12 +262,10 @@ export function EscrowScreen({
 function Header({ onBack }: { onBack: () => void }): ReactElement {
   return (
     <View style={styles.header}>
-      <Pressable testID="escrow-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="escrow-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
-      <Text accessibilityRole="header" style={styles.title}>
-        Escrow
-      </Text>
+      <Text accessibilityRole="header" style={styles.title}>{tr("Escrow")}</Text>
       <View style={styles.spacer} />
     </View>
   );

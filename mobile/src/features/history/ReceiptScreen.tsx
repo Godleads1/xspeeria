@@ -23,11 +23,12 @@ import {
   coordinationFeeMinor,
   type HistoryItem,
 } from "./data";
+import { tr, k } from "../../i18n";
 
 const STATUS_TITLE = {
-  completed: "TRANSACTION SUCCESSFUL",
-  pending: "TRANSACTION IN PROGRESS",
-  failed: "TRANSACTION FAILED",
+  completed: k("TRANSACTION SUCCESSFUL"),
+  pending: k("TRANSACTION IN PROGRESS"),
+  failed: k("TRANSACTION FAILED"),
 } as const;
 
 /** A dashed rule with half-circle notches at each end, like a tear-off ticket. */
@@ -115,8 +116,8 @@ export function ReceiptScreen({
   const failed = item.status === "failed";
   // Completed buy receipts use Figma's "Received"/"Paid"; Figma's sell receipt says "to
   // receive"/"to pay" throughout, so that wording stays for sells.
-  const receivedLabel = failed ? "Amount (not received)" : done && isBuy ? "Amount Received" : "Amount to receive";
-  const paidLabel = failed ? "Amount (not paid)" : done && isBuy ? "Amount Paid" : "Amount to pay";
+  const receivedLabel = failed ? tr("Amount (not received)") : done && isBuy ? tr("Amount Received") : tr("Amount to receive");
+  const paidLabel = failed ? tr("Amount (not paid)") : done && isBuy ? tr("Amount Paid") : tr("Amount to pay");
   const foreign = `${formatHundredths(item.amountMinor)} ${item.currency}`;
   const rate = `NGN ${formatCompact(item.rateHundredths)}/${item.currency}`;
   const [fromCode, toCode] = isBuy
@@ -134,7 +135,7 @@ export function ReceiptScreen({
         <Pressable
           testID="receipt-close"
           accessibilityRole="button"
-          accessibilityLabel="Close receipt"
+          accessibilityLabel={tr("Close receipt")}
           onPress={onClose}
           hitSlop={12}
           style={styles.close}
@@ -163,16 +164,16 @@ export function ReceiptScreen({
                 item.status === "failed" ? styles.statusFailed : null,
               ]}
             >
-              {STATUS_TITLE[item.status]}
+              {tr(STATUS_TITLE[item.status])}
             </Text>
           </View>
           <TicketTear />
           <View style={styles.ticketBody}>
-            <Line label="Transaction Reference" value={item.reference} />
+            <Line label={tr("Transaction Reference")} value={item.reference} />
             <View
               style={styles.corridor}
               accessible
-              accessibilityLabel={`${fromCode} to ${toCode}`}
+              accessibilityLabel={tr("{{fromCode}} to {{toCode}}", { fromCode, toCode })}
             >
               <View style={styles.side}>
                 <RoundFlag code={fromCode} size={40} />
@@ -194,19 +195,19 @@ export function ReceiptScreen({
               label={receivedLabel}
               value={isBuy ? foreign : `${formatHundredths(ngnMinor)} NGN`}
             />
-            <Line label="Rate" value={rate} />
+            <Line label={tr("Rate")} value={rate} />
           </View>
           <TicketTear />
           <View style={styles.ticketBody}>
-            <Text style={styles.detailsTitle}>Transaction details</Text>
+            <Text style={styles.detailsTitle}>{tr("Transaction details")}</Text>
             <Line
-              label="Transaction Amount"
+              label={tr("Transaction Amount")}
               value={isBuy ? `${formatHundredths(ngnMinor)} NGN` : foreign}
             />
             {isBuy ? (
               <>
                 <Line
-                  label={`Coordination Fee (${COORDINATION_FEE_LABEL})`}
+                  label={tr("Coordination Fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
                   value={`${formatHundredths(feeMinor)} NGN`}
                 />
                 <Line
@@ -215,14 +216,14 @@ export function ReceiptScreen({
                   strong
                 />
                 <Text style={styles.note}>
-                  {"Paid into the partner bank's escrow, never to Xspeeria."}
+                  {tr("Paid into the partner bank's escrow, never to Xspeeria.")}
                 </Text>
               </>
             ) : (
               <>
                 {/* Figma sell receipt: fee and amount to pay in the currency the seller sends. */}
                 <Line
-                  label={`Transaction fee (${COORDINATION_FEE_LABEL})`}
+                  label={tr("Transaction fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
                   value={`${formatHundredths(feeMinor)} ${item.currency}`}
                 />
                 <Line
@@ -232,7 +233,7 @@ export function ReceiptScreen({
                   tone="sell"
                 />
                 <Text style={styles.note}>
-                  {"Paid into the partner bank's escrow, never to Xspeeria."}
+                  {tr("Paid into the partner bank's escrow, never to Xspeeria.")}
                 </Text>
               </>
             )}
@@ -241,13 +242,13 @@ export function ReceiptScreen({
 
         {item.payouts.length > 0 ? (
           <View style={styles.section}>
-            <SectionLabel>Settlement account</SectionLabel>
+            <SectionLabel>{tr("Settlement account")}</SectionLabel>
             {item.payouts.map((p) => (
               <View
                 key={`${p.name}-${p.last4}-${p.amountMinor}`}
                 style={styles.account}
                 accessible
-                accessibilityLabel={`${p.name}, ${p.bank} account ending ${p.last4}, ${formatCompact(p.amountMinor)} ${payoutCurrency}`}
+                accessibilityLabel={tr("{{name}}, {{bank}} account ending {{last4}}, {{amountMinor}} {{payoutCurrency}}", { name: p.name, bank: p.bank, last4: p.last4, amountMinor: formatCompact(p.amountMinor), payoutCurrency })}
               >
                 <View style={styles.accountMain}>
                   <Text style={styles.accountName}>{p.name}</Text>
@@ -264,7 +265,7 @@ export function ReceiptScreen({
         ) : null}
 
         <View style={styles.section}>
-          <SectionLabel>Transaction progress</SectionLabel>
+          <SectionLabel>{tr("Transaction progress")}</SectionLabel>
           {item.progress.map((step, i) => {
             const done = step.at !== undefined;
             const last = i === item.progress.length - 1;
@@ -273,7 +274,7 @@ export function ReceiptScreen({
                 key={step.label}
                 style={styles.step}
                 accessible
-                accessibilityLabel={`${step.label}: ${done ? `completed ${step.at}` : "not yet"}`}
+                accessibilityLabel={done ? tr("{{label}}: completed {{at}}", { label: tr(step.label), at: step.at }) : tr("{{label}}: not yet", { label: tr(step.label) })}
               >
                 <View style={styles.stepRail}>
                   <StepDot done={done} />
@@ -293,12 +294,12 @@ export function ReceiptScreen({
                       !done ? styles.stepPending : null,
                     ]}
                   >
-                    {step.label}
+                    {tr(step.label)}
                   </Text>
                   {done ? (
                     <Text
                       style={styles.stepAt}
-                    >{`Completed . ${step.at}`}</Text>
+                    >{tr("Completed . {{at}}", { at: step.at })}</Text>
                   ) : null}
                 </View>
               </View>

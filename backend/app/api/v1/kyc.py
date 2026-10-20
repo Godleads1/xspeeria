@@ -2,6 +2,7 @@
 
 * ``POST /api/v1/kyc/cases`` — start or continue my identity check; returns Didit's link once.
 * ``GET /api/v1/kyc/cases/current`` — my latest check, in plain words.
+* ``GET /api/v1/kyc/regions`` — my status per country and a country to suggest (ADR-042).
 * ``POST /api/v1/webhooks/didit`` — Didit's signed results. No sign-in: trust comes only from
   the HMAC signature and the 5-minute window (docs.didit.me).
 
@@ -10,14 +11,16 @@ Starting a check needs a signed-in, 2FA-verified user but not KYC (that is what 
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Body, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session
+from app.api.deps import get_app_settings
+from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime, Principal
 from app.services.kyc import KycService
@@ -31,8 +34,29 @@ webhooks_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 256 * 1024
 
 
+Country = Literal["NG", "GB", "US"]
+
+
+class StartCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    #: The country this check verifies (ADR-042); the ID must be issued there.
+    country: Country = "NG"
+
+
+class RegionStatus(BaseModel):
+    country: Country
+    status: str
+
+
+class RegionsResponse(BaseModel):
+    regions: list[RegionStatus]
+    #: A country the user appears to be in and is not verified for; only a suggestion.
+    suggested_country: Country | None
+
+
 class KycCaseResponse(BaseModel):
     kyc_case_id: str | None
+    country: Country
     status: str
     message: str | None
     #: Didit's hosted check, returned once when starting or continuing. Never stored.
@@ -45,7 +69,7 @@ async def get_kyc_service(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> KycService:
-    return KycService(db, runtime.clock, runtime.kyc_provider)
+    return KycService(db, runtime.clock, runtime.kyc_provider, runtime.kyc_identity_key)
 
 
 Kyc = Annotated[KycService, Depends(get_kyc_service)]
@@ -72,13 +96,29 @@ Me = Annotated[Principal, Depends(limited)]
     response_model=KycCaseResponse,
     summary="Start or continue my identity check (Didit)",
 )
-async def start_check(principal: Me, kyc: Kyc) -> Any:
-    return await kyc.start(principal)
+async def start_check(
+    principal: Me, kyc: Kyc, body: Annotated[StartCheckRequest | None, Body()] = None
+) -> Any:
+    return await kyc.start(principal, (body or StartCheckRequest()).country)
 
 
 @router.get("/cases/current", response_model=KycCaseResponse, summary="My identity check")
-async def my_check(principal: Me, kyc: Kyc) -> Any:
-    return await kyc.current(principal)
+async def my_check(principal: Me, kyc: Kyc, country: Annotated[Country, Query()] = "NG") -> Any:
+    return await kyc.current(principal, country)
+
+
+@router.get("/regions", response_model=RegionsResponse, summary="My identity checks per country")
+async def my_regions(
+    request: Request,
+    principal: Me,
+    kyc: Kyc,
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> Any:
+    seen = None
+    if settings.client_country_header:
+        raw = request.headers.get(settings.client_country_header, "")[:8].strip().upper()
+        seen = raw if len(raw) == 2 and raw.isalpha() else None
+    return await kyc.regions(principal, seen)
 
 
 @webhooks_router.post("/didit", summary="Didit results (signed)", include_in_schema=False)

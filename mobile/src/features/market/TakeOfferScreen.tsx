@@ -21,6 +21,7 @@ import { brandWeight, color, space, typography, themed } from "../../theme";
 import { FieldInput, OutlinedField } from "./controls";
 import { divRoundHalfEven, formatHundredths, parseToHundredths } from "./money";
 import { groupedRate, type TakeSource } from "./serverOffers";
+import { tr } from "../../i18n";
 
 /** "500.00" → 50000 (exact) or null. */
 function minorOf(text: string): number | null {
@@ -113,11 +114,11 @@ export function TakeOfferScreen({
 
   const header = (
     <View style={styles.header}>
-      <Pressable testID="take-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+      <Pressable testID="take-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
       <Text accessibilityRole="header" style={styles.title}>
-        {match ? "Deal recorded" : "Take offer"}
+        {match ? tr("Deal recorded") : tr("Take offer")}
       </Text>
       <View style={styles.spacer} />
     </View>
@@ -130,19 +131,16 @@ export function TakeOfferScreen({
         {header}
         <View testID="take-match" style={styles.card}>
           <Text style={styles.big}>{`${grouped(match.allocated_amount)} ${match.currency}`}</Text>
-          <Text style={styles.line}>{`Rate: NGN ${groupedRate(match.agreed_rate)} /${match.currency}`}</Text>
+          <Text style={styles.line}>{tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(match.agreed_rate), currency: match.currency })}</Text>
           {total !== null ? (
-            <Text style={styles.line}>{`Works out to NGN ${formatHundredths(total)}`}</Text>
+            <Text style={styles.line}>{tr("Works out to NGN {{total}}", { total: formatHundredths(total) })}</Text>
           ) : null}
         </View>
-        <Text style={styles.note}>
-          The deal is recorded and the rate is fixed. Next you’ll choose your payout account and pay into
-          the partner bank’s escrow account — those steps are coming soon. Xspeeria never holds your money.
-        </Text>
-        <PrimaryButton testID="take-done" label="Done" onPress={onDone} />
+        <Text style={styles.note}>{tr("The deal is recorded and the rate is fixed. Next you’ll choose your payout account and pay into the partner bank’s escrow account — those steps are coming soon. Xspeeria never holds your money.")}</Text>
+        <PrimaryButton testID="take-done" label={tr("Done")} onPress={onDone} />
         {onDeals ? (
           <Pressable testID="take-see-deals" accessibilityRole="button" onPress={onDeals} hitSlop={8} style={styles.seeDeals}>
-            <Text style={styles.link}>See my deals</Text>
+            <Text style={styles.link}>{tr("See my deals")}</Text>
           </Pressable>
         ) : null}
       </Screen>
@@ -155,25 +153,25 @@ export function TakeOfferScreen({
       {loadError ? (
         <ErrorState title={loadError} onRetry={load} />
       ) : !offer ? (
-        <LoadingState label="Loading the offer" />
+        <LoadingState label={tr("Loading the offer")} />
       ) : (
         <View style={styles.form}>
           <View testID="take-offer" style={styles.card}>
             <Text style={styles.line}>
-              {"Available: "}
+              {tr("Available: ")}
               <Text style={styles.strong}>{`${grouped(offer.remaining_amount)} ${offer.source_currency}`}</Text>
             </Text>
             <Text style={styles.line}>
-              {"Rate: "}
+              {tr("Rate: ")}
               <Text style={styles.strong}>{`NGN ${groupedRate(offer.desired_rate)}`}</Text>
               {` /${offer.source_currency}`}
             </Text>
           </View>
 
-          <OutlinedField label={`Amount in “${offer.source_currency}” to take *`} invalid={tooMuch}>
+          <OutlinedField label={tr("Amount in “{{source_currency}}” to take *", { source_currency: offer.source_currency })} invalid={tooMuch}>
             <FieldInput
               testID="take-amount"
-              accessibilityLabel={`Amount in ${offer.source_currency} to take`}
+              accessibilityLabel={tr("Amount in {{source_currency}} to take", { source_currency: offer.source_currency })}
               value={amount}
               onChangeText={editAmount}
             />
@@ -185,20 +183,20 @@ export function TakeOfferScreen({
             hitSlop={8}
             style={styles.takeAll}
           >
-            <Text style={styles.link}>{`Take all ${grouped(offer.remaining_amount)} ${offer.source_currency}`}</Text>
+            <Text style={styles.link}>{tr("Take all {{remaining_amount}} {{source_currency}}", { remaining_amount: grouped(offer.remaining_amount), source_currency: offer.source_currency })}</Text>
           </Pressable>
           {tooMuch ? (
             <Text testID="take-too-much" accessibilityRole="alert" style={styles.error}>
-              {`Only ${grouped(offer.remaining_amount)} ${offer.source_currency} is available.`}
+              {tr("Only {{remaining_amount}} {{source_currency}} is available.", { remaining_amount: grouped(offer.remaining_amount), source_currency: offer.source_currency })}
             </Text>
           ) : ngn !== null ? (
-            <Text testID="take-ngn" style={styles.line}>{`Works out to NGN ${formatHundredths(ngn)}`}</Text>
+            <Text testID="take-ngn" style={styles.line}>{tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })}</Text>
           ) : null}
 
-          <OutlinedField label="Authenticator code *">
+          <OutlinedField label={tr("Authenticator code *")}>
             <FieldInput
               testID="take-code"
-              accessibilityLabel="6-digit code from your authenticator app"
+              accessibilityLabel={tr("6-digit code from your authenticator app")}
               value={code}
               onChangeText={(t) => {
                 setCode(t.replace(/[^0-9]/g, "").slice(0, 6));
@@ -216,11 +214,8 @@ export function TakeOfferScreen({
               {error}
             </Text>
           ) : null}
-          <PrimaryButton testID="take-submit" label={busy ? "Taking…" : "Take offer"} onPress={() => void take()} disabled={!ready} />
-          <Text style={styles.note}>
-            Taking an offer records the deal at this rate. No money moves yet: you’ll pay into the partner
-            bank’s escrow account in a later step.
-          </Text>
+          <PrimaryButton testID="take-submit" label={busy ? tr("Taking…") : tr("Take offer")} onPress={() => void take()} disabled={!ready} />
+          <Text style={styles.note}>{tr("Taking an offer records the deal at this rate. No money moves yet: you’ll pay into the partner bank’s escrow account in a later step.")}</Text>
         </View>
       )}
     </Screen>

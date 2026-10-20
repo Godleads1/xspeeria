@@ -16,13 +16,14 @@ import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { validatePasswordForm, type PasswordField, type PasswordForm } from './passwordForm';
+import { tr, k } from "../../i18n";
 
 const EMPTY: PasswordForm = { oldPassword: '', newPassword: '', confirmPassword: '' };
 
 const FIELDS: readonly { key: PasswordField; label: string }[] = [
-  { key: 'oldPassword', label: 'Enter Old Password' },
-  { key: 'newPassword', label: 'Enter New Password' },
-  { key: 'confirmPassword', label: 'Confirm New Password' },
+  { key: 'oldPassword', label: k("Enter Old Password") },
+  { key: 'newPassword', label: k("Enter New Password") },
+  { key: 'confirmPassword', label: k("Confirm New Password") },
 ];
 
 export function ChangePasswordScreen({
@@ -46,8 +47,8 @@ export function ChangePasswordScreen({
     if (onSubmit) onSubmit(submitted);
     else
       Alert.alert(
-        'Not available yet',
-        'Password changes will work once sign-in is connected. Your password has not been changed.',
+        tr("Not available yet"),
+        tr("Password changes will work once sign-in is connected. Your password has not been changed."),
       );
   };
 
@@ -58,20 +59,20 @@ export function ChangePasswordScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <Pressable testID="change-password-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+        <Pressable testID="change-password-back" accessibilityRole="button" accessibilityLabel={tr("Back")} onPress={onBack} hitSlop={12}>
           <Icon name="back" color={color.text.primary} size={22} weight={2.25} />
         </Pressable>
-        <Text style={styles.title}>Change Password</Text>
+        <Text style={styles.title}>{tr("Change Password")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {FIELDS.map((f, i) => (
           <View key={f.key} style={[styles.fieldWrap, i === 0 ? styles.firstField : null]}>
-            <OutlinedField label={`${f.label} *`} invalid={Boolean(errors[f.key])}>
+            <OutlinedField label={`${tr(f.label)} *`} invalid={Boolean(errors[f.key])}>
               <FieldInput
                 testID={`password-${f.key}`}
-                accessibilityLabel={f.label}
+                accessibilityLabel={tr(f.label)}
                 value={form[f.key]}
                 onChangeText={(t) => {
                   setForm((prev) => ({ ...prev, [f.key]: t }));
@@ -91,7 +92,7 @@ export function ChangePasswordScreen({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.sm }]}>
-        <PrimaryButton testID="change-password-submit" label="Change password" onPress={submit} />
+        <PrimaryButton testID="change-password-submit" label={tr("Change password")} onPress={submit} />
       </View>
     </KeyboardAvoidingView>
   );

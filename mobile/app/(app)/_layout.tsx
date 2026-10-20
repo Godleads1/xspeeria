@@ -1,11 +1,16 @@
-import type { ReactElement } from 'react';
+import { useCallback, type ReactElement } from 'react';
 import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 
 import { SERVER_MODE } from '../../src/api/config';
 import { serverAuth } from '../../src/features/auth/serverAuth';
 import { session } from '../../src/features/auth/session';
 import { useIdleLock } from '../../src/features/auth/useIdleLock';
+import { serverNotifications } from '../../src/features/notifications/serverNotifications';
+import { useNotificationWatcher } from '../../src/features/notifications/unread';
+import { usePushNotifications } from '../../src/features/notifications/push';
+import { serverRegions } from '../../src/features/kyc/serverKyc';
+import { useRegionPrompt } from '../../src/features/kyc/regionPrompt';
 import { color, useThemeMode } from '../../src/theme';
 
 /**
@@ -15,6 +20,16 @@ import { color, useThemeMode } from '../../src/theme';
 export default function AppLayout(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   useIdleLock();
+  const router = useRouter();
+  // ADR-044: the bell's count, and a banner when something new arrives (server builds only).
+  useNotificationWatcher(SERVER_MODE ? serverNotifications : null, (link) => router.push(link as Href));
+  // ADR-052: phone push — register this phone; a tapped push opens its screen.
+  const openLink = useCallback((link: string) => router.push(link as Href), [router]);
+  usePushNotifications(SERVER_MODE, openLink);
+  // ADR-042: offer a new country's check when the server sees the user there (once per sign-in).
+  useRegionPrompt(SERVER_MODE ? serverRegions : null, (country) =>
+    router.push({ pathname: '/region/new', params: { country } }),
+  );
   return (
     <View
       style={{ flex: 1 }}

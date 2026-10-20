@@ -8,6 +8,7 @@ import { CodeScreen, IDENTITY_BODY } from '../../../src/features/auth/SignupScre
 import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { useThemeMode } from '../../../src/theme';
+import { tr } from "../../../src/i18n";
 
 export default function SignupOtpRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
@@ -41,10 +42,10 @@ export default function SignupOtpRoute(): ReactElement {
       kind="phone"
       target={draft.phone}
       step={2}
-      title="Verify Your Identity"
-      body={IDENTITY_BODY}
-      verifyLabel="Verify OTP"
-      altLabel="Verify Using Selfie"
+      title={tr("Verify Your Identity")}
+      body={tr(IDENTITY_BODY)}
+      verifyLabel={tr("Verify OTP")}
+      altLabel={tr("Verify Using Selfie")}
       onAlt={() => router.back()}
       onBack={() => router.back()}
       onVerified={() => {

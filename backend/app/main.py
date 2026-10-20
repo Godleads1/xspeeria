@@ -16,6 +16,7 @@ with ``APP_ENV=local`` prints codes to the terminal on a developer's computer (A
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -23,7 +24,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, health, kyc, offers, settlement
+from app.api.v1 import auth, health, kyc, notifications, offers, push, settlement
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -36,6 +37,7 @@ from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_
 from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
 from app.providers.pretend_bank import PretendBank
+from app.providers.push import ExpoPushSender
 from app.providers.sms import DevConsoleSmsSender, SmsSender
 from app.services.auth import AuthRuntime
 
@@ -97,6 +99,8 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         name_check=DevNameCheck() if settings.bank_check_dev else None,
         pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
         kyc_provider=_didit(settings),
+        kyc_identity_key=_kyc_identity_key(settings),
+        push_sender=ExpoPushSender(settings.expo_access_token) if settings.push_enabled else None,
     )
 
 
@@ -122,6 +126,24 @@ def _didit(settings: Settings) -> DiditClient | None:
         settings.didit_base_url,
         settings.didit_callback_url,
     )
+
+
+def _kyc_identity_key(settings: Settings) -> bytes | None:
+    """ADR-041: required with Didit; base64 of exactly 32 bytes."""
+    raw = settings.kyc_identity_key
+    if not raw:
+        if settings.didit_api_key:
+            raise ValueError("KYC_IDENTITY_KEY is required when Didit is configured (ADR-041)")
+        return None
+    if "CHANGE_ME" in raw:
+        raise ValueError("KYC_IDENTITY_KEY is still the .env.example placeholder")
+    try:
+        key = base64.b64decode(raw, validate=True)
+    except ValueError as exc:
+        raise ValueError("KYC_IDENTITY_KEY must be base64") from exc
+    if len(key) != 32:
+        raise ValueError("KYC_IDENTITY_KEY must decode to 32 bytes")
+    return key
 
 
 async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
@@ -154,6 +176,24 @@ async def _escrow_loop(settings: Settings, runtime: AuthRuntime) -> None:
             log.exception("escrow_tick_failed")
 
 
+async def _push_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """Send new notifications to phones (ADR-052). Runs until cancelled."""
+    from app.db.session import get_sessionmaker
+    from app.services.push import PushDispatcher
+
+    log = get_logger(__name__)
+    sender = runtime.push_sender
+    if sender is None:  # pragma: no cover - only started when a sender exists
+        return
+    while True:
+        await asyncio.sleep(settings.push_tick_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                await PushDispatcher(db, runtime.clock, sender).run_once()
+        except Exception:  # noqa: BLE001 - a failed round must not stop the loop
+            log.exception("push_round_failed")
+
+
 def create_app(
     settings: Settings | None = None, auth_runtime: AuthRuntime | None = None
 ) -> FastAPI:
@@ -174,6 +214,12 @@ def create_app(
             and resolved.escrow_tick_seconds > 0
         ):
             tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
+        if (
+            resolved.database_url
+            and runtime.push_sender is not None
+            and resolved.push_tick_seconds > 0
+        ):
+            tasks.append(asyncio.create_task(_push_loop(resolved, runtime)))
         try:
             yield
         finally:
@@ -217,6 +263,8 @@ def create_app(
     application.include_router(offers.payout_accounts_router)
     application.include_router(kyc.router)
     application.include_router(kyc.webhooks_router)
+    application.include_router(notifications.router)
+    application.include_router(push.router)
     application.include_router(settlement.router)
     application.include_router(settlement.webhooks_router)
     if resolved.app_env == "local" and runtime.pretend_bank is not None:

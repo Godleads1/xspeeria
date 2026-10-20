@@ -1,3 +1,4 @@
+
 /**
  * Rate ceiling: the official rate is the maximum (product owner, 2026-10-17; Standing
  * Standards §7.2; API contract §3.3; `docs/adr/020-official-rate-ceiling.md`).

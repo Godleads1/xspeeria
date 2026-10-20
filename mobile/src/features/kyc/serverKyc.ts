@@ -3,12 +3,13 @@
 import * as Linking from 'expo-linking';
 
 import { ApiError } from '../../api/client';
-import { kycApi, type ServerKycCase } from '../../api/kycApi';
+import { kycApi, type KycCountry, type ServerKycCase, type ServerRegions } from '../../api/kycApi';
 import { serverAuth } from '../auth/serverAuth';
+import { tr } from "../../i18n";
 
 function token(): string {
   const t = serverAuth.accessToken();
-  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, 'Please log in again.');
+  if (!t) throw new ApiError('AUTH_401_UNAUTHORIZED', 401, tr("Please log in again."));
   return t;
 }
 
@@ -30,10 +31,20 @@ export function safeVerificationUrl(url: string | null): string | null {
   }
 }
 
-export const serverKyc: KycSource = {
-  current: async () => kycApi.current(token(), serverAuth.apiOptions()),
-  start: async () => kycApi.start(token(), serverAuth.apiOptions()),
-  open: async (url) => {
-    await Linking.openURL(url);
-  },
-};
+/** The identity check for one country (ADR-042). */
+export function serverKycFor(country: KycCountry): KycSource {
+  return {
+    current: async () => kycApi.current(token(), serverAuth.apiOptions(), country),
+    start: async () => kycApi.start(token(), serverAuth.apiOptions(), country),
+    open: async (url) => {
+      await Linking.openURL(url);
+    },
+  };
+}
+
+export const serverKyc: KycSource = serverKycFor('NG');
+
+/** My status per country and a suggested new country (ADR-042). */
+export async function serverRegions(): Promise<ServerRegions> {
+  return kycApi.regions(token(), serverAuth.apiOptions());
+}
