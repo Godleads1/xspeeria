@@ -1,4 +1,4 @@
-"""Auth and current-user endpoints — Milestones AUTH-1 and AUTH-2 (ADR-025 §1.7, ADR-026 §3).
+"""Auth and current-user endpoints — AUTH-1/AUTH-2 (ADR-025, ADR-026); second check ADR-054.
 
 Routes only translate HTTP to the service; every rule lives in ``app.services.auth``.
 Every route here passes through the per-address limit (10 per minute, ADR-025 §1.2).
@@ -23,31 +23,30 @@ from app.schemas.auth import (
     BiometricEnableRequest,
     BiometricEnableResponse,
     BiometricUnlockRequest,
-    ChallengeRequest,
-    ChallengeResponse,
     ChangePinRequest,
-    EnrolConfirmRequest,
-    EnrolConfirmResponse,
-    EnrolStartResponse,
+    CheckCodesRequest,
+    CheckResponse,
+    DeviceRequest,
+    EmailCodeRequest,
+    FaceStartResponse,
     LoginRequest,
-    MfaVerifyRequest,
-    OtpCodeRequest,
     PhoneChangeConfirmRequest,
     PhoneChangeStartRequest,
     PinResetConfirmRequest,
     PinResetStartRequest,
+    PinResetVerifyRequest,
     ProfileResponse,
-    RecoveryCodesResponse,
     RegisterRequest,
     RegisterResponse,
     SessionResponse,
+    StepUpCheckRequest,
     StepUpRequest,
     StepUpResponse,
     TokenResponse,
     TrustedDeviceResponse,
     VerifyPhoneRequest,
 )
-from app.services.auth import AuthService, Challenge, SignedIn, TokenPair
+from app.services.auth import AuthService, CheckStarted, SignedIn, TokenPair
 
 __all__ = ["router"]
 
@@ -67,9 +66,23 @@ def _tokens(pair: TokenPair, device_token: str | None = None) -> TokenResponse:
     )
 
 
-def _challenge(c: Challenge) -> ChallengeResponse:
-    return ChallengeResponse(
-        mfa_challenge_id=c.challenge_id, enrolment_required=c.enrolment_required
+def _check(c: CheckStarted) -> CheckResponse:
+    return CheckResponse.model_validate(
+        {
+            "check_id": c.check_id,
+            "purpose": c.purpose,
+            "method": c.method,
+            "email_hint": c.email_hint,
+            "phone_hint": c.phone_hint,
+        }
+    )
+
+
+def _step_up(token: str, action: str) -> StepUpResponse:
+    return StepUpResponse(
+        step_up_token=token,
+        action=action,
+        expires_in_seconds=int(STEP_UP_TTL.total_seconds()),
     )
 
 
@@ -91,94 +104,128 @@ async def register(body: RegisterRequest, service: Service) -> RegisterResponse:
 
 @router.post(
     "/auth/verify-phone",
-    response_model=ChallengeResponse,
+    response_model=CheckResponse,
     tags=["auth"],
-    summary="Confirm the SMS code; next, add an authenticator (2FA at sign-up, ADR-026)",
+    summary="Confirm the SMS code; next, the code sent to the email (ADR-054)",
 )
 async def verify_phone(
     body: VerifyPhoneRequest, request: Request, service: Service
-) -> ChallengeResponse:
+) -> CheckResponse:
     device = device_info(request, body.device_id)
-    return _challenge(await service.verify_phone(body.phone, body.code, device))
+    return _check(await service.verify_phone(body.phone, body.code, device))
 
 
 @router.post(
     "/auth/login",
-    response_model=TokenResponse | ChallengeResponse,
+    response_model=TokenResponse | CheckResponse,
     tags=["auth"],
-    summary="Log in: a session on a trusted device, otherwise a 2FA challenge",
+    summary="Log in: a session on a trusted phone, otherwise the second check",
 )
 async def login(
     body: LoginRequest, request: Request, service: Service
-) -> TokenResponse | ChallengeResponse:
+) -> TokenResponse | CheckResponse:
     device = device_info(request, body.device_id)
     result = await service.login(body.identifier, body.pin, device, body.device_token)
-    return _signed_in(result) if isinstance(result, SignedIn) else _challenge(result)
+    return _signed_in(result) if isinstance(result, SignedIn) else _check(result)
 
 
 @router.post(
-    "/auth/mfa/enrol/start",
-    response_model=EnrolStartResponse,
-    tags=["auth"],
-    summary="Get the authenticator secret for this sign-up (shown once)",
-)
-async def enrol_start(body: ChallengeRequest, service: Service) -> EnrolStartResponse:
-    secret, uri = await service.enrol_start(body.mfa_challenge_id)
-    return EnrolStartResponse(secret=secret, otpauth_uri=uri)
-
-
-@router.post(
-    "/auth/mfa/enrol/confirm",
-    response_model=EnrolConfirmResponse,
-    tags=["auth"],
-    summary="Confirm the first authenticator code: 2FA on, signed in, recovery codes",
-)
-async def enrol_confirm(
-    body: EnrolConfirmRequest, request: Request, service: Service
-) -> EnrolConfirmResponse:
-    device = device_info(request, body.device_id)
-    done = await service.enrol_confirm(body.mfa_challenge_id, body.otp_code, device)
-    tokens = done.signed_in.tokens
-    return EnrolConfirmResponse(
-        access_token=tokens.access_token,
-        refresh_token=tokens.refresh_token,
-        device_token=done.signed_in.device_token,
-        recovery_codes=done.recovery_codes,
-    )
-
-
-@router.post(
-    "/auth/mfa/verify",
+    "/auth/checks/{check_id}/codes",
     response_model=TokenResponse,
     tags=["auth"],
-    summary="Finish log-in with an authenticator code or a recovery code",
+    summary="Finish sign-up or log-in with the email code (and the SMS code when asked)",
 )
-async def mfa_verify(body: MfaVerifyRequest, request: Request, service: Service) -> TokenResponse:
+async def check_codes(
+    check_id: uuid.UUID, body: CheckCodesRequest, request: Request, service: Service
+) -> TokenResponse:
     device = device_info(request, body.device_id)
-    result = await service.mfa_verify(
-        body.mfa_challenge_id,
-        device,
-        otp_code=body.otp_code,
-        recovery_code=body.recovery_code,
-    )
-    return _signed_in(result)
+    return _signed_in(await service.check_codes(check_id, device, body.email_code, body.sms_code))
+
+
+@router.post(
+    "/auth/checks/{check_id}/face",
+    response_model=FaceStartResponse,
+    tags=["auth"],
+    summary="Start the face check for a log-in or a PIN reset (link shown once)",
+)
+async def face_start(check_id: uuid.UUID, service: Service) -> FaceStartResponse:
+    return FaceStartResponse(url=await service.face_start(check_id))
+
+
+@router.post(
+    "/auth/checks/{check_id}/face/result",
+    response_model=TokenResponse,
+    tags=["auth"],
+    summary="Finish log-in with the face check result (409 while it is still running)",
+)
+async def face_finish(
+    check_id: uuid.UUID, body: DeviceRequest, request: Request, service: Service
+) -> TokenResponse:
+    device = device_info(request, body.device_id)
+    return _signed_in(await service.face_finish(check_id, device))
 
 
 @router.post(
     "/auth/step-up",
     response_model=StepUpResponse,
     tags=["auth"],
-    summary="Approve one sensitive action with a fresh authenticator code (5 minutes)",
+    summary="Approve one sensitive action with fingerprint/Face ID on a trusted phone",
 )
 async def step_up(
     body: StepUpRequest, principal: CurrentPrincipal, service: Service
 ) -> StepUpResponse:
-    token = await service.step_up(principal, body.action, body.otp_code)
-    return StepUpResponse(
-        step_up_token=token,
-        action=body.action,
-        expires_in_seconds=int(STEP_UP_TTL.total_seconds()),
-    )
+    token = await service.step_up_biometric(principal, body.action, body.unlock_key)
+    return _step_up(token, body.action)
+
+
+@router.post(
+    "/auth/step-up/checks",
+    response_model=CheckResponse,
+    tags=["auth"],
+    summary="No fingerprint: start a face check (or an email code before the identity check)",
+)
+async def step_up_check(
+    body: StepUpCheckRequest, principal: CurrentPrincipal, service: Service
+) -> CheckResponse:
+    return _check(await service.step_up_check(principal, body.action))
+
+
+@router.post(
+    "/auth/step-up/checks/{check_id}/code",
+    response_model=StepUpResponse,
+    tags=["auth"],
+    summary="Approve the action with the email code",
+)
+async def step_up_code(
+    check_id: uuid.UUID, body: EmailCodeRequest, principal: CurrentPrincipal, service: Service
+) -> StepUpResponse:
+    token, action = await service.step_up_codes(principal, check_id, body.email_code)
+    return _step_up(token, action)
+
+
+@router.post(
+    "/auth/step-up/checks/{check_id}/face",
+    response_model=FaceStartResponse,
+    tags=["auth"],
+    summary="Start the face check for one action (link shown once)",
+)
+async def step_up_face_start(
+    check_id: uuid.UUID, principal: CurrentPrincipal, service: Service
+) -> FaceStartResponse:
+    return FaceStartResponse(url=await service.face_start(check_id, principal))
+
+
+@router.post(
+    "/auth/step-up/checks/{check_id}/face/result",
+    response_model=StepUpResponse,
+    tags=["auth"],
+    summary="Approve the action with the face check result (409 while it is still running)",
+)
+async def step_up_face_finish(
+    check_id: uuid.UUID, principal: CurrentPrincipal, service: Service
+) -> StepUpResponse:
+    token, action = await service.step_up_face(principal, check_id)
+    return _step_up(token, action)
 
 
 @router.post(
@@ -249,50 +296,11 @@ async def revoke_session(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post(
-    "/users/me/recovery-codes",
-    response_model=RecoveryCodesResponse,
-    tags=["users"],
-    summary="Replace all recovery codes (step-up: recovery_codes.regenerate)",
-)
-async def regenerate_recovery_codes(
-    principal: CurrentPrincipal, service: Service, step_up_token: StepUpToken = None
-) -> RecoveryCodesResponse:
-    codes = await service.regenerate_recovery_codes(principal, step_up_token)
-    return RecoveryCodesResponse(recovery_codes=codes)
-
-
-@router.post(
-    "/users/me/mfa/replace/start",
-    response_model=EnrolStartResponse,
-    tags=["users"],
-    summary="Start replacing the authenticator (step-up: mfa.change)",
-)
-async def replace_start(
-    principal: CurrentPrincipal, service: Service, step_up_token: StepUpToken = None
-) -> EnrolStartResponse:
-    secret, uri = await service.replace_start(principal, step_up_token)
-    return EnrolStartResponse(secret=secret, otpauth_uri=uri)
-
-
-@router.post(
-    "/users/me/mfa/replace/confirm",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=["users"],
-    summary="Confirm the new authenticator's first code",
-)
-async def replace_confirm(
-    body: OtpCodeRequest, principal: CurrentPrincipal, service: Service
-) -> Response:
-    await service.replace_confirm(principal, body.otp_code)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
 @router.get(
     "/users/me/trusted-devices",
     response_model=list[TrustedDeviceResponse],
     tags=["users"],
-    summary="Devices that can log in with the PIN only (30 days)",
+    summary="Phones that can log in with the PIN only (30 days)",
 )
 async def trusted_devices(
     principal: CurrentPrincipal, service: Service
@@ -353,18 +361,21 @@ async def pin_reset_start(body: PinResetStartRequest, service: Service) -> dict[
 
 
 @router.post(
+    "/auth/pin-reset/verify",
+    response_model=CheckResponse,
+    summary="Forgot PIN: the SMS code; next, a face check or an email code (ADR-054)",
+)
+async def pin_reset_verify(body: PinResetVerifyRequest, service: Service) -> CheckResponse:
+    return _check(await service.pin_reset_verify(body.phone, body.code))
+
+
+@router.post(
     "/auth/pin-reset/confirm",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Forgot PIN: SMS code + authenticator or recovery code + new PIN",
+    summary="Forgot PIN: the email code (or face check result) and the new PIN",
 )
 async def pin_reset_confirm(body: PinResetConfirmRequest, service: Service) -> Response:
-    await service.pin_reset_confirm(
-        body.phone,
-        body.code,
-        body.new_pin,
-        otp_code=body.otp_code,
-        recovery_code=body.recovery_code,
-    )
+    await service.pin_reset_confirm(body.check_id, body.new_pin, body.email_code)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

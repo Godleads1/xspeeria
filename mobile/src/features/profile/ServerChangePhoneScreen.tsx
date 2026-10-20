@@ -1,5 +1,5 @@
 /**
- * Change phone number against the real server (ADR-047): new number → authenticator code →
+ * Change phone number against the real server (ADR-047): new number → "Confirm it's you" →
  * a code texted to the NEW number → changed. Email and date of birth are not changed here
  * (contract: email changes go through Support; the date of birth comes from the verified ID).
  */
@@ -14,12 +14,14 @@ import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { PhoneInput, fullPhone } from '../auth/ui';
 import { FieldInput, OutlinedField } from '../market/controls';
-import { ServerCodeSheet } from '../security/ServerCodeSheet';
+import { ServerConfirm } from '../security/ServerConfirm';
+import type { ConfirmIdentity } from '../security/serverConfirm';
 import { normalisePhone } from './verification';
 import { tr } from "../../i18n";
 
 export interface PhoneChangeSource {
-  start(newPhone: string, authenticatorCode: string): Promise<void>;
+  /** Needs a one-use `contact.change` approval (ADR-054). */
+  start(newPhone: string, approval: string): Promise<void>;
   confirm(newPhone: string, smsCode: string): Promise<void>;
 }
 
@@ -27,8 +29,11 @@ export function ServerChangePhoneScreen({
   source,
   onBack,
   onDone,
+  confirmWith,
 }: {
   source: PhoneChangeSource;
+  /** Tests inject this. */
+  confirmWith?: ConfirmIdentity;
   onBack: () => void;
   onDone: () => void;
 }): ReactElement {
@@ -117,13 +122,16 @@ export function ServerChangePhoneScreen({
           <PrimaryButton testID="change-phone-confirm" label={busy ? tr("Saving…") : tr("Confirm")} onPress={() => void confirm()} disabled={busy} />
         )}
       </View>
-      <ServerCodeSheet
+      <ServerConfirm
         visible={asking}
+        action="contact.change"
+        confirm={confirmWith}
         reason={tr("Change your phone number to {{value}}.", { value: phone ?? '' })}
         onCancel={() => setAsking(false)}
-        onSubmit={async (otp) => {
+        onError={setError}
+        onSubmit={async (approval) => {
           if (!phone) return;
-          await source.start(phone, otp);
+          await source.start(phone, approval);
           setAsking(false);
           setSent(true);
         }}

@@ -49,9 +49,9 @@ export const FAQ: readonly FaqItem[] = [
   {
     id: 'two-factor',
     topic: 'start',
-    question: k("Why do I need 2 FA?"),
+    question: k("How do you check it’s me?"),
     answer:
-      k("Two-factor authentication is required to trade. We ask for a code when you sign in on a new phone and before sensitive changes such as adding a beneficiary. We never send codes by SMS, and our staff will never ask for your codes."),
+      k("Besides your PIN, we check it’s you on a new phone and before sensitive changes such as adding a payout account. On a phone you have used before, Face ID or your fingerprint does it. After your identity check, a new phone or a forgotten PIN needs a quick selfie that we match to your ID photo. Before it, we send codes to your email and phone. Our staff will never ask for your codes or PIN."),
   },
   {
     id: 'how-to-sell',
@@ -95,7 +95,7 @@ export const FAQ: readonly FaqItem[] = [
     topic: 'payments',
     question: k("When will I receive my money?"),
     answer:
-      k("Once both sides have paid, the partner bank pays your beneficiary account. You can follow every step in History. For your safety, adding a beneficiary and choosing where a deal is paid each need your authenticator code."),
+      k("Once both sides have paid, the partner bank pays your beneficiary account. You can follow every step in History. For your safety, adding a beneficiary and choosing where a deal is paid each need you to confirm it’s you."),
   },
   {
     id: 'countries',

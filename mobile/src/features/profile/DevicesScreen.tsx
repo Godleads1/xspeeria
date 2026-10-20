@@ -147,7 +147,7 @@ export function DevicesScreen({ source, onBack }: { source: DevicesSource; onBac
         ))}
 
         <Text style={styles.section}>{tr("Trusted devices")}</Text>
-        <Text style={styles.note}>{tr("These can log in with your PIN only, without an authenticator code, for 30 days.")}</Text>
+        <Text style={styles.note}>{tr("These can log in with your PIN only for 30 days. A new phone needs an extra check.")}</Text>
         {trusted.length === 0 ? (
           <Text testID="trusted-empty" style={styles.meta}>{tr("No trusted devices.")}</Text>
         ) : (

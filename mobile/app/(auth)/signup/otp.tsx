@@ -28,7 +28,7 @@ export default function SignupOtpRoute(): ReactElement {
         onVerified={() => {
           // The PIN is on the server now; the app keeps no copy.
           signup.update({ identityVerified: true, pin: null });
-          router.replace('/signup/authenticator');
+          router.replace('/mfa'); // ADR-054: the email code next
         }}
         onExpired={() => router.replace('/signup/details')}
         onBack={() => router.back()}

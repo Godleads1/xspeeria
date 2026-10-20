@@ -32,16 +32,8 @@ class Person(User):
         self.phone = phone
 
     async def approve(self, action: str = "trade.accept") -> str:
-        """A fresh authenticator code → one step-up approval. Moves the clock past the
-        previous code, since each code works once."""
-        self.env.clock.advance(seconds=31)
-        r = await self.env.client.post(
-            "/api/v1/auth/step-up",
-            json={"action": action, "otp_code": self.env.totp(self.phone)},
-            headers=self._h(),
-        )
-        assert r.status_code == 200, r.text
-        return str(r.json()["step_up_token"])
+        """One step-up approval with fingerprint/Face ID on this person's trusted phone."""
+        return await self.env.approve(self.token, action, self.phone)
 
     async def accept(
         self,

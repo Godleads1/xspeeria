@@ -1,7 +1,7 @@
 /**
  * Take an offer (ADR-032, server builds only). The offer is read fresh from the server (the
- * id in the route is untrusted), the user enters how much to take and a fresh authenticator
- * code, and the server records a Match (ADR-031).
+ * id in the route is untrusted), the user enters how much to take and confirms it's them
+ * (Fingerprint/Face ID or a face check, ADR-054), and the server records a Match (ADR-031).
  *
  * A Match is a record of the deal — information, not money. Paying into the partner bank's
  * escrow and choosing payout accounts come in later steps; Xspeeria never holds funds.
@@ -60,7 +60,6 @@ export function TakeOfferScreen({
   const [offer, setOffer] = useState<ServerOffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [match, setMatch] = useState<ServerMatch | null>(null);
@@ -81,7 +80,7 @@ export function TakeOfferScreen({
   const amountMinor = parseToHundredths(amount);
   const tooMuch = amountMinor !== null && remaining !== null && amountMinor > remaining;
   const ngn = offer && amountMinor !== null && !tooMuch ? ngnMinorFor(amountMinor, offer.desired_rate) : null;
-  const ready = offer !== null && amountMinor !== null && !tooMuch && /^[0-9]{6}$/.test(code) && !busy;
+  const ready = offer !== null && amountMinor !== null && !tooMuch && !busy;
 
   const editAmount = (v: string): void => {
     setAmount(v);
@@ -95,7 +94,14 @@ export function TakeOfferScreen({
     setError(null);
     try {
       key.current ??= source.newKey();
-      approval.current ??= await source.approve(code);
+      approval.current ??= await source.approve(
+        tr("Take {{amount}} {{currency}} at NGN {{rate}}", {
+          amount: formatHundredths(amountMinor),
+          currency: offer.source_currency,
+          rate: groupedRate(offer.desired_rate),
+        }),
+      );
+      if (!approval.current) return; // cancelled
       const m = await source.accept(
         offer.offer_id,
         formatHundredths(amountMinor).replace(/,/g, ""),
@@ -105,7 +111,6 @@ export function TakeOfferScreen({
       setMatch(m);
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) approval.current = null; // spent or refused
-      if (e instanceof ApiError && e.status !== 0) setCode(""); // a code works once
       setError(messageFor(e));
     } finally {
       setBusy(false);
@@ -193,21 +198,6 @@ export function TakeOfferScreen({
             <Text testID="take-ngn" style={styles.line}>{tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })}</Text>
           ) : null}
 
-          <OutlinedField label={tr("Authenticator code *")}>
-            <FieldInput
-              testID="take-code"
-              accessibilityLabel={tr("6-digit code from your authenticator app")}
-              value={code}
-              onChangeText={(t) => {
-                setCode(t.replace(/[^0-9]/g, "").slice(0, 6));
-                setError(null);
-              }}
-              placeholder="123456"
-              keyboardType="number-pad"
-              inputMode="numeric"
-              maxLength={6}
-            />
-          </OutlinedField>
 
           {error ? (
             <Text testID="take-error" accessibilityRole="alert" style={styles.error}>

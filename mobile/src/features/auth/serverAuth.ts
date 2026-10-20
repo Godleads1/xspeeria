@@ -1,5 +1,5 @@
 /**
- * Sign-up, log-in and 2FA against the real server (ADR-025, ADR-026, ADR-027).
+ * Sign-up, log-in and the second check against the real server (ADR-025, ADR-027, ADR-054).
  *
  * Holds the access token in memory and the refresh and trusted-device tokens in secure
  * storage. While the user is active it refreshes every 4 minutes, inside the server's
@@ -10,11 +10,11 @@
  * a fingerprint can resume the same session; the key it needs lives behind the biometric
  * prompt (`unlockKey`). It never extends the 7-day limit: the server refuses past it.
  *
- * The 2FA challenge ID and the tokens of a sign-up that is still showing recovery codes are
- * kept here, in memory, never in route parameters.
+ * The open second check (email/SMS codes or a face check) and the tokens of a sign-up that has
+ * not reached its last screen yet are kept here, in memory, never in route parameters.
  */
 
-import { authApi, isChallenge, type Fetch, type Tokens } from '../../api/authApi';
+import { authApi, isCheck, type Check, type Fetch, type Tokens } from '../../api/authApi';
 import { ApiError } from '../../api/client';
 import { secureTokens } from '../../api/secureTokens';
 import { unlockKey } from '../../api/unlockKey';
@@ -23,18 +23,20 @@ import { tr } from "../../i18n";
 
 export const KEEP_ALIVE_MS = 4 * 60 * 1000;
 
-export type LoginOutcome = 'signedIn' | 'mfa' | 'enrol';
+export type LoginOutcome = 'signedIn' | 'check';
+/** After the second check: signed in, or a sign-up that goes on to its last screen. */
+export type CheckOutcome = 'signedIn' | 'signedUp';
 
 interface State {
   access: string | null;
-  challengeId: string | null;
-  /** Sign-up finished on the server but recovery codes are still on screen. */
+  check: Check | null;
+  /** Sign-up finished on the server; the session starts on its last screen. */
   pending: Tokens | null;
   lastRefreshAt: number;
   refreshing: Promise<void> | null;
 }
 
-const state: State = { access: null, challengeId: null, pending: null, lastRefreshAt: 0, refreshing: null };
+const state: State = { access: null, check: null, pending: null, lastRefreshAt: 0, refreshing: null };
 let testServer: { fetchImpl: Fetch; baseUrl: string } | undefined;
 const x = (): { fetchImpl?: Fetch; baseUrl?: string } => testServer ?? {};
 
@@ -56,7 +58,7 @@ async function signIn(
 function dropSession(): void {
   state.access = null;
   state.pending = null;
-  state.challengeId = null;
+  state.check = null;
   void secureTokens.setRefreshToken(null);
 }
 
@@ -74,9 +76,24 @@ session.onIdleLock(() => {
   if (!session.biometricOn()) return endSession();
   // Keep the refresh token for Face ID/fingerprint; the access token goes now.
   state.access = null;
-  state.challengeId = null;
+  state.check = null;
   state.pending = null;
 });
+
+function openCheck(): Check {
+  if (!state.check) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
+  return state.check;
+}
+
+async function finishCheck(check: Check, tokens: Tokens, now: number): Promise<CheckOutcome> {
+  state.check = null;
+  if (check.purpose === 'signup') {
+    state.pending = tokens;
+    return 'signedUp';
+  }
+  await signIn(tokens, now);
+  return 'signedIn';
+}
 
 export const serverAuth = {
   /** Tests only: a fake server instead of `fetch` and the built-in address. */
@@ -86,7 +103,7 @@ export const serverAuth = {
   /** Tests only. */
   reset(): void {
     state.access = null;
-    state.challengeId = null;
+    state.check = null;
     state.pending = null;
     state.lastRefreshAt = 0;
     state.refreshing = null;
@@ -95,7 +112,9 @@ export const serverAuth = {
   accessToken: (): string | null => state.access,
   /** Where requests go (the test server in tests). For other API modules. */
   apiOptions: (): { fetchImpl?: Fetch; baseUrl?: string } => x(),
-  hasChallenge: (): boolean => state.challengeId !== null,
+  hasCheck: (): boolean => state.check !== null,
+  /** The open second check (for the screen: which method, masked email/phone). */
+  check: (): Check | null => state.check,
   hasPending: (): boolean => state.pending !== null,
 
   // --- sign-up (reordered for the server, ADR-027) ---
@@ -105,26 +124,10 @@ export const serverAuth = {
   },
 
   async verifyPhone(phone: string, code: string): Promise<void> {
-    const challenge = await authApi.verifyPhone({ phone, code }, x());
-    state.challengeId = challenge.mfa_challenge_id;
+    state.check = await authApi.verifyPhone({ phone, code }, x());
   },
 
-  async enrolStart(): Promise<{ secret: string; uri: string }> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
-    const r = await authApi.enrolStart(state.challengeId, x());
-    return { secret: r.secret, uri: r.otpauth_uri };
-  },
-
-  /** The first authenticator code. Returns the recovery codes; the session starts on `finish`. */
-  async enrolConfirm(code: string): Promise<readonly string[]> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
-    const r = await authApi.enrolConfirm(state.challengeId, code, x());
-    state.challengeId = null;
-    state.pending = r;
-    return r.recovery_codes;
-  },
-
-  /** After the recovery codes were saved: start the session. */
+  /** After the sign-up's last screen: start the session. */
   async finish(now: number, options: { newAccount?: boolean } = {}): Promise<void> {
     const tokens = state.pending;
     if (!tokens) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
@@ -137,20 +140,36 @@ export const serverAuth = {
   async login(identifier: string, pin: string, now: number): Promise<LoginOutcome> {
     const deviceToken = await secureTokens.deviceToken();
     const r = await authApi.login({ identifier, pin, ...(deviceToken ? { device_token: deviceToken } : {}) }, x());
-    if (isChallenge(r)) {
-      state.challengeId = r.mfa_challenge_id;
-      return r.enrolment_required ? 'enrol' : 'mfa';
+    if (isCheck(r)) {
+      state.check = r;
+      return 'check';
     }
     await signIn(r, now);
     return 'signedIn';
   },
 
-  async verifyMfa(code: { otp: string } | { recovery: string }, now: number): Promise<void> {
-    if (!state.challengeId) throw new ApiError('AUTH_410_CHALLENGE_EXPIRED', 410, tr("This step has expired. Please log in again."));
-    const body = 'otp' in code ? { otp_code: code.otp } : { recovery_code: code.recovery };
-    const tokens = await authApi.mfaVerify({ mfa_challenge_id: state.challengeId, ...body }, x());
-    state.challengeId = null;
-    await signIn(tokens, now);
+  // --- the second check (ADR-054) ---
+
+  /** The email code, plus the SMS code for a new phone before the identity check. */
+  async checkCodes(emailCode: string, smsCode: string | null, now: number): Promise<CheckOutcome> {
+    const check = openCheck();
+    const tokens = await authApi.checkCodes(
+      check.check_id,
+      { email_code: emailCode, ...(smsCode ? { sms_code: smsCode } : {}) },
+      x(),
+    );
+    return finishCheck(check, tokens, now);
+  },
+
+  /** Opens the face check. Null: the local developer check, which needs no page. */
+  async faceStart(): Promise<string | null> {
+    return (await authApi.faceStart(openCheck().check_id, x())).url;
+  },
+
+  /** The face check result. 409 while it is still running (the screen says so). */
+  async faceFinish(now: number): Promise<CheckOutcome> {
+    const check = openCheck();
+    return finishCheck(check, await authApi.faceResult(check.check_id, x()), now);
   },
 
   // --- keeping the session alive ---
@@ -196,7 +215,7 @@ export const serverAuth = {
       throw new ApiError(
         'AUTH_403_DEVICE_NOT_TRUSTED',
         403,
-        tr("Fingerprint or Face ID unlock needs a trusted device. Log in with your authenticator code and choose to trust this device first."),
+        tr("Fingerprint or Face ID needs a trusted phone. Log out and log in again on this phone to trust it."),
       );
     }
     const r = await authApi.biometricEnable(access, device, x());

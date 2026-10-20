@@ -21,6 +21,9 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 const NOW = Date.UTC(2026, 9, 18, 18, 0, 0);
+/** "Confirm it's you" (ADR-054): the sheet is tested on its own; here it just approves. */
+const confirm = jest.fn(async (_a: string, _r: string): Promise<string | null> => 'approval-1');
+beforeEach(() => confirm.mockClear());
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
 const acct = (over: Partial<ServerPayoutAccount> = {}): ServerPayoutAccount => ({
@@ -91,15 +94,14 @@ describe('Payout accounts list', () => {
     expect(screen.getByTestId('payout-account-a2')).toHaveTextContent(/Bank check pending/);
   });
 
-  it('removing asks for the authenticator code', async () => {
+  it('removing asks "Confirm it’s you" first', async () => {
     const src = fake();
-    await render(<PayoutAccountsScreen source={src} onBack={jest.fn()} onAdd={jest.fn()} />);
+    await render(<PayoutAccountsScreen source={src} onBack={jest.fn()} onAdd={jest.fn()} confirmWith={confirm} />);
     await flush();
     await fireEvent.press(screen.getByTestId('payout-account-a1-remove'));
-    await fireEvent.changeText(screen.getByTestId('server-code-input'), '123456');
-    await fireEvent.press(screen.getByTestId('server-code-confirm'));
     await flush();
-    expect(src.remove).toHaveBeenCalledWith('a1', '123456');
+    expect(confirm).toHaveBeenCalledWith('beneficiary.remove', expect.stringContaining('6789'));
+    expect(src.remove).toHaveBeenCalledWith('a1', 'approval-1');
     expect(screen.getByTestId('payout-accounts-notice')).toHaveTextContent('Account removed.');
   });
 });
@@ -115,54 +117,64 @@ describe('Add payout account', () => {
     });
   });
 
-  it('checks the format, then sends details with the code', async () => {
+  it('checks the format, then confirms it’s you and sends the details', async () => {
     const src = fake();
     const onAdded = jest.fn();
-    await render(<AddPayoutAccountScreen source={src} onBack={jest.fn()} onAdded={onAdded} />);
+    await render(<AddPayoutAccountScreen source={src} onBack={jest.fn()} onAdded={onAdded} confirmWith={confirm} />);
     await fireEvent.changeText(screen.getByTestId('field-bankName'), 'Zenith Bank');
     await fireEvent.changeText(screen.getByTestId('field-accountNumber'), '12345');
-    await fireEvent.changeText(screen.getByTestId('add-payout-code'), '123456');
     await fireEvent.press(screen.getByTestId('add-payout-save'));
     expect(src.add).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
     expect(screen.getByTestId('error-accountNumber')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('field-accountNumber'), '0123456789');
-    await fireEvent.changeText(screen.getByTestId('add-payout-code'), '123456');
     await fireEvent.press(screen.getByTestId('add-payout-save'));
     await flush();
-    expect(src.add).toHaveBeenCalledWith({ currency: 'NGN', bank_name: 'Zenith Bank', account_number: '0123456789' }, '123456');
+    expect(confirm).toHaveBeenCalledWith('beneficiary.add', 'Add a NGN payout account.');
+    expect(src.add).toHaveBeenCalledWith({ currency: 'NGN', bank_name: 'Zenith Bank', account_number: '0123456789' }, 'approval-1');
     expect(onAdded).toHaveBeenCalled();
   });
 
   it('shows the server’s refusal', async () => {
     const src = fake();
-    src.add.mockRejectedValueOnce(new ApiError('AUTH_403_FORBIDDEN', 403, 'Please confirm with your authenticator code first.'));
-    await render(<AddPayoutAccountScreen source={src} onBack={jest.fn()} onAdded={jest.fn()} />);
+    src.add.mockRejectedValueOnce(new ApiError('AUTH_403_FORBIDDEN', 403, "Please confirm it's you first."));
+    await render(<AddPayoutAccountScreen source={src} onBack={jest.fn()} onAdded={jest.fn()} confirmWith={confirm} />);
     await fireEvent.changeText(screen.getByTestId('field-bankName'), 'Zenith Bank');
     await fireEvent.changeText(screen.getByTestId('field-accountNumber'), '0123456789');
-    await fireEvent.changeText(screen.getByTestId('add-payout-code'), '000000');
     await fireEvent.press(screen.getByTestId('add-payout-save'));
     await flush();
-    expect(screen.getByTestId('add-payout-error')).toHaveTextContent(/authenticator code/);
+    expect(screen.getByTestId('add-payout-error')).toHaveTextContent(/confirm it's you/);
+  });
+
+  it('cancelling "Confirm it’s you" sends nothing', async () => {
+    const src = fake();
+    confirm.mockResolvedValueOnce(null);
+    await render(<AddPayoutAccountScreen source={src} onBack={jest.fn()} onAdded={jest.fn()} confirmWith={confirm} />);
+    await fireEvent.changeText(screen.getByTestId('field-bankName'), 'Zenith Bank');
+    await fireEvent.changeText(screen.getByTestId('field-accountNumber'), '0123456789');
+    await fireEvent.press(screen.getByTestId('add-payout-save'));
+    await flush();
+    expect(src.add).not.toHaveBeenCalled();
   });
 });
 
 describe('Choose payout accounts for a deal', () => {
   async function open(src: PayoutSource) {
-    await render(<ChoosePayoutScreen matchId="m1" source={src} onBack={jest.fn()} onAddAccount={jest.fn()} now={() => NOW} />);
+    await render(<ChoosePayoutScreen matchId="m1" source={src} onBack={jest.fn()} onAddAccount={jest.fn()} now={() => NOW} confirmWith={confirm} />);
     await flush();
   }
 
-  it('defaults to the first account getting everything, and confirms with the code', async () => {
+  it('defaults to the first account getting everything, and confirms it’s you', async () => {
     const src = fake([acct(), acct({ payout_account_id: 'a2', account_last4: '2222' }), acct({ payout_account_id: 'u1', currency: 'USD' })]);
     await open(src);
     expect(screen.getByTestId('choose-summary')).toHaveTextContent(/You receive 264,100.00 NGN/);
     expect(screen.getByTestId('choose-summary')).toHaveTextContent(/25 min left/);
     expect(screen.queryByTestId('choose-amount-u1')).toBeNull(); // wrong currency is not offered
     expect(screen.getByTestId('choose-left')).toHaveTextContent('All assigned.');
-    await fireEvent.changeText(screen.getByTestId('choose-code'), '123456');
     await fireEvent.press(screen.getByTestId('choose-confirm'));
     await flush();
-    expect(src.choose).toHaveBeenCalledWith('m1', [{ payout_account_id: 'a1', amount: '264100.00' }], '123456');
+    expect(confirm).toHaveBeenCalledWith('payout.confirm', 'Choose where 264,100.00 NGN is paid.');
+    expect(src.choose).toHaveBeenCalledWith('m1', [{ payout_account_id: 'a1', amount: '264100.00' }], 'approval-1');
     expect(screen.getByTestId('choose-status')).toHaveTextContent(/Waiting for the other side/);
   });
 
@@ -171,7 +183,6 @@ describe('Choose payout accounts for a deal', () => {
     await open(src);
     await fireEvent.changeText(screen.getByTestId('choose-amount-a1'), '200000');
     expect(screen.getByTestId('choose-left')).toHaveTextContent('Left to assign: 64,100.00 NGN');
-    await fireEvent.changeText(screen.getByTestId('choose-code'), '123456');
     expect(screen.getByTestId('choose-confirm')).toBeDisabled();
     await fireEvent.changeText(screen.getByTestId('choose-amount-a2'), '64100.01');
     expect(screen.getByTestId('choose-left')).toHaveTextContent('0.01 NGN more than you receive');
@@ -184,7 +195,7 @@ describe('Choose payout accounts for a deal', () => {
         { payout_account_id: 'a1', amount: '200000.00' },
         { payout_account_id: 'a2', amount: '64100.00' },
       ],
-      '123456',
+      'approval-1',
     );
   });
 

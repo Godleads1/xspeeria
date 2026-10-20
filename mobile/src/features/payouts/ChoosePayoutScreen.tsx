@@ -2,7 +2,7 @@
  * Choose where you are paid for one deal (ADR-036, server builds). Within 30 minutes of the
  * deal, each side picks one or more of their own bank-confirmed accounts in the currency they
  * receive, and how much each gets; the amounts must add up exactly (ADR-021 §3, ADR-035).
- * Your authenticator code confirms it. When both sides have chosen, the deal is ready for the
+ * "Confirm it's you" (ADR-054) confirms it. When both sides have chosen, the deal is ready for the
  * partner bank's escrow. Amounts are integer minor units throughout.
  */
 
@@ -17,6 +17,7 @@ import { ErrorState, LoadingState, PrimaryButton, Screen } from '../../component
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { formatHundredths, parseToHundredths } from '../market/money';
+import { confirmIdentity, type ConfirmIdentity } from '../security/serverConfirm';
 import type { PayoutSource } from './serverPayouts';
 import { tr } from "../../i18n";
 
@@ -40,7 +41,10 @@ export function ChoosePayoutScreen({
   onAddAccount,
   refreshSignal = 0,
   now = Date.now,
+  confirmWith = confirmIdentity,
 }: {
+  /** Tests inject this. */
+  confirmWith?: ConfirmIdentity;
   matchId: string;
   source: PayoutSource;
   onBack: () => void;
@@ -53,7 +57,6 @@ export function ChoosePayoutScreen({
   const [accounts, setAccounts] = useState<ServerPayoutAccount[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -102,7 +105,7 @@ export function ChoosePayoutScreen({
   const malformed = parsed.some(([, m]) => m === null || m === 0);
   const assigned = parsed.reduce((sum, [, m]) => sum + (m ?? 0), 0);
   const leftToAssign = due - assigned;
-  const ready = !malformed && lines.length > 0 && leftToAssign === 0 && code.length === 6 && !busy;
+  const ready = !malformed && lines.length > 0 && leftToAssign === 0 && !busy;
 
   if (deal.preparation_state !== 'awaiting_payout_accounts' || saved) {
     const text =
@@ -123,13 +126,13 @@ export function ChoosePayoutScreen({
   const submit = async (): Promise<void> => {
     setBusy(true);
     setError(null);
-    const typed = code;
-    setCode('');
     try {
+      const approval = await confirmWith('payout.confirm', tr("Choose where {{due}} {{currency}} is paid.", { due: formatHundredths(due), currency }));
+      if (!approval) return;
       const m = await source.choose(
         matchId,
         parsed.map(([id, minor]) => ({ payout_account_id: id, amount: formatHundredths(minor ?? 0).replace(/,/g, '') })),
-        typed,
+        approval,
       );
       setDeal(m);
       setSaved(true);
@@ -192,21 +195,6 @@ export function ChoosePayoutScreen({
         </Text>
       ) : null}
 
-      <OutlinedField label={tr("Authenticator code *")}>
-        <FieldInput
-          testID="choose-code"
-          accessibilityLabel={tr("6-digit code from your authenticator app")}
-          value={code}
-          onChangeText={(t) => {
-            setCode(t.replace(/[^0-9]/g, '').slice(0, 6));
-            setError(null);
-          }}
-          placeholder="123456"
-          keyboardType="number-pad"
-          inputMode="numeric"
-          maxLength={6}
-        />
-      </OutlinedField>
       {error ? (
         <Text testID="choose-error" accessibilityRole="alert" style={styles.warn}>
           {error}

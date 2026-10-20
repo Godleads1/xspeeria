@@ -174,6 +174,8 @@ Endpoints are grouped by module per ARCHITECTURE.md’s core module list: Auth, 
 
 **POST /v1/auth/mfa/verify**
 
+> **Superseded for the user's second check by ADR-054 (owner, 2026-10-20).** The authenticator code is replaced by email/SMS codes (before the identity check) and a face check (after it): `POST /api/v1/auth/checks/{check_id}/codes`, `/face`, `/face/result`. The rules below (5-minute expiry for log-in, 5 tries, a new device session on success) still apply in spirit; exact values are in ADR-054. Kept for history.
+
 |                  |                                                                              |
 |------------------|------------------------------------------------------------------------------|
 | **Field**        | **Specification**                                                            |

@@ -17,6 +17,10 @@ __all__ = [
     "MFA_LOCK",
     "PAYOUT_HOLD",
     "STEP_UP_ACTIONS",
+    "CHECK_CODE_TTL",
+    "CHECKS_PER_DAY",
+    "CHECKS_PER_HOUR",
+    "FACE_CHECK_TTL",
     "STEP_UP_TTL",
     "TRUSTED_DEVICE_TTL",
     "CODE_RESEND_WAIT",
@@ -65,14 +69,18 @@ STEP_UP_TTL = timedelta(minutes=5)  # one action, within 5 minutes (2026-10-18)
 #: Product owner, 2026-10-19 (DEC-044): no payout wait after recovery or an authenticator
 #: reset (was 24 hours, ADR-008). Trust still ends everywhere and an alert is sent.
 PAYOUT_HOLD = timedelta(0)
+#: ADR-054 — the second check after the PIN (email/SMS codes or a face check).
+CHECK_CODE_TTL = timedelta(minutes=10)  # same as the SMS code expiry (ADR-024)
+FACE_CHECK_TTL = timedelta(minutes=15)  # time to take the selfie in the provider's page
+#: Checks started per account (each may send an SMS, an email or cost a face check).
+CHECKS_PER_HOUR = 5
+CHECKS_PER_DAY = 10
 STEP_UP_ACTIONS = frozenset(
     {
         "beneficiary.add",
         "beneficiary.remove",
         "contact.change",
         "pin.change",
-        "mfa.change",
-        "recovery_codes.regenerate",
         "trade.accept",
         "payout.confirm",
     }

@@ -1,7 +1,10 @@
-/** PIN change and reset against the real server (ADR-046). PINs are never stored or logged. */
+/**
+ * PIN change and reset against the real server (ADR-046, ADR-054). PINs and codes are never
+ * stored or logged. Changes take a one-use approval from "Confirm it's you" (`serverConfirm`).
+ */
 
 import { ApiError } from '../../api/client';
-import { authApi } from '../../api/authApi';
+import { authApi, type Check } from '../../api/authApi';
 import { secureTokens } from '../../api/secureTokens';
 import { serverAuth } from './serverAuth';
 import { tr } from "../../i18n";
@@ -13,27 +16,33 @@ function token(): string {
 }
 
 export interface PinSource {
-  change(currentPin: string, newPin: string, authenticatorCode: string): Promise<void>;
+  change(currentPin: string, newPin: string, approval: string): Promise<void>;
   resetStart(phone: string): Promise<void>;
-  resetConfirm(
-    phone: string,
-    smsCode: string,
-    newPin: string,
-    second: { otp_code: string } | { recovery_code: string },
-  ): Promise<void>;
+  /** The SMS code → the second check: an email code, or a face check after the identity check. */
+  resetVerify(phone: string, smsCode: string): Promise<Check>;
+  resetFaceStart(checkId: string): Promise<string | null>;
+  /** The email code (none for a face check) and the new PIN. */
+  resetConfirm(checkId: string, newPin: string, emailCode: string | null): Promise<void>;
 }
 
 export const serverPin: PinSource = {
-  async change(currentPin, newPin, code) {
-    const x = serverAuth.apiOptions();
-    const approval = await authApi.stepUp(token(), 'pin.change', code, x);
-    await authApi.changePin(token(), { current_pin: currentPin, new_pin: newPin }, approval.step_up_token, x);
+  async change(currentPin, newPin, approval) {
+    await authApi.changePin(token(), { current_pin: currentPin, new_pin: newPin }, approval, serverAuth.apiOptions());
   },
   async resetStart(phone) {
     await authApi.pinResetStart(phone, serverAuth.apiOptions());
   },
-  async resetConfirm(phone, smsCode, newPin, second) {
-    await authApi.pinResetConfirm({ phone, code: smsCode, new_pin: newPin, ...second }, serverAuth.apiOptions());
+  async resetVerify(phone, smsCode) {
+    return authApi.pinResetVerify(phone, smsCode, serverAuth.apiOptions());
+  },
+  async resetFaceStart(checkId) {
+    return (await authApi.faceStart(checkId, serverAuth.apiOptions())).url;
+  },
+  async resetConfirm(checkId, newPin, emailCode) {
+    await authApi.pinResetConfirm(
+      { check_id: checkId, new_pin: newPin, ...(emailCode ? { email_code: emailCode } : {}) },
+      serverAuth.apiOptions(),
+    );
     // The server ended every session and forgot trusted devices: so does this phone.
     await secureTokens.setDeviceToken(null);
   },
@@ -41,10 +50,8 @@ export const serverPin: PinSource = {
 
 /** Phone number change (ADR-047). */
 export const serverPhoneChange = {
-  async start(newPhone: string, code: string): Promise<void> {
-    const x = serverAuth.apiOptions();
-    const approval = await authApi.stepUp(token(), 'contact.change', code, x);
-    await authApi.phoneChangeStart(token(), newPhone, approval.step_up_token, x);
+  async start(newPhone: string, approval: string): Promise<void> {
+    await authApi.phoneChangeStart(token(), newPhone, approval, serverAuth.apiOptions());
   },
   async confirm(newPhone: string, smsCode: string): Promise<void> {
     await authApi.phoneChangeConfirm(token(), newPhone, smsCode, serverAuth.apiOptions());

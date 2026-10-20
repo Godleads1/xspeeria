@@ -21,7 +21,11 @@ from app.core.mfa import (
     otpauth_uri,
 )
 from app.domain.auth_rules import (
+    CHECK_CODE_TTL,
+    CHECKS_PER_DAY,
+    CHECKS_PER_HOUR,
     ENROL_CHALLENGE_TTL,
+    FACE_CHECK_TTL,
     LOGIN_CHALLENGE_TTL,
     MAX_MFA_TRIES,
     MFA_LOCK,
@@ -48,11 +52,11 @@ class TestDecidedValues:
             "beneficiary.remove",
             "contact.change",
             "pin.change",
-            "mfa.change",
-            "recovery_codes.regenerate",
             "trade.accept",
             "payout.confirm",
-        }
+        }  # ADR-054: mfa.change and recovery_codes.regenerate went with the authenticator
+        assert (CHECK_CODE_TTL, FACE_CHECK_TTL) == (timedelta(minutes=10), timedelta(minutes=15))
+        assert (CHECKS_PER_HOUR, CHECKS_PER_DAY) == (5, 10)
 
 
 class TestTotp:

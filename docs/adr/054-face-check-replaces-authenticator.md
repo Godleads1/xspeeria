@@ -2,12 +2,12 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-20; design **PROPOSED**; not built |
+| **Status** | **APPROVED** (owner) — 2026-10-20; Decision 1 **IMPLEMENTED** 2026-10-20 (server + app); Decision 2 not built |
 | **Decision ID** | DEC-061 |
 | **Supersedes** | ADR-008's choice of an authenticator app (TOTP) as the user's second factor. ADR-008's *rule* stays: a second check besides the PIN on a new phone and before sensitive changes (SEC-002). |
 | **Authority** | Product owner, 2026-10-20: "we can use finger print for that" → chose fingerprint on a trusted phone, face check only on a new phone or for recovery ("Yes, that mix"). Earlier the same day: "remove the authenticate stuff … they will have to verify their kyc … sent email that the user tried to login … use face verification to confirm if the user is actually the [one who] transfer[s] money to the escrow account"; then chose **"Face check (Recommended)"**. On paying in: "the money can come from another person depending on the relationship." |
 
-## Decision 1 — second check = face check (built next)
+## Decision 1 — second check = face check (built 2026-10-20)
 
 | Moment | Before identity check (KYC) approved | After KYC approved |
 |---|---|---|
@@ -29,3 +29,28 @@
 The owner wants a person to be able to pay into escrow from another person's account "depending on the relationship". Today: own-name accounts only (banking spec §3.3; ADR-022; DEC-007 still open). Third-party funding is a known money-laundering and fraud route, so before building: lawyer and compliance sign-off, partner-bank acceptance, which relationships qualify (e.g. spouse, parent), what proof, limits, and how the bank reports the payer's name. Until then the app keeps "pay from an account in your name".
 
 A face check proves **who** pressed "I have paid"; only the partner bank confirms the money **arrived**. Funds are released only on the bank's confirmation (ADR-001, unchanged).
+
+
+## Implementation (Decision 1) — 2026-10-20
+
+**Server.** Migration `0017` adds `verification_checks` (one row per check: purpose `signup`/`login`/`step_up`/`pin_reset`, method `email`/`sms_email`/`face`, keyed code digests, the provider's face session id and `approved`/`declined`, tries, expiry). The authenticator tables stay, unused (no history dropped). Routes:
+
+| Route | Use |
+|---|---|
+| `POST /auth/verify-phone` | SMS code right → an `email` check (code sent to the account email) |
+| `POST /auth/login` | Trusted phone → tokens; otherwise a check: `sms_email` before KYC, `face` after |
+| `POST /auth/checks/{id}/codes` | Finish sign-up/log-in with the email code (+ SMS code) → tokens and a trusted-phone token |
+| `POST /auth/checks/{id}/face`, `/face/result` | Open the face check (link shown once, never stored); the result (409 while running) |
+| `POST /auth/step-up` | Fingerprint/Face ID: the session's unlock key (ADR-048) → a one-use approval |
+| `POST /auth/step-up/checks`, `/{id}/code`, `/{id}/face`, `/{id}/face/result` | No fingerprint: face check after KYC, email code before |
+| `POST /auth/pin-reset/start`, `/verify`, `/confirm` | Forgot PIN: SMS code → face check or email code → new PIN |
+
+Removed: `/auth/mfa/enrol/*`, `/auth/mfa/verify`, `/users/me/recovery-codes`, `/users/me/mfa/replace/*`, and the `mfa.change` / `recovery_codes.regenerate` actions.
+
+**Rules chosen while building** (conservative; the owner may change them): codes last 10 minutes and a face check 15; 5 failures across checks lock checks for 15 minutes (ADR-008) and email an alert; at most 5 checks an hour and 10 a day per account (each may send an SMS, an email or cost a face check); a step-up before KYC (e.g. changing the PIN) uses an email code; a declined face check ends that check (start again). The face result is **fetched from Didit** (`GET /v3/session/{id}/decision/`) rather than taken from a webhook, so the existing Didit webhook is unchanged. It passes only if the session status is `Approved`, the decision is for the same user (`vendor_data`), and every liveness check and face match is `Approved`; anything else is a failure (fail closed).
+
+**Settings.** `DIDIT_AUTH_WORKFLOW_ID` (a Didit workflow of type `BIOMETRIC_AUTHENTICATION`, created by the owner; uses `DIDIT_API_KEY`). Local only: `DEV_EMAIL=true` prints email codes/alerts in the server window; `FACE_CHECK_DEV=true` passes face checks without a camera. Both refused outside `APP_ENV=local`. Without an email sender, sign-up answers 503; without a face provider, a KYC-approved user's new-phone log-in answers 503.
+
+**App.** One check screen for sign-up and log-in (codes or face check); "Confirm it's you" tries Fingerprint/Face ID first and otherwise shows the face check or email code; Forgot PIN is SMS code + new PIN, then the check; authenticator screens removed from server builds (the offline demo keeps its on-device mock). Security → "How we check it's you" explains the checks.
+
+**Not verified:** a live Didit biometric-authentication session; a real email provider; the fingerprint prompt on a real phone (Expo Go / development build).

@@ -36,6 +36,8 @@ from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
 from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
+from app.providers.email import DevConsoleEmailSender, EmailSender
+from app.providers.face import DevFaceCheck, DiditFaceCheck, FaceCheckProvider
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import ExpoPushSender
 from app.providers.sms import DevConsoleSmsSender, SmsSender
@@ -85,6 +87,11 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         if settings.app_env != "local":
             raise ValueError("DEV_SMS is allowed only with APP_ENV=local (ADR-027)")
         sms = DevConsoleSmsSender()
+    email: EmailSender | None = None
+    if settings.dev_email:
+        if settings.app_env != "local":
+            raise ValueError("DEV_EMAIL is allowed only with APP_ENV=local (ADR-054)")
+        email = DevConsoleEmailSender()
     return AuthRuntime(
         keys=keys,
         secret_box=box,
@@ -101,6 +108,31 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         kyc_provider=_didit(settings),
         kyc_identity_key=_kyc_identity_key(settings),
         push_sender=ExpoPushSender(settings.expo_access_token) if settings.push_enabled else None,
+        email=email,
+        face=_face_check(settings),
+    )
+
+
+def _face_check(settings: Settings) -> FaceCheckProvider | None:
+    """ADR-054: Didit biometric authentication, or the local-only developer check."""
+    if settings.face_check_dev:
+        if settings.app_env != "local":
+            raise ValueError("FACE_CHECK_DEV is allowed only with APP_ENV=local (ADR-054)")
+        return DevFaceCheck()
+    workflow = settings.didit_auth_workflow_id
+    if not workflow:
+        return None
+    if not settings.didit_api_key:
+        raise ValueError("DIDIT_AUTH_WORKFLOW_ID needs DIDIT_API_KEY (ADR-054)")
+    if "CHANGE_ME" in workflow:
+        raise ValueError("DIDIT_AUTH_WORKFLOW_ID is still the .env.example placeholder")
+    if not settings.didit_base_url.startswith("https://"):
+        raise ValueError("DIDIT_BASE_URL must be https")
+    return DiditFaceCheck(
+        settings.didit_api_key,
+        workflow,
+        settings.didit_base_url,
+        settings.didit_callback_url,
     )
 
 

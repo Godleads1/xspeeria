@@ -209,7 +209,7 @@ async def test_adding_needs_an_approval_for_that_action(owner: Party) -> None:
     )
     assert r.status_code == 403
     headers = owner._h()
-    headers["X-Step-Up-Token"] = await owner.approve("mfa.change")
+    headers["X-Step-Up-Token"] = await owner.approve("pin.change")
     r = await owner.env.client.post(
         "/api/v1/payout-accounts",
         json={"currency": "NGN", "bank_name": "Zenith", "account_number": "0123456789"},

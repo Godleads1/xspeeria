@@ -135,11 +135,20 @@ class Settings(BaseSettings):
     jwt_algorithm: str | None = None
     jwt_access_token_expire_minutes: int | None = None
     webhook_shared_secret: str | None = None
-    #: AES-256-GCM key for TOTP secrets at rest (ADR-026): base64 of 32 random bytes.
-    #: Without it the sign-in routes are switched off, since no session can exist without 2FA.
+    #: AES-256-GCM key for the old authenticator secrets at rest (ADR-026). Unused since
+    #: ADR-054 replaced the authenticator; kept so existing .env files still load.
     mfa_encryption_key: str | None = None
     #: ADR-027: print SMS codes to the server terminal. Refused unless app_env is "local".
     dev_sms: bool = False
+    #: ADR-054: print email codes and alerts to the server terminal (no email provider yet).
+    #: Refused unless app_env is "local".
+    dev_email: bool = False
+    #: ADR-054: pass every face check without a camera (no cost). Refused unless app_env is
+    #: "local".
+    face_check_dev: bool = False
+    #: ADR-054: the Didit workflow of type BIOMETRIC_AUTHENTICATION (face check). Needs the
+    #: Didit API key too. Unset: face checks are off (only FACE_CHECK_DEV, locally).
+    didit_auth_workflow_id: str | None = None
     #: ADR-029: treat signed-in, 2FA-verified users as KYC-approved for offers. No KYC provider
     #: exists yet. Refused unless app_env is "local".
     kyc_dev_bypass: bool = False

@@ -26,7 +26,9 @@ from app.models.identity import (
     StepUpGrant,
     TrustedDevice,
     User,
+    VerificationCheck,
 )
+from app.models.kyc import KycCase
 
 __all__ = ["IdentityRepository"]
 
@@ -208,3 +210,24 @@ class IdentityRepository:
     async def step_up_grant(self, token_hash: str) -> StepUpGrant | None:
         stmt = select(StepUpGrant).where(StepUpGrant.token_hash == token_hash).with_for_update()
         return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    # --- second check (ADR-054) -------------------------------------------------------
+
+    async def check(self, check_id: uuid.UUID) -> VerificationCheck | None:
+        stmt = select(VerificationCheck).where(VerificationCheck.id == check_id).with_for_update()
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
+    async def checks_since(self, user_id: uuid.UUID, since: datetime) -> int:
+        stmt = select(func.count(VerificationCheck.id)).where(
+            VerificationCheck.user_id == user_id, VerificationCheck.created_at >= since
+        )
+        return int((await self._db.execute(stmt)).scalar_one())
+
+    async def has_approved_kyc(self, user_id: uuid.UUID) -> bool:
+        """An approved identity check in any country: the face to compare with exists."""
+        stmt = (
+            select(KycCase.id)
+            .where(KycCase.user_id == user_id, KycCase.status == "approved")
+            .limit(1)
+        )
+        return (await self._db.execute(stmt)).scalar_one_or_none() is not None

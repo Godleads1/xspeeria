@@ -91,8 +91,8 @@ export function LoginScreen({
     /** ADR-048: Face ID/fingerprint resumes the session after the idle lock. */
     unlock?: (now: number) => Promise<boolean>;
   } | null;
-  /** Server mode: the PIN was right and 2FA comes next ("mfa"), or set-up ("enrol"). */
-  onSecondFactor?: (step: "mfa" | "enrol") => void;
+  /** Server mode: the PIN was right; a new phone needs the second check next (ADR-054). */
+  onSecondFactor?: () => void;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const s = useSession();
@@ -127,7 +127,7 @@ export function LoginScreen({
       const outcome = await server.login(id.trim(), typed, now());
       session.setRemembered(remember ? id.trim() : null);
       if (outcome === "signedIn") onDone();
-      else onSecondFactor?.(outcome);
+      else onSecondFactor?.();
     } catch (e) {
       setError(messageFor(e));
     } finally {

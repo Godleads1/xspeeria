@@ -16,6 +16,10 @@ Copy `.env.example` to `.env`, then set:
 APP_ENV=local
 DATABASE_URL=postgresql+asyncpg://xspeeria_dev:xspeeria_dev_local_only@127.0.0.1:5432/xspeeria_dev
 DEV_SMS=true
+# ADR-054: email codes and alerts print in the server window (no email provider yet):
+DEV_EMAIL=true
+# ADR-054: pass the face check without a camera (this computer only; no cost):
+FACE_CHECK_DEV=true
 # Offers need an ID check; no ID-check provider exists yet. On your own computer only:
 KYC_DEV_BYPASS=true
 # Payout accounts: a pretend bank check (this computer only) and a key for account numbers.
@@ -24,11 +28,11 @@ BANK_CHECK_DEV=true
 PRETEND_BANK=true
 ```
 
-Generate the three keys and paste them in (never share or commit them):
+Generate the keys and paste them in (never share or commit them). `MFA_ENCRYPTION_KEY` is no
+longer needed since ADR-054 removed the authenticator app; an existing one does no harm:
 
 ```bash
 python -c "import secrets;print('JWT_SECRET_KEY=' + secrets.token_urlsafe(48))"
-python -c "import base64,os;print('MFA_ENCRYPTION_KEY=' + base64.b64encode(os.urandom(32)).decode())"
 python -c "import base64,os;print('BENEFICIARY_ENCRYPTION_KEY=' + base64.b64encode(os.urandom(32)).decode())"
 ```
 
