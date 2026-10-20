@@ -78,3 +78,24 @@ describe('tapping a push', () => {
     expect(pushLink({ event: 'settlement.completed', data: { match_id: { x: 1 } } })).toBeNull();
   });
 });
+
+describe('Expo Go', () => {
+  it('never loads the notifications module there (it would crash on Android)', () => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const Constants = require('expo-constants').default as { executionEnvironment?: string };
+    const push = require('../src/features/notifications/push') as typeof import('../src/features/notifications/push');
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    const before = Constants.executionEnvironment;
+    try {
+      Constants.executionEnvironment = 'storeClient';
+      push.resetNotificationsModule();
+      expect(push.notificationsModule()).toBeNull();
+      Constants.executionEnvironment = 'bare';
+      push.resetNotificationsModule();
+      expect(push.notificationsModule()).not.toBeNull();
+    } finally {
+      Constants.executionEnvironment = before;
+      push.resetNotificationsModule();
+    }
+  });
+});
