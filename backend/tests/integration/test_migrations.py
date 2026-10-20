@@ -78,8 +78,8 @@ APPROVED_TABLES = {
 # KYC-1 Didit (ADR-039) -> "0010"; one person, one account (ADR-041) -> "0011";
 # per country (ADR-042) -> "0012"; notifications (ADR-044) -> "0013"; PIN (ADR-046) -> "0014";
 # biometric unlock (ADR-048) -> "0015"; phone push (ADR-052) -> "0016";
-# face check replaces the authenticator (ADR-054) -> "0017".
-EXPECTED_HEAD = "0017"
+# face check replaces the authenticator (ADR-054) -> "0017"; gender from the ID (ADR-055) -> "0018".
+EXPECTED_HEAD = "0018"
 
 
 def _config(database_url: str) -> Config:

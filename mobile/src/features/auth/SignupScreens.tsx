@@ -333,7 +333,16 @@ function ReadOnly({ label, value, testID }: { label: string; value: string; test
   );
 }
 
-export function DetailsScreen({ onBack, onNext }: { onBack: () => void; onNext: () => void }): ReactElement {
+export function DetailsScreen({
+  onBack,
+  onNext,
+  server = false,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  /** Server builds (ADR-055): no sample identity; it comes from the ID check later. */
+  server?: boolean;
+}): ReactElement {
   const draft = useSignup();
   const [email, setEmail] = useState(draft.email ?? '');
   const [newsletter, setNewsletter] = useState(draft.newsletter);
@@ -348,16 +357,28 @@ export function DetailsScreen({ onBack, onNext }: { onBack: () => void; onNext: 
 
   return (
     <Frame testID="signup-details" top={<AuthTop onBack={onBack} step={2} />} footer={<PrimaryButton testID="signup-details-continue" label={tr("Continue")} onPress={next} disabled={email.trim() === ''} />}>
-      <Heading title={tr("Let’s get started")} body={tr("Verify Your identity and provide your e-mail address")} />
-      <ReadOnly testID="signup-first" label={tr("First name")} value={DEMO_NIN_RECORD.firstName} />
-      <ReadOnly testID="signup-last" label={tr("Last name")} value={DEMO_NIN_RECORD.lastName} />
+      <Heading title={tr("Let’s get started")} body={server ? tr("Enter your e-mail address") : tr("Verify Your identity and provide your e-mail address")} />
+      {server ? null : (
+        <>
+          <ReadOnly testID="signup-first" label={tr("First name")} value={DEMO_NIN_RECORD.firstName} />
+          <ReadOnly testID="signup-last" label={tr("Last name")} value={DEMO_NIN_RECORD.lastName} />
+        </>
+      )}
       <OutlinedField label={tr("Email Address *")} invalid={Boolean(error)}>
         <FieldInput testID="signup-email" accessibilityLabel={tr("Email address")} value={email} onChangeText={(t) => { setEmail(t); setError(null); }} keyboardType="email-address" inputMode="text" maxLength={254} />
       </OutlinedField>
       {error ? <Text testID="signup-details-error" style={styles.error}>{error}</Text> : null}
-      <ReadOnly testID="signup-dob-ro" label={tr("Date of Birth")} value={longDate(DEMO_NIN_RECORD.dateOfBirth)} />
-      <ReadOnly testID="signup-gender" label={tr("Gender")} value={DEMO_NIN_RECORD.gender} />
-      <Text style={styles.small}>{tr("Name, date of birth and gender come from your NIN record and can’t be changed here.")}</Text>
+      {server ? (
+        <Text testID="signup-identity-later" style={styles.small}>
+          {tr("Your name, date of birth and gender come from your ID when you verify your identity, so nobody can use a false name.")}
+        </Text>
+      ) : (
+        <>
+          <ReadOnly testID="signup-dob-ro" label={tr("Date of Birth")} value={longDate(DEMO_NIN_RECORD.dateOfBirth)} />
+          <ReadOnly testID="signup-gender" label={tr("Gender")} value={DEMO_NIN_RECORD.gender} />
+          <Text style={styles.small}>{tr("Name, date of birth and gender come from your NIN record and can’t be changed here.")}</Text>
+        </>
+      )}
       <CheckRow testID="signup-newsletter" checked={newsletter} onToggle={() => setNewsletter((v) => !v)}>{tr("Subscribe to our newsletter for exclusive insights, tips, and updates delivered straight to your inbox. Be the first to know.")}</CheckRow>
     </Frame>
   );

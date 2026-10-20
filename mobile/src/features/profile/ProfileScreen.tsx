@@ -111,13 +111,13 @@ export function ProfileScreen({
       <Pressable
         testID="profile-account"
         accessibilityRole="button"
-        accessibilityLabel={tr("{{fullName}}. Account details", { fullName: user.fullName })}
+        accessibilityLabel={tr("{{fullName}}. Account details", { fullName: user.fullName || user.handle })}
         onPress={() => open('account', tr("Account details"))}
         style={({ pressed }) => [styles.header, pressed ? styles.pressed : null]}
       >
         <ProfileAvatar testID="profile-avatar" size={70} initials={user.initials} uri={user.avatarUri} />
         <View style={styles.headerText}>
-          <Text style={styles.name}>{user.fullName}</Text>
+          <Text style={styles.name}>{user.fullName || user.handle}</Text>
           <Text style={styles.headerSub}>{tr("Account details")}</Text>
         </View>
         <Icon name="chevron" color={color.text.secondary} size={16} weight={2} />

@@ -1,7 +1,8 @@
-import { useMemo, type ReactElement } from 'react';
+import { useEffect, useMemo, type ReactElement } from 'react';
 import { useRouter } from 'expo-router';
 
 import { SERVER_MODE } from '../../../src/api/config';
+import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { HomeScreen } from '../../../src/features/home/HomeScreen';
 import { bestRates, dealsToActivity } from '../../../src/features/history/serverHistory';
 import { serverDeals, useServerData } from '../../../src/features/history/serverDeals';
@@ -52,13 +53,18 @@ export default function HomeRoute(): ReactElement {
   const offers = useServerData(SERVER_MODE ? loadOffers : null);
   const kyc = useServerData(SERVER_MODE ? loadKyc : null);
   const rates = useMemo(() => bestRates(offers.data ?? [], ['USD', 'GBP']), [offers.data]);
+  const approved = kyc.data?.status === 'approved';
+  // ADR-055: once the identity check is approved, show the name from the ID.
+  useEffect(() => {
+    if (SERVER_MODE && approved && !profile.fullName) void serverAuth.refreshProfile().catch(() => undefined);
+  }, [approved, profile.fullName]);
   if (SERVER_MODE) {
     return (
       <HomeScreen
-        user={{ name: profile.fullName, initials: profile.initials, avatarUri: profile.avatarUri }}
+        user={{ name: profile.fullName || profile.handle, initials: profile.initials, avatarUri: profile.avatarUri }}
         bestRate={rates[0]}
         rates={rates}
-        dimensions={serverReadiness(kyc.data?.status === 'approved')}
+        dimensions={serverReadiness(approved)}
         activity={dealsToActivity(deals.data ?? [])}
         onCreateOffer={() => router.push('/marketplace')}
         onViewAll={() => router.push('/history')}

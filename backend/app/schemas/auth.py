@@ -8,7 +8,7 @@ models are separate from the database models: no hash, counter or internal field
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -224,6 +224,11 @@ class ProfileResponse(BaseModel):
     email: str
     status: str
     created_at: datetime
+    #: ADR-055: from the latest approved identity check; all null until one is approved.
+    #: Never typed in by the user (DEC-054).
+    legal_name: str | None = None
+    date_of_birth: date | None = None
+    gender: Literal["M", "F"] | None = None
 
 
 class SessionResponse(BaseModel):

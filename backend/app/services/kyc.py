@@ -406,6 +406,7 @@ class KycService:
                 if outcome.status == "approved":
                     case.legal_name = outcome.legal_name
                     case.date_of_birth = outcome.date_of_birth
+                    case.gender = outcome.gender
                     case.id_type = outcome.id_type
                     case.issuing_country = outcome.issuing_country
                 if outcome.status == "expired":

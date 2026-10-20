@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { ActionSheet } from '../market/controls';
-import { longDate } from './data';
+import { genderLabel, longDate } from './data';
 import { pickPhoto, type PhotoKind, type PickOutcome } from './photos';
 import { ProfileAvatar } from './ProfileAvatar';
 import { profileStore, useProfile } from './profileStore';
@@ -112,18 +112,18 @@ export function EditProfileScreen({
         </View>
 
         <View style={styles.list}>
-          <Row testID="edit-name" label={tr("Full Name")} value={p.fullName} note={tr("Verified by KYC. Contact Support to change your legal name.")} />
+          <Row testID="edit-name" label={tr("Full Name")} value={p.fullName || tr("From your ID once verified")} note={tr("Verified by KYC. Contact Support to change your legal name.")} />
           <Row testID="edit-phone" label={tr("Phone Number")} value={p.phone} action="Change" onPress={() => onEdit('phone')} />
           <Row testID="edit-email" label={tr("Email Address")} value={p.email} action="Change" onPress={() => onEdit('email')} />
           <Row
             testID="edit-dob"
             label={tr("Date of birth")}
-            value={longDate(p.dateOfBirth)}
+            value={p.dateOfBirth ? longDate(p.dateOfBirth) : tr("From your ID once verified")}
             note={p.pendingDob ? tr("Change to {{dateOfBirth}} is under review", { dateOfBirth: longDate(p.pendingDob.dateOfBirth) }) : undefined}
             action={p.pendingDob ? undefined : 'Change'}
             onPress={p.pendingDob ? undefined : () => onEdit('dob')}
           />
-          <Row testID="edit-gender" label={tr("Gender")} value={p.gender} />
+          <Row testID="edit-gender" label={tr("Gender")} value={genderLabel(p.gender) || tr("From your ID once verified")} />
         </View>
       </ScrollView>
 
