@@ -31,6 +31,20 @@ export const PROFILE_USER: ProfileUser = {
   gender: 'Male',
 };
 
+/** ADR-055: the ID's "M"/"F" in words; empty when not known. */
+export function genderLabel(gender: string): string {
+  if (gender === 'M' || gender === 'Male') return tr("Male");
+  if (gender === 'F' || gender === 'Female') return tr("Female");
+  return '';
+}
+
+/** Initials of a name ("Ada Obi" → "AO"); the fallback when there is no name. */
+export function nameInitials(name: string, fallback = ''): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const out = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0]?.slice(0, 2) ?? '');
+  return (out || fallback).toUpperCase();
+}
+
 export type KycState = 'approved' | 'pending';
 
 export interface KycRegion {

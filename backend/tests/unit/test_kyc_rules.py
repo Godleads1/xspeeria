@@ -258,3 +258,13 @@ def test_the_id_must_be_issued_by_the_country_checked(
 def test_names_match(a: str, b: str, same: bool) -> None:
     assert names_match(a, b) is same
     assert names_match(b, a) is same
+
+
+@pytest.mark.parametrize(
+    ("raw", "kept"),
+    [("F", "F"), ("m", "M"), ("Female", "F"), ("MALE", "M"), ("X", None), (None, None), ("", None)],
+)
+def test_gender_from_the_id_keeps_only_m_or_f(raw: object, kept: str | None) -> None:
+    """ADR-055: shown on the user's own profile; anything but M/F is not stored."""
+    out = evaluate("Approved", _decision(gender=raw), TODAY)
+    assert out is not None and out.status == "approved" and out.gender == kept

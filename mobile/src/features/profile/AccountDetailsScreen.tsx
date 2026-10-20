@@ -16,7 +16,7 @@ import { Icon, type IconName } from '../../components/icons';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { SectionLabel } from '../home/SectionLabel';
 import { StatusPill } from '../home/StatusPill';
-import { formatRating, longDate } from './data';
+import { formatRating, genderLabel, longDate } from './data';
 import { useKycRegions } from './kycRegions';
 import type { KycRegion } from './data';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -87,6 +87,7 @@ export function AccountDetailsScreen({
         <View style={styles.identity}>
           <ProfileAvatar testID="account-avatar" size={AVATAR} initials={user.initials} uri={user.avatarUri} ring={4} />
           <Text style={styles.handle}>{user.handle}</Text>
+{user.ratingHundredths > 0 ? (
           <View style={styles.rating} accessible accessibilityLabel={tr("Rated {{ratingHundredths}} out of 5", { ratingHundredths: formatRating(user.ratingHundredths) })}>
             <Star />
             <Text style={styles.ratingText}>
@@ -94,20 +95,21 @@ export function AccountDetailsScreen({
               <Text style={styles.ratingOf}>/5</Text>
             </Text>
           </View>
+          ) : null}
         </View>
 
         <View style={styles.body}>
           <View style={styles.card}>
-            <Detail icon="idcard" label={tr("Full Name")} value={user.fullName} />
+            <Detail icon="idcard" label={tr("Full Name")} value={user.fullName || tr("From your ID once verified")} />
             <Detail icon="phone" label={tr("Phone Number")} value={user.phone} />
             <Detail icon="mail" label={tr("Email Address")} value={user.email} />
             <Detail
               icon="calendar"
               label={tr("Date of birth")}
-              value={longDate(user.dateOfBirth)}
+              value={user.dateOfBirth ? longDate(user.dateOfBirth) : tr("From your ID once verified")}
               note={user.pendingDob ? tr("Change to {{dateOfBirth}} under review", { dateOfBirth: longDate(user.pendingDob.dateOfBirth) }) : undefined}
             />
-            <Detail icon="gender" label={tr("Gender")} value={user.gender} />
+            <Detail icon="gender" label={tr("Gender")} value={genderLabel(user.gender) || tr("From your ID once verified")} />
           </View>
 
           <SectionLabel>{tr("KYC approved regions")}</SectionLabel>

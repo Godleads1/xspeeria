@@ -12,5 +12,5 @@ export default function SignupDetailsRoute(): ReactElement {
   const draft = useSignup();
   // Server mode (ADR-027): phone → email → PIN → SMS code; the server checks the phone.
   if (SERVER_MODE ? !draft.phone : !draft.identityVerified) return <Redirect href="/signup/start" />;
-  return <DetailsScreen onBack={() => router.back()} onNext={() => router.push(SERVER_MODE ? '/signup/pin' : '/signup/email')} />;
+  return <DetailsScreen server={SERVER_MODE} onBack={() => router.back()} onNext={() => router.push(SERVER_MODE ? '/signup/pin' : '/signup/email')} />;
 }

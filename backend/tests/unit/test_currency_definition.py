@@ -464,4 +464,5 @@ class TestPackageRegistration:
             "0015_biometric_unlock.py",  # biometric unlock (ADR-048)
             "0016_push_tokens_n3.py",  # phone push (ADR-052)
             "0017_verification_checks.py",  # face check (ADR-054)
+            "0018_kyc_gender.py",  # gender from the ID (ADR-055)
         ]

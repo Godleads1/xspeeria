@@ -231,3 +231,13 @@ class IdentityRepository:
             .limit(1)
         )
         return (await self._db.execute(stmt)).scalar_one_or_none() is not None
+
+    async def latest_approved_kyc(self, user_id: uuid.UUID) -> KycCase | None:
+        """ADR-055: the identity shown on the profile — the most recently approved check."""
+        stmt = (
+            select(KycCase)
+            .where(KycCase.user_id == user_id, KycCase.status == "approved")
+            .order_by(KycCase.decided_at.desc())
+            .limit(1)
+        )
+        return (await self._db.execute(stmt)).scalar_one_or_none()

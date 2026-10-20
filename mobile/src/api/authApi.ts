@@ -34,6 +34,10 @@ export interface Profile {
   phone: string;
   email: string;
   status: string;
+  /** ADR-055: from the latest approved identity check; null until one is approved. */
+  legal_name?: string | null;
+  date_of_birth?: string | null;
+  gender?: 'M' | 'F' | null;
 }
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
