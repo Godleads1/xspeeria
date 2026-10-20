@@ -210,7 +210,7 @@ export function MarketScreen({
       setNotice({
         ok: true,
         text: buying
-          ? tr("Your request to buy {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", values)
+          ? tr("Your request to buy {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Requests.", values)
           : tr("Your offer to sell {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", values),
       });
       setReload((n) => n + 1);
@@ -237,7 +237,7 @@ export function MarketScreen({
     if (server && listing.own) {
       setNotice({
         ok: false,
-        text: side === "buy" ? tr("This is your offer. Manage it under ⋮ › My Offers.") : tr("This is your request. Manage it under ⋮ › My Offers."),
+        text: side === "buy" ? tr("This is your offer. Manage it under ⋮ › My Offers.") : tr("This is your request. Manage it under ⋮ › My Requests."),
       });
       return;
     }

@@ -277,6 +277,10 @@ describe('My Offers (ADR-030)', () => {
     };
     await render(<MyOffersScreen source={source} onBack={jest.fn()} />);
     await flush();
+    expect(screen.queryByTestId('my-offer-r1')).toBeNull(); // My Offers lists sell offers only
+    await render(<MyOffersScreen source={source} show="requests" onBack={jest.fn()} />);
+    await flush();
+    expect(screen.getByText('My Requests')).toBeTruthy();
     const row = screen.getByTestId('my-offer-r1');
     expect(row).toHaveTextContent(/Buy 10,000\.00 USD \(you pay NGN 13,300,000\.00\)/);
     expect(row).toHaveTextContent(/Matched: 400\.00 · Left: 9,600\.00 USD/);
