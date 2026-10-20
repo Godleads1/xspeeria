@@ -43,9 +43,12 @@ function grouped(text: string): string {
 export function MyOffersScreen({
   source,
   onBack,
+  show = "offers",
 }: {
   source: MyOffersSource;
   onBack: () => void;
+  /** ADR-056: "offers" sell foreign currency; "requests" are buy requests (offers paying naira). */
+  show?: "offers" | "requests";
 }): ReactElement {
   const [offers, setOffers] = useState<ServerOffer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +61,9 @@ export function MyOffersScreen({
     setOffers(null);
     source
       .list()
-      .then(setOffers)
+      .then((all) => setOffers(all.filter((o) => (o.source_currency === "NGN") === (show === "requests"))))
       .catch((e: unknown) => setError(messageFor(e)));
-  }, [source]);
+  }, [source, show]);
 
   useEffect(load, [load]);
 
@@ -80,7 +83,7 @@ export function MyOffersScreen({
   };
 
   return (
-    <Screen testID="my-offers-screen">
+    <Screen testID={show === "requests" ? "my-requests-screen" : "my-offers-screen"}>
       <View style={styles.header}>
         <Pressable
           testID="my-offers-back"
@@ -91,7 +94,7 @@ export function MyOffersScreen({
         >
           <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>{tr("My Offers")}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{show === "requests" ? tr("My Requests") : tr("My Offers")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -104,9 +107,11 @@ export function MyOffersScreen({
       {error ? (
         <ErrorState title={error} onRetry={load} />
       ) : offers === null ? (
-        <LoadingState label={tr("Loading your offers")} />
+        <LoadingState label={show === "requests" ? tr("Loading your requests") : tr("Loading your offers")} />
       ) : offers.length === 0 ? (
-        <EmptyState title={tr("You have no offers or requests yet. Create one from Market.")} />
+        <EmptyState
+          title={show === "requests" ? tr("You have no buy requests yet. Create one from Market › Buy.") : tr("You have no offers yet. Create one from Market › Sell.")}
+        />
       ) : (
         <View testID="my-offers-list" style={styles.list}>
           {offers.map((o) => {
