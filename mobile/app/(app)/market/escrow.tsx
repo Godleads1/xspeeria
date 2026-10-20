@@ -14,5 +14,12 @@ export default function EscrowRoute(): ReactElement {
   const router = useRouter();
   const { match } = useLocalSearchParams<{ match?: string }>();
   if (!SERVER_MODE || typeof match !== 'string' || !UUID.test(match)) return <Redirect href="/market/deals" />;
-  return <EscrowScreen matchId={match} source={serverEscrow} onBack={() => router.back()} />;
+  return (
+    <EscrowScreen
+      matchId={match}
+      source={serverEscrow}
+      onBack={() => router.back()}
+      onReport={(tx) => router.push({ pathname: '/market/new-case', params: { tx } })}
+    />
+  );
 }

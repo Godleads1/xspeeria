@@ -32,6 +32,8 @@ class YouReceive(BaseModel):
 
 class SettlementResponse(BaseModel):
     settlement_id: str
+    #: ADR-057: the deal's transaction, which a dispute is opened against.
+    transaction_id: str
     phase: str
     closure_reason: str | None
     simulated: bool

@@ -71,6 +71,15 @@ export function notificationCopy(n: Pick<ServerNotification, 'event' | 'data'>):
         tone: 'warning',
         link: '/profile/kyc',
       };
+    case 'dispute.opened': {
+      const id = data.dispute_id;
+      return {
+        title: tr("A deal is under review"),
+        body: tr("The other side reported a problem, so the escrow is paused. Tell us your side."),
+        tone: 'warning',
+        link: id && UUID.test(id) ? `/market/case?id=${id}` : '/market/disputes',
+      };
+    }
     case 'match.created':
       return {
         title: tr("Someone took your offer"),

@@ -18,11 +18,14 @@ amounts, not money. MILESTONE 4.1F (ADR-037, simulation only): the escrow settle
 milestone and must not be added here ahead of its approved batch.
 MILESTONE KYC-1 (ADR-039): `KycCase` (data dictionary KYCCases) and `KycWebhookEvent` --
 identity-check outcomes only; ID images stay with the provider.
+ADR-057: `Dispute`, `DisputeMessage` -- cases and messages; a dispute pauses escrow only
+through a `settlement_holds` row, never by changing money state.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
 
 from app.models.currency_definition import CurrencyDefinition
+from app.models.disputes import Dispute, DisputeMessage
 from app.models.identity import (
     AuthRefreshToken,
     AuthSession,
@@ -59,6 +62,8 @@ __all__ = [
     "Notification",
     "PushDelivery",
     "PushToken",
+    "Dispute",
+    "DisputeMessage",
     "OutboxMessage",
     "Partner",
     "PayoutExecution",

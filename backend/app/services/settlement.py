@@ -241,6 +241,18 @@ class SettlementService:
         )
         return len(rows.all())
 
+    async def _open_dispute_hold(self, settlement_id: uuid.UUID) -> bool:
+        found = await self._db.scalar(
+            select(SettlementHold.id)
+            .where(
+                SettlementHold.settlement_id == settlement_id,
+                SettlementHold.type == "DISPUTE",
+                SettlementHold.closed_at.is_(None),
+            )
+            .limit(1)
+        )
+        return found is not None
+
     def _hold(self, settlement_id: uuid.UUID, kind: str, reason: str) -> None:
         self._db.add(
             SettlementHold(
@@ -838,6 +850,8 @@ class SettlementService:
                 settlement.phase != "AWAITING_FUNDING"
                 or settlement.funding_deadline is None
                 or settlement.funding_deadline > now
+                # ADR-057 / contract §3.8: an open dispute freezes the deal; staff decide.
+                or await self._open_dispute_hold(settlement.id)
             ):
                 await self._db.rollback()
                 continue
@@ -955,6 +969,8 @@ async def settlement_view(
     )
     return {
         "settlement_id": str(settlement.id),
+        # ADR-057: what a dispute is opened against.
+        "transaction_id": str(settlement.transaction_id),
         "phase": settlement.phase,
         "closure_reason": settlement.closure_reason,
         "simulated": bank is not None,

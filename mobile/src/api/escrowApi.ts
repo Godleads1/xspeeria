@@ -32,6 +32,8 @@ export type SettlementPhase =
 
 export interface ServerSettlement {
   settlement_id: string;
+  /** ADR-057: the deal's transaction; a dispute is opened against it. */
+  transaction_id?: string;
   phase: SettlementPhase;
   closure_reason: string | null;
   /** True on a developer's computer with the pretend bank: no real money moves. */
