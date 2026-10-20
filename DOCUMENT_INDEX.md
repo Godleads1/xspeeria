@@ -124,6 +124,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `051-admin-console-decisions.md` | Admin console scope: email-code staff 2FA (hardware key for Super Admin before live money), escrow float as a record not revenue, one approver never on own request, Cards/Adverts hidden, disputes from app and staff, Figma corrections (DEC-058) | **APPROVED** — 2026-10-19 |
 | `052-notifications-n3-phone-push.md` | Phone push via Expo (FCM/APNs): token bound to the signed-in session, each notification pushed once while fresh, no personal details on the lock screen, `PUSH_ENABLED` switch (DEC-059) | **PROPOSED** — 2026-10-19 |
 | `053-app-languages.md` | App in seven languages (English UK/US, French, Arabic right to left, Spanish, Chinese Simplified, Portuguese): English sentences as keys, picker on sign-in and Profile, legal texts English-only, native review before launch (DEC-060) | **PROPOSED** — 2026-10-19 |
+| `054-face-check-replaces-authenticator.md` | Face check (live selfie vs KYC photo) replaces the authenticator app as the second check after KYC; SMS + email codes before KYC; email alerts; paying in from another person's account pending legal sign-off (DEC-061) | **APPROVED** — 2026-10-20 (design PROPOSED) |
 
 ### Accounting policy is not architecture
 
