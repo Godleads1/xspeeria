@@ -67,7 +67,9 @@ describe('My Deals screen', () => {
 describe('Market menu', () => {
   const server: MarketServer = {
     offersFor: jest.fn(async () => []),
+    requestsFor: jest.fn(async () => []),
     publishSell: jest.fn(),
+    publishBuy: jest.fn(),
     newKey: () => 'k',
   };
 

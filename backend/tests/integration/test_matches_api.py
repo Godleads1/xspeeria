@@ -114,6 +114,34 @@ async def test_taking_part_of_an_offer(
     assert seen["your_role"] == "offer_owner" and seen["allocated_amount"] == "200.00"
 
 
+async def test_selling_to_a_buy_request(owner: Person, taker: Person) -> None:
+    """ADR-056: a buy request is an offer paying naira. "Buy 1,000 USD at 1,330" is saved as
+    NGN 1,330,000.00; a seller takes part of it in naira and the deal shows the USD side."""
+    r = await owner.publish(
+        source_currency="NGN",
+        target_currency="USD",
+        source_amount="1330000.00",
+        desired_rate="1330.00",
+    )
+    assert r.status_code == 201, r.text
+    request = r.json()
+    listed = (await taker.listings("NGN/USD")).json()["items"]
+    assert [o["offer_id"] for o in listed] == [request["offer_id"]]
+    r = await taker.take(request["offer_id"], "532000.00")  # 400.00 USD at 1,330
+    assert r.status_code == 201, r.text
+    m = r.json()
+    assert (m["currency"], m["allocated_amount"]) == ("NGN", "532000.00")
+    assert (m["counter_currency"], m["you_receive_currency"], m["you_receive_amount"]) == (
+        "USD",
+        "NGN",
+        "532000.00",
+    )
+    seen = (await owner.match(m["match_id"])).json()
+    assert (seen["you_receive_currency"], seen["you_receive_amount"]) == ("USD", "400.00")
+    left = (await taker.listings("NGN/USD")).json()["items"]
+    assert [o["remaining_amount"] for o in left] == ["798000.00"]
+
+
 async def test_taking_everything_closes_the_offer(
     db_settings: Settings, taker: Person, offer: dict[str, Any]
 ) -> None:

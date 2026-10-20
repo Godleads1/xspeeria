@@ -8,7 +8,7 @@
  *
  * Demo builds use mock data. With `server` (a development build pointed at a real server,
  * ADR-030) Buy lists real offers, tapping one opens Take offer (ADR-032), and Sell's "Create
- * Offer" publishes one; buy requests are not built on the server yet, and the screen says so. All amounts and
+ * Offer" publishes one; "Create request" publishes a buy request, saved as an offer paying naira (ADR-056). All amounts and
  * rates are parsed to integers (`money.ts`); the server re-validates everything.
  */
 
@@ -149,12 +149,11 @@ export function MarketScreen({
 
   const foreignCode = foreign?.code ?? null;
   useEffect(() => {
-    if (!server || side !== "buy" || !foreignCode) return undefined;
+    if (!server || !foreignCode) return undefined;
     let live = true;
     setServerRows(null);
     setLoadError(null);
-    server
-      .offersFor(foreignCode, Date.now())
+    (side === "buy" ? server.offersFor(foreignCode, Date.now()) : server.requestsFor(foreignCode, Date.now()))
       .then((rows) => {
         if (live) setServerRows(rows);
       })
@@ -171,11 +170,7 @@ export function MarketScreen({
 
   const listings = useMemo(() => {
     if (!foreign) return [];
-    const list = server
-      ? side === "buy"
-        ? (serverRows ?? [])
-        : []
-      : listingsFor(side, foreign.code);
+    const list = server ? (serverRows ?? []) : listingsFor(side, foreign.code);
     return cheapestFirst ? list : [...list].reverse();
   }, [side, foreign, cheapestFirst, server, serverRows]);
 
@@ -201,15 +196,21 @@ export function MarketScreen({
     pendingKey.current ??= server.newKey();
     setBusy(true);
     setNotice(null);
+    const buying = side === "buy";
     try {
-      await server.publishSell(code, amt, rt, pendingKey.current);
+      if (buying) await server.publishBuy(code, amt, rt, pendingKey.current);
+      else await server.publishSell(code, amt, rt, pendingKey.current);
       pendingKey.current = null;
       setAmount("");
       setRate("");
+      const values = { amt: formatHundredths(amt), code, rt: formatHundredths(rt) };
       setNotice({
         ok: true,
-        text: tr("Your offer to sell {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", { amt: formatHundredths(amt), code, rt: formatHundredths(rt) }),
+        text: buying
+          ? tr("Your request to buy {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", values)
+          : tr("Your offer to sell {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", values),
       });
+      setReload((n) => n + 1);
     } catch (e) {
       setNotice({ ok: false, text: messageFor(e) });
       setKycNeeded(e instanceof ApiError && e.code === "AUTH_403_KYC_REQUIRED");
@@ -223,13 +224,6 @@ export function MarketScreen({
     if (!ready || !foreign || amountMinor === null || rateHundredths === null)
       return;
     if (server) {
-      if (side === "buy") {
-        setNotice({
-          ok: false,
-          text: tr("Buy requests are coming soon. For now you can see the offers below."),
-        });
-        return;
-      }
       void publish(foreign.code, amountMinor, rateHundredths);
       return;
     }
@@ -238,7 +232,10 @@ export function MarketScreen({
 
   const take = (listing: Listing): void => {
     if (server && listing.own) {
-      setNotice({ ok: false, text: tr("This is your offer. Manage it under ⋮ › My Offers.") });
+      setNotice({
+        ok: false,
+        text: side === "buy" ? tr("This is your offer. Manage it under ⋮ › My Offers.") : tr("This is your request. Manage it under ⋮ › My Offers."),
+      });
       return;
     }
     // Server mode: the route opens Take offer (ADR-032), which reads the offer fresh.
@@ -456,7 +453,7 @@ export function MarketScreen({
         </Pressable>
       </View>
 
-      {server && side === "buy" && foreign && loadError ? (
+      {server && foreign && loadError ? (
         <View style={styles.loadError}>
           <Text testID="market-load-error" accessibilityRole="alert" style={styles.empty}>
             {loadError}
@@ -475,13 +472,11 @@ export function MarketScreen({
             <Text style={styles.detailsText}>{tr("Try again")}</Text>
           </Pressable>
         </View>
-      ) : server && side === "buy" && foreign && serverRows === null ? (
-        <Text testID="market-loading" style={styles.empty}>{tr("Loading offers…")}</Text>
+      ) : server && foreign && serverRows === null ? (
+        <Text testID="market-loading" style={styles.empty}>{side === "buy" ? tr("Loading offers…") : tr("Loading requests…")}</Text>
       ) : listings.length === 0 ? (
         <Text testID="market-empty" style={styles.empty}>
-          {server && side === "sell"
-            ? tr("Buy requests are coming soon.")
-            : foreign
+          {foreign
               ? (side === "buy" ? tr("No offers for {{code}} right now", { code: foreign.code }) : tr("No requests for {{code}} right now", { code: foreign.code }))
               : tr("Select a currency to buy to see available offers")}
         </Text>
