@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'expo-router';
 
 import { SERVER_MODE } from '../../../src/api/config';
+import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { regionsFromServer } from '../../../src/features/kyc/regions';
 import { serverRegions } from '../../../src/features/kyc/serverKyc';
 import { AccountDetailsScreen } from '../../../src/features/profile/AccountDetailsScreen';
@@ -14,6 +15,7 @@ export default function AccountDetailsRoute(): ReactElement {
   const [regions, setRegions] = useState<KycRegion[] | null>(null);
   useEffect(() => {
     if (!SERVER_MODE) return;
+    void serverAuth.refreshProfile().catch(() => undefined); // ADR-055: identity from the ID
     serverRegions().then(
       (r) => setRegions(regionsFromServer(r)),
       () => setRegions([]),

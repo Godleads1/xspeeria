@@ -251,13 +251,18 @@ async def logout(principal: CurrentPrincipal, service: Service) -> Response:
 
 @router.get("/users/me", response_model=ProfileResponse, tags=["users"], summary="My profile")
 async def me(principal: CurrentPrincipal, service: Service) -> ProfileResponse:
-    user = await service.me(principal)
-    return ProfileResponse(
-        user_id=user.id,
-        phone=user.phone,
-        email=user.email,
-        status=user.status,
-        created_at=user.created_at,
+    user, identity = await service.me(principal)
+    return ProfileResponse.model_validate(
+        {
+            "user_id": user.id,
+            "phone": user.phone,
+            "email": user.email,
+            "status": user.status,
+            "created_at": user.created_at,
+            "legal_name": identity.legal_name if identity else None,
+            "date_of_birth": identity.date_of_birth if identity else None,
+            "gender": identity.gender if identity else None,
+        }
     )
 
 

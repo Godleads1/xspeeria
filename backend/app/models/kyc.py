@@ -72,6 +72,7 @@ class KycCase(Base):
             postgresql_where=text("status = 'approved' AND identity_key IS NOT NULL"),
         ),
         Index("ix_kyc_cases_identity_key", "identity_key"),
+        CheckConstraint("gender IS NULL OR gender IN ('M', 'F')", name="gender_allowed"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -87,6 +88,8 @@ class KycCase(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     legal_name: Mapped[str | None] = mapped_column(String(255))
     date_of_birth: Mapped[date | None] = mapped_column(Date)
+    #: ADR-055: as printed on the ID ("M"/"F"), set with the approval; shown only to the user.
+    gender: Mapped[str | None] = mapped_column(CHAR(1))
     id_type: Mapped[str | None] = mapped_column(String(16))
     #: ISO 3166-1 alpha-3, as the provider reports the document's issuer.
     issuing_country: Mapped[str | None] = mapped_column(CHAR(3))

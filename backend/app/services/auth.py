@@ -72,6 +72,7 @@ from app.models.identity import (
     User,
     VerificationCheck,
 )
+from app.models.kyc import KycCase
 from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
 from app.providers.email import EmailSender, mask_email
@@ -621,11 +622,13 @@ class AuthService:
             session.revoke_reason = "logout"
         await self._db.commit()
 
-    async def me(self, principal: Principal) -> User:
+    async def me(self, principal: Principal) -> tuple[User, KycCase | None]:
+        """The account, and the identity from its latest approved check (ADR-055)."""
         user = await self._repo.user_by_id(principal.user_id)
         if user is None:  # pragma: no cover - a live session implies the user exists
             raise _unauthorized()
-        return user
+        identity = await self._repo.latest_approved_kyc(user.id)
+        return user, identity
 
     async def sessions(self, principal: Principal) -> list[AuthSession]:
         now = self._now()

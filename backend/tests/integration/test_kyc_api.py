@@ -148,6 +148,7 @@ def _approved(
                 "first_name": "Ada",
                 "last_name": "Obi",
                 "full_name": name,
+                "gender": "F",
                 "document_type": "Passport",
                 "issuing_state": issuer,
                 "document_number": document,
@@ -207,6 +208,8 @@ async def test_start_returns_didit_link_once_and_resumes_same_session(
 
 async def test_approved_check_unlocks_the_market(db_settings: Settings, k: K) -> None:
     token, uid = await _user(k)
+    before = (await k.env.get("/users/me", token=token)).json()
+    assert (before["legal_name"], before["date_of_birth"], before["gender"]) == (None, None, None)
     case = (await _start(k, token)).json()
     sid = k.didit.sessions[uid]
     r = await k.post_webhook({**_approved(sid, uid, status="In Progress"), "decision": None})
@@ -224,6 +227,9 @@ async def test_approved_check_unlocks_the_market(db_settings: Settings, k: K) ->
     }
     r = await k.env.client.get("/api/v1/offers/mine", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
+    # ADR-055: the profile shows the name, date of birth and gender from the ID.
+    me = (await k.env.get("/users/me", token=token)).json()
+    assert (me["legal_name"], me["date_of_birth"], me["gender"]) == ("Ada Obi", "1990-05-17", "F")
     # Only the outcome and a few facts are kept: never document numbers or images.
     row = str(await _sql(db_settings, "SELECT row_to_json(kyc_cases)::text FROM kyc_cases"))
     assert "A12345678" not in row and '"id_type":"passport"' in row and "NGA" in row

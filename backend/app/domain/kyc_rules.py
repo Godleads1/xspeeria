@@ -103,6 +103,8 @@ class Outcome:
     reason: str | None = None
     legal_name: str | None = None
     date_of_birth: date | None = None
+    #: ADR-055: "M" or "F" as read from the ID; None when the ID shows neither.
+    gender: str | None = None
     id_type: str | None = None
     issuing_country: str | None = None
     #: For the server log only (never shown, never personal data).
@@ -203,10 +205,17 @@ def evaluate(
         "approved",
         legal_name=name[:255],
         date_of_birth=born,
+        gender=_gender(idv.get("gender")),
         id_type=id_type,
         issuing_country=issuer,
         document_ref=f"{issuer or ''}|{id_type}|{number[:64]}",
     )
+
+
+def _gender(value: object) -> str | None:
+    """Didit's ``gender`` (e.g. ``"F"``). Only M/F are kept; anything else is not stored."""
+    word = str(value or "").strip().upper()
+    return {"M": "M", "MALE": "M", "F": "F", "FEMALE": "F"}.get(word)
 
 
 def _name_tokens(name: str) -> set[str]:

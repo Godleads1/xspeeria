@@ -256,6 +256,10 @@ async def test_sign_up_verify_and_read_my_profile(env: Env) -> None:
         "phone": PHONE,
         "email": EMAIL,
         "status": "active",
+        # ADR-055: no approved identity check yet, so no name, date of birth or gender.
+        "legal_name": None,
+        "date_of_birth": None,
+        "gender": None,
     }
 
 

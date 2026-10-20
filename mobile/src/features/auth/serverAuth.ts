@@ -14,10 +14,11 @@
  * not reached its last screen yet are kept here, in memory, never in route parameters.
  */
 
-import { authApi, isCheck, type Check, type Fetch, type Tokens } from '../../api/authApi';
+import { authApi, isCheck, type Check, type Fetch, type Profile, type Tokens } from '../../api/authApi';
 import { ApiError } from '../../api/client';
 import { secureTokens } from '../../api/secureTokens';
 import { unlockKey } from '../../api/unlockKey';
+import { profileStore, type ServerIdentity } from '../profile/profileStore';
 import { session } from './session';
 import { tr } from "../../i18n";
 
@@ -40,6 +41,17 @@ const state: State = { access: null, check: null, pending: null, lastRefreshAt: 
 let testServer: { fetchImpl: Fetch; baseUrl: string } | undefined;
 const x = (): { fetchImpl?: Fetch; baseUrl?: string } => testServer ?? {};
 
+function identityOf(me: Profile): ServerIdentity {
+  return {
+    userId: me.user_id,
+    phone: me.phone,
+    email: me.email,
+    legalName: me.legal_name ?? null,
+    dateOfBirth: me.date_of_birth ?? null,
+    gender: me.gender ?? null,
+  };
+}
+
 async function signIn(
   tokens: Tokens,
   now: number,
@@ -51,6 +63,7 @@ async function signIn(
   if (tokens.device_token) await secureTokens.setDeviceToken(tokens.device_token);
   const me = await authApi.me(tokens.access_token, x());
   session.serverSignIn({ phone: me.phone, email: me.email }, now, options);
+  profileStore.setServerIdentity(identityOf(me));
   // A new session needs its own unlock key; turn it back on if it was on for this account.
   if (!options.newAccount && !options.resumed && session.biometricOn()) void serverAuth.enableBiometric().catch(() => undefined);
 }
@@ -250,6 +263,7 @@ export const serverAuth = {
       await secureTokens.setRefreshToken(t.refresh_token);
       const me = await authApi.me(t.access_token, x());
       session.serverUnlocked(now, { phone: me.phone, email: me.email });
+      profileStore.setServerIdentity(identityOf(me));
       return true;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
@@ -259,6 +273,13 @@ export const serverAuth = {
       }
       throw e;
     }
+  },
+
+  /** Re-reads the profile (e.g. after the identity check is approved). */
+  async refreshProfile(): Promise<void> {
+    const access = state.access;
+    if (!access) return;
+    profileStore.setServerIdentity(identityOf(await authApi.me(access, x())));
   },
 
   /** App start: resume a session if the server still accepts the refresh token. */

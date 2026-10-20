@@ -7,8 +7,9 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { SERVER_MODE } from '../../api/config';
 import { session } from '../auth/session';
-import { PROFILE_USER, type ProfileUser } from './data';
+import { PROFILE_USER, nameInitials, type ProfileUser } from './data';
 
 export interface PendingDob {
   readonly dateOfBirth: string;
@@ -21,7 +22,32 @@ export interface Profile extends ProfileUser {
   readonly pendingDob: PendingDob | null;
 }
 
-const INITIAL: Profile = { ...PROFILE_USER, avatarUri: null, bannerUri: null, pendingDob: null };
+/**
+ * Server builds start empty and are filled from the server after sign-in (ADR-055): no sample
+ * person is ever shown as the user. Demo builds keep the Figma sample (David Peters).
+ */
+const BLANK: ProfileUser = {
+  fullName: '',
+  initials: '',
+  handle: '',
+  ratingHundredths: 0,
+  phone: '',
+  email: '',
+  dateOfBirth: '',
+  gender: '',
+};
+
+const INITIAL: Profile = { ...(SERVER_MODE ? BLANK : PROFILE_USER), avatarUri: null, bannerUri: null, pendingDob: null };
+
+export interface ServerIdentity {
+  readonly userId: string;
+  readonly phone: string;
+  readonly email: string;
+  /** From the approved identity check; null before it (ADR-055). */
+  readonly legalName: string | null;
+  readonly dateOfBirth: string | null;
+  readonly gender: 'M' | 'F' | null;
+}
 
 let state: Profile = INITIAL;
 const listeners = new Set<() => void>();
@@ -36,6 +62,21 @@ export const profileStore = {
   subscribe(l: () => void): () => void {
     listeners.add(l);
     return () => listeners.delete(l);
+  },
+  /** Server builds: the account and the identity from the ID check (ADR-055). */
+  setServerIdentity(id: ServerIdentity): void {
+    const name = id.legalName?.trim() ?? '';
+    set({
+      fullName: name,
+      initials: nameInitials(name, id.email.slice(0, 1)),
+      // Public handle shown to the other side of a deal instead of the real name.
+      handle: `User ${id.userId.replace(/[^0-9a-f]/gi, '').slice(0, 4).toUpperCase()}`,
+      ratingHundredths: 0,
+      phone: id.phone,
+      email: id.email,
+      dateOfBirth: id.dateOfBirth ?? '',
+      gender: id.gender ?? '',
+    });
   },
   setAvatar: (uri: string | null): void => set({ avatarUri: uri }),
   setBanner: (uri: string | null): void => set({ bannerUri: uri }),
