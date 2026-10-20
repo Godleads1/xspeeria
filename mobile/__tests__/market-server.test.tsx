@@ -259,6 +259,33 @@ describe('My Offers (ADR-030)', () => {
     expect(screen.queryByTestId('my-offer-a1-withdraw')).toBeNull();
   });
 
+  it('shows a buy request in the foreign currency (ADR-056)', async () => {
+    const request = offer({
+      offer_id: 'r1',
+      is_own: true,
+      source_currency: 'NGN',
+      target_currency: 'USD',
+      source_amount: '13300000.00',
+      matched_amount: '532000.00',
+      remaining_amount: '12768000.00',
+      desired_rate: '1330.00',
+      status: 'partially_matched',
+    });
+    const source = {
+      list: jest.fn(async () => [request]),
+      withdraw: jest.fn(async () => ({ ...request, status: 'withdrawn' as const })),
+    };
+    await render(<MyOffersScreen source={source} onBack={jest.fn()} />);
+    await flush();
+    const row = screen.getByTestId('my-offer-r1');
+    expect(row).toHaveTextContent(/Buy 10,000\.00 USD \(you pay NGN 13,300,000\.00\)/);
+    expect(row).toHaveTextContent(/Matched: 400\.00 · Left: 9,600\.00 USD/);
+    await fireEvent.press(screen.getByTestId('my-offer-r1-withdraw'));
+    await fireEvent.press(screen.getByTestId('my-offer-r1-withdraw'));
+    await flush();
+    expect(screen.getByTestId('my-offers-notice')).toHaveTextContent('Request withdrawn.');
+  });
+
   it('shows an error with retry', async () => {
     const source = {
       list: jest.fn().mockRejectedValueOnce(new ApiError('NETWORK', 0, 'Can’t reach Xspeeria.')).mockResolvedValue([]),

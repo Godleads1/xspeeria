@@ -168,6 +168,9 @@ export function MarketScreen({
     };
   }, [server, side, foreignCode, reload, refreshSignal]);
 
+  // Coming back to Market (e.g. after withdrawing in My Offers): an old "is live" note goes.
+  useEffect(() => setNotice(null), [refreshSignal]);
+
   const listings = useMemo(() => {
     if (!foreign) return [];
     const list = server ? (serverRows ?? []) : listingsFor(side, foreign.code);

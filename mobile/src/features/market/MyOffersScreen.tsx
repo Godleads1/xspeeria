@@ -15,7 +15,8 @@ import type { ServerOffer } from "../../api/offersApi";
 import { Icon } from "../../components/icons";
 import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTone } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
-import { groupedRate } from "./serverOffers";
+import { formatHundredths } from "./money";
+import { exactHundredths, foreignMinorFor, groupedRate } from "./serverOffers";
 import { tr, k } from "../../i18n";
 
 export interface MyOffersSource {
@@ -69,7 +70,7 @@ export function MyOffersScreen({
     try {
       const updated = await source.withdraw(id);
       setOffers((list) => (list ?? []).map((o) => (o.offer_id === id ? updated : o)));
-      setNotice(tr("Offer withdrawn."));
+      setNotice(updated.source_currency === "NGN" ? tr("Request withdrawn.") : tr("Offer withdrawn."));
     } catch (e) {
       setNotice(messageFor(e));
     } finally {
@@ -105,11 +106,18 @@ export function MyOffersScreen({
       ) : offers === null ? (
         <LoadingState label={tr("Loading your offers")} />
       ) : offers.length === 0 ? (
-        <EmptyState title={tr("You have no offers yet. Create one from Market › Sell.")} />
+        <EmptyState title={tr("You have no offers or requests yet. Create one from Market.")} />
       ) : (
         <View testID="my-offers-list" style={styles.list}>
           {offers.map((o) => {
-            const foreign = o.source_currency === "NGN" ? o.target_currency : o.source_currency;
+            // ADR-056: a buy request is an offer paying naira; it is shown in the foreign currency.
+            const request = o.source_currency === "NGN";
+            const foreign = request ? o.target_currency : o.source_currency;
+            const inForeign = (text: string): string => {
+              const naira = exactHundredths(text);
+              const minor = naira === null ? null : foreignMinorFor(naira, o.desired_rate);
+              return minor === null ? "" : formatHundredths(minor);
+            };
             const status = STATUS[o.status];
             const active = ACTIVE.has(o.status);
             const asking = confirming === o.offer_id;
@@ -117,15 +125,24 @@ export function MyOffersScreen({
               <View key={o.offer_id} testID={`my-offer-${o.offer_id}`} style={styles.row}>
                 <View style={styles.rowTop}>
                   <Text style={styles.strong}>
-                    {tr("Sell {{source_amount}} {{source_currency}} → {{target_currency}}", { source_amount: grouped(o.source_amount), source_currency: o.source_currency, target_currency: o.target_currency })}
+                    {request
+                      ? tr("Buy {{amount}} {{currency}} (you pay NGN {{naira}})", { amount: inForeign(o.source_amount), currency: foreign, naira: grouped(o.source_amount) })
+                      : tr("Sell {{source_amount}} {{source_currency}} → {{target_currency}}", { source_amount: grouped(o.source_amount), source_currency: o.source_currency, target_currency: o.target_currency })}
                   </Text>
                   <StatusChip label={tr(status.label)} tone={status.tone} />
                 </View>
                 <Text style={styles.line}>{tr("Rate: NGN {{desired_rate}} /{{foreign}}", { desired_rate: groupedRate(o.desired_rate), foreign })}</Text>
                 <Text style={styles.line}>
                   {active
-                    ? tr("Matched: {{matched_amount}} · Left: {{remaining_amount}} {{source_currency}}", { matched_amount: grouped(o.matched_amount), remaining_amount: grouped(o.remaining_amount), source_currency: o.source_currency })
-                    : tr("Matched: {{matched_amount}} {{source_currency}}", { matched_amount: grouped(o.matched_amount), source_currency: o.source_currency })}
+                    ? tr("Matched: {{matched_amount}} · Left: {{remaining_amount}} {{source_currency}}", {
+                        matched_amount: request ? inForeign(o.matched_amount) : grouped(o.matched_amount),
+                        remaining_amount: request ? inForeign(o.remaining_amount) : grouped(o.remaining_amount),
+                        source_currency: foreign,
+                      })
+                    : tr("Matched: {{matched_amount}} {{source_currency}}", {
+                        matched_amount: request ? inForeign(o.matched_amount) : grouped(o.matched_amount),
+                        source_currency: foreign,
+                      })}
                 </Text>
                 {active ? (
                   <Pressable
@@ -137,7 +154,7 @@ export function MyOffersScreen({
                     style={({ pressed }) => [styles.withdraw, asking ? styles.withdrawConfirm : null, pressed ? styles.pressed : null]}
                   >
                     <Text style={[styles.withdrawLabel, asking ? styles.withdrawConfirmLabel : null]}>
-                      {working === o.offer_id ? "Withdrawing…" : asking ? tr("Tap again to withdraw") : "Withdraw"}
+                      {working === o.offer_id ? tr("Withdrawing…") : asking ? tr("Tap again to withdraw") : tr("Withdraw")}
                     </Text>
                   </Pressable>
                 ) : null}
