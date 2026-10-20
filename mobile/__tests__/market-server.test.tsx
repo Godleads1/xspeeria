@@ -9,7 +9,7 @@ import { offersApi, type ServerOffer } from '../src/api/offersApi';
 import { serverAuth } from '../src/features/auth/serverAuth';
 import { MarketScreen } from '../src/features/market/MarketScreen';
 import { MyOffersScreen } from '../src/features/market/MyOffersScreen';
-import { exactHundredths, marketServer, myOffers, toListing, type MarketServer } from '../src/features/market/serverOffers';
+import { exactHundredths, foreignMinorFor, marketServer, myOffers, toListing, type MarketServer } from '../src/features/market/serverOffers';
 
 jest.mock('expo-crypto', () => ({ randomUUID: jest.fn(() => '11111111-1111-4111-8111-111111111111') }));
 jest.mock('expo-secure-store', () => ({
@@ -72,12 +72,14 @@ describe('marketServer requests', () => {
   });
 });
 
-function fakeServer(rows: ServerOffer[] = [offer()]): jest.Mocked<MarketServer> {
+function fakeServer(rows: ServerOffer[] = [offer()], requests: ServerOffer[] = []): jest.Mocked<MarketServer> {
+  const listed = (list: ServerOffer[], now: number) =>
+    list.map((o, i) => toListing(o, now, i === 0)).filter((r): r is NonNullable<typeof r> => r !== null);
   return {
-    offersFor: jest.fn(async (_c: string, now: number) =>
-      rows.map((o, i) => toListing(o, now, i === 0)).filter((r): r is NonNullable<typeof r> => r !== null),
-    ),
+    offersFor: jest.fn(async (_c: string, now: number) => listed(rows, now)),
+    requestsFor: jest.fn(async (_c: string, now: number) => listed(requests, now)),
     publishSell: jest.fn(async (_c: string, _a: number, _r: number, _k: string) => offer({ is_own: true })),
+    publishBuy: jest.fn(async (_c: string, _a: number, _r: number, _k: string) => offer({ is_own: true })),
     newKey: jest.fn(() => 'key-1'),
   };
 }
@@ -188,18 +190,52 @@ describe('Market screen with a server (ADR-030)', () => {
     expect(server.publishSell).not.toHaveBeenCalled();
   });
 
-  it('says buy requests are coming instead of creating one', async () => {
-    const server = fakeServer();
+  it('publishes a buy request (ADR-056) and lists requests on the Sell side', async () => {
+    const request = offer({
+      offer_id: 'r1',
+      source_currency: 'NGN',
+      target_currency: 'USD',
+      source_amount: '1330000.00',
+      remaining_amount: '1330000.00',
+      desired_rate: '1330.00',
+    });
+    const server = fakeServer([offer()], [request]);
     await render(<MarketScreen server={server} />);
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
-    await fireEvent.changeText(screen.getByTestId('market-amount'), '100');
-    await fireEvent.changeText(screen.getByTestId('market-rate'), '1320');
+    await fireEvent.changeText(screen.getByTestId('market-amount'), '1000');
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1330');
     await flush();
     await fireEvent.press(screen.getByTestId('market-create'));
-    expect(screen.getByTestId('market-notice')).toHaveTextContent(/Buy\ requests\ are\ coming\ soon/);
+    await flush();
+    expect(server.publishBuy).toHaveBeenCalledWith('USD', 100000, 133000, 'key-1');
+    expect(screen.getByTestId('market-notice')).toHaveTextContent(/request to buy 1,000\.00 USD/);
     await fireEvent.press(screen.getByTestId('market-sell'));
-    expect(screen.getByTestId('market-empty')).toHaveTextContent(/Buy\ requests\ are\ coming\ soon\./);
+    await flush();
+    expect(server.requestsFor).toHaveBeenCalledWith('USD', expect.any(Number));
+    expect(screen.getByTestId('listing-r1')).toHaveTextContent(/1,000 USD/); // shown in USD
+  });
+});
+
+describe('buy requests as offers paying naira (ADR-056)', () => {
+  it('shows the foreign amount still wanted, rounded like the server', () => {
+    expect(foreignMinorFor(133000000, '1330.00')).toBe(100000);
+    expect(foreignMinorFor(133055, '1330.55')).toBe(100);
+    expect(foreignMinorFor(100, 'abc')).toBeNull();
+    expect(foreignMinorFor(100, '0')).toBeNull();
+    const row = toListing(
+      offer({ source_currency: 'NGN', target_currency: 'USD', remaining_amount: '665000.00', desired_rate: '1330.00', is_own: true }),
+      NOW,
+      true,
+    );
+    expect(row).toMatchObject({ currency: 'USD', availableMinor: 50000, own: true, meta: 'Your request' });
+  });
+
+  it('publishBuy needs a signed-in session and sends nothing without one', async () => {
+    const publish = jest.spyOn(offersApi, 'publish');
+    await expect(marketServer.publishBuy('USD', 100001, 133055, 'k-1')).rejects.toBeInstanceOf(ApiError);
+    expect(publish).not.toHaveBeenCalled();
+    publish.mockRestore();
   });
 });
 

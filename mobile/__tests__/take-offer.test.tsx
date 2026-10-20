@@ -164,3 +164,55 @@ describe('Take offer screen (ADR-032)', () => {
     expect(screen.getByText('That offer was not found.')).toBeTruthy();
   });
 });
+
+describe('Selling to a buy request (ADR-056)', () => {
+  const REQUEST: ServerOffer = {
+    ...OFFER,
+    offer_id: 'r-1',
+    source_currency: 'NGN',
+    target_currency: 'USD',
+    source_amount: '1330000.00',
+    remaining_amount: '1330000.00',
+    desired_rate: '1330.00',
+  };
+  const SOLD: ServerMatch = {
+    ...MATCH,
+    offer_id: 'r-1',
+    currency: 'NGN',
+    counter_currency: 'USD',
+    allocated_amount: '532000.00',
+    agreed_rate: '1330.00',
+    counter_amount: '400.00',
+  };
+
+  function requestSource(): jest.Mocked<TakeSource> {
+    const src = source();
+    src.offer.mockResolvedValue(REQUEST);
+    src.accept.mockResolvedValue(SOLD);
+    return src;
+  }
+
+  it('is typed in the foreign currency and sent in naira', async () => {
+    const src = requestSource();
+    await open(src);
+    expect(screen.getByTestId('take-offer')).toHaveTextContent(/1,000\.00 USD/);
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '400');
+    expect(screen.getByTestId('take-ngn')).toHaveTextContent('Works out to NGN 532,000.00');
+    await fireEvent.press(screen.getByTestId('take-submit'));
+    await flush();
+    expect(src.approve).toHaveBeenCalledWith('Sell 400.00 USD at NGN 1,330.00');
+    expect(src.accept).toHaveBeenCalledWith('r-1', '532000.00', expect.any(String), expect.any(String));
+    expect(screen.getByTestId('take-match')).toHaveTextContent(/400\.00 USD/);
+  });
+
+  it('"take all" sends exactly the naira left; more than wanted is refused', async () => {
+    const src = requestSource();
+    await open(src);
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '1000.01');
+    expect(screen.getByTestId('take-too-much')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('take-all'));
+    await fireEvent.press(screen.getByTestId('take-submit'));
+    await flush();
+    expect(src.accept).toHaveBeenCalledWith('r-1', '1330000.00', expect.any(String), expect.any(String));
+  });
+});

@@ -14,7 +14,7 @@ import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersA
 import { serverAuth } from '../auth/serverAuth';
 import { confirmIdentity } from '../security/serverConfirm';
 import type { Listing } from './data';
-import { formatHundredths, parseToHundredths } from './money';
+import { divRoundHalfEven, formatHundredths, parseToHundredths, quoteMinorOrNull } from './money';
 import { tr } from "../../i18n";
 
 /** Server text such as "1320.50" or "1320.125" → hundredths, only when exact. */
@@ -42,11 +42,29 @@ function minutesAgo(iso: string, now: number): string {
   return (days === 1 ? tr("Offer time: 1 day ago") : tr("Offer time: {{count}} days ago", { count: days }));
 }
 
+/**
+ * ADR-056: a buy request is an offer that pays naira. Its foreign amount for display is the
+ * naira left ÷ the rate (NGN per 1 unit, up to 6 decimals), half to even — the same rule the
+ * server uses when it is taken (ADR-019). Null when the inputs are not exact decimal text.
+ */
+export function foreignMinorFor(ngnMinor: number, rate: string): number | null {
+  const m = /^([0-9]+)(?:\.([0-9]{1,6}))?$/.exec(rate);
+  if (!m || !Number.isSafeInteger(ngnMinor) || ngnMinor < 0) return null;
+  const micro = BigInt(m[1]) * 1_000_000n + BigInt((m[2] ?? '').padEnd(6, '0'));
+  if (micro <= 0n) return null;
+  const n = Number(divRoundHalfEven(BigInt(ngnMinor) * 1_000_000n, micro));
+  return Number.isSafeInteger(n) ? n : null;
+}
+
 /** A server offer as a Market row. Returns null for anything the app cannot show exactly. */
 export function toListing(offer: ServerOffer, now: number, best: boolean): Listing | null {
-  const foreign = offer.source_currency === 'NGN' ? offer.target_currency : offer.source_currency;
-  const remaining = exactHundredths(offer.remaining_amount);
-  if (remaining === null || !/^[0-9]+(\.[0-9]{1,6})?$/.test(offer.desired_rate)) return null;
+  const request = offer.source_currency === 'NGN';
+  const foreign = request ? offer.target_currency : offer.source_currency;
+  const left = exactHundredths(offer.remaining_amount);
+  if (left === null || !/^[0-9]+(\.[0-9]{1,6})?$/.test(offer.desired_rate)) return null;
+  // A buy request shows how much foreign currency it still wants (ADR-056).
+  const remaining = request ? foreignMinorFor(left, offer.desired_rate) : left;
+  if (remaining === null) return null;
   const rate = exactHundredths(offer.desired_rate);
   // A rate with more than two decimals keeps its exact text for display; the integer is
   // then only a sort key, never used for an amount (taking offers is not built yet).
@@ -58,7 +76,7 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
     availableMinor: remaining,
     rateHundredths: sortKey,
     ...(rate === null ? { rateLabel: groupedRate(offer.desired_rate) } : {}),
-    meta: offer.is_own ? tr("Your offer") : minutesAgo(offer.created_at, now),
+    meta: offer.is_own ? (request ? tr("Your request") : tr("Your offer")) : minutesAgo(offer.created_at, now),
     ...(best ? { best: true } : {}),
     ...(offer.is_own ? { own: true } : {}),
   };
@@ -73,8 +91,15 @@ function token(): string {
 export interface MarketServer {
   /** Offers selling `foreign` for naira, best (lowest) rate first. */
   offersFor(foreign: string, now: number): Promise<Listing[]>;
+  /** Buy requests for `foreign` (offers paying naira, ADR-056), best (highest) rate first. */
+  requestsFor(foreign: string, now: number): Promise<Listing[]>;
   /** Publish an offer to sell `foreign` for naira. Safe to retry with the same key. */
   publishSell(foreign: string, amountMinor: number, rateHundredths: number, key: string): Promise<ServerOffer>;
+  /**
+   * ADR-056: publish a request to buy `amountMinor` of `foreign`, saved as an offer paying
+   * amount × rate in naira (half to even). Safe to retry with the same key.
+   */
+  publishBuy(foreign: string, amountMinor: number, rateHundredths: number, key: string): Promise<ServerOffer>;
   newKey(): string;
 }
 
@@ -87,6 +112,30 @@ export const marketServer: MarketServer = {
       if (row) rows.push(row);
     });
     return rows;
+  },
+  async requestsFor(foreign, now) {
+    const page = await offersApi.listings(token(), `NGN/${foreign}`, 50, 0, serverAuth.apiOptions());
+    const rows: Listing[] = [];
+    page.items.forEach((o) => {
+      const row = toListing(o, now, rows.length === 0);
+      if (row) rows.push(row);
+    });
+    return rows;
+  },
+  async publishBuy(foreign, amountMinor, rateHundredths, key) {
+    const naira = quoteMinorOrNull(amountMinor, rateHundredths);
+    if (naira === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
+    return offersApi.publish(
+      token(),
+      {
+        source_currency: 'NGN',
+        target_currency: foreign,
+        source_amount: formatHundredths(naira).replace(/,/g, ''),
+        desired_rate: formatHundredths(rateHundredths).replace(/,/g, ''),
+      },
+      key,
+      serverAuth.apiOptions(),
+    );
   },
   async publishSell(foreign, amountMinor, rateHundredths, key) {
     return offersApi.publish(

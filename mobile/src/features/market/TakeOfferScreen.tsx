@@ -20,7 +20,7 @@ import { ErrorState, LoadingState, PrimaryButton, Screen } from "../../component
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { FieldInput, OutlinedField } from "./controls";
 import { divRoundHalfEven, formatHundredths, parseToHundredths } from "./money";
-import { groupedRate, type TakeSource } from "./serverOffers";
+import { foreignMinorFor, groupedRate, type TakeSource } from "./serverOffers";
 import { tr } from "../../i18n";
 
 /** "500.00" → 50000 (exact) or null. */
@@ -76,10 +76,20 @@ export function TakeOfferScreen({
   }, [offerId, source]);
   useEffect(load, [load]);
 
-  const remaining = offer ? minorOf(offer.remaining_amount) : null;
+  // ADR-056: a buy request is an offer paying naira. The taker sells the foreign currency, so
+  // the amount is typed in it; the naira equivalent is what the server is sent.
+  const request = offer?.source_currency === "NGN";
+  const code = offer ? (request ? offer.target_currency : offer.source_currency) : "";
+  const leftMinor = offer ? minorOf(offer.remaining_amount) : null;
+  const remaining = offer && leftMinor !== null ? (request ? foreignMinorFor(leftMinor, offer.desired_rate) : leftMinor) : null;
   const amountMinor = parseToHundredths(amount);
-  const tooMuch = amountMinor !== null && remaining !== null && amountMinor > remaining;
-  const ngn = offer && amountMinor !== null && !tooMuch ? ngnMinorFor(amountMinor, offer.desired_rate) : null;
+  const ngnFor = amountMinor !== null && offer ? ngnMinorFor(amountMinor, offer.desired_rate) : null;
+  const tooMuch =
+    amountMinor !== null &&
+    remaining !== null &&
+    (request ? ngnFor === null || leftMinor === null || ngnFor > leftMinor : amountMinor > remaining);
+  const ngn = offer && amountMinor !== null && !tooMuch ? ngnFor : null;
+  const remainingText = remaining !== null ? formatHundredths(remaining).replace(/,/g, "") : "";
   const ready = offer !== null && amountMinor !== null && !tooMuch && !busy;
 
   const editAmount = (v: string): void => {
@@ -94,20 +104,21 @@ export function TakeOfferScreen({
     setError(null);
     try {
       key.current ??= source.newKey();
+      const values = { amount: formatHundredths(amountMinor), currency: code, rate: groupedRate(offer.desired_rate) };
       approval.current ??= await source.approve(
-        tr("Take {{amount}} {{currency}} at NGN {{rate}}", {
-          amount: formatHundredths(amountMinor),
-          currency: offer.source_currency,
-          rate: groupedRate(offer.desired_rate),
-        }),
+        request ? tr("Sell {{amount}} {{currency}} at NGN {{rate}}", values) : tr("Take {{amount}} {{currency}} at NGN {{rate}}", values),
       );
       if (!approval.current) return; // cancelled
-      const m = await source.accept(
-        offer.offer_id,
-        formatHundredths(amountMinor).replace(/,/g, ""),
-        key.current,
-        approval.current,
-      );
+      // A request is taken in naira: everything left exactly, or amount × rate (half to even).
+      const sent = request
+        ? amountMinor === remaining
+          ? offer.remaining_amount
+          : ngn !== null
+            ? formatHundredths(ngn).replace(/,/g, "")
+            : null
+        : formatHundredths(amountMinor).replace(/,/g, "");
+      if (sent === null) return;
+      const m = await source.accept(offer.offer_id, sent, key.current, approval.current);
       setMatch(m);
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) approval.current = null; // spent or refused
@@ -123,20 +134,22 @@ export function TakeOfferScreen({
         <Icon name="back" color={color.text.primary} size={24} weight={2.25} />
       </Pressable>
       <Text accessibilityRole="header" style={styles.title}>
-        {match ? tr("Deal recorded") : tr("Take offer")}
+        {match ? tr("Deal recorded") : request ? tr("Sell to this request") : tr("Take offer")}
       </Text>
       <View style={styles.spacer} />
     </View>
   );
 
   if (match) {
-    const total = ngnMinorFor(minorOf(match.allocated_amount) ?? 0, match.agreed_rate);
+    const naira = match.currency === "NGN";
+    const shown = naira ? `${grouped(match.counter_amount ?? "")} ${match.counter_currency}` : `${grouped(match.allocated_amount)} ${match.currency}`;
+    const total = naira ? minorOf(match.allocated_amount) : ngnMinorFor(minorOf(match.allocated_amount) ?? 0, match.agreed_rate);
     return (
       <Screen testID="take-done-screen">
         {header}
         <View testID="take-match" style={styles.card}>
-          <Text style={styles.big}>{`${grouped(match.allocated_amount)} ${match.currency}`}</Text>
-          <Text style={styles.line}>{tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(match.agreed_rate), currency: match.currency })}</Text>
+          <Text style={styles.big}>{shown}</Text>
+          <Text style={styles.line}>{tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(match.agreed_rate), currency: naira ? match.counter_currency : match.currency })}</Text>
           {total !== null ? (
             <Text style={styles.line}>{tr("Works out to NGN {{total}}", { total: formatHundredths(total) })}</Text>
           ) : null}
@@ -164,19 +177,19 @@ export function TakeOfferScreen({
           <View testID="take-offer" style={styles.card}>
             <Text style={styles.line}>
               {tr("Available: ")}
-              <Text style={styles.strong}>{`${grouped(offer.remaining_amount)} ${offer.source_currency}`}</Text>
+              <Text style={styles.strong}>{`${grouped(remainingText)} ${code}`}</Text>
             </Text>
             <Text style={styles.line}>
               {tr("Rate: ")}
               <Text style={styles.strong}>{`NGN ${groupedRate(offer.desired_rate)}`}</Text>
-              {` /${offer.source_currency}`}
+              {` /${code}`}
             </Text>
           </View>
 
-          <OutlinedField label={tr("Amount in “{{source_currency}}” to take *", { source_currency: offer.source_currency })} invalid={tooMuch}>
+          <OutlinedField label={request ? tr("Amount in “{{source_currency}}” to sell *", { source_currency: code }) : tr("Amount in “{{source_currency}}” to take *", { source_currency: code })} invalid={tooMuch}>
             <FieldInput
               testID="take-amount"
-              accessibilityLabel={tr("Amount in {{source_currency}} to take", { source_currency: offer.source_currency })}
+              accessibilityLabel={tr("Amount in {{source_currency}} to take", { source_currency: code })}
               value={amount}
               onChangeText={editAmount}
             />
@@ -184,15 +197,15 @@ export function TakeOfferScreen({
           <Pressable
             testID="take-all"
             accessibilityRole="button"
-            onPress={() => editAmount(offer.remaining_amount)}
+            onPress={() => editAmount(remainingText)}
             hitSlop={8}
             style={styles.takeAll}
           >
-            <Text style={styles.link}>{tr("Take all {{remaining_amount}} {{source_currency}}", { remaining_amount: grouped(offer.remaining_amount), source_currency: offer.source_currency })}</Text>
+            <Text style={styles.link}>{tr("Take all {{remaining_amount}} {{source_currency}}", { remaining_amount: grouped(remainingText), source_currency: code })}</Text>
           </Pressable>
           {tooMuch ? (
             <Text testID="take-too-much" accessibilityRole="alert" style={styles.error}>
-              {tr("Only {{remaining_amount}} {{source_currency}} is available.", { remaining_amount: grouped(offer.remaining_amount), source_currency: offer.source_currency })}
+              {tr("Only {{remaining_amount}} {{source_currency}} is available.", { remaining_amount: grouped(remainingText), source_currency: code })}
             </Text>
           ) : ngn !== null ? (
             <Text testID="take-ngn" style={styles.line}>{tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })}</Text>
@@ -204,7 +217,7 @@ export function TakeOfferScreen({
               {error}
             </Text>
           ) : null}
-          <PrimaryButton testID="take-submit" label={busy ? tr("Taking…") : tr("Take offer")} onPress={() => void take()} disabled={!ready} />
+          <PrimaryButton testID="take-submit" label={busy ? tr("Taking…") : request ? tr("Sell") : tr("Take offer")} onPress={() => void take()} disabled={!ready} />
           <Text style={styles.note}>{tr("Taking an offer records the deal at this rate. No money moves yet: you’ll pay into the partner bank’s escrow account in a later step.")}</Text>
         </View>
       )}

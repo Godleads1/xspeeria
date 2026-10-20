@@ -105,3 +105,14 @@ Needs `KYC_DEV_BYPASS=true` in `.env` and the currency command from step 3.
 Buy requests are not built yet; the app says "coming soon". The pretend bank only exists on
 your computer and forgets everything when the server restarts. No real money moves.
 
+
+
+## Start again with the same phone and email (this computer only)
+
+Deletes every account and everything made with them (offers, deals, identity checks), keeps
+the currencies and pretend banks. Refused unless `APP_ENV=local`.
+
+```bash
+cd backend
+uv run python -m app.cli.reset_local_data --yes-delete-everything
+```
