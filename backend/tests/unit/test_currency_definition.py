@@ -360,6 +360,8 @@ class TestPackageRegistration:
             "push_tokens",
             "push_deliveries",
             "verification_checks",
+            "disputes",
+            "dispute_messages",
         }
 
     @pytest.mark.parametrize(
@@ -400,7 +402,8 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'idempotency_records', 'kyc_cases', 'kyc_webhook_events', "
+            "'currency_definitions', 'dispute_messages', 'disputes', 'idempotency_records', "
+            "'kyc_cases', 'kyc_webhook_events', "
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', 'offers', "
             "'outbox_messages', "
@@ -465,4 +468,5 @@ class TestPackageRegistration:
             "0016_push_tokens_n3.py",  # phone push (ADR-052)
             "0017_verification_checks.py",  # face check (ADR-054)
             "0018_kyc_gender.py",  # gender from the ID (ADR-055)
+            "0019_disputes.py",  # disputes and support cases (ADR-057)
         ]

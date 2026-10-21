@@ -30,3 +30,8 @@ Real-device right-to-left layout and the brand fonts' fallback for Arabic and Ch
 ## Next
 
 Admin web console languages (same seven) when the console is built (ADR-051); server-side language for push and email.
+
+
+## Update — 2026-10-20 (product owner)
+
+"Native speakers check the translations — use AI for this." The pre-launch translation review is done by an AI review pass (a model checking each language against the English for meaning, tone, placeholders and financial terms) instead of native speakers. A human may still spot-check before launch.

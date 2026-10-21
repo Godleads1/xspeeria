@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-20; Decision 1 **IMPLEMENTED** 2026-10-20 (server + app); Decision 2 not built |
+| **Status** | **APPROVED** (owner) — 2026-10-20; Decision 1 **IMPLEMENTED** 2026-10-20 (server + app); Decision 2: paying from someone else's account **not allowed** |
 | **Decision ID** | DEC-061 |
 | **Supersedes** | ADR-008's choice of an authenticator app (TOTP) as the user's second factor. ADR-008's *rule* stays: a second check besides the PIN on a new phone and before sensitive changes (SEC-002). |
 | **Authority** | Product owner, 2026-10-20: "we can use finger print for that" → chose fingerprint on a trusted phone, face check only on a new phone or for recovery ("Yes, that mix"). Earlier the same day: "remove the authenticate stuff … they will have to verify their kyc … sent email that the user tried to login … use face verification to confirm if the user is actually the [one who] transfer[s] money to the escrow account"; then chose **"Face check (Recommended)"**. On paying in: "the money can come from another person depending on the relationship." |
@@ -24,7 +24,11 @@
 - Why not fingerprint everywhere: the phone's fingerprint proves only that a finger saved on *that* phone was used. On a new phone a thief would use their own finger, so a new phone always needs the face check against the KYC photo.
 - **Cost:** Didit lists biometric authentication at about **$0.10 per check** (pricing page, 2026-10-20; to confirm in the Didit contract). Trusted phones keep the count low.
 
-## Decision 2 — paying in from someone else's account (NOT built; needs legal sign-off)
+## Decision 2 — paying in from someone else's account: **NOT ALLOWED** (owner, 2026-10-20)
+
+> **Update 2026-10-20 (product owner):** "you can not pay from someone else's account". Paying into escrow from another person's account is **not allowed**; only an account in the user's own name may be used (banking spec §3.3, ADR-022, unchanged). The earlier wish below is withdrawn and nothing will be built for it.
+
+### Earlier note (withdrawn)
 
 The owner wants a person to be able to pay into escrow from another person's account "depending on the relationship". Today: own-name accounts only (banking spec §3.3; ADR-022; DEC-007 still open). Third-party funding is a known money-laundering and fraud route, so before building: lawyer and compliance sign-off, partner-bank acceptance, which relationships qualify (e.g. spouse, parent), what proof, limits, and how the bank reports the payer's name. Until then the app keeps "pay from an account in your name".
 

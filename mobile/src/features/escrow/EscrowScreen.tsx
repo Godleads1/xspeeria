@@ -116,12 +116,15 @@ export function EscrowScreen({
   matchId,
   source,
   onBack,
+  onReport,
   now = Date.now,
   pollMs = POLL_MS,
 }: {
   matchId: string;
   source: EscrowSource;
   onBack: () => void;
+  /** ADR-057: opens "Report a problem" for this deal's transaction. */
+  onReport?: (transactionId: string) => void;
   now?: () => number;
   pollMs?: number;
 }): ReactElement {
@@ -255,6 +258,17 @@ export function EscrowScreen({
           disabled={busy}
         />
       ) : null}
+      {onReport && s.transaction_id ? (
+        <Pressable
+          testID="escrow-report"
+          accessibilityRole="button"
+          onPress={() => s.transaction_id && onReport(s.transaction_id)}
+          hitSlop={8}
+          style={styles.report}
+        >
+          <Text style={styles.reportText}>{tr("Report a problem with this deal")}</Text>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -307,4 +321,6 @@ const styles = themed(() => ({
   dotDone: { backgroundColor: color.brand.primary, borderColor: color.brand.primary },
   stepDone: { color: color.text.primary },
   error: { ...typography.caption, fontSize: 13, color: color.error.text },
+  report: { alignSelf: 'center', paddingVertical: space.xs },
+  reportText: { ...typography.body, fontSize: 14, color: color.error.text },
 }));
