@@ -10,6 +10,7 @@ import { StepUpHost } from '../src/features/security/StepUpHost';
 import { DEMO_MODE } from '../src/features/auth/demo';
 import { LaunchSplash } from '../src/features/auth/LaunchSplash';
 import { UnavailableBuild } from '../src/features/auth/ui';
+import { AppDialogHost, installAppDialog } from '../src/components/AppDialog';
 import { BannerHost } from '../src/components/Banner';
 import { installWebAlert } from '../src/components/webAlert';
 import { language, useLanguage } from '../src/i18n';
@@ -20,6 +21,8 @@ import { SATOSHI_FILES, SPACE_GROTESK_FILES, color, loadSavedThemeMode, useTheme
 
 // Browser builds: make Alert.alert visible (it is a no-op on web).
 installWebAlert();
+// Owner, 2026-10-20: the app's own branded pop-ups instead of the plain system alert.
+installAppDialog();
 
 // Keep the native splash up until the brand font is ready, so text never flashes in the
 // system face first.
@@ -78,6 +81,7 @@ export default function RootLayout(): ReactElement | null {
       {signedIn && !SERVER_MODE ? <StepUpHost onSetUp={() => router.push('/profile/two-factor')} /> : null}
       {/* ADR-044: in-app banner (Figma message style). */}
       <BannerHost />
+      <AppDialogHost />
       {launching ? <LaunchSplash onDone={() => setLaunching(false)} /> : null}
     </Fragment>
   );
