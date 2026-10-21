@@ -27,6 +27,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PrimaryButton } from '../../components/primitives';
 import { Icon, type IconName } from "../../components/icons";
 import { brandWeight, color, numericTextStyle, space, themed, typography } from "../../theme";
 import {
@@ -198,6 +199,13 @@ export function CardsScreen({
   const unavailable = (): void => {
     Alert.alert(tr("Cards are not available"), tr(CARDS_UNAVAILABLE));
   };
+  // ADR-056: a physical card per currency needs a card-issuing partner; not available yet.
+  const request = (): void => {
+    Alert.alert(
+      tr("Request a card"),
+      tr("This service is not available now. We will let you know when you can request your {{currency}} card.", { currency: design.currency }),
+    );
+  };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>): void => {
     const i = Math.round(e.nativeEvent.contentOffset.x / (cardW + space.sm));
@@ -263,6 +271,8 @@ export function CardsScreen({
             />
           ))}
         </View>
+
+        <PrimaryButton testID="cards-request" label={tr("Request a {{currency}} card", { currency: design.currency })} onPress={request} />
 
         <View style={styles.actions}>
           <Action testID="cards-details" icon="info" label={tr("Details")} filled onPress={unavailable} />
