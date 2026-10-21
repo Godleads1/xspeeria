@@ -40,6 +40,7 @@ export default function MarketplaceRoute(): ReactElement {
         SERVER_MODE
           ? (key) => {
               if (key === 'offers') router.push('/market/my-offers');
+              else if (key === 'requests') router.push('/market/my-requests');
               else if (key === 'deals') router.push('/market/deals');
               else Alert.alert(tr("Coming soon"), tr("This is one of the next screens to be built."));
             }
