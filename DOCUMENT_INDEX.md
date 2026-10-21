@@ -129,6 +129,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `056-buy-requests-adverts-cards.md` | Buy requests built as offers paying naira (R5-9 resolved for the app; part-fills allowed); advert placeholder stays until the web admin sets adverts; demo card stays, real cards need an issuing partner (DEC-063) | **APPROVED** — 2026-10-20; buy requests **IMPLEMENTED** |
 | `057-disputes-and-support-cases.md` | Disputes on deals with escrow (DISPUTE hold freezes release and timeout), support cases without a deal, private per-party messages, files later (DEC-064) | **APPROVED** — 2026-10-20; **IMPLEMENTED** (migration 0019); staff side with the admin console |
 | `058-verification-tiers-and-limits.md` | Tiers 0–3 limit trading (naira equivalent per day/month: ₦500k/₦2m, ₦5m/₦20m, ₦20m/₦100m), BVN and proof of address for higher tiers; AI rate forecasting scope (DEC-065) | **APPROVED** — 2026-10-20; not built |
+| `059-market-search-queue-edit-multicurrency.md` | Home market search (sort: best rate, newest, oldest, amount; filters: currency, rate range, amount, status); location rule (hide listings selling your own country's currency); edit offers before any part is taken; payment extension and 3-person waiting queue; buy requests in up to 5 currencies (DEC-066) | **APPROVED** — 2026-10-21; not built |
 
 ### Accounting policy is not architecture
 
