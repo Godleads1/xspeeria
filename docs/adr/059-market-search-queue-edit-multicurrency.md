@@ -1,0 +1,63 @@
+# ADR-059 — Market Search, Location Rule, Editing Offers, Waiting Queue, Multi-Currency Buy Requests
+
+| Attribute | Value |
+|---|---|
+| **Status** | **APPROVED** (owner) — 2026-10-21; **not built** |
+| **Decision ID** | DEC-066 |
+| **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
+| **Design** | Claude Design canvas "Xspeeria Home — Search" (5 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies) |
+| **Builds on** | ADR-029 (offers; §4 marked amount filters and sort "not built"), ADR-030, ADR-056 (buy requests), ADR-057 (disputes), ADR-058 (tiers) |
+
+Build as **five separate PRs**, in the order below. Each needs its own tests (normal, failure, abuse), server-side checks, translations and a SECURITY_EVIDENCE_REGISTER update where a requirement is touched.
+
+## Decision 1 — Search on Home (market search)
+
+Owner: "add a search bar for user to be able to search for all buy request or seller request from the home page … the search will include ability to sort by different things"; then "users should be able to filter by currency, sort by rate range, sort by time"; "rate range" = **filter between two rates**; time = **newest and oldest**; amount options **kept**.
+
+- Home: a search box under the header ("Search USD, GBP, EUR offers"), a sort-and-filter button beside it, quick currency chips (USD, GBP, EUR, CAD), and one line saying what the user sees and why (Decision 2).
+- **Sort:** best rate (default; today's order), newest first, oldest first, largest amount, smallest amount.
+- **Filters:** currency; rate range (lowest–highest, NGN per unit); amount range (from–to, in the foreign currency); status — **Available now** / **Waiting for payment** (Decision 4).
+- Results show rate ("NGN 1,320.50 / USD"), amount, part-fill or whole-amount, age, and a Buy / Sell / Join queue action. Active filters show as chips above the list. Empty state: "No offers match" with "Post a buy request" (primary) and "Clear filters".
+- **Server:** extend `GET /api/v1/offers` with validated `sort` (allow-list), `filter[min_rate]`, `filter[max_rate]`, `filter[min_amount]`, `filter[max_amount]`, `filter[status]`. Rates and amounts are decimal strings / integer minor units — never floats. Reject unknown sort keys and min > max with 422. Keep pagination limits. The part-fill switch shown in an early draft was **removed** (not requested).
+- **Best-rate card:** keep the existing Home hero (dark texture, chip, contactless, "1 USD = 1,320.50 NGN"); owner asked that its **height match a typical bank-app card** (about 342 × 195 instead of 342 × 135; content spread top-to-bottom).
+
+## Decision 2 — Location rule (who sees what)
+
+Owner: "if i am in nigeria, i can't see request to sell naira, like if another person in other country can't see request to sell currency of that country"; country from **phone location ("google location")**; applies **everywhere** (Market and search).
+
+- A user in Nigeria does **not** see listings that sell naira (buy requests). A user in country X does **not** see listings that sell X's currency.
+- Country comes from the device location (permission asked; the phone's own reverse geocoder turns it into a country — no paid API key). Store/send **only the country code**, never coordinates.
+- If location is refused or unavailable: fall back to the country on the user's approved ID check; with neither, show "Turn on location to see deals".
+- This is a **visibility** rule only. Location can be spoofed, so it must never decide money, limits or permissions — those stay with KYC and the server (CLAUDE.md: never trust client-supplied values for authorisation). The server applies the filter from the country the app sends, validated against an allow-list of ISO codes.
+- **Changes existing behaviour:** today a Nigeria user can sell USD to a buy request from the Market Sell side (ADR-056). Under this rule those requests are hidden from Nigeria users and shown to users in the foreign-currency country.
+
+## Decision 3 — Withdraw and edit offers
+
+Owner: "user should be able to withdraw the offer and edit the offer. if the users withdraw the offer, the offer should be removed from the market"; edit **rate and amount**; **no** editing after any part is taken.
+
+- Withdraw is already built (`DELETE /api/v1/offers/{id}`; withdrawn offers leave the market at once).
+- Add **Edit** in My Offers and My Requests, shown only while `matched_amount_minor == 0`. Extend `PATCH /api/v1/offers/{id}` to accept amount as well as rate; re-run every create-time check (ownership, limits, rate band, currency rules) server-side; refuse with 409 if a deal started meanwhile: "Someone has started a deal on this offer, so it can't be changed now. You can still withdraw what's left." Edits are audited.
+
+## Decision 4 — Offer status, payment extension and waiting queue
+
+Owner: status means "accepted" (taker has paid into escrow) or "available"; "we can show queue of offers based on time so if the offer person to proceed to taking offer but later failed to fund the next inline can be notified to take up the offer". Answers: filters on **market search**; accepted offers **hidden** from the market; next in line is **notified and confirms**; **one extra 5 minutes** to pay; next person has **5 minutes** to tap take; **up to 3** in a queue; a person can wait in **only one queue** at a time.
+
+- Today: taking an offer holds that amount for 5 minutes (`FUNDING_WINDOW`); unpaid holds return to the market automatically.
+- Status filter: **Available now** (no one taking it) / **Waiting for payment** (someone taking it, not yet paid — others may join the queue). Accepted (funded) offers leave the market; the owner still sees them in My Offers.
+- The taker may ask **once** for 5 more minutes (10 minutes total).
+- Queue: max 3 people per offer, one queue per person, ordered by join time. When the taker's time runs out, the first in queue is notified and has 5 minutes to take; otherwise it passes on; if nobody is left, the offer is simply available again. Leaving the queue is always allowed.
+- Escrow remains a simulation; Xspeeria holds no money.
+
+## Decision 5 — Buy requests in up to 5 currencies
+
+Owner: "a user who want to sell nigeria can choose another other currencies make 5 desired currencies. if any one is picked and completed, the other is deleted". Answers: others **paused when a deal starts, deleted when it completes, restored if it fails**; **a rate for each currency**; **whole amount only**; **naira sellers only**.
+
+- A buy request has one naira amount and 1–5 currencies, each with its own rate; the app shows "You get X" per currency (half-even, as `foreignMinorFor`).
+- The same naira cannot fund two deals: when a deal starts in one currency, the others are hidden immediately (atomically, in the same transaction that creates the match); deleted when that deal completes; restored if it expires unpaid.
+- Whole amount only — no part-fills. Offers selling foreign currency still list one currency.
+- The location rule applies per currency (e.g. GBP option visible to users in the UK).
+
+## Open points (decide while building, report back)
+
+- How the multi-currency group is stored (a parent request with child offers is the likely shape) — needs a migration and an architecture review.
+- Whether the queue and extension need new notification event types (add to `EVENTS` and translations).
