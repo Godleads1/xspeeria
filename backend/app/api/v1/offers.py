@@ -138,7 +138,22 @@ Settings_ = Annotated[Settings, Depends(get_app_settings)]
 Runtime = Annotated[AuthRuntime, Depends(get_auth_runtime)]
 Db = Annotated[AsyncSession, Depends(get_db_session)]
 Service = Annotated[OfferService, Depends(get_offer_service)]
+
+
+async def signed_in_browsing(principal: CurrentPrincipal, runtime: Runtime) -> Principal:
+    """ADR-058 Tier 0: anyone signed in may look at the market (per-user request limit)."""
+    if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
+        raise AppError(
+            "AUTH_429_RATE_LIMITED",
+            "Too many requests. Please wait a moment and try again.",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            details={"retry_after_seconds": 60},
+        )
+    return principal
+
+
 Verified = Annotated[Principal, Depends(kyc_approved)]
+Browsing = Annotated[Principal, Depends(signed_in_browsing)]
 IdempotencyKey = Annotated[uuid.UUID, Header(alias="Idempotency-Key")]
 StepUpToken = Annotated[str | None, Header(alias="X-Step-Up-Token", max_length=128)]
 
@@ -146,8 +161,9 @@ StepUpToken = Annotated[str | None, Header(alias="X-Step-Up-Token", max_length=1
 async def get_match_service(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> MatchService:
-    return MatchService(db, runtime.clock, runtime.pretend_bank)
+    return MatchService(db, runtime.clock, runtime.pretend_bank, settings)
 
 
 Matches = Annotated[MatchService, Depends(get_match_service)]
@@ -214,7 +230,7 @@ async def create_group(
     summary="Search one currency pair: offers that can be taken, or recent completed trades",
 )
 async def listings(
-    principal: Verified,
+    principal: Browsing,
     service: Service,
     currency_pair: Annotated[
         str, Query(alias="filter[currency_pair]", pattern=r"^[A-Za-z]{3}/[A-Za-z]{3}$")

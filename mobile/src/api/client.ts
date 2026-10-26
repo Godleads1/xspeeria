@@ -97,6 +97,15 @@ export function messageFor(error: unknown): string {
       : tr('Too many attempts. Try again in {{count}} minutes.', { count: minutes });
   }
   if (error.code === 'SYS_503_SERVICE_UNAVAILABLE') return tr('This isn’t available right now. Please try again later.');
+  // ADR-058: the limit messages carry how much is left; write them in the user's language.
+  const left = typeof error.details?.left === 'string' && /^[0-9]+(\.[0-9]{2})?$/.test(error.details.left) ? error.details.left : null;
+  if (left !== null && (error.code === 'TRADE_403_DAILY_LIMIT' || error.code === 'TRADE_403_MONTHLY_LIMIT')) {
+    const [whole, frac = '00'] = left.split('.');
+    const amount = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${frac}`;
+    return error.code === 'TRADE_403_DAILY_LIMIT'
+      ? tr('This deal is over your daily limit. You can trade up to NGN {{amount}} more today.', { amount })
+      : tr('This deal is over your monthly limit. You can trade up to NGN {{amount}} more this month.', { amount });
+  }
   // Server messages are English sentences; known ones have translations (serverMessages.ts).
   return tr(error.message);
 }

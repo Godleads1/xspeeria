@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { useRouter, type Href } from 'expo-router';
 
+import { SERVER_MODE } from '../../../src/api/config';
 import { session } from '../../../src/features/auth/session';
 import { ProfileScreen, type ProfileDestination } from '../../../src/features/profile/ProfileScreen';
 import { useThemeMode } from '../../../src/theme';
@@ -9,7 +10,8 @@ import { useThemeMode } from '../../../src/theme';
 const ROUTES: Record<ProfileDestination, Href> = {
   account: '/profile/account',
   beneficiaries: '/profile/beneficiaries',
-  kyc: '/profile/kyc',
+  // ADR-058: server builds show the real tier and limits; the demo keeps its tier cards.
+  kyc: SERVER_MODE ? '/profile/limits' : '/profile/kyc',
   security: '/profile/security',
   faq: '/profile/faq',
   support: '/profile/support',

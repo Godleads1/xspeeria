@@ -128,3 +128,21 @@ async def scratch_table(connection: AsyncConnection) -> AsyncIterator[str]:
     finally:
         await connection.execute(text(f'DROP TABLE IF EXISTS "{name}"'))
         await connection.commit()
+
+
+#: Modules that test the ADR-058 limits themselves and so run with the real numbers.
+_REAL_LIMIT_MODULES = {"test_tier_limits"}
+
+
+@pytest.fixture(autouse=True)
+def roomy_trade_limits(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every other test exercises deal rules, not limit policy (ADR-058): give Tier 1 room.
+
+    Limits are tested with the real numbers in ``test_tier_limits.py``.
+    """
+    if request.module.__name__.rsplit(".", 1)[-1] in _REAL_LIMIT_MODULES:
+        return
+    from app.domain import tier_rules
+
+    roomy = tier_rules.Limits(10**15, 10**16)
+    monkeypatch.setitem(tier_rules.LIMITS, 1, roomy)

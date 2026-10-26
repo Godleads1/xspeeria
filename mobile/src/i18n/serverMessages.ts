@@ -83,6 +83,7 @@ export const SERVER_MESSAGES: readonly string[] = [
   k("This number is already used by another account."),
   k("This offer can be taken now, so there is no need to wait."),
   k("This offer can no longer be edited."),
+  k("This offer can’t be taken right now. Try another offer."),
   k("This offer is held for the next person in its queue for a few minutes."),
   k("This offer is no longer available."),
   k("This request can only be taken whole."),
