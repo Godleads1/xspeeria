@@ -80,6 +80,25 @@ export function notificationCopy(n: Pick<ServerNotification, 'event' | 'data'>):
         link: id && UUID.test(id) ? `/market/case?id=${id}` : '/market/disputes',
       };
     }
+    case 'dispute.reply': {
+      // ADR-063: our team answered a case.
+      const id = data.dispute_id;
+      return {
+        title: tr("Our team replied"),
+        body: tr("Open your case to read the reply."),
+        tone: 'info',
+        link: id && UUID.test(id) ? `/market/case?id=${id}` : '/market/disputes',
+      };
+    }
+    case 'dispute.resolved': {
+      const id = data.dispute_id;
+      return {
+        title: tr("Your case is closed"),
+        body: tr("Our team closed your case. Open it to see the outcome."),
+        tone: 'info',
+        link: id && UUID.test(id) ? `/market/case?id=${id}` : '/market/disputes',
+      };
+    }
     case 'queue.your_turn': {
       // ADR-059 Decision 4: the offer the user waited for is free for 5 minutes.
       const id = data.offer_id;

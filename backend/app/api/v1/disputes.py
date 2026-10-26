@@ -3,6 +3,7 @@
 * ``POST /api/v1/disputes`` — open a dispute on a deal (``transaction_id``) or, without one, a
   support case.
 * ``GET /api/v1/disputes`` — my cases, newest first.
+* ``GET /api/v1/disputes/categories`` — the active categories (ADR-063).
 * ``GET /api/v1/disputes/{dispute_id}`` — one case with my messages and staff replies.
 * ``POST /api/v1/disputes/{dispute_id}/evidence`` — add a message. The contract's file part
   (multipart, 10 MB) comes with file storage; until then this takes JSON ``{"message": ...}``.
@@ -22,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session
 from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime, Principal
+from app.services.dispute_admin import list_categories
 from app.services.disputes import DisputeService
 
 __all__ = ["router"]
@@ -40,7 +42,8 @@ class OpenDisputeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     #: The deal (from the escrow screen). Leave out for a support case (ADR-050).
     transaction_id: uuid.UUID | None = None
-    reason: Literal["funds_not_received", "wrong_amount", "counterparty_unresponsive", "other"]
+    #: A dispute category code (ADR-063: staff manage the list; ``GET .../categories``).
+    reason: str = Field(pattern=r"^[a-z][a-z0-9_]{1,31}$")
     description: str = Field(min_length=1, max_length=2000)
 
     _clean = field_validator("description")(_text)
@@ -119,6 +122,24 @@ async def open_dispute(body: OpenDisputeRequest, me: Me, service: Service) -> Di
             description=body.description,
         )
     )
+
+
+class CategoryResponse(BaseModel):
+    code: str
+    name: str
+    description: str
+
+
+@router.get(
+    "/categories",
+    response_model=list[CategoryResponse],
+    summary="The dispute categories to choose from (staff manage the list, ADR-063)",
+)
+async def categories(
+    me: Me, db: Annotated[AsyncSession, Depends(get_db_session)]
+) -> list[CategoryResponse]:
+    rows = await list_categories(db, active_only=True)
+    return [CategoryResponse.model_validate(r) for r in rows]
 
 
 @router.get(

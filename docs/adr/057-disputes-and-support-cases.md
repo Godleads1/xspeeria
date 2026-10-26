@@ -21,4 +21,4 @@ Migration `0019` (`disputes`, `dispute_messages`); `POST/GET /api/v1/disputes`, 
 
 ## Not yet
 
-Staff reading, replying, `under_review` and resolution (admin console, next); file attachments (R2); email to staff on new cases.
+Staff reading, replying, `under_review` and resolution: built (ADR-063). Still not built: file attachments (R2); email to staff on new cases.

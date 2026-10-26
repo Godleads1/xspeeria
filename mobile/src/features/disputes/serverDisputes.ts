@@ -1,7 +1,7 @@
 /** Disputes and support cases against the real server (ADR-057). */
 
 import { ApiError } from '../../api/client';
-import { disputesApi, type DisputeReason, type ServerDispute } from '../../api/disputesApi';
+import { disputesApi, type DisputeCategory, type DisputeReason, type ServerDispute } from '../../api/disputesApi';
 import { serverAuth } from '../auth/serverAuth';
 import { tr } from '../../i18n';
 
@@ -12,6 +12,8 @@ function token(): string {
 }
 
 export interface DisputeSource {
+  /** The active categories (ADR-063). Optional: without it the app's built-in four are used. */
+  categories?(): Promise<DisputeCategory[]>;
   mine(): Promise<ServerDispute[]>;
   get(id: string): Promise<ServerDispute>;
   /** With a transaction: a dispute on that deal (pauses its escrow). Without: a support case. */
@@ -20,6 +22,7 @@ export interface DisputeSource {
 }
 
 export const serverDisputes: DisputeSource = {
+  categories: async () => disputesApi.categories(token(), serverAuth.apiOptions()),
   mine: async () => disputesApi.mine(token(), serverAuth.apiOptions()),
   get: async (id) => disputesApi.get(token(), id, serverAuth.apiOptions()),
   open: async (transactionId, reason, description) =>

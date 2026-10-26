@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.models.disputes import Dispute, DisputeMessage
+from app.models.disputes import Dispute, DisputeCategory, DisputeMessage
 from app.models.marketplace import Match, Offer
 from app.models.settlement import Settlement, SettlementEvent, SettlementHold, Transaction
 from app.services.auth import Principal
@@ -109,6 +109,16 @@ class DisputeService:
         description: str,
     ) -> dict[str, Any]:
         now = self._clock()
+        category = await self._db.get(DisputeCategory, reason)
+        if category is None or not category.active:
+            # ADR-063: the list is managed by staff; only active categories can be chosen.
+            await self._db.rollback()
+            raise AppError(
+                "VAL_422_MISSING_FIELD",
+                "Choose what the problem is.",
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                details={"field": "reason"},
+            )
         kind = "dispute" if transaction_id is not None else "support"
         dispute = Dispute(
             id=uuid.uuid4(),

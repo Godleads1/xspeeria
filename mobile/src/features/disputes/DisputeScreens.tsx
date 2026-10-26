@@ -21,12 +21,21 @@ import type { DisputeSource } from './serverDisputes';
 
 const MAX = 2000;
 
+/** The built-in categories, with the app's own translated wording (ADR-057). */
 export const REASONS: readonly { key: DisputeReason; label: string }[] = [
   { key: 'funds_not_received', label: k('I paid but the money hasn’t arrived') },
   { key: 'wrong_amount', label: k('The amount is wrong') },
   { key: 'counterparty_unresponsive', label: k('The other side isn’t paying') },
   { key: 'other', label: k('Something else') },
 ];
+
+/** Wording for a category: the app's translation for the built-in four, else the staff's name. */
+export function reasonLabel(code: string, name?: string): string {
+  const known = REASONS.find((r) => r.key === code);
+  if (known) return tr(known.label);
+  return name ?? tr('Something else');
+}
+
 
 const STATUS: Record<ServerDispute['status'], { label: string; tone: StatusTone }> = {
   open: { label: k('Open'), tone: 'warning' },
@@ -136,7 +145,7 @@ export function DisputesScreen({
                 <Text style={styles.strong}>{caseTitle(d)}</Text>
                 <StatusChip label={tr(STATUS[d.status].label)} tone={STATUS[d.status].tone} />
               </View>
-              <Text style={styles.line}>{tr(REASONS.find((r) => r.key === d.reason)?.label ?? 'Something else')}</Text>
+              <Text style={styles.line}>{reasonLabel(d.reason)}</Text>
               <Text style={styles.small}>{when(d.updated_at)}</Text>
             </Pressable>
           ))}
@@ -162,6 +171,22 @@ export function NewCaseScreen({
 }): ReactElement {
   const deal = transactionId !== null;
   const [reason, setReason] = useState<DisputeReason | null>(deal ? null : 'other');
+  // ADR-063: staff manage the list; the built-in four are used until it loads (or if it can't).
+  const [choices, setChoices] = useState<readonly { key: string; label: string }[]>(
+    REASONS.map((r) => ({ key: r.key, label: tr(r.label) })),
+  );
+  useEffect(() => {
+    let live = true;
+    source
+      .categories?.()
+      .then((list) => {
+        if (live && list.length > 0) setChoices(list.map((c) => ({ key: c.code, label: reasonLabel(c.code, c.name) })));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [source]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +216,7 @@ export function NewCaseScreen({
       </Text>
       {deal ? (
         <View style={styles.list} accessibilityRole="radiogroup">
-          {REASONS.map((r) => (
+          {choices.map((r) => (
             <Pressable
               key={r.key}
               testID={`reason-${r.key}`}
@@ -200,7 +225,7 @@ export function NewCaseScreen({
               onPress={() => setReason(r.key)}
               style={[styles.choice, reason === r.key ? styles.choiceOn : null]}
             >
-              <Text style={[styles.line, reason === r.key ? styles.choiceText : null]}>{tr(r.label)}</Text>
+              <Text style={[styles.line, reason === r.key ? styles.choiceText : null]}>{r.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -269,7 +294,7 @@ export function CaseScreen({ id, source, onBack }: { id: string; source: Dispute
       <Header title={caseTitle(d)} onBack={onBack} testID="case-back" />
       <View style={styles.card} testID="case-summary">
         <View style={styles.rowTop}>
-          <Text style={styles.strong}>{tr(REASONS.find((r) => r.key === d.reason)?.label ?? 'Something else')}</Text>
+          <Text style={styles.strong}>{reasonLabel(d.reason)}</Text>
           <StatusChip label={tr(STATUS[d.status].label)} tone={STATUS[d.status].tone} />
         </View>
         {d.description ? <Text style={styles.line}>{d.description}</Text> : null}
