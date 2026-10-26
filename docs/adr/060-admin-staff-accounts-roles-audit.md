@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED** (server) — 2026-10-26; console screens (A-2) not built |
+| **Status** | **IMPLEMENTED** — server (A-1) and console screens (A-2) 2026-10-26; A-3 not built |
 | **Decision ID** | DEC-067 |
 | **Authority** | Builds ADR-051 A-1 (owner decisions 2026-10-19). Roles from the Technical Design Specification §11.2; permission model from ADR-051 (per module Read / Create / Update / Delete / Approve); controls SEC-002, SEC-003, SEC-008, FX-04; Compliance Operations Manual §14; Security Master Audit §38.3 (authorization matrix, abuse cases) and B3 (cookie sessions). Owner instruction 2026-10-26: "Start one" (the admin console). |
 
@@ -69,8 +69,18 @@ Every sign-in event (code sent, log-in, failures, locks, log-out), password set/
 - **Opaque session token instead of a JWT** in the cookie: it can be ended at once (log-out, disable, role change), which a JWT can't until it expires.
 - **A local data reset** (`reset_local_data`) keeps staff accounts: they are not customer data.
 
+## A-2 — console screens (built 2026-10-26)
+
+Next.js console in `admin/`: **Log-in** (password, then email code), **Set your password** (forgot password, and invited staff via a link `…/set-password?id=…` plus the emailed code — the link alone does nothing), **Overview**, **My profile** (change password), **Staff** (list, invite, change role, disable/enable), **Roles** (list, create, edit with an area × Read/Create/Update/Delete/Approve grid and "Full access", delete unused custom roles) and **Audit log** (filter, older pages, read-only).
+
+- **Same-site only.** The browser calls `/api/v1/admin/…` on the console's own address; the console server forwards only those paths to the API (`ADMIN_API_ORIGIN`, default `http://127.0.0.1:8000`). No CORS is opened and the session cookie stays httpOnly and SameSite=Strict — checked in a real browser: page scripts can't read it.
+- **Display follows permissions, the server decides.** The menu shows only allowed areas; buttons appear only where the server would allow the action (never on yourself, never beyond your own permissions, Super Admin only by a Super Admin); permission boxes you don't hold are greyed out. Every action is still checked by the server.
+- Signed-out visits go to log-in; log-out ends the session on the server. Route parameters are untrusted (the invite id is used only if it is a well-formed id).
+- Tests: 44 console tests (`admin/__tests__/`), plus a real-browser run against the real API (log-in with the email code, invite, create role, audit entry, log-out).
+
+**Known limit (decide before going live):** the console forwards requests, so the API sees the **console server's address** for every staff request. The audit log's "Address" column then shows the console server, and the sign-in rate limit (10 a minute per address) is shared by all staff. Fixing it means trusting the console's `X-Forwarded-For` header only from the console server's own address — a change to ADR-025 §4 ("proxy headers are not trusted") that needs a decision when the hosting is chosen.
+
 ## Not built yet
 
-- **A-2:** the console screens (log-in, email code, forgot/reset password, profile, staff, roles, audit log). The console will reach the API through its own server (same site), so no cross-site CORS is opened for admin cookies.
 - **A-3:** users, identity-check review, disputes/support, reversals with the approval rule, fraud alerts, outages, dashboard.
 - **Release gates:** Super Admin hardware security key before live money (ADR-051 Decision 2); a real email provider (Resend, needs the domain); the in-memory rate limiter needs Redis before more than one server runs (ADR-025 §4); quarterly access review (COM §14.2) is a process, not code.

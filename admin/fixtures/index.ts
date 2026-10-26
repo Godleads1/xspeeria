@@ -1,15 +1,17 @@
 /**
  * View-model fixtures for the admin shell.
  *
- * Presentation shapes only. No domain entity, persistence or API exists. Status
- * vocabulary is taken verbatim from ADR-001 so that operator and customer surfaces
- * never describe the same settlement differently. No new settlement state is invented.
+ * Presentation shapes only. Status vocabulary is taken verbatim from ADR-001 so that
+ * operator and customer surfaces never describe the same settlement differently. No new
+ * settlement state is invented.
  */
 
 export interface NavItem {
   readonly id: string;
   readonly label: string;
   readonly href: string;
+  /** Shown only to staff holding this permission (display only; the server enforces it). */
+  readonly permission?: string;
 }
 
 /**
@@ -17,22 +19,26 @@ export interface NavItem {
  * exists under `admin/app`; `__tests__/shell.test.tsx` derives the route set from the
  * filesystem and fails if a rendered link would 404.
  */
-export const NAV_ITEMS: readonly NavItem[] = [{ id: 'overview', label: 'Overview', href: '/' }];
+export const NAV_ITEMS: readonly NavItem[] = [
+  { id: 'overview', label: 'Overview', href: '/' },
+  { id: 'staff', label: 'Staff', href: '/staff', permission: 'staff.read' },
+  { id: 'roles', label: 'Roles', href: '/roles', permission: 'roles.read' },
+  { id: 'audit', label: 'Audit log', href: '/audit', permission: 'audit.read' },
+  { id: 'profile', label: 'My profile', href: '/profile' },
+];
 
 /**
- * Destinations the operator console is expected to grow, kept here so the intent stays
- * recorded rather than rediscovered. **Not rendered.** Each one requires its own review
- * of operator authorization before it becomes a route: an admin surface reaching KYC
- * cases, allocations, settlements, reconciliation or the audit log is privileged, and
- * Phase 1 grants no privileged operator workflow. Move an entry into `NAV_ITEMS` in the
- * same change that adds its page.
+ * Destinations the operator console is expected to grow (ADR-051 A-3), kept here so the
+ * intent stays recorded. **Not rendered.** Move an entry into `NAV_ITEMS` in the same
+ * change that adds its page and its server-side permission check.
  */
 export const PLANNED_DESTINATIONS: readonly NavItem[] = [
-  { id: 'kyc', label: 'KYC review', href: '/kyc' },
-  { id: 'allocations', label: 'Allocations', href: '/allocations' },
+  { id: 'users', label: 'Users', href: '/users' },
+  { id: 'kyc', label: 'Identity checks', href: '/kyc' },
+  { id: 'disputes', label: 'Disputes', href: '/disputes' },
+  { id: 'reversals', label: 'Reversals', href: '/reversals' },
   { id: 'settlements', label: 'Settlements', href: '/settlements' },
   { id: 'reconciliation', label: 'Reconciliation', href: '/reconciliation' },
-  { id: 'audit', label: 'Audit log', href: '/audit' },
 ];
 
 export type LegState =
@@ -56,6 +62,7 @@ export interface SettlementRow {
   readonly legState: LegState;
 }
 
+/** Test data for the table components only. Not shown on any page. */
 export const SETTLEMENT_ROWS: readonly SettlementRow[] = [
   {
     id: 'row-1',
