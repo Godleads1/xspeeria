@@ -481,6 +481,58 @@ async def test_changing_my_password_keeps_this_session_only(
         assert (await other.get("/api/v1/admin/me", headers=H)).status_code == 401
 
 
+async def test_i_can_change_my_own_name_and_phone_only(admin: Admin, boss: AsyncClient) -> None:
+    r = await boss.patch(
+        "/api/v1/admin/me", json={"name": "  Godleads Boss ", "phone": "+44 7700 900123"}, headers=H
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["name"] == "Godleads Boss" and r.json()["phone"] == "+447700900123"
+    # Email, role and status are not mine to change: refused, nothing saved.
+    me = (await boss.get("/api/v1/admin/me", headers=H)).json()
+    for extra in (
+        {"email": "taken@xspeeria.test"},
+        {"role_id": await admin.role_id("support_agent")},
+        {"status": "disabled"},
+        {"permissions": ["staff.update"]},
+    ):
+        r = await boss.patch("/api/v1/admin/me", json={"name": "Hacker", **extra}, headers=H)
+        assert r.status_code == 422, extra
+    assert (await boss.get("/api/v1/admin/me", headers=H)).json() == me
+    # A bad phone is refused; a blank name is refused.
+    assert (
+        await boss.patch("/api/v1/admin/me", json={"phone": "not a phone"}, headers=H)
+    ).status_code == 422
+    assert (
+        await boss.patch("/api/v1/admin/me", json={"name": "  a "}, headers=H)
+    ).status_code == 422
+    # The audit records that it changed, never the number.
+    page = (await boss.get("/api/v1/admin/audit-log?action=profile_updated", headers=H)).json()
+    assert len(page["items"]) == 1
+    assert page["items"][0]["detail"] == {"name": True, "phone": True}
+    assert "7700900123" not in str(page)
+    # Saving the same values again writes no new audit entry.
+    await boss.patch("/api/v1/admin/me", json={"name": "Godleads Boss"}, headers=H)
+    page = (await boss.get("/api/v1/admin/audit-log?action=profile_updated", headers=H)).json()
+    assert len(page["items"]) == 1
+
+
+async def test_my_profile_needs_a_session_and_the_admin_header(
+    admin: Admin, boss: AsyncClient
+) -> None:
+    async with admin.client() as stranger:
+        assert (
+            await stranger.patch("/api/v1/admin/me", json={"name": "X Y"}, headers=H)
+        ).status_code == 401
+    assert (await boss.patch("/api/v1/admin/me", json={"name": "X Y"})).status_code == 403
+
+
+async def test_a_support_agent_can_change_their_own_name(admin: Admin, boss: AsyncClient) -> None:
+    agent = await admin.invite(boss, "agent@xspeeria.test", "support_agent")
+    r = await agent.patch("/api/v1/admin/me", json={"name": "Agent Smith"}, headers=H)
+    assert r.status_code == 200 and r.json()["name"] == "Agent Smith"
+    assert r.json()["role"] == "support_agent"
+
+
 # --- audit log ---------------------------------------------------------------------------------
 
 

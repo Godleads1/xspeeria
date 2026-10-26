@@ -1,16 +1,16 @@
+'use client';
+
 /**
- * Admin shell, following the Figma admin frames: a white top bar (logo, signed-in person),
- * a white side menu with the work areas, an "ADMIN" section and a red Log out, and a light
- * grey content area.
+ * Admin shell, following the Figma admin frames: a white top bar (logo, bell, language,
+ * signed-in person), a white side menu with the work areas, an "ADMIN" section and a red
+ * Log out, and a light grey content area.
  *
  * The menu lists only the areas the signed-in person's role allows (display only — the
- * server checks every call). Figma's bell and language picker are not shown: there are no
- * admin notifications or console translations yet, and the console never shows a control
- * that does nothing.
+ * server checks every call).
  */
 
 import Link from 'next/link';
-import type { ReactElement, ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 
 import { NAV_ITEMS, type NavItem } from '../../fixtures';
 import { roleLabel } from '../../lib/permissions';
@@ -18,6 +18,8 @@ import { color, fontStack, space } from '../../theme';
 import { Avatar } from '../Avatar';
 import { Icon } from '../icons';
 import { LanguagePicker } from '../LanguagePicker';
+import { LogoutDialog } from '../LogoutDialog';
+import { NotificationBell } from '../Notifications';
 import { tr } from '../../lib/i18n';
 import { Wordmark } from '../Wordmark';
 
@@ -67,6 +69,7 @@ export function AppShell({
   current?: string;
   onLogout?: () => void;
 }): ReactElement {
+  const [askLogout, setAskLogout] = useState(false);
   const held = new Set(permissions ?? []);
   const items = NAV_ITEMS.filter((i) => !i.permission || held.has(i.permission));
   const work = items.filter((i) => i.section !== 'admin');
@@ -107,6 +110,7 @@ export function AppShell({
           backgroundColor: color.bg.canvas,
         }}
       >
+        {who ? <NotificationBell /> : null}
         <LanguagePicker />
         {who ? (
           <a
@@ -154,7 +158,7 @@ export function AppShell({
             <button
               type="button"
               data-testid="logout"
-              onClick={onLogout}
+              onClick={() => setAskLogout(true)}
               style={{
                 alignSelf: 'flex-start',
                 margin: '4px 16px',
@@ -187,6 +191,15 @@ export function AppShell({
       >
         {children}
       </main>
+      {askLogout && onLogout ? (
+        <LogoutDialog
+          onCancel={() => setAskLogout(false)}
+          onConfirm={() => {
+            setAskLogout(false);
+            onLogout();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

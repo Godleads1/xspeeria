@@ -13,6 +13,8 @@ const PATHS: Record<string, string> = {
   reset: 'M4 10a6 6 0 1 0 2-4.5M4 4v3h3',
   more: 'M10 5h.01M10 10h.01M10 15h.01',
   chevron: 'M6 8l4 4 4-4',
+  bell: 'M10 3a4.5 4.5 0 0 0-4.5 4.5c0 4-1.5 5.5-2 6h13c-.5-.5-2-2-2-6A4.5 4.5 0 0 0 10 3Zm-1.6 13.5a1.8 1.8 0 0 0 3.2 0',
+  close: 'M6 6l8 8M14 6l-8 8',
 };
 
 export function Icon({ name, size = 20 }: { name: keyof typeof PATHS; size?: number }): ReactElement {

@@ -123,6 +123,8 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
         new_password: newPassword,
       }),
     me: () => call<Me>('GET', '/me'),
+    /** Only my name and phone; the server refuses anything else. */
+    updateMe: (changes: { name?: string; phone?: string }) => call<Me>('PATCH', '/me', changes),
     changePassword: (current: string, next: string) =>
       call<void>('POST', '/me/password', { current_password: current, new_password: next }),
     listStaff: () => call<StaffView[]>('GET', '/staff'),
