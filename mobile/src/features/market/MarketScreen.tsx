@@ -85,7 +85,10 @@ export function MarketScreen({
   server = null,
   refreshSignal = 0,
   onQueueListing,
+  onMultiRequest,
 }: {
+  /** ADR-059 Decision 5: opens "New buy request" in several currencies (server builds). */
+  onMultiRequest?: () => void;
   /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
   onQueueListing?: (listing: Listing) => Promise<string | null>;
   /** Changes when the screen comes back into view, so server offers are fetched again. */
@@ -430,6 +433,11 @@ export function MarketScreen({
             {busy ? tr("Publishing…") : side === "buy" ? tr("Create request") : tr("Create Offer")}
           </Text>
         </Pressable>
+        {side === "buy" && server && onMultiRequest ? (
+          <Pressable testID="market-multi-request" accessibilityRole="button" onPress={onMultiRequest} hitSlop={8}>
+            <Text style={styles.detailsText}>{tr("Happy with more than one currency? Post one request for up to 5")}</Text>
+          </Pressable>
+        ) : null}
         {notice ? (
           <Text
             testID="market-notice"

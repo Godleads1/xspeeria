@@ -59,6 +59,7 @@ from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import Settlement, Transaction
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
+from app.services.groups import lock_group_for_take
 from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
 from app.services.queue import active_turn, mark_taken, on_capacity_returned
@@ -291,6 +292,14 @@ class MatchService:
             await self._db.rollback()
             small = below_minimum(currency)
             raise _err(small.code, small.message, status.HTTP_422_UNPROCESSABLE_CONTENT)
+
+        # ADR-059 Decision 5: a request in several currencies is taken whole, and taking one
+        # currency locks the others (the same naira cannot fund two deals).
+        try:
+            await lock_group_for_take(self._db, offer, amount, now)
+        except AppError:
+            await self._db.rollback()
+            raise
 
         # 7–10. Server time, server order key, the Match, the Offer's capacity.
         match = Match(

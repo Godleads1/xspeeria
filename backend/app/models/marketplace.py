@@ -48,7 +48,9 @@ __all__ = [
     "QUEUE_STATUSES",
     "IdempotencyRecord",
     "Match",
+    "GROUP_STATUSES",
     "Offer",
+    "OfferGroup",
     "OfferQueueEntry",
 ]
 
@@ -92,6 +94,8 @@ class Offer(Base):
         ),
         Index("ix_offers_listing", "source_currency", "target_currency", "status", "desired_rate"),
         Index("ix_offers_user_id", "user_id"),
+        Index("ix_offers_group_id", "group_id", postgresql_where=text("group_id IS NOT NULL")),
+        CheckConstraint("group_id IS NULL OR source_currency = 'NGN'", name="group_only_naira"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -117,6 +121,10 @@ class Offer(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     rate_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-059 Decision 5: one of a buy request's currencies (null for ordinary offers).
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("offer_groups.id", ondelete="RESTRICT")
+    )
 
 
 class IdempotencyRecord(Base):
@@ -274,3 +282,33 @@ class OfferQueueEntry(Base):
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     turn_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+#: ADR-059 Decision 5.
+GROUP_STATUSES = ("open", "locked", "done")
+
+
+class OfferGroup(Base):
+    """One buy request offered in 2–5 currencies (ADR-059 Decision 5).
+
+    ``locked`` while a deal on ``locked_offer_id`` is unpaid: the other currencies are hidden
+    and cannot be taken. ``done`` once that deal completed (the others are withdrawn).
+    """
+
+    __tablename__ = "offer_groups"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'locked', 'done')", name="status_allowed"),
+        CheckConstraint("(status = 'open') = (locked_offer_id IS NULL)", name="locked_iff_offer"),
+        Index("ix_offer_groups_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(8), nullable=False)
+    locked_offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("offers.id", ondelete="RESTRICT", use_alter=True)
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

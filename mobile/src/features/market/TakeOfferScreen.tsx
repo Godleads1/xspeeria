@@ -91,6 +91,11 @@ export function TakeOfferScreen({
   const ngn = offer && amountMinor !== null && !tooMuch ? ngnFor : null;
   const remainingText = remaining !== null ? formatHundredths(remaining).replace(/,/g, "") : "";
   const ready = offer !== null && amountMinor !== null && !tooMuch && !busy;
+  // ADR-059 Decision 5: a request in several currencies is taken whole, never in part.
+  const whole = offer?.whole_only === true;
+  useEffect(() => {
+    if (whole && remainingText) setAmount(remainingText);
+  }, [whole, remainingText]);
 
   const editAmount = (v: string): void => {
     setAmount(v);
@@ -191,9 +196,13 @@ export function TakeOfferScreen({
               testID="take-amount"
               accessibilityLabel={tr("Amount in {{source_currency}} to take", { source_currency: code })}
               value={amount}
-              onChangeText={editAmount}
+              onChangeText={whole ? () => undefined : editAmount}
             />
           </OutlinedField>
+          {whole ? (
+            <Text testID="take-whole" style={styles.line}>{tr("Whole amount only: this request is taken in full.")}</Text>
+          ) : null}
+          {whole ? null : (
           <Pressable
             testID="take-all"
             accessibilityRole="button"
@@ -203,6 +212,7 @@ export function TakeOfferScreen({
           >
             <Text style={styles.link}>{tr("Take all {{remaining_amount}} {{source_currency}}", { remaining_amount: grouped(remainingText), source_currency: code })}</Text>
           </Pressable>
+          )}
           {tooMuch ? (
             <Text testID="take-too-much" accessibilityRole="alert" style={styles.error}>
               {tr("Only {{remaining_amount}} {{source_currency}} is available.", { remaining_amount: grouped(remainingText), source_currency: code })}

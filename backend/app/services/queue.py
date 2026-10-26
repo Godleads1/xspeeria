@@ -28,6 +28,7 @@ from app.domain.offer_rules import OFFICIAL_RATE
 from app.models.marketplace import QUEUE_ACTIVE, Match, Offer, OfferQueueEntry
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
+from app.services.groups import reopen_group
 from app.services.notifications import notify
 
 __all__ = [
@@ -142,6 +143,8 @@ async def on_capacity_returned(db: AsyncSession, offer: Offer, now: datetime) ->
     Called wherever an unpaid deal returns its amount; the background sweep calls it too, so a
     missed call only delays the turn, never loses it.
     """
+    # ADR-059 Decision 5: a failed deal on one currency brings the request's others back.
+    await reopen_group(db, offer, now)
     if offer.status not in ("open", "partially_matched"):
         return
     if offer.source_amount_minor - offer.matched_amount_minor <= 0:

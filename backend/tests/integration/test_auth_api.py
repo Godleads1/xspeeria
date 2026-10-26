@@ -57,7 +57,7 @@ TABLES = (
     "outbox_messages, reconciliation_exceptions, settlement_holds, pending_events, "
     "settlement_events, webhook_receipts, payout_executions, settlement_legs, settlements, "
     "transactions, partners, "
-    "match_payout_selections, beneficiaries, matches, idempotency_records, offers, "
+    "match_payout_selections, beneficiaries, matches, idempotency_records, offers, offer_groups, "
     "step_up_grants, trusted_devices, recovery_codes, mfa_challenges, mfa_factors, "
     "auth_refresh_tokens, auth_sessions, phone_verifications, users"
 )

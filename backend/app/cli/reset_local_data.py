@@ -49,6 +49,7 @@ USER_TABLES = (
     "matches",
     "idempotency_records",
     "offers",
+    "offer_groups",
     "step_up_grants",
     "trusted_devices",
     "recovery_codes",

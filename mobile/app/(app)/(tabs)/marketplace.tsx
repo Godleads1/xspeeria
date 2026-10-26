@@ -48,6 +48,7 @@ export default function MarketplaceRoute(): ReactElement {
             }
           : undefined
       }
+      onMultiRequest={SERVER_MODE ? () => router.push('/market/new-request') : undefined}
       onQueueListing={SERVER_MODE ? (listing) => queueAction(listing, queueServer) : undefined}
       onTakeListing={(listing, side) => {
         if (SERVER_MODE) {

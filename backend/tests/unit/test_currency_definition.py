@@ -363,6 +363,7 @@ class TestPackageRegistration:
             "disputes",
             "dispute_messages",
             "offer_queue_entries",
+            "offer_groups",
         }
 
     @pytest.mark.parametrize(
@@ -406,7 +407,8 @@ class TestPackageRegistration:
             "'currency_definitions', 'dispute_messages', 'disputes', 'idempotency_records', "
             "'kyc_cases', 'kyc_webhook_events', "
             "'match_payout_selections', "
-            "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', 'offer_queue_entries', "
+            "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "
+            "'offer_groups', 'offer_queue_entries', "
             "'offers', "
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
@@ -472,4 +474,5 @@ class TestPackageRegistration:
             "0018_kyc_gender.py",  # gender from the ID (ADR-055)
             "0019_disputes.py",  # disputes and support cases (ADR-057)
             "0020_offer_queue_and_extension.py",  # waiting queue (ADR-059)
+            "0021_offer_groups.py",  # requests in several currencies (ADR-059)
         ]

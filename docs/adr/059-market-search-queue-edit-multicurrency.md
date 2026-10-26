@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–4 built 2026-10-26**, Decision 5 not built |
+| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **all five decisions built 2026-10-26** |
 | **Decision ID** | DEC-066 |
 | **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
 | **Design** | Claude Design canvas "Xspeeria Home — Search" (6 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies, Success) |
@@ -103,3 +103,13 @@ Choices made while building, for the owner to confirm or change:
 - **Turns:** when an unpaid deal's amount comes back (payout-account time ran out, or the escrow was cancelled), the first person waiting is notified (`queue.your_turn`, push "It's your turn") and gets 5 minutes; taking by anyone else answers 409 `RES_409_OFFER_RESERVED`. A missed turn passes on (background sweep); leaving during a turn passes it on at once; when nobody is left the offer is simply available. Withdrawing an offer, or its deals completing, ends its queue.
 - **Extension:** `POST /api/v1/matches/{id}/settlement/extend` — the taker only, once, while the funding window is open: the deadline moves 5 minutes later, both sides are told the new time, and `funding_extended_at` is set once (database guard). The escrow view shows `can_extend` / `funding_extended`; the app shows "Need more time? Ask once for 5 more minutes".
 - Lock order everywhere is Offer → Match/queue entry, as in taking an offer, so joins, turns and takes cannot race or deadlock.
+
+## Build notes — Decision 5 (2026-10-26)
+
+- `POST /api/v1/offers/requests` (Idempotency-Key): `{source_amount (naira), currencies: [{currency, desired_rate}] × 2–5}`. Each currency becomes an ordinary NGN → currency offer with the same naira amount and its own rate, linked by `offer_groups` (migration 0021). Every publish check runs per currency (amount, minimum, rate ceiling, no duplicates). Only USD, GBP and EUR can be chosen today, so the practical maximum is 3; the rule stays 5.
+- **Whole amount only** for grouped offers (`VAL_422_WHOLE_AMOUNT_ONLY`); single-currency requests keep part-fills (ADR-056).
+- **Taking one currency locks the group** (`locked`): the others disappear from listings and are refused (409), so the same naira can never fund two deals. Lock order Offer → group, as in taking. If the deal ends unpaid the group opens again and the others come back; when it **completes**, the group is `done` and the others are withdrawn (their queues end).
+- **Editing:** a grouped offer's rate can change; its amount cannot (every currency pays the same naira) — withdraw and post again instead. Withdrawing one currency leaves the others.
+- A database check keeps groups for naira requests only.
+- App: Market › Buy shows "Happy with more than one currency? Post one request for up to 5", opening **New buy request** (naira amount, currencies with rates, "You get X" per currency, Post request). Taking a grouped request fills the whole amount and can't be changed.
+- Known limit (unchanged): EUR has no partner bank or identity country yet, so taking a EUR request is refused outside local development (ADR-042, fail closed).
