@@ -18,7 +18,15 @@ from httpx import AsyncClient
 from app.core.config import Settings
 from tests.integration.test_admin_staff import BOSS, BOSS_PW, Admin, H
 from tests.integration.test_auth_api import Clock, _runtime, _sql, clean, migrated  # noqa: F401
-from tests.integration.test_kyc_api import K, _approved, _start, _status, _user, _verify, k  # noqa: F401
+from tests.integration.test_kyc_api import (  # noqa: F401
+    K,
+    _approved,
+    _start,
+    _status,
+    _user,
+    _verify,
+    k,
+)
 from tests.integration.test_matches_api import OWNER, TAKER
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
