@@ -20,7 +20,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 
 from fastapi import status
-from sqlalchemy import and_, case, delete, select, text
+from sqlalchemy import and_, case, delete, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,9 +41,17 @@ from app.domain.offer_rules import (
 )
 from app.domain.search_rules import Search
 from app.models.kyc import KycCase
-from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
+from app.models.marketplace import (
+    ACTIVE_STATUSES,
+    QUEUE_ACTIVE,
+    IdempotencyRecord,
+    Match,
+    Offer,
+    OfferQueueEntry,
+)
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
+from app.services.queue import QUEUE_OFFER_STATUSES, pending_minor_expr, queue_facts
 
 __all__ = ["Created", "OfferService", "offer_view", "replay_idempotent"]
 
@@ -273,6 +281,10 @@ class OfferService:
         search = search or Search()
         ceiling = OFFICIAL_RATE[pair.foreign]
         remaining = Offer.source_amount_minor - Offer.matched_amount_minor
+        # ADR-059 Decision 4: offers whose whole amount is held by unpaid deals are listed too,
+        # as "waiting for payment" (people may queue for them). Their size is what is held.
+        pending = pending_minor_expr()
+        size_minor = case((remaining > 0, remaining), else_=pending)
         # The amount filter and sort are in the FOREIGN currency. A buy request (paying naira)
         # holds naira, so its foreign size is naira / rate; bounds are multiplied, not divided,
         # so the comparison stays exact (NUMERIC, never float).
@@ -281,7 +293,8 @@ class OfferService:
         conditions = [
             Offer.source_currency == pair.source,
             Offer.target_currency == pair.target,
-            Offer.status.in_(ACTIVE_STATUSES),
+            Offer.status.in_(QUEUE_OFFER_STATUSES),
+            or_(remaining > 0, pending > 0),
             Offer.desired_rate <= ceiling,
         ]
         if search.min_rate is not None:
@@ -295,10 +308,10 @@ class OfferService:
             if bound is None:
                 continue
             limit_expr = Offer.desired_rate * (bound * unit) if selling_naira else bound
-            conditions.append(remaining >= limit_expr if above else remaining <= limit_expr)
+            conditions.append(size_minor >= limit_expr if above else size_minor <= limit_expr)
         # Best for the taker: buying foreign currency → lowest NGN rate; buying naira → highest.
         best = Offer.desired_rate.asc() if not selling_naira else Offer.desired_rate.desc()
-        size = remaining / Offer.desired_rate if selling_naira else remaining
+        size = size_minor / Offer.desired_rate if selling_naira else size_minor
         order = {
             "best_rate": (best, Offer.created_at.asc()),
             "newest": (Offer.created_at.desc(),),
@@ -307,15 +320,36 @@ class OfferService:
             "smallest": (size.asc(), best),
         }[search.sort]
         rows = (
-            await self._db.scalars(
-                select(Offer)
+            await self._db.execute(
+                select(Offer, pending)
                 .where(and_(*conditions))
                 .order_by(*order, Offer.id.asc())
                 .limit(limit)
                 .offset(offset)
             )
         ).all()
-        return [offer_view(o, principal.user_id) for o in rows]
+        facts = await queue_facts(
+            self._db, [o.id for o, _ in rows], principal.user_id, self._clock()
+        )
+        out = []
+        for offer, held in rows:
+            view = offer_view(offer, principal.user_id)
+            f = facts.get(offer.id, {})
+            left = offer.source_amount_minor - offer.matched_amount_minor
+            waiting = left <= 0 or bool(f.get("held_for_other"))
+            view.update(
+                {
+                    "waiting": waiting,
+                    "waiting_amount": money_text(int(held) if left <= 0 else left, offer.scale)
+                    if waiting
+                    else None,
+                    "queue_length": int(f.get("queue_length", 0)),
+                    "in_queue": bool(f.get("in_queue")),
+                    "your_turn": bool(f.get("your_turn")),
+                }
+            )
+            out.append(view)
+        return out
 
     async def viewer_country(self, principal: Principal, device: str | None) -> str | None:
         """ADR-059 Decision 2: the phone's country, else the latest approved check's country."""
@@ -541,6 +575,12 @@ class OfferService:
         offer.status = "withdrawn"
         offer.withdrawn_at = self._clock()
         offer.version += 1
+        # ADR-059 Decision 4: nobody waits for a withdrawn offer.
+        await self._db.execute(
+            update(OfferQueueEntry)
+            .where(OfferQueueEntry.offer_id == offer.id, OfferQueueEntry.status.in_(QUEUE_ACTIVE))
+            .values(status="ended", ended_at=offer.withdrawn_at)
+        )
         view = offer_view(offer, principal.user_id)
         await self._db.commit()
         return view

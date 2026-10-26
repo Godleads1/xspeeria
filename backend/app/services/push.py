@@ -50,6 +50,10 @@ PUSH_COPY: dict[str, tuple[str, str]] = {
         "A deal is under review",
         "The other side reported a problem. Open Xspeeria.",
     ),
+    "queue.your_turn": (
+        "It’s your turn",
+        "The offer you waited for is free. Take it within 5 minutes.",
+    ),
 }
 
 

@@ -61,6 +61,7 @@ from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
 from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
+from app.services.queue import active_turn, mark_taken, on_capacity_returned
 from app.services.settlement import SettlementService
 
 __all__ = ["ACCEPT_OPERATION", "EXPIRY_CAUSE", "MatchService", "PayoutChoice", "match_view"]
@@ -262,6 +263,16 @@ class MatchService:
                 status.HTTP_409_CONFLICT,
             )
 
+        # ADR-059 Decision 4: while someone's 5-minute turn runs, only they may take it.
+        turn = await active_turn(self._db, offer.id, now)
+        if turn is not None and turn.user_id != principal.user_id:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_OFFER_RESERVED",
+                "This offer is held for the next person in its queue for a few minutes.",
+                status.HTTP_409_CONFLICT,
+            )
+
         # 5. The amount, against what is left right now.
         try:
             amount = parse_amount_minor(accepted_amount, currency, minimum=False)
@@ -303,6 +314,7 @@ class MatchService:
             else "partially_matched"
         )
         offer.version += 1
+        await mark_taken(self._db, offer.id, principal.user_id, now)
         await self._db.flush()
         await self._db.refresh(match, ["server_order_key"])
         # ADR-044: the offer's owner hears that someone took it (same transaction).
@@ -427,6 +439,8 @@ class MatchService:
             _release(offer, match, now)
         if due:
             await self._db.flush()
+            # ADR-059 Decision 4: the amount is back — the next person waiting gets a turn.
+            await on_capacity_returned(self._db, offer, now)
 
     async def expire_due(self, *, limit: int = 200) -> int:
         """Expire awaiting Matches past their deadline, one transaction per Match.
@@ -460,6 +474,8 @@ class MatchService:
                 and match.preparation_deadline <= now
             ):
                 _release(offer, match, now)
+                await self._db.flush()
+                await on_capacity_returned(self._db, offer, now)
                 await self._db.commit()
                 done += 1
                 _logger.info("match_expired", extra={"match_id": str(match_id)})

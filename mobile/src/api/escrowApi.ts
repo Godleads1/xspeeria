@@ -39,6 +39,9 @@ export interface ServerSettlement {
   /** True on a developer's computer with the pretend bank: no real money moves. */
   simulated: boolean;
   funding_deadline: string | null;
+  /** ADR-059 Decision 4: the taker's one extra 5 minutes is used / may be asked now. */
+  funding_extended?: boolean;
+  can_extend?: boolean;
   on_hold: boolean;
   you_pay: {
     leg_id: string;
@@ -57,6 +60,9 @@ type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
 export const escrowApi = {
   get: (token: string, matchId: string, x: Extra = {}) =>
     apiRequest<ServerSettlement>('GET', `/api/v1/matches/${encodeURIComponent(matchId)}/settlement`, { token, ...x }),
+  /** ADR-059 Decision 4: the taker asks once for 5 more minutes to pay. */
+  extend: (token: string, matchId: string, x: Extra = {}) =>
+    apiRequest<ServerSettlement>('POST', `/api/v1/matches/${encodeURIComponent(matchId)}/settlement/extend`, { token, ...x }),
   /** Developer computers only (pretend bank). */
   simulateTransfer: (token: string, matchId: string, x: Extra = {}) =>
     apiRequest<ServerSettlement>('POST', `/api/v1/dev/matches/${encodeURIComponent(matchId)}/simulate-transfer`, {

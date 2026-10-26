@@ -191,6 +191,20 @@ export function EscrowScreen({
     }
   };
 
+  const extend = async (): Promise<void> => {
+    if (!source.extend) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setS(await source.extend(matchId));
+    } catch (e) {
+      setError(messageFor(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const canExtend = Boolean(source.extend && s.can_extend && countdown(s.funding_deadline, now()) !== null);
+
   return (
     <Screen testID="escrow-screen">
       <Header onBack={onBack} />
@@ -258,6 +272,20 @@ export function EscrowScreen({
           disabled={busy}
         />
       ) : null}
+      {canExtend ? (
+        <Pressable
+          testID="escrow-extend"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={() => void extend()}
+          style={styles.extend}
+        >
+          <Text style={styles.extendText}>{tr("Need more time? Ask once for 5 more minutes")}</Text>
+        </Pressable>
+      ) : s.funding_extended && s.phase === 'AWAITING_FUNDING' ? (
+        <Text testID="escrow-extended" style={styles.small}>{tr("5 more minutes were added. This can only be done once.")}</Text>
+      ) : null}
       {onReport && s.transaction_id ? (
         <Pressable
           testID="escrow-report"
@@ -297,6 +325,8 @@ function Line({ label, value, testID, strong }: { label: string; value: string; 
 }
 
 const styles = themed(() => ({
+  extend: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.brand.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.sm },
+  extendText: { ...typography.body, ...brandWeight('600'), fontSize: 14, color: color.brand.primary, textAlign: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   spacer: { width: 24 },
   title: { ...brandWeight('700'), fontSize: 20, color: color.text.primary },

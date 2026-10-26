@@ -53,6 +53,15 @@ async def my_settlement(match_id: uuid.UUID, principal: Verified, service: Settl
     return await service.view(principal, match_id)
 
 
+@router.post(
+    "/{match_id}/settlement/extend",
+    response_model=SettlementResponse,
+    summary="Ask once for 5 more minutes to pay into escrow (the taker only)",
+)
+async def extend_funding(match_id: uuid.UUID, principal: Verified, service: Settlements) -> Any:
+    return await service.extend(principal, match_id)
+
+
 @webhooks_router.post(
     "/partners/{partner_code}",
     summary="Partner bank messages (signed)",

@@ -19,6 +19,22 @@ export interface ServerOffer {
   is_own: boolean;
   version: number;
   created_at: string;
+  /** ADR-059 Decision 4 (listings): someone is paying for it, or it is held for someone's turn. */
+  waiting?: boolean;
+  /** What may come back to take, in the offer's own currency. */
+  waiting_amount?: string | null;
+  queue_length?: number;
+  in_queue?: boolean;
+  your_turn?: boolean;
+}
+
+/** ADR-059 Decision 4: my place in an offer's waiting queue. */
+export interface QueueEntry {
+  offer_id: string;
+  status: 'waiting' | 'notified';
+  position: number;
+  queue_length: number;
+  turn_deadline: string | null;
 }
 
 /** ADR-059 "Success": a recent completed trade. No ids, no names; nothing to take. */
@@ -124,6 +140,12 @@ export const offersApi = {
       ...x,
     }),
   mine: (token: string, x: Extra = {}) => apiRequest<ServerOffer[]>('GET', '/api/v1/offers/mine', { token, ...x }),
+  /** ADR-059 Decision 4: wait for an offer someone else is paying for. */
+  joinQueue: (token: string, offerId: string, x: Extra = {}) =>
+    apiRequest<QueueEntry>('POST', `/api/v1/offers/${encodeURIComponent(offerId)}/queue`, { token, ...x }),
+  leaveQueue: (token: string, offerId: string, x: Extra = {}) =>
+    apiRequest<null>('DELETE', `/api/v1/offers/${encodeURIComponent(offerId)}/queue`, { token, ...x }),
+  myQueue: (token: string, x: Extra = {}) => apiRequest<QueueEntry | null>('GET', '/api/v1/offers/queue/mine', { token, ...x }),
   updateRate: (token: string, offerId: string, desiredRate: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('PATCH', `/api/v1/offers/${encodeURIComponent(offerId)}`, {
       token,

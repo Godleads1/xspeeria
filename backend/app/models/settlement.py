@@ -149,6 +149,8 @@ class Settlement(Base):
     closure_reason: Mapped[str | None] = mapped_column(String(24))
     #: ADR-021 §2: 5 minutes from both escrows being open. Null until then.
     funding_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-059 Decision 4: the taker's one extra 5 minutes, set once (DB guard).
+    funding_extended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rematched_to: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("settlements.id", ondelete="RESTRICT")
     )

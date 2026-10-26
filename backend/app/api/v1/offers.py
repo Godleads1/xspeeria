@@ -44,6 +44,7 @@ from app.schemas.offers import (
     MatchResponse,
     OfferResponse,
     PayoutAccountResponse,
+    QueueEntryResponse,
     UpdateRateRequest,
 )
 from app.services.auth import AuthRuntime, AuthService, Principal
@@ -51,6 +52,7 @@ from app.services.kyc import KycService
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
 from app.services.payouts import PayoutAccountService
+from app.services.queue import QueueService
 
 __all__ = ["marketplace_router", "matches_router", "payout_accounts_router", "router"]
 
@@ -242,6 +244,59 @@ async def listings(
     items = await service.marketplace(principal, source, target, limit + 1, offset, search)
     more = len(items) > limit
     return {**page, "items": items[:limit], "next_offset": offset + limit if more else None}
+
+
+# --- waiting queue (ADR-059 Decision 4) ----------------------------------------------------
+
+
+async def get_queue_service(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> QueueService:
+    return QueueService(db, runtime.clock)
+
+
+Queue = Annotated[QueueService, Depends(get_queue_service)]
+
+
+@router.get(
+    "/queue/mine",
+    response_model=QueueEntryResponse | None,
+    summary="The queue I am waiting in, if any",
+)
+async def my_queue(principal: Verified, queue: Queue) -> Any:
+    return await queue.mine(principal)
+
+
+@router.post(
+    "/{offer_id}/queue",
+    response_model=QueueEntryResponse,
+    summary="Wait for an offer someone else is paying for (up to 3 people, one queue each)",
+)
+async def join_queue(
+    offer_id: uuid.UUID,
+    principal: Verified,
+    queue: Queue,
+    settings: Settings_,
+    runtime: Runtime,
+    db: Db,
+) -> Any:
+    # Waiting leads to taking: the same identity rule as taking applies (ADR-042).
+    pays = await db.scalar(select(Offer.target_currency).where(Offer.id == offer_id))
+    await db.rollback()
+    if pays is not None:
+        await require_pay_country(principal, pays, settings, runtime, db)
+    return await queue.join(principal, offer_id)
+
+
+@router.delete(
+    "/{offer_id}/queue",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Stop waiting for this offer",
+)
+async def leave_queue(offer_id: uuid.UUID, principal: Verified, queue: Queue) -> Response:
+    await queue.leave(principal, offer_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/mine", response_model=list[OfferResponse], summary="My offers, open ones first")

@@ -147,7 +147,10 @@ async def test_taking_everything_closes_the_offer(
 ) -> None:
     assert (await taker.take(offer["offer_id"], "500")).status_code == 201
     assert await _offer_row(db_settings, offer["offer_id"]) == ("fully_matched", 50_000)
-    assert (await taker.listings()).json()["items"] == []
+    # ADR-059 Decision 4: still listed, as waiting for payment (people may queue), not takeable.
+    [row] = (await taker.listings()).json()["items"]
+    assert row["waiting"] is True and row["waiting_amount"] == "500.00"
+    assert row["remaining_amount"] == "0.00"
     r = await taker.take(offer["offer_id"], "10.00")
     assert r.status_code == 409 and _code(r) == "RES_409_OFFER_UNAVAILABLE"
 

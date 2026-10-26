@@ -41,7 +41,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from app.db.money import CURRENCY_DEF_VERSION_LENGTH
 
-__all__ = ["ACTIVE_STATUSES", "OFFER_STATUSES", "IdempotencyRecord", "Match", "Offer"]
+__all__ = [
+    "ACTIVE_STATUSES",
+    "OFFER_STATUSES",
+    "QUEUE_ACTIVE",
+    "QUEUE_STATUSES",
+    "IdempotencyRecord",
+    "Match",
+    "Offer",
+    "OfferQueueEntry",
+]
 
 #: Contract (HUMAN-APPROVED 2026-08-25). `expired` is unused: offers do not expire (ADR-029).
 OFFER_STATUSES = ("open", "partially_matched", "fully_matched", "withdrawn", "cancelled", "expired")
@@ -210,3 +219,58 @@ class Match(Base):
     preparation_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     #: The attributable cause when preparation ends without readiness (ADR-001 §14.5).
     termination_cause: Mapped[str | None] = mapped_column(String(64))
+
+
+#: ADR-059 Decision 4. "waiting"/"notified" are active; the rest are final.
+QUEUE_STATUSES = ("waiting", "notified", "taken", "left", "passed", "ended")
+QUEUE_ACTIVE = ("waiting", "notified")
+
+
+class OfferQueueEntry(Base):
+    """Someone waiting for an offer another person is paying for (ADR-059 Decision 4)."""
+
+    __tablename__ = "offer_queue_entries"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('waiting', 'notified', 'taken', 'left', 'passed', 'ended')",
+            name="status_allowed",
+        ),
+        CheckConstraint(
+            "status <> 'notified' OR (notified_at IS NOT NULL AND turn_deadline IS NOT NULL)",
+            name="turn_when_notified",
+        ),
+        CheckConstraint(
+            "(status IN ('waiting', 'notified')) = (ended_at IS NULL)", name="ended_iff_closed"
+        ),
+        Index(
+            "uq_offer_queue_entries_one_active_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status IN ('waiting', 'notified')"),
+        ),
+        Index(
+            "uq_offer_queue_entries_one_turn_per_offer",
+            "offer_id",
+            unique=True,
+            postgresql_where=text("status = 'notified'"),
+        ),
+        Index("ix_offer_queue_entries_offer", "offer_id", "status", "joined_at"),
+        Index(
+            "ix_offer_queue_entries_turn_due",
+            "turn_deadline",
+            postgresql_where=text("status = 'notified'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    offer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("offers.id", ondelete="RESTRICT"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    turn_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–3 built 2026-10-26**, Decisions 4–5 not built |
+| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–4 built 2026-10-26**, Decision 5 not built |
 | **Decision ID** | DEC-066 |
 | **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
 | **Design** | Claude Design canvas "Xspeeria Home — Search" (6 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies, Success) |
@@ -95,3 +95,11 @@ Choices made while building, for the owner to confirm or change:
 - `PATCH /api/v1/offers/{id}` takes `desired_rate` and/or `source_amount` (at least one; nothing else). It re-runs the publish checks (exact decimals, minimum, positive rate, official-rate ceiling) under the same row lock that taking an offer uses, so an edit and a take cannot both succeed. Once any part is taken it answers 409 with "Someone has started a deal on this offer, so it can't be changed now. You can still withdraw what's left."
 - Each successful edit bumps `version` and writes an `offer_edited` audit log line (user, offer, which fields changed, new version — no amounts or rates in the log).
 - App: My Offers and My Requests show **Edit** next to Withdraw only while nothing is taken. A buy request is edited in the foreign currency; the app sends naira = amount × rate (half to even), as when publishing.
+
+## Build notes — Decision 4 (2026-10-26)
+
+- **Waiting for payment** = an offer whose whole amount is held by deals not yet paid (choosing payout accounts, or escrow INITIALIZING / AWAITING_FUNDING), or one held for someone's 5-minute turn. Such offers stay in the "Available now" list with `waiting: true`, `waiting_amount` (what may come back), `queue_length`, `in_queue` and `your_turn`; they can't be taken, only queued for. Paid deals (RELEASING onwards) no longer hold anything, so a fully paid offer leaves the market.
+- **Queue** (`offer_queue_entries`, migration 0020): `POST/DELETE /api/v1/offers/{id}/queue`, `GET /api/v1/offers/queue/mine`. Joining needs the same identity check as taking (ADR-042); the owner and anyone already in a deal on the offer can't join. Max 3 per offer (checked under the offer row lock), one active queue per person (unique index), one turn per offer (unique index). Order is join time.
+- **Turns:** when an unpaid deal's amount comes back (payout-account time ran out, or the escrow was cancelled), the first person waiting is notified (`queue.your_turn`, push "It's your turn") and gets 5 minutes; taking by anyone else answers 409 `RES_409_OFFER_RESERVED`. A missed turn passes on (background sweep); leaving during a turn passes it on at once; when nobody is left the offer is simply available. Withdrawing an offer, or its deals completing, ends its queue.
+- **Extension:** `POST /api/v1/matches/{id}/settlement/extend` — the taker only, once, while the funding window is open: the deadline moves 5 minutes later, both sides are told the new time, and `funding_extended_at` is set once (database guard). The escrow view shows `can_extend` / `funding_extended`; the app shows "Need more time? Ask once for 5 more minutes".
+- Lock order everywhere is Offer → Match/queue entry, as in taking an offer, so joins, turns and takes cannot race or deadlock.

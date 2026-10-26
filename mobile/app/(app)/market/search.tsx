@@ -5,6 +5,8 @@ import { SERVER_MODE } from '../../../src/api/config';
 import { SearchScreen } from '../../../src/features/search/SearchScreen';
 import { DEFAULT_SEARCH, isSearchCurrency, readQuery } from '../../../src/features/search/searchModel';
 import { serverSearch } from '../../../src/features/search/serverSearch';
+import { queueAction } from '../../../src/features/market/queueActions';
+import { queueServer } from '../../../src/features/market/serverOffers';
 import { useThemeMode } from '../../../src/theme';
 
 /**
@@ -29,6 +31,7 @@ export default function SearchRoute(): ReactElement {
       onBack={() => router.back()}
       onTake={(listing) => router.push({ pathname: '/market/take', params: { offer: listing.id } })}
       onPostRequest={() => router.push('/marketplace')}
+      onQueue={(listing) => queueAction(listing, queueServer)}
     />
   );
 }

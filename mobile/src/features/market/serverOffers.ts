@@ -61,7 +61,11 @@ export function foreignMinorFor(ngnMinor: number, rate: string): number | null {
 export function toListing(offer: ServerOffer, now: number, best: boolean): Listing | null {
   const request = offer.source_currency === 'NGN';
   const foreign = request ? offer.target_currency : offer.source_currency;
-  const left = exactHundredths(offer.remaining_amount);
+  // ADR-059 Decision 4: a waiting offer shows what may come back (the amount being paid for).
+  const waiting = offer.waiting === true;
+  const yourTurn = offer.your_turn === true;
+  const amountText = waiting && !yourTurn && offer.waiting_amount ? offer.waiting_amount : offer.remaining_amount;
+  const left = exactHundredths(amountText);
   if (left === null || !/^[0-9]+(\.[0-9]{1,6})?$/.test(offer.desired_rate)) return null;
   // A buy request shows how much foreign currency it still wants (ADR-056).
   const remaining = request ? foreignMinorFor(left, offer.desired_rate) : left;
@@ -71,15 +75,28 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
   // then only a sort key, never used for an amount (taking offers is not built yet).
   const [whole, frac = ''] = offer.desired_rate.split('.');
   const sortKey = rate ?? Number(whole) * 100 + Number(frac.slice(0, 2).padEnd(2, '0'));
+  const queueLength = Math.max(0, Math.min(3, Math.trunc(offer.queue_length ?? 0)));
+  const meta = offer.is_own
+    ? request
+      ? tr("Your request")
+      : tr("Your offer")
+    : yourTurn
+      ? tr("Your turn: take it within 5 minutes")
+      : waiting
+        ? offer.in_queue
+          ? tr("Waiting for payment · You’re in the queue")
+          : tr("Waiting for payment · {{count}} of 3 in queue", { count: queueLength })
+        : minutesAgo(offer.created_at, now);
   return {
     id: offer.offer_id,
     currency: foreign,
     availableMinor: remaining,
     rateHundredths: sortKey,
     ...(rate === null ? { rateLabel: groupedRate(offer.desired_rate) } : {}),
-    meta: offer.is_own ? (request ? tr("Your request") : tr("Your offer")) : minutesAgo(offer.created_at, now),
-    ...(best ? { best: true } : {}),
+    meta,
+    ...(best && !waiting ? { best: true } : {}),
     ...(offer.is_own ? { own: true } : {}),
+    ...(waiting || yourTurn ? { waiting: { queueLength, inQueue: offer.in_queue === true, yourTurn } } : {}),
   };
 }
 
@@ -124,7 +141,7 @@ export const marketServer: MarketServer = {
     const page = await locatedPage(`${foreign}/NGN`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
-      const row = toListing(o, now, rows.length === 0);
+      const row = toListing(o, now, rows.every((r) => r.waiting));
       if (row) rows.push(row);
     });
     return rows;
@@ -133,7 +150,7 @@ export const marketServer: MarketServer = {
     const page = await locatedPage(`NGN/${foreign}`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
-      const row = toListing(o, now, rows.length === 0);
+      const row = toListing(o, now, rows.every((r) => r.waiting));
       if (row) rows.push(row);
     });
     return rows;
@@ -213,4 +230,14 @@ export const takeServer: TakeSource = {
 
 export const myDeals = {
   list: async () => offersApi.myMatches(token(), serverAuth.apiOptions()),
+};
+
+/**
+ * ADR-059 Decision 4: the waiting queue. The server checks everything (who may wait, the limit
+ * of 3, one queue per person) and decides whose turn it is.
+ */
+export const queueServer = {
+  join: async (offerId: string) => offersApi.joinQueue(token(), offerId, serverAuth.apiOptions()),
+  leave: async (offerId: string) => offersApi.leaveQueue(token(), offerId, serverAuth.apiOptions()),
+  mine: async () => offersApi.myQueue(token(), serverAuth.apiOptions()),
 };
