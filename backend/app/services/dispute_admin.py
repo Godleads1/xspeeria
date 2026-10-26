@@ -560,6 +560,18 @@ class DisputeAdminService:
         if outcome not in DISPUTE_OUTCOMES:
             raise _err("VAL_422_MISSING_FIELD", "Choose the outcome.", 422, {"field": "outcome"})
         d = await self._open_case(dispute_id)
+        # ADR-065: a refund waiting for approval is decided first, so a closed case and a
+        # refund can never contradict each other.
+        waiting = await self._db.scalar(
+            select(Reversal.id).where(Reversal.dispute_id == d.id, Reversal.status == "pending")
+        )
+        if waiting is not None:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_REFUND_PENDING",
+                "A refund for this case is waiting for approval. Approve or reject it first.",
+                status.HTTP_409_CONFLICT,
+            )
         now = self._clock()
         d.status, d.outcome, d.resolved_at, d.updated_at = "resolved", outcome, now, now
         if d.hold_id is not None:

@@ -14,6 +14,7 @@
  "> 1 hour": "> 1 小时",
  "A dispute with dispute ID {{id}} has been created successfully.": "争议 {{id}} 已成功创建。",
  "A record of customer money held by partner banks until both sides have paid. It is not Xspeeria’s money and not revenue.": "合作银行在双方付款前代为保管的客户资金记录。这不是 Xspeeria 的钱，也不是收入。",
+ "A refund for this case is waiting for approval. The case can be closed once it is approved or rejected.": "此案件有一笔退款正在等待审批。退款获批或被拒后才能关闭此案件。",
  "A role with this name exists.": "已有同名角色。",
  "A staff member already uses this email.": "已有员工使用此邮箱。",
  "ACTION": "操作",

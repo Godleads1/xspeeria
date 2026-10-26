@@ -20,7 +20,7 @@ function me(id: string, permissions: string[]): Me {
   };
 }
 const OPS = me('s-2', ['reversals.read', 'reversals.create', 'reversals.approve', 'disputes.read']);
-const ASKER = me('s-1', ['reversals.read', 'reversals.create', 'reversals.approve', 'disputes.read', 'disputes.update']);
+const ASKER = me('s-1', ['reversals.read', 'reversals.create', 'reversals.approve', 'disputes.read', 'disputes.update', 'disputes.approve']);
 const READER = me('s-3', ['reversals.read']);
 
 const ROW: ReversalRow = {
@@ -149,5 +149,8 @@ describe('process refund on a dispute', () => {
     mount(ASKER, <DisputeCaseScreen id={CASE.id} />, { dispute: vi.fn(async () => withPending) });
     expect(await screen.findByTestId('reversal-pending')).toHaveAttribute('href', `/reversals/case?id=${ROW.id}`);
     expect(screen.queryByTestId('process-refund')).toBeNull();
+    // The case can't be closed until the refund is decided.
+    expect(screen.queryByTestId('close-case')).toBeNull();
+    expect(screen.getByTestId('refund-waiting')).toBeInTheDocument();
   });
 });

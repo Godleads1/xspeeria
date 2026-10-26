@@ -84,12 +84,11 @@ async def test_refund_is_approved_by_someone_else_and_both_escrows_go_back_in_fu
     ).status_code == 409
     case = (await boss.get(f"/api/v1/admin/disputes/{did}", headers=H)).json()
     assert case["can_refund"] is False and case["reversals"][0]["status"] == "pending"
-    # Closing the dispute does not release the money while the refund waits.
-    assert (
-        await boss.post(
-            f"/api/v1/admin/disputes/{did}/resolve", json={"outcome": "favor_initiator"}, headers=H
-        )
-    ).status_code == 204
+    # The case can't be closed while the refund waits (no contradicting decisions).
+    r = await boss.post(
+        f"/api/v1/admin/disputes/{did}/resolve", json={"outcome": "favor_initiator"}, headers=H
+    )
+    assert r.status_code == 409 and r.json()["error"]["code"] == "RES_409_REFUND_PENDING"
     await esc.tick(2)
     assert await _phase(db_settings) == "AWAITING_FUNDING"
     # The list, counts and details.
@@ -113,6 +112,23 @@ async def test_refund_is_approved_by_someone_else_and_both_escrows_go_back_in_fu
     # Never on your own request (server rule and database CHECK).
     r = await boss.post(f"/api/v1/admin/reversals/{rid}/approve", json={}, headers=H)
     assert r.status_code == 403 and r.json()["error"]["code"] == "AUTH_403_OWN_REQUEST"
+    r = await boss.post(
+        f"/api/v1/admin/reversals/{rid}/reject", json={"note": "Changed my mind"}, headers=H
+    )
+    assert r.status_code == 403 and r.json()["error"]["code"] == "AUTH_403_OWN_REQUEST"
+    # The database refuses it too, whatever the code does.
+    boss_id = await _sql(
+        db_settings, "SELECT id FROM staff_accounts WHERE email = 'boss@xspeeria.test'"
+    )
+    with pytest.raises(Exception, match="not_own_request"):
+        await _sql(
+            db_settings,
+            f"UPDATE reversals SET status = 'approved', decided_by = '{boss_id}', decided_at = now() WHERE id = '{rid}'",
+        )
+    with pytest.raises(Exception, match="cannot be rewritten"):
+        await _sql(
+            db_settings, f"UPDATE reversals SET reason = 'something else' WHERE id = '{rid}'"
+        )
     r = await ops.post(
         f"/api/v1/admin/reversals/{rid}/approve", json={"note": "Checked the receipts"}, headers=H
     )
@@ -133,9 +149,13 @@ async def test_refund_is_approved_by_someone_else_and_both_escrows_go_back_in_fu
         == 0
     )
     assert await _offer(db_settings) == ("open", 0)  # the deal's amount is back on the offer
+    # The refund's hold is closed; only the dispute's remains until the case is closed.
     assert (
-        await _sql(db_settings, "SELECT count(*) FROM settlement_holds WHERE closed_at IS NULL")
-        == 0
+        await _sql(
+            db_settings,
+            "SELECT string_agg(type, ',') FROM settlement_holds WHERE closed_at IS NULL",
+        )
+        == "DISPUTE"
     )
     actions = await _sql(
         db_settings,
@@ -148,6 +168,17 @@ async def test_refund_is_approved_by_someone_else_and_both_escrows_go_back_in_fu
         "dispute_refund_approved",
     ):
         assert a in actions
+    event = await _sql(
+        db_settings,
+        "SELECT payload->>'reversal_id' FROM settlement_events WHERE event_type = 'ReversalApproved'",
+    )
+    assert event == rid  # the ledger points at the staff decision
+    # Now the case can be closed.
+    assert (
+        await boss.post(
+            f"/api/v1/admin/disputes/{did}/resolve", json={"outcome": "favor_initiator"}, headers=H
+        )
+    ).status_code == 204
     detail = (await ops.get(f"/api/v1/admin/reversals/{rid}", headers=H)).json()
     assert detail["status"] == "approved" and detail["decided_by"] == "New Person"
     assert detail["deal"]["closure_reason"] == "REVERSED"
@@ -175,9 +206,13 @@ async def test_rejected_refund_lets_the_payout_go_ahead(
             f"/api/v1/admin/disputes/{did}/refund", json={"reason": "Customer asked"}, headers=H
         )
     ).json()["id"]
-    await boss.post(
-        f"/api/v1/admin/disputes/{did}/resolve", json={"outcome": "favor_counterparty"}, headers=H
-    )
+    # Someone without reversals.approve can't decide.
+    agent = await staff.invite(boss, "agent@xspeeria.test", "support_agent")
+    assert (
+        await agent.post(
+            f"/api/v1/admin/reversals/{rid}/reject", json={"note": "no no no"}, headers=H
+        )
+    ).status_code == 403
     # A reason is required to reject.
     assert (
         await ops.post(f"/api/v1/admin/reversals/{rid}/reject", json={}, headers=H)
@@ -188,6 +223,15 @@ async def test_rejected_refund_lets_the_payout_go_ahead(
         headers=H,
     )
     assert r.status_code == 204, r.text
+    # The dispute still holds the deal; closing it lets the payout go ahead.
+    assert await _phase(db_settings) == "AWAITING_FUNDING"
+    assert (
+        await boss.post(
+            f"/api/v1/admin/disputes/{did}/resolve",
+            json={"outcome": "favor_counterparty"},
+            headers=H,
+        )
+    ).status_code == 204
     assert await _phase(db_settings) == "RELEASING"
     await esc.tick(3)
     assert await _phase(db_settings) == "COMPLETED"
@@ -228,7 +272,7 @@ async def test_closing_a_dispute_after_both_paid_pays_out_even_after_the_window(
     assert await _phase(db_settings) == "COMPLETED"
 
 
-async def test_a_pending_refund_stops_the_clock_from_closing_the_deal(
+async def test_money_paid_in_after_approval_goes_back_too(
     db_settings: Settings,
     esc: Escrow,
     staff: Admin,
@@ -237,18 +281,70 @@ async def test_a_pending_refund_stops_the_clock_from_closing_the_deal(
     taker: Party,
     deal: dict[str, Any],
 ) -> None:
+    """Only the owner had paid in when the refund was approved; the taker pays in afterwards."""
     await _open(esc, deal, owner)
     await _pay(owner, deal["match_id"])
     did = (await _dispute(esc, deal, owner))["dispute_id"]
-    assert (
+    ops = await _approver(staff, boss)
+    rid = (
         await boss.post(
             f"/api/v1/admin/disputes/{did}/refund", json={"reason": "Wrong amount"}, headers=H
         )
-    ).status_code == 201
-    await boss.post(f"/api/v1/admin/disputes/{did}/resolve", json={"outcome": "split"}, headers=H)
-    esc.env.clock.advance(minutes=10)
-    await esc.tick(2)
-    assert await _phase(db_settings) == "AWAITING_FUNDING"
+    ).json()["id"]
+    assert (
+        await ops.post(f"/api/v1/admin/reversals/{rid}/approve", json={}, headers=H)
+    ).status_code == 204
+    assert await _phase(db_settings) == "UNWINDING"
+    leg = await _sql(
+        db_settings,
+        "SELECT leg_id::text || ':' || (amount_minor + fee_minor)::text FROM settlement_legs WHERE state = 'ESCROW_PROVISIONED'",
+    )
+    leg_id, total = leg.split(":")
+    import uuid
+
+    esc.bank.simulate_pay_in(uuid.UUID(leg_id), int(total))
+    await esc.tick(4)
+    assert await _phase(db_settings) == "CLOSED_UNWOUND"
+    assert await _sql(db_settings, "SELECT closure_reason FROM settlements") == "REVERSED"
+    assert (
+        await _sql(db_settings, "SELECT string_agg(DISTINCT state, ',') FROM settlement_legs")
+        == "RETURNED"
+    )
+    assert (
+        await _sql(db_settings, "SELECT count(*) FROM outbox_messages WHERE operation='RELEASE'")
+        == 0
+    )
+
+
+async def test_a_request_must_start_pending_with_its_own_hold(
+    db_settings: Settings,
+    esc: Escrow,
+    staff: Admin,
+    boss: AsyncClient,
+    owner: Party,
+    taker: Party,
+    deal: dict[str, Any],
+) -> None:
+    """Database guard: a row can't be inserted already decided, or pointing at another hold."""
+    did = await _both_paid_and_disputed(esc, deal, owner, taker)
+    boss_id = await _sql(
+        db_settings, "SELECT id FROM staff_accounts WHERE email = 'boss@xspeeria.test'"
+    )
+    sid = await _sql(db_settings, "SELECT id FROM settlements")
+    hold = await _sql(db_settings, "SELECT id FROM settlement_holds WHERE type = 'DISPUTE'")
+    cols = "id, dispute_id, settlement_id, hold_id, status, reason, requested_by, requested_at"
+    vals = f"gen_random_uuid(), '{did}', '{sid}', '{hold}'"
+    with pytest.raises(Exception, match="starts as pending"):
+        await _sql(
+            db_settings,
+            f"INSERT INTO reversals ({cols}, decided_at) "
+            f"VALUES ({vals}, 'approved', 'sneaky', '{boss_id}', now(), now())",
+        )
+    with pytest.raises(Exception, match="REVERSAL hold"):
+        await _sql(
+            db_settings,
+            f"INSERT INTO reversals ({cols}) VALUES ({vals}, 'pending', 'sneaky', '{boss_id}', now())",
+        )
 
 
 async def test_validation_and_access(

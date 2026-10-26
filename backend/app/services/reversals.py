@@ -280,7 +280,9 @@ class ReversalService:
         now = self._clock()
         settlement = SettlementService(self._db, self._clock, None)
         try:
-            returned = await settlement.reverse(row.settlement_id)
+            returned = await settlement.reverse(
+                row.settlement_id, reversal_id=row.id, decided_by=principal.staff_id
+            )
         except AppError:
             await self._db.rollback()
             raise

@@ -883,14 +883,6 @@ class SettlementService:
             ):
                 await self._db.rollback()
                 continue
-            if all(leg.state == "FUNDED" for leg in legs):
-                # Both sides paid in while staff held the deal (ADR-063: closing a dispute lets
-                # the escrow continue under its own rules) -> pay out if the gates hold.
-                await self._advance(settlement, legs)
-                if settlement.phase != "AWAITING_FUNDING":
-                    await self._db.commit()
-                    done += 1
-                    continue
             self._event(settlement.id, None, "FundingWindowExpired", {})
             if any(leg.state == "FUNDED" for leg in legs):
                 await self._set_phase(settlement, "UNWINDING")
@@ -1052,7 +1044,9 @@ class SettlementService:
         settlement, legs = await self._lock(settlement_id)
         await self._advance(settlement, legs)
 
-    async def reverse(self, settlement_id: uuid.UUID) -> list[dict[str, Any]]:
+    async def reverse(
+        self, settlement_id: uuid.UUID, *, reversal_id: uuid.UUID, decided_by: uuid.UUID
+    ) -> list[dict[str, Any]]:
         """ADR-065: a staff-approved reversal. The funded escrows go back to whoever paid them
         in, in full (fee included), exactly as when the funding window runs out (ADR-001
         transition 5, here started by an approved staff decision). No commit: the caller records
@@ -1073,7 +1067,13 @@ class SettlementService:
                 details={"problem": problem},
             )
         now = self._clock()
-        self._event(settlement.id, None, "ReversalApproved", {"at": now.isoformat()})
+        # Links the ledger to the staff decision (reversals row, staff audit log).
+        self._event(
+            settlement.id,
+            None,
+            "ReversalApproved",
+            {"at": now.isoformat(), "reversal_id": str(reversal_id), "decided_by": str(decided_by)},
+        )
         await self._set_phase(settlement, "UNWINDING")
         returned = []
         for leg in legs:

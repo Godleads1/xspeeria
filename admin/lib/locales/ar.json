@@ -14,6 +14,7 @@
  "> 1 hour": "أكثر من ساعة",
  "A dispute with dispute ID {{id}} has been created successfully.": "تم إنشاء النزاع ذي المعرّف {{id}} بنجاح.",
  "A record of customer money held by partner banks until both sides have paid. It is not Xspeeria’s money and not revenue.": "سجل لأموال العملاء التي تحتفظ بها البنوك الشريكة حتى يدفع الطرفان. ليست أموال Xspeeria وليست إيرادات.",
+ "A refund for this case is waiting for approval. The case can be closed once it is approved or rejected.": "هناك استرداد لهذه الحالة بانتظار الموافقة. يمكن إغلاق الحالة بعد الموافقة عليه أو رفضه.",
  "A role with this name exists.": "يوجد دور بهذا الاسم بالفعل.",
  "A staff member already uses this email.": "يستخدم أحد الموظفين هذا البريد الإلكتروني بالفعل.",
  "ACTION": "إجراء",

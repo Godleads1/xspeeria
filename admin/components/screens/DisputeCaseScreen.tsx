@@ -101,6 +101,8 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
   if (!c) return <LoadingState />;
 
   const open = c.status !== 'resolved';
+  // ADR-065: a refund waiting for approval is decided before the case can be closed.
+  const refundWaiting = c.reversals.some((rv) => rv.status === 'pending');
   const canWork = open && can('disputes.update');
   const people = staff.length > 0 ? staff : [{ id: me.id, name: me.name } as StaffView];
 
@@ -176,12 +178,17 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
           <button type="button" data-testid="export-case" onClick={() => window.print()} style={tool}>
             {tr('Export Details')}
           </button>
-          {open && can('disputes.approve') ? (
+          {open && can('disputes.approve') && !refundWaiting ? (
             <button type="button" data-testid="close-case" onClick={() => setClosing(true)} style={{ ...tool, borderColor: admin.down, color: admin.down, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
               {tr('Close')} <Icon name="close" size={14} />
             </button>
           ) : null}
         </div>
+        {open && refundWaiting && can('disputes.approve') ? (
+          <p data-testid="refund-waiting" style={{ margin: 0, fontSize: 13, color: color.text.secondary }}>
+            {tr('A refund for this case is waiting for approval. The case can be closed once it is approved or rejected.')}
+          </p>
+        ) : null}
         {error ? (
           <p role="alert" style={{ margin: 0, color: color.error.text }}>
             {error}

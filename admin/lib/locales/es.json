@@ -14,6 +14,7 @@
  "> 1 hour": "> 1 hora",
  "A dispute with dispute ID {{id}} has been created successfully.": "Se creó la disputa con ID {{id}}.",
  "A record of customer money held by partner banks until both sides have paid. It is not Xspeeria’s money and not revenue.": "Un registro del dinero de los clientes que guardan los bancos socios hasta que ambas partes pagan. No es dinero de Xspeeria ni ingresos.",
+ "A refund for this case is waiting for approval. The case can be closed once it is approved or rejected.": "Hay un reembolso de este caso esperando aprobación. El caso se puede cerrar cuando se apruebe o rechace.",
  "A role with this name exists.": "Ya existe un rol con este nombre.",
  "A staff member already uses this email.": "Un miembro del personal ya usa este correo.",
  "ACTION": "ACCIÓN",

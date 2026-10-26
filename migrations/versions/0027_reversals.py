@@ -50,6 +50,19 @@ _CLOSE_NEW = (
 _GUARD = """
 CREATE FUNCTION reversals_decided_once() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status <> 'pending' OR NEW.decided_by IS NOT NULL OR NEW.decided_at IS NOT NULL THEN
+      RAISE EXCEPTION 'a reversal request starts as pending' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM settlement_holds h
+      WHERE h.id = NEW.hold_id AND h.settlement_id = NEW.settlement_id AND h.type = 'REVERSAL'
+    ) THEN
+      RAISE EXCEPTION 'a reversal needs its own REVERSAL hold on the same settlement'
+        USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
   IF OLD.status <> 'pending' THEN
     RAISE EXCEPTION 'reversal % is already decided', OLD.id USING ERRCODE = 'check_violation';
   END IF;
@@ -63,7 +76,7 @@ BEGIN
 END $$
 """
 _TRIGGER = (
-    "CREATE TRIGGER trg_reversals_decided_once BEFORE UPDATE ON reversals "
+    "CREATE TRIGGER trg_reversals_decided_once BEFORE INSERT OR UPDATE ON reversals "
     "FOR EACH ROW EXECUTE FUNCTION reversals_decided_once()"
 )
 
