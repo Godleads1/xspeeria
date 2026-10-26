@@ -101,11 +101,16 @@ class User:
     async def get(self, path: str, **params: Any) -> Response:
         return await self.env.client.get(f"/api/v1/offers{path}", params=params, headers=self._h())
 
-    async def listings(self, pair: str = "USD/NGN", **params: Any) -> Response:
+    async def listings(
+        self, pair: str = "USD/NGN", *, country: str | None = "CA", **params: Any
+    ) -> Response:
+        # ADR-059 Decision 2: a country whose currency is not traded here, so nothing is
+        # hidden by the location rule unless a test says otherwise.
+        headers = self._h() | ({"X-Device-Country": country} if country else {})
         return await self.env.client.get(
             "/api/v1/marketplace/listings",
             params={"filter[currency_pair]": pair, **params},
-            headers=self._h(),
+            headers=headers,
         )
 
     async def patch(self, offer_id: str, body: dict[str, Any]) -> Response:

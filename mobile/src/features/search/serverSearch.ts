@@ -7,6 +7,7 @@ import { ApiError } from '../../api/client';
 import { offersApi, type CompletedTrade } from '../../api/offersApi';
 import { tr } from '../../i18n';
 import { serverAuth } from '../auth/serverAuth';
+import { countryHeaders, viewerCountry } from '../location/viewerCountry';
 import type { Listing } from '../market/data';
 import { exactHundredths, groupedRate, toListing } from '../market/serverOffers';
 import { pairFor, toParams, type SearchState } from './searchModel';
@@ -22,7 +23,12 @@ export interface TradeRow {
 
 export type SearchResult =
   | { readonly kind: 'offers'; readonly rows: readonly Listing[] }
-  | { readonly kind: 'trades'; readonly rows: readonly TradeRow[] };
+  | { readonly kind: 'trades'; readonly rows: readonly TradeRow[] }
+  /**
+   * ADR-059 Decision 2: `hidden` — this side sells the viewer's own currency;
+   * `needs_location` — no country is known yet. Nothing is listed either way.
+   */
+  | { readonly kind: 'blocked'; readonly reason: 'hidden' | 'needs_location'; readonly rows: readonly [] };
 
 export interface SearchSource {
   run(state: SearchState, now: number): Promise<SearchResult>;
@@ -61,7 +67,13 @@ function token(): string {
 
 export const serverSearch: SearchSource = {
   async run(state, now) {
-    const page = await offersApi.search(token(), pairFor(state), toParams(state), 50, serverAuth.apiOptions());
+    const country = await viewerCountry.get({ ask: true });
+    const page = await offersApi.search(token(), pairFor(state), toParams(state), 50, {
+      ...serverAuth.apiOptions(),
+      headers: countryHeaders(country),
+    });
+    if (page.needs_location) return { kind: 'blocked', reason: 'needs_location', rows: [] };
+    if (page.hidden) return { kind: 'blocked', reason: 'hidden', rows: [] };
     if (state.status === 'success') {
       const rows: TradeRow[] = [];
       (page.trades ?? []).forEach((t, i) => {

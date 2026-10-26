@@ -242,6 +242,16 @@ describe('search screen', () => {
   });
 });
 
+describe('search screen without a clock (as the route renders it)', () => {
+  it('searches once, not on every render', async () => {
+    const run = jest.fn(async () => ({ kind: 'offers' as const, rows: [] }));
+    await render(<SearchScreen source={{ run }} onBack={jest.fn()} onTake={jest.fn()} onPostRequest={jest.fn()} />);
+    await flush();
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Home search bar', () => {
   it('sends the text, a currency chip, or opens filters', async () => {
     const onSearch = jest.fn();

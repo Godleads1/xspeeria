@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersApi';
 import { serverAuth } from '../auth/serverAuth';
+import { countryHeaders, viewerCountry } from '../location/viewerCountry';
 import { tr } from "../../i18n";
 
 function token(): string {
@@ -21,7 +22,11 @@ export interface DealsSource {
 
 export const serverDeals: DealsSource = {
   deals: async () => offersApi.myMatches(token(), serverAuth.apiOptions()),
-  offers: async (pair) => (await offersApi.listings(token(), pair, 50, 0, serverAuth.apiOptions())).items,
+  // Home's best rates: the location rule applies (ADR-059 D2), without asking for permission.
+  offers: async (pair) => {
+    const country = await viewerCountry.get({ ask: false });
+    return (await offersApi.listings(token(), pair, 50, 0, { ...serverAuth.apiOptions(), headers: countryHeaders(country) })).items;
+  },
 };
 
 /** Loads once on mount and on `reload()`; `null` while loading, `error` when it failed. */

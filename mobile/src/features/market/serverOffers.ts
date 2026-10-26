@@ -10,8 +10,9 @@
 import * as Crypto from 'expo-crypto';
 
 import { ApiError } from '../../api/client';
-import { offersApi, type ServerMatch, type ServerOffer } from '../../api/offersApi';
+import { offersApi, type ListingsPage, type ServerMatch, type ServerOffer } from '../../api/offersApi';
 import { serverAuth } from '../auth/serverAuth';
+import { countryHeaders, viewerCountry } from '../location/viewerCountry';
 import { confirmIdentity } from '../security/serverConfirm';
 import type { Listing } from './data';
 import { divRoundHalfEven, formatHundredths, parseToHundredths, quoteMinorOrNull } from './money';
@@ -103,9 +104,24 @@ export interface MarketServer {
   newKey(): string;
 }
 
+/**
+ * ADR-059 Decision 2: a listings page with the phone's country, or a clear error when the
+ * location rule hides it or no country is known. Asks for location only when `ask` is true.
+ */
+export async function locatedPage(pair: string, ask: boolean): Promise<ListingsPage> {
+  const country = await viewerCountry.get({ ask });
+  const page = await offersApi.listings(token(), pair, 50, 0, { ...serverAuth.apiOptions(), headers: countryHeaders(country) });
+  if (page.needs_location) throw new ApiError('LOCATION_NEEDED', 0, tr("Turn on location to see deals. We use only your country."));
+  if (page.hidden) {
+    const sold = pair.split('/')[0];
+    throw new ApiError('LISTINGS_HIDDEN', 0, tr("Listings that sell {{currency}} aren’t shown in your country.", { currency: sold }));
+  }
+  return page;
+}
+
 export const marketServer: MarketServer = {
   async offersFor(foreign, now) {
-    const page = await offersApi.listings(token(), `${foreign}/NGN`, 50, 0, serverAuth.apiOptions());
+    const page = await locatedPage(`${foreign}/NGN`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
       const row = toListing(o, now, rows.length === 0);
@@ -114,7 +130,7 @@ export const marketServer: MarketServer = {
     return rows;
   },
   async requestsFor(foreign, now) {
-    const page = await offersApi.listings(token(), `NGN/${foreign}`, 50, 0, serverAuth.apiOptions());
+    const page = await locatedPage(`NGN/${foreign}`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
       const row = toListing(o, now, rows.length === 0);

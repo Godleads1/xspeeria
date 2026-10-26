@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decision 1 built 2026-10-26**, Decisions 2–5 not built |
+| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–2 built 2026-10-26**, Decisions 3–5 not built |
 | **Decision ID** | DEC-066 |
 | **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
 | **Design** | Claude Design canvas "Xspeeria Home — Search" (6 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies, Success) |
@@ -80,3 +80,12 @@ Choices made while building, for the owner to confirm or change:
 - **The search box** reads a currency (code, word or symbol: "usd", "pounds", "€") and an amount; the amount becomes "at least this much". Other words are ignored.
 - **API:** `GET /api/v1/marketplace/listings` gains `sort` (best_rate, newest, oldest, largest, smallest), `filter[status]` (available, success), `filter[min_rate]`, `filter[max_rate]`, `filter[min_amount]`, `filter[max_amount]`. With `filter[status]=success` the answer's `trades` list holds `{currency, amount, rate, completed_at}` and `items` is empty. Amount filters and sorts are in the foreign currency for both sides (a buy request's size is naira ÷ rate).
 - **Waiting for payment** labels and **Join queue** are part of Decision 4 and not built yet.
+
+## Build notes — Decision 2 (2026-10-26)
+
+- **Where it applies:** `GET /api/v1/marketplace/listings` (Market tab, Home best rates, search and the Success list). If the pair sells the viewer's currency the answer is empty with `hidden: true`; if no country is known, empty with `needs_location: true`. The answer also says which `viewer_country` was used.
+- **Country:** the app sends `X-Device-Country` (two letters from the phone's location, ADR-022; only the code, held in memory for the session). The server ignores anything that is not two letters. Without it, the server uses the most recently approved identity check's country.
+- **Currency of a country:** NG → NGN, US → USD, GB → GBP, euro-area countries (including Bulgaria from 2026) → EUR. Other countries hide nothing.
+- **Visibility only:** taking an offer by its link is unchanged; it is still governed by the identity check for the currency you pay (ADR-042).
+- **App:** Market shows "Listings that sell NGN aren't shown in your country." on the hidden side; search switches to the other side and greys out the hidden one; with no country, search shows "Turn on location to see deals". Home does not ask for location (no prompt there); Market and search ask.
+- Fixed while building: the search screen re-ran its search on every render when no clock was passed (as in the real route) — now searches once per change (regression test added).

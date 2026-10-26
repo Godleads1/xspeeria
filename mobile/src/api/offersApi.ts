@@ -34,6 +34,12 @@ export interface CompletedTrade {
 export interface ListingsPage {
   /** "available" (offers in `items`) or "success" (trades in `trades`). Older servers omit it. */
   status?: 'available' | 'success';
+  /** ADR-059 Decision 2: the country used for the location rule; null when unknown. */
+  viewer_country?: string | null;
+  /** This pair sells the viewer's own currency, so nothing is shown. */
+  hidden?: boolean;
+  /** No country is known (location off and no approved check), so nothing is shown. */
+  needs_location?: boolean;
   items: ServerOffer[];
   trades?: CompletedTrade[];
   limit: number;
@@ -73,6 +79,8 @@ export interface NewOffer {
 }
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
+/** Listings may also carry the `X-Device-Country` header (ADR-059 Decision 2). */
+type ListingExtra = Extra & Pick<RequestOptions, 'headers'>;
 
 /** ADR-059 search. Values are decimal text; the server checks every one again. */
 export interface SearchParams {
@@ -96,13 +104,13 @@ export function searchQuery(params: SearchParams): string {
 }
 
 export const offersApi = {
-  listings: (token: string, pair: string, limit = 50, offset = 0, x: Extra = {}) =>
+  listings: (token: string, pair: string, limit = 50, offset = 0, x: ListingExtra = {}) =>
     apiRequest<ListingsPage>(
       'GET',
       `/api/v1/marketplace/listings?filter%5Bcurrency_pair%5D=${encodeURIComponent(pair)}&limit=${limit}&offset=${offset}`,
       { token, ...x },
     ),
-  search: (token: string, pair: string, params: SearchParams, limit = 50, x: Extra = {}) =>
+  search: (token: string, pair: string, params: SearchParams, limit = 50, x: ListingExtra = {}) =>
     apiRequest<ListingsPage>(
       'GET',
       `/api/v1/marketplace/listings?filter%5Bcurrency_pair%5D=${encodeURIComponent(pair)}&limit=${limit}&offset=0${searchQuery(params)}`,

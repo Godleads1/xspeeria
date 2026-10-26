@@ -28,6 +28,7 @@ import {
   activeChips,
   DEFAULT_SEARCH,
   filterProblem,
+  pairFor,
   readQuery,
   SEARCH_CURRENCIES,
   SORTS,
@@ -62,20 +63,38 @@ export function SearchScreen({
   const [query, setQuery] = useState(initialQuery);
   const [sheet, setSheet] = useState(openFilters);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
+  /** Pairs the location rule hides for this user (ADR-059 Decision 2). */
+  const [hiddenPairs, setHiddenPairs] = useState<readonly string[]>([]);
   const asked = useRef(0);
+  // Kept in refs so a new function or list each render never re-runs the search by itself.
+  const clock = useRef(now);
+  clock.current = now;
+  const hiddenRef = useRef(hiddenPairs);
+  hiddenRef.current = hiddenPairs;
 
   const run = useCallback(
     async (s: SearchState) => {
       const id = ++asked.current;
       setLoad({ status: 'loading' });
       try {
-        const result = await source.run(s, now());
-        if (id === asked.current) setLoad({ status: 'ready', result });
+        const result = await source.run(s, clock.current());
+        if (id !== asked.current) return;
+        if (result.kind === 'blocked' && result.reason === 'hidden') {
+          // Show the other side instead; this one stays switched off for the currency.
+          const pair = pairFor(s);
+          setHiddenPairs((h) => (h.includes(pair) ? h : [...h, pair]));
+          const other = { ...s, side: s.side === 'buy' ? ('sell' as const) : ('buy' as const) };
+          if (!hiddenRef.current.includes(pairFor(other))) {
+            setState(other);
+            return;
+          }
+        }
+        setLoad({ status: 'ready', result });
       } catch (e) {
         if (id === asked.current) setLoad({ status: 'error', message: messageFor(e) });
       }
     },
-    [source, now],
+    [source],
   );
 
   useEffect(() => {
@@ -142,22 +161,32 @@ export function SearchScreen({
       <View style={styles.sides} accessibilityRole="tablist">
         {(['buy', 'sell'] as const).map((side) => {
           const on = state.side === side;
+          const off = hiddenPairs.includes(pairFor({ ...state, side }));
           return (
             <Pressable
               key={side}
               testID={`search-side-${side}`}
               accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
+              accessibilityState={{ selected: on, disabled: off }}
+              disabled={off}
               onPress={() => setState((s) => ({ ...s, side }))}
               style={[styles.side, on ? styles.sideOn : null]}
             >
-              <Text style={[styles.sideText, on ? styles.sideTextOn : null]}>
+              <Text style={[styles.sideText, on ? styles.sideTextOn : null, off ? styles.sideTextOff : null]}>
                 {side === 'buy' ? tr('Buy {{currency}}', { currency: state.currency }) : tr('Sell {{currency}}', { currency: state.currency })}
               </Text>
             </Pressable>
           );
         })}
       </View>
+
+      {hiddenPairs.some((p) => p.includes(state.currency)) ? (
+        <Text testID="search-hidden-note" style={styles.hiddenNote}>
+          {tr('Listings that sell {{currency}} aren’t shown in your country.', {
+            currency: hiddenPairs.find((p) => p.includes(state.currency))?.split('/')[0] ?? '',
+          })}
+        </Text>
+      ) : null}
 
       <View style={styles.head}>
         <Text testID="search-heading" accessibilityRole="header" style={styles.heading}>{heading}</Text>
@@ -179,7 +208,19 @@ export function SearchScreen({
       <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + space.lg }]}>
         {load.status === 'loading' ? <LoadingState label={tr('Searching')} /> : null}
         {load.status === 'error' ? <ErrorState title={load.message} onRetry={() => void run(state)} /> : null}
-        {load.status === 'ready' && load.result.rows.length === 0 ? (
+        {load.status === 'ready' && load.result.kind === 'blocked' && load.result.reason === 'needs_location' ? (
+          <View testID="search-needs-location" style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Icon name="globe" color={color.brand.primary} size={30} />
+            </View>
+            <Text style={styles.emptyTitle}>{tr('Turn on location to see deals')}</Text>
+            <Text style={styles.emptyText}>
+              {tr('Deals shown depend on the country you are in. We use only your country, never your exact location.')}
+            </Text>
+            <PrimaryButton testID="search-location" label={tr('Turn on location')} onPress={() => void run(state)} />
+          </View>
+        ) : null}
+        {load.status === 'ready' && load.result.kind !== 'blocked' && load.result.rows.length === 0 ? (
           <View testID="search-empty" style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Icon name="search" color={color.brand.primary} size={30} />
@@ -389,6 +430,8 @@ const styles = themed(() => ({
   sideOn: { backgroundColor: color.bg.canvas },
   sideText: { ...typography.body, color: color.text.secondary },
   sideTextOn: { ...brandWeight('700'), color: color.brand.primary },
+  sideTextOff: { color: color.text.disabled },
+  hiddenNote: { ...typography.caption, color: color.text.secondary, paddingHorizontal: space.lg, marginTop: space.xs },
   head: { paddingHorizontal: space.lg, marginTop: space.md, gap: 4 },
   heading: { ...brandWeight('700'), fontSize: 20, lineHeight: 26, color: color.text.primary },
   explain: { ...typography.caption, fontSize: 13, color: color.text.secondary },
