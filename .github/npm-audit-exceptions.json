@@ -9,6 +9,15 @@
       "approved_by": "Product owner (Godleads), 2026-10-17, option 1",
       "approved": "2026-10-17",
       "expires": "2026-11-16"
+    },
+    {
+      "id": "GHSA-mrhx-c7xc-m3w5",
+      "package": "zod",
+      "severity": "high",
+      "reason": "Fix is zod 4.6.6, a major version @expo/cli (zod 3) has not adopted; forcing it could break the Expo CLI. Reached only via @expo/cli (developer tooling on the PC); not in the app bundle. npm's only fix is expo@44.",
+      "approved_by": "Product owner (Godleads), 2026-10-26, \"yes\"",
+      "approved": "2026-10-26",
+      "expires": "2026-11-25"
     }
   ]
 }
