@@ -56,6 +56,14 @@ describe('outage list', () => {
     expect(screen.getByTestId('live-count')).toHaveTextContent('1 notice is showing in the app right now.');
   });
 
+  it('shows planned work as not started, by the server clock', async () => {
+    mount(OPS, {
+      listOutages: vi.fn(async () => ({ now: '2026-10-26T11:15:00Z', total: 1, items: [{ ...OPEN, started_at: '2026-10-27T09:00:00Z', duration_seconds: 0 }] })),
+    });
+    expect(await screen.findByText('Not started')).toBeInTheDocument();
+    expect(screen.getByTestId('live-count')).toHaveTextContent('No notice is showing in the app right now.');
+  });
+
   it('reports an outage with the words app users will read', async () => {
     const api = mount(OPS);
     fireEvent.click(await screen.findByTestId('report-outage'));

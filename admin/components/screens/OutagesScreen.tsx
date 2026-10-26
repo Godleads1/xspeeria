@@ -139,7 +139,12 @@ export function OutagesScreen(): ReactElement {
         ),
     },
     { key: 'severity', header: tr('Severity'), render: (o) => <SeverityDot severity={o.severity} /> },
-    { key: 'duration', header: tr('Duration'), render: (o) => (o.duration_seconds > 0 ? (duration(o.duration_seconds) ?? '—') : tr('Not started')) },
+    {
+      key: 'duration',
+      header: tr('Duration'),
+      // Planned work that hasn't begun yet, by the server's clock.
+      render: (o) => (page && Date.parse(o.started_at) > Date.parse(page.now) ? tr('Not started') : (duration(o.duration_seconds) ?? '—')),
+    },
     { key: 'status', header: tr('Status'), render: (o) => <OutageChip status={o.status} /> },
     ...(can('outages.update') ? [{ key: 'actions', header: tr('ACTION'), render: (o: Outage) => <RowMenu label={tr('Actions for {{name}}', { name: o.ref })} actions={actionsFor(o)} testId={`menu-${o.id}`} /> }] : []),
   ];
