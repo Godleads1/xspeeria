@@ -8,8 +8,8 @@ import { LoginScreen } from '../../components/screens/LoginScreen';
 function Login(): ReactElement {
   const router = useRouter();
   const params = useSearchParams();
-  const notice = params.get('done') === 'password' ? 'Your password is set. Log in with it now.' : null;
-  return <LoginScreen notice={notice} onSignedIn={() => router.replace('/')} />;
+  const passwordChanged = params.get('done') === 'password';
+  return <LoginScreen passwordChanged={passwordChanged} onSignedIn={() => router.replace('/')} />;
 }
 
 export default function LoginPage(): ReactElement {

@@ -9,19 +9,22 @@
 import { useState, type ReactElement } from 'react';
 
 import { adminApi, messageFor, type AdminApi } from '../../lib/api';
+import { tr } from '../../lib/i18n';
 import { color } from '../../theme';
-import { Button, Form, FormError, Notice, TextInput } from '../forms';
+import { CodeBoxes } from '../CodeBoxes';
+import { Button, Form, FormError, TextInput } from '../forms';
+import { Toast } from '../Toast';
 import { AuthLayout, linkGreen } from './AuthLayout';
 
 export function LoginScreen({
   onSignedIn,
   api = adminApi,
-  notice = null,
+  passwordChanged = false,
 }: {
   onSignedIn: () => void;
   api?: AdminApi;
-  /** e.g. "Your password is set. Log in." */
-  notice?: string | null;
+  /** Just came from setting a new password: show the Figma "Password Changed" toast. */
+  passwordChanged?: boolean;
 }): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +35,7 @@ export function LoginScreen({
 
   async function submitPassword(): Promise<void> {
     if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+      setError(tr('Enter your email and password.'));
       return;
     }
     setBusy(true);
@@ -51,7 +54,7 @@ export function LoginScreen({
   async function submitCode(): Promise<void> {
     if (!challenge) return;
     if (!/^[0-9]{6}$/.test(code)) {
-      setError('Enter the 6-digit code from the email.');
+      setError(tr('Enter the 6-digit code from the email.'));
       return;
     }
     setBusy(true);
@@ -67,35 +70,41 @@ export function LoginScreen({
 
   if (challenge === null) {
     return (
-      <AuthLayout title="Welcome back! Kindly enter your details to proceed">
-        <Form label="Log in" onSubmit={() => void submitPassword()}>
-          <Notice message={notice} />
+      <AuthLayout title={tr('Welcome back! Kindly enter your details to proceed')}>
+        {passwordChanged ? (
+          <Toast
+            testId="password-changed"
+            title={tr('Password Changed')}
+            message={tr('Your password reset is successful. Proceed to login with new password.')}
+          />
+        ) : null}
+        <Form label={tr('Log in')} onSubmit={() => void submitPassword()}>
           <TextInput
-            label="Email Address"
+            label={tr('Email Address')}
             type="email"
             autoComplete="username"
             inputMode="email"
-            placeholder="enter email address"
+            placeholder={tr('enter email address')}
             value={email}
             onChange={setEmail}
             testId="login-email"
           />
           <TextInput
-            label="Password"
+            label={tr('Password')}
             type="password"
             autoComplete="current-password"
-            placeholder="enter password"
+            placeholder={tr('enter password')}
             value={password}
             onChange={setPassword}
             testId="login-password"
           />
           <a href="/set-password" style={linkGreen}>
-            FORGOT PASSWORD ?
+            {tr('FORGOT PASSWORD ?')}
           </a>
           <FormError message={error} />
           <div style={{ height: 40 }} />
           <Button type="submit" busy={busy} block testId="login-submit">
-            Login
+            {tr('Login')}
           </Button>
         </Form>
       </AuthLayout>
@@ -103,24 +112,17 @@ export function LoginScreen({
   }
 
   return (
-    <AuthLayout title="Two-Factor Authentication">
-      <Form label="Email code" onSubmit={() => void submitCode()}>
+    <AuthLayout title={tr('Two-Factor Authentication')}>
+      <Form label={tr('Email code')} onSubmit={() => void submitCode()}>
         <p style={{ margin: 0, color: color.text.secondary }}>
-          Enter the code you received via email at {challenge.email}. It works for 10 minutes.
+          {tr('Enter the code you received via email at {{email}}. It works for 10 minutes.', { email: challenge.email })}
         </p>
-        <TextInput
-          label="Code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          placeholder="6-digit code"
-          maxLength={6}
-          value={code}
-          onChange={(v) => setCode(v.replace(/\D/g, ''))}
-          testId="login-code"
-        />
+        <div style={{ height: 24 }} />
+        <CodeBoxes value={code} onChange={setCode} testId="login-code" />
         <FormError message={error} />
+        <div style={{ height: 24 }} />
         <Button type="submit" busy={busy} block testId="login-verify">
-          Verify
+          {tr('Confirm')}
         </Button>
         <button
           type="button"
@@ -131,7 +133,7 @@ export function LoginScreen({
           }}
           style={{ ...linkGreen, alignSelf: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
         >
-          START AGAIN
+          {tr('START AGAIN')}
         </button>
       </Form>
     </AuthLayout>

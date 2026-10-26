@@ -9,6 +9,7 @@
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
 import { color, density, numericStyle, radius, space } from '../../theme';
+import { tr } from '../../lib/i18n';
 
 export type StatusTone = 'neutral' | 'success' | 'warning' | 'error';
 
@@ -31,7 +32,7 @@ export function StatusChip({
   return (
     <span
       data-testid={`status-${label}`}
-      aria-label={`Status: ${label}`}
+      aria-label={tr('Status: {{label}}', { label })}
       style={{
         display: 'inline-block',
         backgroundColor: palette.surface,
@@ -75,10 +76,10 @@ export function Amount({
   return <span style={{ ...numericStyle, color: color.text.primary }}>{rendered}</span>;
 }
 
-export function LoadingState({ label = 'Loading' }: { label?: string }): ReactElement {
+export function LoadingState({ label }: { label?: string }): ReactElement {
   return (
     <div role="status" aria-live="polite" style={panel}>
-      {label}
+      {label ?? tr('Loading')}
     </div>
   );
 }
@@ -131,7 +132,7 @@ export function ErrorState({
       <p style={{ margin: 0 }}>{title}</p>
       {onRetry ? (
         <button type="button" style={buttonStyle} onClick={onRetry}>
-          Try again
+          {tr('Try again')}
         </button>
       ) : null}
     </div>

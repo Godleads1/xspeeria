@@ -17,6 +17,8 @@ import { roleLabel } from '../../lib/permissions';
 import { color, fontStack, space } from '../../theme';
 import { Avatar } from '../Avatar';
 import { Icon } from '../icons';
+import { LanguagePicker } from '../LanguagePicker';
+import { tr } from '../../lib/i18n';
 import { Wordmark } from '../Wordmark';
 
 const SIDEBAR = 240;
@@ -44,7 +46,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }): ReactEle
         }}
       >
         {item.icon ? <Icon name={item.icon} /> : null}
-        {item.label}
+        {tr(item.label)}
       </a>
     </li>
   );
@@ -90,7 +92,7 @@ export function AppShell({
           backgroundColor: color.bg.canvas,
         }}
       >
-        <Link href="/" aria-label="Xspeeria Admin home" style={{ textDecoration: 'none' }}>
+        <Link href="/" aria-label={tr('Xspeeria Admin home')} style={{ textDecoration: 'none' }}>
           <Wordmark size={30} />
         </Link>
       </div>
@@ -100,11 +102,12 @@ export function AppShell({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          gap: space.sm,
+          gap: space.md,
           padding: `0 ${space.md}px`,
           backgroundColor: color.bg.canvas,
         }}
       >
+        <LanguagePicker />
         {who ? (
           <a
             href="/profile"
@@ -120,7 +123,7 @@ export function AppShell({
         ) : null}
       </header>
       <nav
-        aria-label="Primary"
+        aria-label={tr('Primary')}
         style={{
           gridColumn: '1 / 2',
           backgroundColor: color.bg.canvas,
@@ -137,7 +140,7 @@ export function AppShell({
         {admin.length > 0 ? (
           <>
             <div style={{ borderTop: `1px solid ${color.border.subtle}`, margin: '12px 0 8px' }} />
-            <p style={{ margin: '4px 28px 6px', fontSize: 12, fontWeight: 600, color: color.text.secondary }}>ADMIN</p>
+            <p style={{ margin: '4px 28px 6px', fontSize: 12, fontWeight: 600, color: color.text.secondary }}>{tr('ADMIN')}</p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {admin.map((item) => (
                 <NavLink key={item.id} item={item} active={current === item.href} />
@@ -155,7 +158,9 @@ export function AppShell({
               style={{
                 alignSelf: 'flex-start',
                 margin: '4px 16px',
-                padding: '10px 12px 10px 40px',
+                paddingBlock: 10,
+                paddingInlineStart: 40,
+                paddingInlineEnd: 12,
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -165,7 +170,7 @@ export function AppShell({
                 fontWeight: 500,
               }}
             >
-              Logout
+              {tr('Logout')}
             </button>
           </>
         ) : null}

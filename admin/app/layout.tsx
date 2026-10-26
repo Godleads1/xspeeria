@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactElement, ReactNode } from 'react';
 
+import { LanguageRoot } from '../lib/i18n';
 import { color, fontStack } from '../theme';
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
         <style>{`fieldset:focus-within{border-color:${color.border.focus}!important;box-shadow:0 0 0 2px ${color.border.focus}33}a:focus-visible,button:focus-visible,select:focus-visible,input[type=search]:focus-visible{outline:2px solid ${color.border.focus};outline-offset:2px}`}</style>
       </head>
       <body style={{ margin: 0, fontFamily: fontStack.brand, color: color.text.primary, backgroundColor: color.bg.canvas }}>
-        {children}
+        <LanguageRoot>{children}</LanguageRoot>
       </body>
     </html>
   );

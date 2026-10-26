@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState, type ReactElement } from 'react';
 
 import { messageFor, type AdminApi, type RoleView } from '../../lib/api';
 import { ACTIONS, MODULES, roleLabel } from '../../lib/permissions';
+import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
 import { color, space } from '../../theme';
 import { Button, Form, FormError, Notice, PageTitle, TextInput } from '../forms';
@@ -51,7 +52,7 @@ export function RolesScreen(): ReactElement {
     setNotice(null);
     try {
       await api.deleteRole(r.id);
-      setNotice(`Role “${roleLabel(r.name)}” deleted.`);
+      setNotice(tr('Role “{{name}}” deleted.', { name: roleLabel(r.name) }));
       await load();
     } catch (e) {
       setError(messageFor(e));
@@ -61,29 +62,29 @@ export function RolesScreen(): ReactElement {
   const columns: readonly Column<RoleView>[] = [
     {
       key: 'name',
-      header: 'Role',
+      header: tr('Role'),
       render: (r) => (
         <span>
-          {roleLabel(r.name)} {r.builtin ? <StatusChip label="Built in" /> : null}
+          {roleLabel(r.name)} {r.builtin ? <StatusChip label={tr('Built in')} /> : null}
         </span>
       ),
     },
-    { key: 'description', header: 'Description', render: (r) => r.description || '—' },
-    { key: 'permissions', header: 'Permissions', numeric: true, render: (r) => r.permissions.length },
-    { key: 'staff', header: 'Staff', numeric: true, render: (r) => r.staff_count },
+    { key: 'description', header: tr('Description'), render: (r) => r.description || '—' },
+    { key: 'permissions', header: tr('Permissions'), numeric: true, render: (r) => r.permissions.length },
+    { key: 'staff', header: tr('Staff'), numeric: true, render: (r) => r.staff_count },
     {
       key: 'actions',
-      header: 'Actions',
+      header: tr('Actions'),
       render: (r) => (
         <div style={{ display: 'flex', gap: 8 }}>
           {canEdit(r) ? (
             <Button variant="secondary" testId={`edit-${r.name}`} onClick={() => setEditing({ mode: 'edit', role: r })}>
-              Edit
+              {tr('Edit')}
             </Button>
           ) : null}
           {canDelete(r) ? (
             <Button variant="danger" testId={`delete-${r.name}`} onClick={() => void remove(r)}>
-              Delete
+              {tr('Delete')}
             </Button>
           ) : null}
           {!canEdit(r) && !canDelete(r) ? '—' : null}
@@ -95,23 +96,23 @@ export function RolesScreen(): ReactElement {
   return (
     <>
       <PageTitle
-        crumb="Setups"
-        sub="What each role may do. You can only give permissions you have yourself."
+        crumb={tr('Setups')}
+        sub={tr('What each role may do. You can only give permissions you have yourself.')}
         action={
           !editing && can('roles.create') ? (
             <Button testId="new-role" onClick={() => setEditing({ mode: 'new' })}>
-              Create Role
+              {tr('Create Role')}
             </Button>
           ) : undefined
         }
       >
-        Role Setup
+        {tr('Role Setup')}
       </PageTitle>
       <FormError message={error} />
       <Notice message={notice} />
       <Panel>
         <DataTable
-          caption="Roles"
+          caption={tr('Roles')}
           hideCaption
           columns={columns}
           rows={roles ?? []}
@@ -178,7 +179,7 @@ function RoleEditor({
 
   async function save(): Promise<void> {
     if (!role && !/^[a-z][a-z0-9_]{2,39}$/.test(name)) {
-      setError('Name: 3–40 lower-case letters, numbers or _ (for example: finance_viewer).');
+      setError(tr('Name: 3–40 lower-case letters, numbers or _ (for example: finance_viewer).'));
       return;
     }
     setBusy(true);
@@ -187,10 +188,10 @@ function RoleEditor({
       const permissions = [...picked].sort();
       if (role) {
         await api.updateRole(role.id, { description, permissions });
-        onSaved(`Role “${roleLabel(role.name)}” saved. People with it see the change on their next page.`);
+        onSaved(tr('Role “{{name}}” saved. People with it see the change on their next page.', { name: roleLabel(role.name) }));
       } else {
         await api.createRole(name, description, permissions);
-        onSaved(`Role “${roleLabel(name)}” created.`);
+        onSaved(tr('Role “{{name}}” created.', { name: roleLabel(name) }));
       }
     } catch (e) {
       setError(messageFor(e));
@@ -201,18 +202,18 @@ function RoleEditor({
   return (
     <Panel>
       <h2 style={{ margin: 0, fontSize: 18 }}>{role ? `Edit ${roleLabel(role.name)}` : 'Create a role'}</h2>
-      <Form label={role ? 'Edit role' : 'Create a role'} onSubmit={() => void save()}>
+      <Form label={role ? tr('Edit role') : tr('Create a role')} onSubmit={() => void save()}>
         {role ? null : (
           <TextInput
-            label="Name"
+            label={tr('Name')}
             value={name}
             onChange={(v) => setName(v.toLowerCase())}
-            hint="Lower-case letters, numbers and _ only, e.g. finance_viewer"
+            hint={tr('Lower-case letters, numbers and _ only, e.g. finance_viewer')}
             testId="role-name"
           />
         )}
         <TextInput
-          label="Description"
+          label={tr('Description')}
           value={description}
           onChange={setDescription}
           required={false}
@@ -222,15 +223,15 @@ function RoleEditor({
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <caption style={{ textAlign: 'left', paddingBottom: 8, color: color.text.secondary }}>
-              Permissions (greyed out: you don’t have it, so you can’t give it)
+              {tr('Permissions (greyed out: you don’t have it, so you can’t give it)')}
             </caption>
             <thead>
               <tr>
-                <th scope="col" style={th}>Area</th>
-                <th scope="col" style={th}>Full access</th>
+                <th scope="col" style={th}>{tr('Area')}</th>
+                <th scope="col" style={th}>{tr('Full access')}</th>
                 {ACTIONS.map((a) => (
                   <th key={a.id} scope="col" style={th}>
-                    {a.label}
+                    {tr(a.label)}
                   </th>
                 ))}
               </tr>
@@ -242,12 +243,12 @@ function RoleEditor({
                 return (
                   <tr key={m.id}>
                     <th scope="row" style={{ ...td, textAlign: 'left', fontWeight: 500 }}>
-                      {m.label}
+                      {tr(m.label)}
                     </th>
                     <td style={td}>
                       <input
                         type="checkbox"
-                        aria-label={`${m.label}: full access`}
+                        aria-label={tr('{{area}}: full access', { area: tr(m.label) })}
                         checked={allOn}
                         disabled={mine.length === 0}
                         onChange={(e) => fullAccess(m.id, e.target.checked)}
@@ -260,7 +261,7 @@ function RoleEditor({
                           <input
                             type="checkbox"
                             data-testid={`perm-${p}`}
-                            aria-label={`${m.label}: ${a.label}`}
+                            aria-label={`${tr(m.label)}: ${tr(a.label)}`}
                             checked={picked.has(p)}
                             disabled={!can(p)}
                             onChange={() => toggle(p)}
@@ -277,10 +278,10 @@ function RoleEditor({
         <FormError message={error} />
         <div style={{ display: 'flex', gap: space.xs }}>
           <Button type="submit" busy={busy} testId="role-save">
-            {role ? 'Save role' : 'Create role'}
+            {role ? tr('Save role') : tr('Create role')}
           </Button>
           <Button variant="secondary" onClick={onCancel}>
-            Cancel
+            {tr('Cancel')}
           </Button>
         </div>
       </Form>

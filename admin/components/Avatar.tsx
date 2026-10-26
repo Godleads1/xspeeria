@@ -6,6 +6,7 @@ import { useRef, useState, type ReactElement } from 'react';
 
 import { readPhoto } from '../lib/photos';
 import { color } from '../theme';
+import { tr } from '../lib/i18n';
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -68,7 +69,7 @@ export function PhotoPicker({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           type="button"
-          aria-label={preview ? 'Change photo' : 'Add photo'}
+          aria-label={preview ? tr('Change photo') : tr('Add photo')}
           onClick={() => input.current?.click()}
           style={{
             width: 72,
@@ -97,7 +98,7 @@ export function PhotoPicker({
           onClick={() => input.current?.click()}
           style={{ background: 'none', border: 'none', color: color.brand.secondaryText, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
         >
-          Edit Photo
+          {tr('Edit Photo')}
         </button>
         {preview && onRemove ? (
           <button
@@ -105,7 +106,7 @@ export function PhotoPicker({
             onClick={onRemove}
             style={{ background: 'none', border: 'none', color: color.error.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
           >
-            Remove
+            {tr('Remove')}
           </button>
         ) : null}
       </div>
@@ -114,7 +115,7 @@ export function PhotoPicker({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         data-testid={testId}
-        aria-label="Photo file"
+        aria-label={tr('Photo file')}
         style={{ display: 'none' }}
         onChange={async (e) => {
           const file = e.target.files?.[0];
@@ -122,7 +123,7 @@ export function PhotoPicker({
           if (!file) return;
           const r = await readPhoto(file);
           if ('error' in r) {
-            setError(r.error);
+            setError(tr(r.error));
             return;
           }
           setError(null);
@@ -134,7 +135,7 @@ export function PhotoPicker({
           {error}
         </span>
       ) : null}
-      <span style={{ fontSize: 12, color: color.text.secondary }}>JPG, PNG or WebP, up to 5 MB.</span>
+      <span style={{ fontSize: 12, color: color.text.secondary }}>{tr('JPG, PNG or WebP, up to 5 MB.')}</span>
     </div>
   );
 }

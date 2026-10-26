@@ -167,7 +167,7 @@ describe('DataTable', () => {
     render(
       <DataTable caption="Settlements" columns={columns} rows={SETTLEMENT_ROWS} status="loading" />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent('Loading settlements');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
   });
 
   it('announces errors and offers a retry when one is wired', () => {
@@ -180,7 +180,7 @@ describe('DataTable', () => {
         onRetry={() => {}}
       />,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not load settlements');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load this list');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
@@ -188,7 +188,7 @@ describe('DataTable', () => {
     render(
       <DataTable caption="Settlements" columns={columns} rows={SETTLEMENT_ROWS} status="error" />,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not load settlements');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load this list');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

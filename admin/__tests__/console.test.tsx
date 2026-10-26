@@ -120,8 +120,10 @@ describe('log-in', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
     expect(await screen.findByText(/received via email at b\*\*\*@xspeeria.test/)).toBeInTheDocument();
     expect(login).toHaveBeenCalledWith('boss@xspeeria.test', 'secret words here');
+    // Pasting or autofill puts the whole code in the first box; it spreads over all six.
     fireEvent.change(screen.getByTestId('login-code'), { target: { value: '12a34 56' } });
-    expect(screen.getByTestId('login-code')).toHaveValue('123456');
+    expect(screen.getByTestId('login-code')).toHaveValue('1');
+    expect(screen.getByTestId('login-code-5')).toHaveValue('6');
     fireEvent.click(screen.getByTestId('login-verify'));
     await waitFor(() => expect(onSignedIn).toHaveBeenCalled());
     expect(verify).toHaveBeenCalledWith('ch-1', '123456');

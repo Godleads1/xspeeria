@@ -11,6 +11,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 
 import { AdminApiError, adminApi, messageFor, type AdminApi, type Me } from './api';
+import { tr } from './i18n';
 
 interface Session {
   me: Me;
@@ -73,7 +74,7 @@ export function SessionProvider({
       <div role="alert" style={{ padding: 24 }}>
         <p>{error}</p>
         <button type="button" onClick={() => void refresh()}>
-          Try again
+          {tr('Try again')}
         </button>
       </div>
     );
@@ -81,7 +82,7 @@ export function SessionProvider({
   if (!me) {
     return (
       <div role="status" style={{ padding: 24 }}>
-        Loading…
+        {tr('Loading…')}
       </div>
     );
   }

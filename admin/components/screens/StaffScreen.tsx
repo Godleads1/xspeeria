@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { AdminApiError, messageFor, type AdminApi, type RoleView, type StaffView } from '../../lib/api';
 import { roleLabel } from '../../lib/permissions';
 import { useStaffPhoto } from '../../lib/photos';
+import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
 import { color, space } from '../../theme';
 import { Avatar, PhotoPicker } from '../Avatar';
@@ -40,7 +41,7 @@ function StaffName({ api, staff, you }: { api: AdminApi; staff: StaffView; you: 
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <Avatar name={staff.name} src={src} size={28} />
-      {you ? `${staff.name} (you)` : staff.name}
+      {you ? tr('{{name}} (you)', { name: staff.name }) : staff.name}
     </span>
   );
 }
@@ -110,7 +111,11 @@ export function StaffScreen({
     setNotice(null);
     try {
       await api.updateStaff(s.id, changes);
-      setNotice(changes.status === 'disabled' ? `${s.name} is disabled and was logged out.` : `${s.name} can log in again.`);
+      setNotice(
+        changes.status === 'disabled'
+          ? tr('{{name}} is disabled and was logged out.', { name: s.name })
+          : tr('{{name}} can log in again.', { name: s.name }),
+      );
       await load();
     } catch (e) {
       setRowError(messageFor(e));
@@ -129,15 +134,15 @@ export function StaffScreen({
   };
 
   const columns: readonly Column<StaffView>[] = [
-    { key: 'name', header: 'NAME', render: (s) => <StaffName api={api} staff={s} you={s.id === me.id} /> },
-    { key: 'email', header: 'E-MAIL ADDRESS', render: (s) => s.email },
-    { key: 'phone', header: 'Phone Number', render: (s) => s.phone ?? '—' },
-    { key: 'role', header: 'Role', render: (s) => roleLabel(s.role) },
-    { key: 'status', header: 'Status', render: (s) => <StaffStatus status={s.status} passwordSet={s.password_set} /> },
-    { key: 'last', header: 'Last log-in', render: (s) => when(s.last_login_at) },
+    { key: 'name', header: tr('NAME'), render: (s) => <StaffName api={api} staff={s} you={s.id === me.id} /> },
+    { key: 'email', header: tr('E-MAIL ADDRESS'), render: (s) => s.email },
+    { key: 'phone', header: tr('Phone Number'), render: (s) => (s.phone ? <span dir="ltr">{s.phone}</span> : '—') },
+    { key: 'role', header: tr('Role'), render: (s) => roleLabel(s.role) },
+    { key: 'status', header: tr('Status'), render: (s) => <StaffStatus status={s.status} passwordSet={s.password_set} /> },
+    { key: 'last', header: tr('Last log-in'), render: (s) => when(s.last_login_at) },
     {
       key: 'actions',
-      header: 'ACTION',
+      header: tr('ACTION'),
       render: (s) => <RowMenu label={`Actions for ${s.name}`} actions={actionsFor(s)} testId={`menu-${s.id}`} />,
     },
   ];
@@ -145,14 +150,14 @@ export function StaffScreen({
   if (adding) {
     return (
       <>
-        <PageTitle crumb="Staff">Add Staff</PageTitle>
+        <PageTitle crumb={tr('Staff')}>{tr('Add Staff')}</PageTitle>
         <AddStaffForm
           api={api}
           roles={assignable}
           onCancel={() => setAdding(false)}
           onInvited={(inviteId, name) => {
             setAdding(false);
-            setNotice(`Invitation sent to ${name}.`);
+            setNotice(tr('Invitation sent to {{name}}.', { name }));
             setInviteLink(`${origin}/set-password?id=${encodeURIComponent(inviteId)}`);
             void load();
           }}
@@ -164,23 +169,23 @@ export function StaffScreen({
   return (
     <>
       <PageTitle
-        crumb="Staff"
+        crumb={tr('Staff')}
         action={
           can('staff.create') ? (
             <Button testId="add-staff" onClick={() => { setInviteLink(null); setAdding(true); }}>
-              Add Staff
+              {tr('Add Staff')}
             </Button>
           ) : undefined
         }
       >
-        Staff
+        {tr('Staff')}
       </PageTitle>
       <FormError message={rowError} />
       <Notice message={notice} />
       {inviteLink ? (
         <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 16px', borderRadius: 8, backgroundColor: color.bg.canvas, border: `1px solid ${color.border.subtle}` }}>
           <span style={{ color: color.text.secondary }}>
-            They got a 6-digit code by email. Send them this link to set their password with it (the link alone does nothing without the code):
+            {tr('They got a 6-digit code by email. Send them this link to set their password with it (the link alone does nothing without the code):')}
           </span>
           <code data-testid="invite-link" style={{ wordBreak: 'break-all' }}>
             {inviteLink}
@@ -203,31 +208,31 @@ export function StaffScreen({
         />
       ) : null}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' }}>
-        <SearchBox value={search} onChange={setSearch} placeholder="Search name or email" testId="staff-search" />
+        <SearchBox value={search} onChange={setSearch} placeholder={tr('Search name or email')} testId="staff-search" />
         <FilterBar onReset={search || status ? () => { setSearch(''); setStatus(''); } : undefined}>
           <BarSelect
-            label="Status"
+            label={tr('Status')}
             value={status}
             onChange={(v) => setStatus(v as StatusFilter)}
             testId="staff-status"
             options={[
-              { value: '', label: 'Status' },
-              { value: 'active', label: 'Active' },
-              { value: 'invited', label: 'Invited' },
-              { value: 'disabled', label: 'Disabled' },
+              { value: '', label: tr('Status') },
+              { value: 'active', label: tr('Active') },
+              { value: 'invited', label: tr('Invited') },
+              { value: 'disabled', label: tr('Disabled') },
             ]}
           />
         </FilterBar>
       </div>
       <Panel>
         <DataTable
-          caption="Staff"
+          caption={tr('Staff')}
           hideCaption
           columns={columns}
           rows={shown}
           status={loadError ? 'error' : staff === null ? 'loading' : 'ready'}
           onRetry={() => void load()}
-          emptyTitle={search || status ? 'No staff match your search' : 'No staff yet'}
+          emptyTitle={search || status ? tr('No staff match your search') : tr('No staff yet')}
         />
       </Panel>
     </>
@@ -259,8 +264,8 @@ function EditStaff({
 
   async function save(): Promise<void> {
     const cleanedPhone = cleanPhone(phone);
-    if (name.trim().length < 2) return setError('Enter their name.');
-    if (!cleanedPhone) return setError(`Enter a valid phone number. ${PHONE_HINT}.`);
+    if (name.trim().length < 2) return setError(tr('Enter their name.'));
+    if (!cleanedPhone) return setError(tr('Enter a valid phone number. International form, e.g. +234 803 123 4567.'));
     const changes: { name?: string; phone?: string; role_id?: string } = {};
     if (name.trim() !== staff.name) changes.name = name.trim();
     if (cleanedPhone !== staff.phone) changes.phone = cleanedPhone;
@@ -273,8 +278,8 @@ function EditStaff({
       else if (removePhoto) await api.removePhoto(staff.id);
       onSaved(
         changes.role_id
-          ? `${name.trim()} is saved. Their role changed, so they were logged out and see it when they log in.`
-          : `${name.trim()} is saved.`,
+          ? tr('{{name}} is saved. Their role changed, so they were logged out and see it when they log in.', { name: name.trim() })
+          : tr('{{name}} is saved.', { name: name.trim() }),
       );
     } catch (e) {
       setError(messageFor(e));
@@ -284,8 +289,8 @@ function EditStaff({
 
   return (
     <Panel>
-      <h2 style={{ margin: 0, fontSize: 16 }}>Edit {staff.name}</h2>
-      <Form label={`Edit ${staff.name}`} onSubmit={() => void save()}>
+      <h2 style={{ margin: 0, fontSize: 16 }}>{tr('Edit {{name}}', { name: staff.name })}</h2>
+      <Form label={tr('Edit {{name}}', { name: staff.name })} onSubmit={() => void save()}>
         <PhotoPicker
           preview={photo?.preview ?? (removePhoto ? null : current)}
           onPick={(p) => {
@@ -299,11 +304,11 @@ function EditStaff({
           testId={`photo-${staff.id}`}
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${space.sm}px 40px`, maxWidth: 680, width: '100%', margin: '0 auto' }}>
-          <TextInput label="Name" value={name} onChange={setName} testId={`name-${staff.id}`} />
-          <TextInput label="Phone Number" value={phone} onChange={setPhone} inputMode="text" hint={PHONE_HINT} testId={`phone-${staff.id}`} />
+          <TextInput label={tr('Name')} value={name} onChange={setName} testId={`name-${staff.id}`} />
+          <TextInput label={tr('Phone Number')} value={phone} onChange={setPhone} inputMode="text" hint={tr(PHONE_HINT)} ltr testId={`phone-${staff.id}`} />
           {roles.length > 0 ? (
             <Select
-              label="Role"
+              label={tr('Role')}
               value={roleId}
               onChange={setRoleId}
               testId={`role-${staff.id}`}
@@ -319,10 +324,10 @@ function EditStaff({
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: space.sm, maxWidth: 680, width: '100%', margin: '0 auto' }}>
           <Button variant="secondary" onClick={onCancel}>
-            Cancel
+            {tr('Cancel')}
           </Button>
           <Button type="submit" busy={busy} testId={`save-${staff.id}`}>
-            Save
+            {tr('Save')}
           </Button>
         </div>
       </Form>
@@ -353,12 +358,12 @@ function AddStaffForm({
 
   async function save(): Promise<void> {
     if (!ready) {
-      setError('Enter their first name, last name, email and phone number, and choose a role.');
+      setError(tr('Enter their first name, last name, email and phone number, and choose a role.'));
       return;
     }
     const cleanedPhone = cleanPhone(phone);
     if (!cleanedPhone) {
-      setError(`Enter a valid phone number. ${PHONE_HINT}.`);
+      setError(tr('Enter a valid phone number. International form, e.g. +234 803 123 4567.'));
       return;
     }
     setBusy(true);
@@ -371,7 +376,7 @@ function AddStaffForm({
           await api.setPhoto(r.id, photo.base64);
         } catch {
           // The account exists; the photo can be added from Edit. Say so rather than fail.
-          onInvited(r.invite_id, `${name} (the photo didn’t save — add it from Edit)`);
+          onInvited(r.invite_id, tr('{{name}} (the photo didn’t save — add it from Edit)', { name }));
           return;
         }
       }
@@ -386,41 +391,41 @@ function AddStaffForm({
     <Panel>
       {roles.length === 0 ? (
         <p style={{ margin: 0, color: color.text.secondary }}>
-          There is no role you can give (you can only give roles within your own permissions).
+          {tr('There is no role you can give (you can only give roles within your own permissions).')}
         </p>
       ) : (
-        <Form label="Add Staff" onSubmit={() => void save()}>
+        <Form label={tr('Add Staff')} onSubmit={() => void save()}>
           <div style={{ marginTop: 16 }}>
             <PhotoPicker preview={photo?.preview ?? null} onPick={setPhoto} onRemove={() => setPhoto(null)} testId="invite-photo" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${space.sm}px 40px`, maxWidth: 680, width: '100%', margin: '8px auto 0' }}>
-            <TextInput label="First Name" placeholder="enter" value={first} onChange={setFirst} testId="invite-first" />
-            <TextInput label="Last Name" placeholder="enter" value={last} onChange={setLast} testId="invite-last" />
-            <TextInput label="Email address" type="email" placeholder="enter" value={email} onChange={setEmail} testId="invite-email" />
-            <TextInput label="Phone Number" value={phone} onChange={setPhone} hint={PHONE_HINT} testId="invite-phone" />
+            <TextInput label={tr('First Name')} placeholder={tr('enter')} value={first} onChange={setFirst} testId="invite-first" />
+            <TextInput label={tr('Last Name')} placeholder={tr('enter')} value={last} onChange={setLast} testId="invite-last" />
+            <TextInput label={tr('Email address')} type="email" placeholder={tr('enter')} value={email} onChange={setEmail} testId="invite-email" />
+            <TextInput label={tr('Phone Number')} value={phone} onChange={setPhone} hint={tr(PHONE_HINT)} ltr testId="invite-phone" />
             <Select
-              label="Role"
+              label={tr('Role')}
               value={roleId}
               onChange={setRoleId}
               testId="invite-role"
               options={[
-                { value: '', label: 'Select', disabled: true },
+                { value: '', label: tr('Select'), disabled: true },
                 ...roles.map((r) => ({ value: r.id, label: roleLabel(r.name) })),
               ]}
             />
           </div>
           <p style={{ margin: '0 auto', maxWidth: 680, width: '100%', fontSize: 13, color: color.text.secondary }}>
-            They get a 6-digit code by email and set their own password. Their staff ID is made automatically.
+            {tr('They get a 6-digit code by email and set their own password. Their staff ID is made automatically.')}
           </p>
           <div style={{ maxWidth: 680, width: '100%', margin: '0 auto' }}>
             <FormError message={error} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: space.sm, maxWidth: 680, width: '100%', margin: '16px auto 8px' }}>
             <Button variant="secondary" onClick={onCancel}>
-              Cancel
+              {tr('Cancel')}
             </Button>
             <Button type="submit" busy={busy} disabled={!ready} testId="invite-submit">
-              Save Staff
+              {tr('Save Staff')}
             </Button>
           </div>
         </Form>
