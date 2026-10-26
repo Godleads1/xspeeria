@@ -16,6 +16,7 @@ everywhere except a developer's own computer (``APP_ENV=local``).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Cookie, Depends, Header, Path, Query, Request, Response, status
@@ -30,6 +31,7 @@ from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.dispute_admin import DisputeAdminService
+from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 
@@ -797,4 +799,103 @@ async def reject_reversal(
     reversal_id: uuid.UUID, body: RejectBody, staff: Staff, service: Reversals, info: Info
 ) -> Response:
     await service.reject(staff, info, reversal_id, " ".join(body.note.split()))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- service outages (ADR-066) -----------------------------------------------------------------
+
+
+async def get_outages(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> OutageService:
+    return OutageService(db, runtime.clock)
+
+
+Outages = Annotated[OutageService, Depends(get_outages)]
+_Severity = Literal["low", "medium", "high"]
+
+
+class OutageBody(_Strict):
+    service: str = Field(min_length=2, max_length=60)
+    #: What app users read in the banner.
+    message: str = Field(min_length=5, max_length=300)
+    severity: _Severity
+    #: When it started (now if left out). Timezone required.
+    started_at: datetime | None = None
+    expected_end_at: datetime | None = None
+
+
+class OutageChange(_Strict):
+    service: str | None = Field(default=None, min_length=2, max_length=60)
+    message: str | None = Field(default=None, min_length=5, max_length=300)
+    severity: _Severity | None = None
+    started_at: datetime | None = None
+    expected_end_at: datetime | None = None
+    status: Literal["open", "in_progress", "resolved"] | None = None
+
+
+def _aware(value: datetime | None, field: str) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        raise AppError(
+            "VAL_422_INVALID_FIELD",
+            "Give the time with its time zone.",
+            status_code=422,
+            details={"field": field},
+        )
+    return value
+
+
+@router.get("/outages", summary="Service outages (outages.read)")
+async def list_outages(
+    staff: Staff,
+    service: Outages,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    status_in: Annotated[
+        Literal["open", "in_progress", "resolved"] | None, Query(alias="status")
+    ] = None,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.list(
+        staff, search=q or None, status_in=status_in, offset=offset, limit=limit
+    )
+
+
+@router.post(
+    "/outages",
+    status_code=status.HTTP_201_CREATED,
+    summary="Report an outage; app users see the notice (outages.create)",
+)
+async def report_outage(body: OutageBody, staff: Staff, service: Outages, info: Info) -> Any:
+    return await service.create(
+        staff,
+        info,
+        service=" ".join(body.service.split()),
+        message=" ".join(body.message.split()),
+        severity=body.severity,
+        started_at=_aware(body.started_at, "started_at"),
+        expected_end_at=_aware(body.expected_end_at, "expected_end_at"),
+    )
+
+
+@router.patch(
+    "/outages/{outage_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Change or resolve an outage (outages.update)",
+)
+async def change_outage(
+    outage_id: uuid.UUID, body: OutageChange, staff: Staff, service: Outages, info: Info
+) -> Response:
+    sent = body.model_dump(exclude_unset=True)
+    changes: dict[str, Any] = {}
+    for key, value in sent.items():
+        if value is None and key != "expected_end_at":
+            continue  # only the expected end can be cleared
+        if key in ("service", "message"):
+            value = " ".join(value.split())
+        if key in ("started_at", "expected_end_at"):
+            value = _aware(value, key)
+        changes[key] = value
+    await service.change(staff, info, outage_id, changes=changes)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

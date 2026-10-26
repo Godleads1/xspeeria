@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ReactElement } from 'react';
 import { useRouter } from 'expo-router';
 
 import { SERVER_MODE } from '../../../src/api/config';
+import { noticesApi } from '../../../src/api/noticesApi';
 import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { HomeScreen } from '../../../src/features/home/HomeScreen';
 import { bestRates, dealsToActivity } from '../../../src/features/history/serverHistory';
@@ -26,6 +27,10 @@ const loadOffers = async () => [
   ...(await serverDeals.offers('GBP/NGN')),
 ];
 const loadKyc = () => serverKyc.current();
+const loadNotices = async () => {
+  const t = serverAuth.accessToken();
+  return t ? noticesApi.list(t, serverAuth.apiOptions()) : [];
+};
 
 /** Server builds: identity from the real check; 2FA is always on (ADR-026). */
 export function serverReadiness(approved: boolean): ReadinessDimension[] {
@@ -52,6 +57,8 @@ export default function HomeRoute(): ReactElement {
   const deals = useServerData(SERVER_MODE ? loadDeals : null);
   const offers = useServerData(SERVER_MODE ? loadOffers : null);
   const kyc = useServerData(SERVER_MODE ? loadKyc : null);
+  // ADR-066: a failed notice request shows nothing; it never blocks Home.
+  const notices = useServerData(SERVER_MODE ? loadNotices : null);
   const rates = useMemo(() => bestRates(offers.data ?? [], ['USD', 'GBP']), [offers.data]);
   const approved = kyc.data?.status === 'approved';
   // ADR-055: once the identity check is approved, show the name from the ID.
@@ -71,6 +78,7 @@ export default function HomeRoute(): ReactElement {
         onNotifications={() => router.push('/notifications')}
         unread={unread}
         showReadiness
+        notices={notices.data ?? []}
         onSearch={({ query, currency, filters }) =>
           router.push({
             pathname: '/market/search',

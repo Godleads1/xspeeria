@@ -127,7 +127,7 @@ async def admin(db_settings: Settings) -> AsyncIterator[Admin]:
         await c.aclose()
     await _sql(
         db_settings,
-        "TRUNCATE reversals, dispute_messages, disputes, staff_audit_log, staff_sessions, staff_codes, staff_accounts",
+        "TRUNCATE service_outages, reversals, dispute_messages, disputes, staff_audit_log, staff_sessions, staff_codes, staff_accounts",
     )
     await _sql(db_settings, "DELETE FROM staff_roles WHERE NOT builtin")
 
@@ -188,7 +188,7 @@ async def test_the_cookie_is_secure_outside_a_developer_computer(db_settings: Se
     finally:
         await _sql(
             db_settings,
-            "TRUNCATE reversals, dispute_messages, disputes, staff_audit_log, staff_sessions, staff_codes, staff_accounts",
+            "TRUNCATE service_outages, reversals, dispute_messages, disputes, staff_audit_log, staff_sessions, staff_codes, staff_accounts",
         )
 
 

@@ -17,8 +17,8 @@ def test_every_account_table_is_listed() -> None:
     import app.models  # noqa: F401
 
     # Staff accounts are not customer data: a local reset keeps the admin console log-ins, and
-    # the dispute category list staff manage (ADR-063).
-    kept = {"currency_definitions", "partners", "dispute_categories"} | {
+    # the dispute category list staff manage (ADR-063) and the outage history (ADR-066).
+    kept = {"currency_definitions", "partners", "dispute_categories", "service_outages"} | {
         t for t in Base.metadata.tables if t.startswith("staff_")
     }
     assert set(USER_TABLES) == set(Base.metadata.tables) - kept
