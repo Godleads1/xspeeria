@@ -172,6 +172,25 @@ export const marketServer: MarketServer = {
 export const myOffers = {
   list: async () => offersApi.mine(token(), serverAuth.apiOptions()),
   withdraw: async (offerId: string) => offersApi.withdraw(token(), offerId, serverAuth.apiOptions()),
+  /**
+   * ADR-059 Decision 3: new amount (in the foreign currency) and rate. A buy request holds
+   * naira, so its amount becomes amount × rate, half to even (as when publishing, ADR-056).
+   * The server checks everything again and refuses once anyone has taken part of it.
+   */
+  edit: async (offer: ServerOffer, amountMinor: number, rateHundredths: number) => {
+    const request = offer.source_currency === 'NGN';
+    const own = request ? quoteMinorOrNull(amountMinor, rateHundredths) : amountMinor;
+    if (own === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
+    return offersApi.edit(
+      token(),
+      offer.offer_id,
+      {
+        source_amount: formatHundredths(own).replace(/,/g, ''),
+        desired_rate: formatHundredths(rateHundredths).replace(/,/g, ''),
+      },
+      serverAuth.apiOptions(),
+    );
+  },
 };
 
 /** Taking an offer (ADR-031): read it fresh, get an approval, accept. */

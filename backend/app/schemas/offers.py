@@ -42,7 +42,11 @@ class CreateOfferRequest(_Strict):
 
 
 class UpdateRateRequest(_Strict):
-    desired_rate: str = Field(min_length=1, max_length=24)
+    """ADR-059 Decision 3: change the rate, the amount, or both (at least one)."""
+
+    desired_rate: str | None = Field(default=None, min_length=1, max_length=24)
+    #: Exact decimal text in the offer's own (source) currency.
+    source_amount: str | None = Field(default=None, min_length=1, max_length=24)
 
 
 class OfferResponse(BaseModel):

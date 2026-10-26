@@ -254,11 +254,15 @@ async def get_offer(offer_id: uuid.UUID, principal: Verified, service: Service) 
     return await service.get(principal, offer_id)
 
 
-@router.patch("/{offer_id}", response_model=OfferResponse, summary="Change my offer's rate")
+@router.patch(
+    "/{offer_id}",
+    response_model=OfferResponse,
+    summary="Change my offer's rate and/or amount (before anyone takes any of it)",
+)
 async def update_rate(
     offer_id: uuid.UUID, body: UpdateRateRequest, principal: Verified, service: Service
 ) -> Any:
-    return await service.update_rate(principal, offer_id, body.desired_rate)
+    return await service.update_rate(principal, offer_id, body.desired_rate, body.source_amount)
 
 
 @router.delete("/{offer_id}", response_model=OfferResponse, summary="Withdraw my offer")

@@ -395,10 +395,87 @@ async def test_each_change_bumps_the_version(david: User) -> None:
     assert r.json()["version"] == 3
 
 
-async def test_only_rate_can_change(david: User) -> None:
+async def test_owner_can_change_amount_and_rate_together(david: User, ada: User) -> None:
+    """ADR-059 Decision 3: rate and amount, before anyone takes any of it."""
     offer = (await david.publish()).json()
-    r = await david.patch(offer["offer_id"], {"desired_rate": "1321", "source_amount": "1.00"})
+    r = await david.patch(offer["offer_id"], {"desired_rate": "1321", "source_amount": "750.50"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert (body["source_amount"], body["remaining_amount"], body["desired_rate"]) == (
+        "750.50",
+        "750.50",
+        "1321.00",
+    )
+    assert body["version"] == 2
+    # The market shows the new amount and rate straight away.
+    [row] = (await ada.listings()).json()["items"]
+    assert (row["remaining_amount"], row["desired_rate"]) == ("750.50", "1321.00")
+
+
+async def test_amount_only_change_keeps_the_rate(db_settings: Settings, david: User) -> None:
+    offer = (await david.publish()).json()
+    r = await david.patch(offer["offer_id"], {"source_amount": "20.00"})
+    assert r.status_code == 200 and r.json()["desired_rate"] == "1320.50"
+    assert await _sql(db_settings, "SELECT source_amount_minor FROM offers") == 2000
+    assert await _sql(db_settings, "SELECT rate_updated_at IS NULL FROM offers") is True
+
+
+async def test_buy_request_amount_is_naira(david: User) -> None:
+    req = (
+        await david.publish(
+            source_currency="NGN",
+            target_currency="USD",
+            source_amount="660000",
+            desired_rate="1320",
+        )
+    ).json()
+    r = await david.patch(req["offer_id"], {"source_amount": "1330000.00", "desired_rate": "1330"})
+    assert r.status_code == 200 and r.json()["source_amount"] == "1330000.00"
+
+
+@pytest.mark.parametrize(
+    ("body", "code"),
+    [
+        ({}, "VALIDATION_ERROR"),
+        ({"source_amount": "5.00"}, "VAL_422_AMOUNT_BELOW_MINIMUM"),
+        ({"source_amount": "10.001"}, "VALIDATION_ERROR"),
+        ({"source_amount": "-10"}, "VALIDATION_ERROR"),
+        ({"source_amount": "1e5"}, "VALIDATION_ERROR"),
+        ({"desired_rate": "0"}, "VAL_422_RATE_NOT_POSITIVE"),
+        ({"desired_rate": "1400", "source_amount": "100.00"}, "VAL_422_RATE_ABOVE_CEILING"),
+    ],
+)
+async def test_edit_runs_every_publish_check(
+    db_settings: Settings, david: User, body: dict[str, str], code: str
+) -> None:
+    offer = (await david.publish()).json()
+    r = await david.patch(offer["offer_id"], body)
+    assert r.status_code == 422 and _code(r) == code, r.text
+    # Nothing changed.
+    assert await _sql(db_settings, "SELECT version FROM offers") == 1
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["source_currency", "target_currency", "status", "matched_amount", "version", "user_id"],
+)
+async def test_only_rate_and_amount_can_change(david: User, field: str) -> None:
+    offer = (await david.publish()).json()
+    r = await david.patch(offer["offer_id"], {"desired_rate": "1321", field: "x"})
     assert r.status_code == 422
+
+
+async def test_a_number_amount_is_refused_on_edit(david: User) -> None:
+    offer = (await david.publish()).json()
+    r = await david.patch(offer["offer_id"], {"source_amount": 100})
+    assert r.status_code == 422
+
+
+async def test_withdrawn_offer_cannot_be_edited(david: User) -> None:
+    offer = (await david.publish()).json()
+    await david.delete(offer["offer_id"])
+    r = await david.patch(offer["offer_id"], {"source_amount": "100.00"})
+    assert r.status_code == 409 and _code(r) == "RES_409_OFFER_ALREADY_MATCHED"
 
 
 async def test_non_owner_cannot_change_or_withdraw(
@@ -421,6 +498,9 @@ async def test_partly_matched_offer_cannot_be_edited(db_settings: Settings, davi
     )
     r = await david.patch(offer["offer_id"], {"desired_rate": "1300"})
     assert r.status_code == 409 and _code(r) == "RES_409_OFFER_ALREADY_MATCHED"
+    assert "withdraw what’s left" in r.json()["error"]["message"]
+    r = await david.patch(offer["offer_id"], {"source_amount": "900.00"})
+    assert r.status_code == 409
     # Withdrawing the rest is still allowed and keeps the matched part.
     r = await david.delete(offer["offer_id"])
     assert r.status_code == 200

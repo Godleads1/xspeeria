@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–2 built 2026-10-26**, Decisions 3–5 not built |
+| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decisions 1–3 built 2026-10-26**, Decisions 4–5 not built |
 | **Decision ID** | DEC-066 |
 | **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
 | **Design** | Claude Design canvas "Xspeeria Home — Search" (6 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies, Success) |
@@ -89,3 +89,9 @@ Choices made while building, for the owner to confirm or change:
 - **Visibility only:** taking an offer by its link is unchanged; it is still governed by the identity check for the currency you pay (ADR-042).
 - **App:** Market shows "Listings that sell NGN aren't shown in your country." on the hidden side; search switches to the other side and greys out the hidden one; with no country, search shows "Turn on location to see deals". Home does not ask for location (no prompt there); Market and search ask.
 - Fixed while building: the search screen re-ran its search on every render when no clock was passed (as in the real route) — now searches once per change (regression test added).
+
+## Build notes — Decision 3 (2026-10-26)
+
+- `PATCH /api/v1/offers/{id}` takes `desired_rate` and/or `source_amount` (at least one; nothing else). It re-runs the publish checks (exact decimals, minimum, positive rate, official-rate ceiling) under the same row lock that taking an offer uses, so an edit and a take cannot both succeed. Once any part is taken it answers 409 with "Someone has started a deal on this offer, so it can't be changed now. You can still withdraw what's left."
+- Each successful edit bumps `version` and writes an `offer_edited` audit log line (user, offer, which fields changed, new version — no amounts or rates in the log).
+- App: My Offers and My Requests show **Edit** next to Withdraw only while nothing is taken. A buy request is edited in the foreign currency; the app sends naira = amount × rate (half to even), as when publishing.
