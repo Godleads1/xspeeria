@@ -61,6 +61,10 @@ export const ACTION_LABELS: Record<string, string> = {
   first_super_admin_created: 'First Super Admin created',
   photo_set: 'Set a photo',
   photo_removed: 'Removed a photo',
+  profile_updated: 'Changed own name or phone',
+  customer_suspended: 'Suspended a customer',
+  customer_reactivated: 'Lifted a customer suspension',
+  customer_closed: 'Closed a customer account',
 };
 
 export function actionLabel(action: string): string {
