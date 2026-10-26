@@ -14,7 +14,7 @@ export interface NavItem {
   readonly permission?: string;
   /** Figma admin menu: work areas on top, then the "ADMIN" section. */
   readonly section?: 'work' | 'admin';
-  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'staff' | 'audit' | 'setups' | 'profile';
+  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile';
 }
 
 /**
@@ -31,6 +31,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'users', label: 'Users', href: '/users', permission: 'users.read', section: 'admin', icon: 'staff' },
   { id: 'audit', label: 'Audit Logs', href: '/audit', permission: 'audit.read', section: 'admin', icon: 'audit' },
   { id: 'settings', label: 'Setups', href: '/settings', section: 'admin', icon: 'setups' },
+  { id: 'outages', label: 'Service Outage Mgt', href: '/outages', permission: 'outages.read', section: 'admin', icon: 'outages' },
   { id: 'profile', label: 'My profile', href: '/profile', section: 'admin', icon: 'profile' },
 ];
 
@@ -42,7 +43,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
 export const PLANNED_DESTINATIONS: readonly NavItem[] = [
   { id: 'fraud', label: 'Fraud Management', href: '/fraud' },
   { id: 'kyc', label: 'Identity checks', href: '/kyc' },
-  { id: 'outages', label: 'Service Outage Mgt', href: '/outages' },
 ];
 
 export type LegState =

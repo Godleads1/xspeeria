@@ -31,6 +31,7 @@ from app.api.v1 import (
     health,
     kyc,
     limits,
+    notices,
     notifications,
     offers,
     push,
@@ -338,6 +339,7 @@ def create_app(
     application.include_router(notifications.router)
     application.include_router(disputes.router)
     application.include_router(limits.router)
+    application.include_router(notices.router)
     application.include_router(push.router)
     application.include_router(settlement.router)
     application.include_router(settlement.webhooks_router)

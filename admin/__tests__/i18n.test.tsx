@@ -19,6 +19,7 @@ import { EVENTS, OUTCOMES } from '../components/screens/DisputeCaseScreen';
 import { PRIORITY } from '../components/screens/RaiseDispute';
 import { REVERSAL_STATUS } from '../components/screens/ReversalsScreen';
 import { PHASE_LABEL } from '../components/screens/ReversalScreen';
+import { OUTAGE_STATUS, SEVERITY } from '../components/screens/OutagesScreen';
 import ar from '../lib/locales/ar.json';
 import es from '../lib/locales/es.json';
 import fr from '../lib/locales/fr.json';
@@ -49,7 +50,7 @@ function shownSentences(): Set<string> {
     for (const m of text.matchAll(/\btr\(\s*'((?:[^'\\]|\\.)*)'/g)) found.add(m[1].replace(/\\'/g, "'"));
   }
   for (const l of [...MODULES, ...ACTIONS, ...NAV_ITEMS, ...PLANNED_DESTINATIONS]) found.add(l.label);
-  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL), ...Object.values(QUESTION), ...Object.values(CONFIRM), ...Object.values(DONE), ...Object.values(EVENTS), ...Object.values(OUTCOMES), ...Object.values(PRIORITY), ...Object.values(STATUS_LABEL), ...Object.values(THEME_LABEL), ...Object.values(REVERSAL_STATUS), ...Object.values(PHASE_LABEL)]) found.add(l);
+  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL), ...Object.values(QUESTION), ...Object.values(CONFIRM), ...Object.values(DONE), ...Object.values(EVENTS), ...Object.values(OUTCOMES), ...Object.values(PRIORITY), ...Object.values(STATUS_LABEL), ...Object.values(THEME_LABEL), ...Object.values(REVERSAL_STATUS), ...Object.values(PHASE_LABEL), ...Object.values(SEVERITY), ...Object.values(OUTAGE_STATUS)]) found.add(l);
   return found;
 }
 

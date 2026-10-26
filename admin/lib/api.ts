@@ -284,6 +284,37 @@ export interface ReversalDetail {
   can_return: boolean;
 }
 
+export type OutageSeverity = 'low' | 'medium' | 'high';
+export type OutageStatus = 'open' | 'in_progress' | 'resolved';
+export interface Outage {
+  id: string;
+  ref: string;
+  service: string;
+  /** What app users read in the banner. */
+  message: string;
+  severity: OutageSeverity;
+  status: OutageStatus;
+  started_at: string;
+  expected_end_at: string | null;
+  resolved_at: string | null;
+  duration_seconds: number;
+  reported_by: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface OutagePage {
+  now: string;
+  total: number;
+  items: Outage[];
+}
+export interface OutageInput {
+  service: string;
+  message: string;
+  severity: OutageSeverity;
+  started_at?: string;
+  expected_end_at?: string | null;
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -389,6 +420,17 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     approveReversal: (id: string, note?: string) =>
       call<void>('POST', `/reversals/${encodeURIComponent(id)}/approve`, note ? { note } : {}),
     rejectReversal: (id: string, note: string) => call<void>('POST', `/reversals/${encodeURIComponent(id)}/reject`, { note }),
+    listOutages: (q: { search?: string; status?: OutageStatus; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      if (q.status) p.set('status', q.status);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<OutagePage>('GET', `/outages?${p.toString()}`);
+    },
+    reportOutage: (body: OutageInput) => call<{ id: string; ref: string }>('POST', '/outages', body),
+    changeOutage: (id: string, body: Partial<OutageInput> & { status?: OutageStatus }) =>
+      call<void>('PATCH', `/outages/${encodeURIComponent(id)}`, body),
     /** Super Admin only (the server checks); a reason is required. */
     changeCustomer: (id: string, action: CustomerAction, reason: string) =>
       call<{ id: string; status: CustomerStatus }>('POST', `/users/${encodeURIComponent(id)}/${action}`, { reason }),

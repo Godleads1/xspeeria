@@ -30,6 +30,8 @@ import { FigmaActivityList } from './FigmaActivityList';
 import { HomeHeader } from './HomeHeader';
 import { HomeSearchBar, type HomeSearch } from './HomeSearchBar';
 import { MarketRates } from './MarketRates';
+import { ServiceNotices } from './ServiceNotices';
+import type { ServiceNotice } from '../../api/noticesApi';
 import { tr } from "../../i18n";
 
 export type HomeStatus = 'ready' | 'loading' | 'error';
@@ -51,6 +53,7 @@ export function HomeScreen({
   demoActivity = [],
   showReadiness = true,
   onSearch,
+  notices = [],
 }: {
   user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
   bestRate?: MarketRate;
@@ -72,6 +75,8 @@ export function HomeScreen({
   showReadiness?: boolean;
   /** ADR-059: "Find a deal" under the header. Server builds only (search needs the server). */
   onSearch?: (s: HomeSearch) => void;
+  /** ADR-066: outage notices from staff; shown first while they last. Server builds only. */
+  notices?: readonly ServiceNotice[];
 }): ReactElement {
   return (
     <Screen testID="home-screen">
@@ -91,6 +96,7 @@ export function HomeScreen({
 
       {status === 'ready' ? (
         <View style={styles.body}>
+          <ServiceNotices notices={notices} />
           {onSearch ? <HomeSearchBar onSearch={onSearch} /> : null}
           <View>
             {demoHero ? (

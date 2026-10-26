@@ -364,6 +364,7 @@ class TestPackageRegistration:
             "dispute_messages",
             "dispute_categories",
             "reversals",
+            "service_outages",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -422,7 +423,7 @@ class TestPackageRegistration:
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', "
-            "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'settlement_events', "
+            "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'service_outages', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', "
             "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_roles', 'staff_sessions', "
             "'step_up_grants', "
@@ -492,4 +493,5 @@ class TestPackageRegistration:
             "0025_customer_suspend_close.py",  # suspend / close customers (ADR-062)
             "0026_dispute_categories_staff_work.py",  # dispute categories, staff work (ADR-063)
             "0027_reversals.py",  # reversals (ADR-065)
+            "0028_service_outages.py",  # service outage notices (ADR-066)
         ]
