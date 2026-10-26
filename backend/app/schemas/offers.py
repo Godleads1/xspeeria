@@ -59,8 +59,22 @@ class OfferResponse(BaseModel):
     created_at: str
 
 
+class CompletedTradeResponse(BaseModel):
+    """A recent completed trade (ADR-059 "Success"): no ids, no names, nothing to take."""
+
+    #: The pair's foreign currency; ``amount`` is in it.
+    currency: str
+    amount: str
+    #: NGN per 1 unit of ``currency``, as agreed.
+    rate: str
+    completed_at: str
+
+
 class ListingsResponse(BaseModel):
+    #: "available" (offers in ``items``) or "success" (completed trades in ``trades``).
+    status: str = "available"
     items: list[OfferResponse]
+    trades: list[CompletedTradeResponse] = []
     limit: int
     offset: int
     #: Where the next page starts, or null when there is no more.

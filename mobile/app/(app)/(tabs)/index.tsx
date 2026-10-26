@@ -71,6 +71,12 @@ export default function HomeRoute(): ReactElement {
         onNotifications={() => router.push('/notifications')}
         unread={unread}
         showReadiness
+        onSearch={({ query, currency, filters }) =>
+          router.push({
+            pathname: '/market/search',
+            params: { ...(query ? { q: query } : {}), ...(currency ? { currency } : {}), ...(filters ? { filters: '1' } : {}) },
+          })
+        }
       />
     );
   }

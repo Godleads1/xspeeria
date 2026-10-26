@@ -26,7 +26,8 @@ import { tr } from "../../i18n";
 /** The Figma frame every measurement below is taken from. */
 const FIGMA = {
   width: 342,
-  height: 135,
+  /** Owner, 2026-10-21 (ADR-059): as tall as a typical bank-app card (was 135). */
+  height: 195,
   padding: 17.24,
   gap: 10.06,
   label: 11,
@@ -247,6 +248,8 @@ const styles = themed(() => ({
     backgroundColor: color.bg.inverse,
     borderRadius: radius.md,
     overflow: 'hidden',
+    // The taller card spreads label, marks and figure from top to bottom.
+    justifyContent: 'space-between',
   },
   pressed: { opacity: 0.92 },
   label: { ...brandWeight('700'), color: color.text.onFill },

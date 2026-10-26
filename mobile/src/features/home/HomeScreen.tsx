@@ -28,6 +28,7 @@ import { DEMO_BADGE } from '../demo/figmaDemo';
 import { BestRateCard, HeroCard } from './BestRateCard';
 import { FigmaActivityList } from './FigmaActivityList';
 import { HomeHeader } from './HomeHeader';
+import { HomeSearchBar, type HomeSearch } from './HomeSearchBar';
 import { MarketRates } from './MarketRates';
 import { tr } from "../../i18n";
 
@@ -49,6 +50,7 @@ export function HomeScreen({
   demoHero = null,
   demoActivity = [],
   showReadiness = true,
+  onSearch,
 }: {
   user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
   bestRate?: MarketRate;
@@ -68,6 +70,8 @@ export function HomeScreen({
   /** Figma's demo transaction rows (development builds only, ADR-023). */
   demoActivity?: readonly DemoHomeActivity[];
   showReadiness?: boolean;
+  /** ADR-059: "Find a deal" under the header. Server builds only (search needs the server). */
+  onSearch?: (s: HomeSearch) => void;
 }): ReactElement {
   return (
     <Screen testID="home-screen">
@@ -87,6 +91,7 @@ export function HomeScreen({
 
       {status === 'ready' ? (
         <View style={styles.body}>
+          {onSearch ? <HomeSearchBar onSearch={onSearch} /> : null}
           <View>
             {demoHero ? (
               <View style={styles.hero}>
