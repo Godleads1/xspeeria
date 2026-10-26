@@ -15,6 +15,7 @@ export const MODULES = [
   { id: 'reversals', label: 'Reversals' },
   { id: 'fraud_alerts', label: 'Fraud alerts' },
   { id: 'outages', label: 'Service outages' },
+  { id: 'adverts', label: 'Adverts' },
   { id: 'staff', label: 'Staff' },
   { id: 'roles', label: 'Roles' },
   { id: 'audit', label: 'Audit log' },

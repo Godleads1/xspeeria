@@ -16,7 +16,7 @@
 - A seller types the foreign amount; the app sends naira = amount × rate (or exactly the naira left for "take all"). The server computes the foreign side with the same rounding, so the shown amount and the deal agree.
 - No server change: the server already supported Offers in both directions. The KYC rule per country (ADR-042) applies: the requester pays naira (Nigeria check), the seller pays the foreign currency (that country's check).
 
-## Decision 2 — advert placeholder stays (not built)
+## Decision 2 — advert placeholder stays (advert upload built in ADR-067)
 
 The "Place advert here" area stays on the Market screen in the MVP. Later, an admin uploads an advert in the web admin (sized to that placeholder) and every app user sees it there. Until then the placeholder shows. To build with the admin console: advert upload, size check, schedule, and an app endpoint that returns the active advert.
 

@@ -1,9 +1,11 @@
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
+import { advertImageSource, advertsApi } from '../../../src/api/advertsApi';
+import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer, queueServer } from '../../../src/features/market/serverOffers';
 import { queueAction } from '../../../src/features/market/queueActions';
@@ -26,8 +28,27 @@ export default function MarketplaceRoute(): ReactElement {
   // Fetch server offers again whenever the tab comes back into view (e.g. after My Offers).
   const [refresh, setRefresh] = useState(0);
   useFocusEffect(useCallback(() => setRefresh((n) => n + 1), []));
+  // ADR-067: the advert staff placed; on any failure the placeholder stays.
+  const [advert, setAdvert] = useState<Parameters<typeof MarketScreen>[0]['advert']>(null);
+  useEffect(() => {
+    if (!SERVER_MODE) return;
+    const token = serverAuth.accessToken();
+    if (!token) return;
+    let alive = true;
+    advertsApi
+      .current(token, serverAuth.apiOptions())
+      .then((a) => {
+        const source = a ? advertImageSource(a, token, serverAuth.apiOptions().baseUrl ?? undefined) : null;
+        if (alive) setAdvert(a && source ? { name: a.name, link_url: a.link_url, source } : null);
+      })
+      .catch(() => alive && setAdvert(null));
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
   return (
     <MarketScreen
+      advert={advert}
       server={SERVER_MODE ? marketServer : null}
       refreshSignal={refresh}
       onVerifyIdentity={

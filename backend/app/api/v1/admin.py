@@ -27,6 +27,7 @@ from app.api.auth_deps import client_address, get_auth_runtime, get_db_session, 
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.services.adverts import AdvertService
 from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
@@ -899,3 +900,94 @@ async def change_outage(
         changes[key] = value
     await service.change(staff, info, outage_id, changes=changes)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- adverts (ADR-067) -------------------------------------------------------------------------
+
+
+async def get_adverts(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> AdvertService:
+    return AdvertService(db, runtime.clock, runtime.object_store)
+
+
+Adverts = Annotated[AdvertService, Depends(get_adverts)]
+
+
+class AdvertBody(_Strict):
+    name: str = Field(min_length=2, max_length=60)
+    #: JPEG, PNG or WebP, base64; at most 5 MB once decoded; the app slot's shape (342 x 113).
+    image: str = Field(min_length=8, max_length=7_000_000)
+    starts_at: datetime
+    ends_at: datetime
+    link_url: str | None = Field(default=None, max_length=500)
+
+
+class AdvertChange(_Strict):
+    name: str | None = Field(default=None, min_length=2, max_length=60)
+    image: str | None = Field(default=None, min_length=8, max_length=7_000_000)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    link_url: str | None = Field(default=None, max_length=500)
+    active: bool | None = None
+
+
+_PICTURE_HEADERS = {
+    "Cache-Control": "private, max-age=300",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; sandbox",
+    "Content-Disposition": "inline",
+}
+
+
+@router.get("/adverts", summary="Adverts for the app's advert slot (adverts.read)")
+async def list_adverts(staff: Staff, service: Adverts) -> Any:
+    return await service.list(staff)
+
+
+@router.post(
+    "/adverts", status_code=status.HTTP_201_CREATED, summary="Add an advert (adverts.create)"
+)
+async def add_advert(body: AdvertBody, staff: Staff, service: Adverts, info: Info) -> Any:
+    _aware(body.starts_at, "starts_at")
+    _aware(body.ends_at, "ends_at")
+    return await service.create(
+        staff,
+        info,
+        name=" ".join(body.name.split()),
+        image_b64=body.image,
+        starts_at=body.starts_at,
+        ends_at=body.ends_at,
+        link_url=body.link_url,
+    )
+
+
+@router.patch(
+    "/adverts/{advert_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Change an advert or switch it on/off (adverts.update)",
+)
+async def change_advert(
+    advert_id: uuid.UUID, body: AdvertChange, staff: Staff, service: Adverts, info: Info
+) -> Response:
+    changes: dict[str, Any] = {}
+    for key, value in body.model_dump(exclude_unset=True).items():
+        if value is None and key != "link_url":
+            continue  # only the link can be cleared
+        if key == "name":
+            value = " ".join(value.split())
+        if key in ("starts_at", "ends_at"):
+            value = _aware(value, key)
+        changes[key] = value
+    await service.change(staff, info, advert_id, changes)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/adverts/{advert_id}/image", summary="An advert's picture (adverts.read)")
+async def advert_image(advert_id: uuid.UUID, staff: Staff, service: Adverts) -> Response:
+    found = await service.picture(staff, advert_id)
+    if found is None:
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+    data, content_type = found
+    return Response(content=data, media_type=content_type, headers=_PICTURE_HEADERS)

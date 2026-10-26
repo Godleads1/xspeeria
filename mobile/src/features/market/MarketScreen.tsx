@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { RoundFlag } from "../../components/flags";
 import { Icon } from "../../components/icons";
@@ -43,6 +43,7 @@ import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull }
 import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
+import { safeAdvertLink } from "../../api/advertsApi";
 import { isKycCountry, type KycCountry } from "../../api/kycApi";
 import { tr, k } from "../../i18n";
 
@@ -86,7 +87,10 @@ export function MarketScreen({
   refreshSignal = 0,
   onQueueListing,
   onMultiRequest,
+  advert = null,
 }: {
+  /** ADR-067: the advert staff put in the slot (server builds); null shows the placeholder. */
+  advert?: { name: string; link_url: string | null; source: { uri: string; headers: Record<string, string> } } | null;
   /** ADR-059 Decision 5: opens "New buy request" in several currencies (server builds). */
   onMultiRequest?: () => void;
   /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
@@ -512,14 +516,31 @@ export function MarketScreen({
 
       {side === "buy" ? (
         <View testID="market-advert" style={styles.advert}>
-          {/* Figma advert slot (node 787:4204). PLACEHOLDER artwork supplied by the product
-              owner; the stock photo needs a confirmed licence before release. */}
-          <Image
-            source={ADVERT}
-            accessibilityLabel={tr("Place advert here")}
-            resizeMode="cover"
-            style={styles.advertImage}
-          />
+          {advert ? (
+            // ADR-067: the advert staff placed from the web admin; everyone sees the same one.
+            <Pressable
+              testID="market-advert-live"
+              accessibilityRole={safeAdvertLink(advert.link_url) ? "link" : "image"}
+              accessibilityLabel={advert.name}
+              disabled={!safeAdvertLink(advert.link_url)}
+              onPress={() => {
+                const link = safeAdvertLink(advert.link_url);
+                if (link) void Linking.openURL(link).catch(() => undefined);
+              }}
+              style={styles.advertImage}
+            >
+              <Image source={advert.source} resizeMode="cover" style={styles.advertImage} />
+            </Pressable>
+          ) : (
+            // Figma advert slot (node 787:4204). PLACEHOLDER artwork supplied by the product
+            // owner; the stock photo needs a confirmed licence before release.
+            <Image
+              source={ADVERT}
+              accessibilityLabel={tr("Place advert here")}
+              resizeMode="cover"
+              style={styles.advertImage}
+            />
+          )}
         </View>
       ) : null}
 
