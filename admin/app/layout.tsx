@@ -15,7 +15,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }): ReactElement {
   return (
-    <html lang="en">
+    // Browser extensions (themes, dark mode, translators) add attributes to <html> before
+    // React loads; this ignores attribute differences on this one element only.
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Outlined inputs draw their border on the fieldset; show focus there. */}
         <style>{`fieldset:focus-within{border-color:${color.border.focus}!important;box-shadow:0 0 0 2px ${color.border.focus}33}a:focus-visible,button:focus-visible,select:focus-visible,input[type=search]:focus-visible{outline:2px solid ${color.border.focus};outline-offset:2px}`}</style>
