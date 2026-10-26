@@ -16,6 +16,8 @@ import {
   type SettlementRow,
 } from '../fixtures';
 
+const EVERY_PERMISSION = NAV_ITEMS.flatMap((i) => (i.permission ? [i.permission] : []));
+
 /** jsdom serialises colours as rgb(), so compare tokens in the same form. */
 function asRgb(hex: string): string {
   const v = hex.replace('#', '');
@@ -63,14 +65,14 @@ describe('AppShell', () => {
   });
 
   it('exposes a labelled primary navigation landmark', () => {
-    render(<AppShell>{null}</AppShell>);
+    render(<AppShell permissions={EVERY_PERMISSION}>{null}</AppShell>);
     const nav = screen.getByRole('navigation', { name: 'Primary' });
     expect(nav).toBeInTheDocument();
     expect(within(nav).getAllByRole('link')).toHaveLength(NAV_ITEMS.length);
   });
 
   it('renders every navigation destination', () => {
-    render(<AppShell>{null}</AppShell>);
+    render(<AppShell permissions={EVERY_PERMISSION}>{null}</AppShell>);
     for (const item of NAV_ITEMS) {
       expect(screen.getByTestId(`nav-${item.id}`)).toHaveTextContent(item.label);
     }
@@ -82,7 +84,7 @@ describe('AppShell', () => {
    * `page.tsx` is a 404 the operator finds instead of the test.
    */
   it('renders no link to a route that does not exist', () => {
-    render(<AppShell>{null}</AppShell>);
+    render(<AppShell permissions={EVERY_PERMISSION}>{null}</AppShell>);
     const routes = existingRoutes();
     expect(routes).toContain('/');
     for (const link of within(screen.getByRole('navigation', { name: 'Primary' })).getAllByRole(
@@ -92,8 +94,17 @@ describe('AppShell', () => {
     }
   });
 
+  it('shows only the entries the signed-in role allows', () => {
+    render(<AppShell permissions={['staff.read']}>{null}</AppShell>);
+    expect(screen.getByTestId('nav-staff')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-roles')).toBeNull();
+    expect(screen.queryByTestId('nav-audit')).toBeNull();
+    expect(screen.getByTestId('nav-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-profile')).toBeInTheDocument();
+  });
+
   it('does not render the destinations that have no page yet', () => {
-    render(<AppShell>{null}</AppShell>);
+    render(<AppShell permissions={EVERY_PERMISSION}>{null}</AppShell>);
     for (const planned of PLANNED_DESTINATIONS) {
       expect(screen.queryByTestId(`nav-${planned.id}`)).toBeNull();
     }

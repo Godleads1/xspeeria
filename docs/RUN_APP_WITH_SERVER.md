@@ -127,7 +127,28 @@ Super Admin exists; add everyone else from the console (ADR-060).
 
 ```bash
 cd backend
-uv run python -m app.cli.create_super_admin --email you@example.com --name "Your Name"
+uv run python -m app.cli.create_super_admin --email you@example.com --name "Your Name" --phone +2348031234567
 ```
 
-The console screens are not built yet; the server side is (`/api/v1/admin/...`).
+To try staff photos on this computer, add to `.env` (until the Cloudflare R2 bucket exists):
+
+```bash
+LOCAL_PHOTO_DIR=.local-photos
+```
+
+## Admin console: open it in your browser
+
+With the server running (step 3), open a second window:
+
+```bash
+cd admin
+npm run dev
+```
+
+Open **http://localhost:3000** in the browser on the same computer, log in with the Super
+Admin email and password, then the code that prints in the server window. To invite staff,
+go to **Staff**; they set their password from the link you get plus the code in their email.
+
+If the server runs on another address or port, start the console with
+`ADMIN_API_ORIGIN=http://127.0.0.1:8000 npm run dev` (PowerShell:
+`$env:ADMIN_API_ORIGIN="http://127.0.0.1:8000"; npm run dev`).

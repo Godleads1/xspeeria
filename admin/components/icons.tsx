@@ -1,0 +1,37 @@
+/** Simple line icons for the admin menu (generic shapes, 20 px, follow the text colour). */
+
+import type { ReactElement } from 'react';
+
+const PATHS: Record<string, string> = {
+  dashboard: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm0 7 3-3M6 13h8',
+  staff: 'M7 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm6 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM2.5 16c.5-2.5 2.3-4 4.5-4s4 1.5 4.5 4m1-3.8c.2 0 .3-.2.5-.2 2.2 0 4 1.5 4.5 4',
+  audit: 'M5 3h10v14H5zM8 7h4M8 10h4M8 13h2',
+  setups: 'M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm6 2.5-1.6-.6-.4-1 .7-1.6-1.4-1.4-1.6.7-1-.4L10 3.5h-2l-.6 1.6-1 .4-1.6-.7-1.4 1.4.7 1.6-.4 1-1.7.7v2l1.6.6.4 1-.7 1.6 1.4 1.4 1.6-.7 1 .4.7 1.7h2l.6-1.6 1-.4 1.6.7 1.4-1.4-.7-1.6.4-1 1.7-.7Z',
+  profile: 'M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-6 7c.6-3 3-5 6-5s5.4 2 6 5',
+  search: 'M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm4.5-1.5L17 17',
+  filter: 'M3 4h14l-5.5 6.5V16l-3 1.5v-7Z',
+  reset: 'M4 10a6 6 0 1 0 2-4.5M4 4v3h3',
+  more: 'M10 5h.01M10 10h.01M10 15h.01',
+  chevron: 'M6 8l4 4 4-4',
+};
+
+export function Icon({ name, size = 20 }: { name: keyof typeof PATHS; size?: number }): ReactElement {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={name === 'more' ? 2.6 : 1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={PATHS[name]} />
+    </svg>
+  );
+}
+
+export type IconName = keyof typeof PATHS;

@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 import secrets
 import uuid
@@ -31,6 +33,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth_tokens import generate_code, generate_refresh_token, hash_refresh_token
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
+from app.domain.auth_rules import normalise_phone
+from app.domain.image_rules import PhotoError, clean_photo
 from app.domain.staff_rules import (
     CODE_TRIES,
     CODE_TTL,
@@ -46,6 +50,7 @@ from app.domain.staff_rules import (
 )
 from app.models.staff import StaffAccount, StaffAuditEntry, StaffCode, StaffRole, StaffSession
 from app.providers.email import mask_email
+from app.providers.object_store import new_key
 from app.services.auth import AuthRuntime
 
 __all__ = ["RequestInfo", "StaffPrincipal", "StaffService"]
@@ -129,6 +134,26 @@ def _not_found() -> AppError:
 
 def _weak(message: str) -> AppError:
     return _err("VAL_422_WEAK_PASSWORD", message, 422)
+
+
+def _phone_or_422(value: str | None) -> str:
+    phone = normalise_phone(value or "")
+    if phone is None:
+        raise _err(
+            "VAL_422_INVALID_PHONE",
+            "Enter the phone number in international form, e.g. +2348031234567.",
+            422,
+            {"field": "phone"},
+        )
+    return phone
+
+
+def _photos_unavailable() -> AppError:
+    return _err(
+        "SYS_503_SERVICE_UNAVAILABLE",
+        "Photos aren’t available yet. Please try again later.",
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 def _email_unavailable() -> AppError:
@@ -497,11 +522,13 @@ class StaffService:
         name: str,
         role_id: uuid.UUID,
         info: RequestInfo,
+        phone_in: str | None = None,
     ) -> dict[str, Any]:
         """Invite a staff member: they get an email code to set their own password."""
         self._need(principal, "staff.create")
         if self._rt.email is None or self._rt.keys is None:
             raise _email_unavailable()
+        phone = _phone_or_422(phone_in)  # required for new staff (owner, 2026-10-26)
         email = normalise_email(email_in)
         if email is None:
             raise _err(
@@ -519,6 +546,7 @@ class StaffService:
             id=uuid.uuid4(),
             email=email,
             name=name.strip(),
+            phone=phone,
             role_id=role.id,
             status="active",
             created_by=principal.staff_id,
@@ -603,6 +631,15 @@ class StaffService:
         if "name" in changes and changes["name"].strip() != staff.name:
             done["name"] = True
             staff.name = changes["name"].strip()
+        if "phone" in changes:
+            try:
+                phone = _phone_or_422(changes["phone"])
+            except AppError:
+                await self._db.rollback()
+                raise
+            if phone != staff.phone:
+                done["phone"] = True  # the audit says it changed, never the number
+                staff.phone = phone
         # Never leave the console without an active Super Admin.
         if current_role.name == SUPER_ADMIN and (
             role.name != SUPER_ADMIN or staff.status != "active"
@@ -630,6 +667,111 @@ class StaffService:
         out = _staff_view(staff, role)
         await self._db.commit()
         return out
+
+    # --- photos (ADR-049, ADR-060) ----------------------------------------------------------
+
+    async def _photo_target(
+        self, principal: StaffPrincipal, staff_id: uuid.UUID, *, change: bool
+    ) -> StaffAccount:
+        """The account whose photo is asked for, if the caller may see / change it."""
+        staff = await self._db.get(StaffAccount, staff_id, with_for_update=change)
+        if staff is None:
+            await self._db.rollback()
+            raise _not_found()
+        if staff.id == principal.staff_id:
+            return staff  # your own photo, always
+        if not change:
+            if principal.can("staff.read"):
+                return staff
+            await self._db.rollback()
+            raise forbidden()
+        role = await self._db.get(StaffRole, staff.role_id)
+        if (
+            not principal.can("staff.update")
+            or role is None
+            or not self._can_hand_out(principal, role)
+        ):
+            await self._db.rollback()
+            raise forbidden()
+        return staff
+
+    async def set_photo(
+        self, principal: StaffPrincipal, staff_id: uuid.UUID, photo_b64: str, info: RequestInfo
+    ) -> dict[str, Any]:
+        store = self._rt.object_store
+        if store is None:
+            raise _photos_unavailable()
+        try:
+            raw = base64.b64decode(photo_b64, validate=True)
+        except (binascii.Error, ValueError):
+            raise _err("VALIDATION_ERROR", "That file could not be read.", 422) from None
+        try:
+            cleaned, _ = clean_photo(raw)
+        except PhotoError as exc:
+            raise _err("VALIDATION_ERROR", str(exc), 422) from None
+        staff = await self._photo_target(principal, staff_id, change=True)
+        old = staff.photo_key
+        key = new_key("staff")
+        store.put(key, cleaned)
+        staff.photo_key = key
+        staff.updated_at = self._now()
+        self._audit(
+            info,
+            principal.staff_id,
+            "photo_set",
+            target_type="staff",
+            target_id=staff.id,
+            detail={"bytes": len(cleaned)},
+        )
+        role = await self._db.get(StaffRole, staff.role_id)
+        if role is None:  # pragma: no cover - the foreign key guarantees a role
+            await self._db.rollback()
+            raise _not_found()
+        out = _staff_view(staff, role)
+        try:
+            await self._db.commit()
+        except Exception:
+            store.delete(key)  # nothing points at it
+            raise
+        if old:
+            store.delete(old)
+        return out
+
+    async def remove_photo(
+        self, principal: StaffPrincipal, staff_id: uuid.UUID, info: RequestInfo
+    ) -> None:
+        store = self._rt.object_store
+        staff = await self._photo_target(principal, staff_id, change=True)
+        old = staff.photo_key
+        if old is None:
+            await self._db.rollback()
+            return
+        staff.photo_key = None
+        staff.updated_at = self._now()
+        self._audit(
+            info, principal.staff_id, "photo_removed", target_type="staff", target_id=staff.id
+        )
+        await self._db.commit()
+        if store is not None:
+            store.delete(old)
+
+    async def photo(
+        self, principal: StaffPrincipal, staff_id: uuid.UUID
+    ) -> tuple[bytes, str] | None:
+        """The photo and its type, or None when there is none."""
+        staff = await self._photo_target(principal, staff_id, change=False)
+        key = staff.photo_key
+        await self._db.rollback()
+        store = self._rt.object_store
+        if key is None or store is None:
+            return None
+        data = store.get(key)
+        if data is None:
+            return None
+        try:
+            return clean_photo(data)  # re-checked on the way out, never trusted from storage
+        except PhotoError:
+            return None
 
     # --- roles ------------------------------------------------------------------------------
 
@@ -851,8 +993,17 @@ class StaffService:
 
     # --- first Super Admin (command line only) ----------------------------------------------
 
-    async def create_first_super_admin(self, email_in: str, name: str, password: str) -> uuid.UUID:
+    async def create_first_super_admin(
+        self, email_in: str, name: str, password: str, phone_in: str | None = None
+    ) -> uuid.UUID:
         """Only when no Super Admin exists. Used by ``app.cli.create_super_admin``."""
+        phone = None
+        if phone_in is not None:
+            phone = normalise_phone(phone_in)
+            if phone is None:
+                raise ValueError(
+                    "Enter the phone number in international form, e.g. +2348031234567."
+                )
         email = normalise_email(email_in)
         if email is None:
             raise ValueError("Enter a valid email address.")
@@ -875,6 +1026,7 @@ class StaffService:
             id=uuid.uuid4(),
             email=email,
             name=name.strip(),
+            phone=phone,
             role_id=role.id,
             status="active",
             password_hash=self._rt.hasher.hash(password),
@@ -900,6 +1052,8 @@ def _staff_view(staff: StaffAccount, role: StaffRole) -> dict[str, Any]:
         "id": staff.id,
         "email": staff.email,
         "name": staff.name,
+        "phone": staff.phone,
+        "has_photo": staff.photo_key is not None,
         "role_id": role.id,
         "role": role.name,
         "status": staff.status,

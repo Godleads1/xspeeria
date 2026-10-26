@@ -485,4 +485,5 @@ class TestPackageRegistration:
             "0021_offer_groups.py",  # requests in several currencies (ADR-059)
             "0022_tier_checks.py",  # higher-tier checks (ADR-058)
             "0023_admin_staff.py",  # admin console staff (ADR-060)
+            "0024_staff_phone_photo.py",  # staff phone and photo (ADR-060)
         ]

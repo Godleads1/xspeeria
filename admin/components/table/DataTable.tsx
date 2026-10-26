@@ -29,8 +29,11 @@ export function DataTable<Row extends { id: string }>({
   emptyActionLabel,
   onEmptyAction,
   onRetry,
+  hideCaption = false,
 }: {
   caption: string;
+  /** Figma tables have no visible caption; it stays for screen readers. */
+  hideCaption?: boolean;
   columns: readonly Column<Row>[];
   rows: readonly Row[];
   status?: TableStatus;
@@ -56,16 +59,20 @@ export function DataTable<Row extends { id: string }>({
         style={{ borderCollapse: 'collapse', width: '100%', color: color.text.primary }}
       >
         <caption
-          style={{
-            textAlign: 'left',
-            padding: `${density.cellPaddingY}px ${density.cellPaddingX}px`,
-            color: color.text.secondary,
-          }}
+          style={
+            hideCaption
+              ? { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }
+              : {
+                  textAlign: 'left',
+                  padding: `${density.cellPaddingY}px ${density.cellPaddingX}px`,
+                  color: color.text.secondary,
+                }
+          }
         >
           {caption}
         </caption>
         <thead>
-          <tr style={{ backgroundColor: color.bg.sunken }}>
+          <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -74,7 +81,8 @@ export function DataTable<Row extends { id: string }>({
                   textAlign: column.numeric ? 'right' : 'left',
                   padding: `${density.cellPaddingY}px ${density.cellPaddingX}px`,
                   borderBottom: `1px solid ${color.border.strong}`,
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: 13,
                 }}
               >
                 {column.header}
@@ -90,8 +98,10 @@ export function DataTable<Row extends { id: string }>({
                   key={column.key}
                   style={{
                     textAlign: column.numeric ? 'right' : 'left',
-                    padding: `${density.cellPaddingY}px ${density.cellPaddingX}px`,
+                    padding: `${density.cellPaddingY + 4}px ${density.cellPaddingX}px`,
                     borderBottom: `1px solid ${color.border.subtle}`,
+                    fontSize: 13,
+                    fontWeight: 400,
                   }}
                 >
                   {column.render(row)}

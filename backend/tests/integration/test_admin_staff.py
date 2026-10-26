@@ -1,8 +1,9 @@
-# ruff: noqa: F811  -- pytest fixtures are imported by name and used as parameters
+# ruff: noqa: F811, E501  -- pytest fixtures are imported by name and used as parameters
 """Admin console staff: sign-in, sessions, roles, escalation and the audit log (ADR-060)."""
 
 from __future__ import annotations
 
+import base64
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -18,6 +19,7 @@ from app.db.session import build_engine
 from app.domain.staff_rules import ALL_PERMISSIONS
 from app.main import create_app
 from app.providers.email import RecordingEmailSender
+from app.providers.object_store import LocalFolderStore
 from app.services.auth import AuthRuntime
 from app.services.staff import StaffService
 from tests.integration.test_auth_api import (  # noqa: F401
@@ -28,6 +30,7 @@ from tests.integration.test_auth_api import (  # noqa: F401
     clean,
     migrated,
 )
+from tests.unit.test_image_rules import SECRET, _png_chunk, png
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -88,7 +91,12 @@ class Admin:
         """Invite through ``c``; the new person sets a password; returns their logged-in client."""
         r = await c.post(
             "/api/v1/admin/staff",
-            json={"email": email, "name": "New Person", "role_id": await self.role_id(role)},
+            json={
+                "email": email,
+                "name": "New Person",
+                "phone": "+2348031234567",
+                "role_id": await self.role_id(role),
+            },
             headers=H,
         )
         assert r.status_code == 201, r.text
@@ -320,6 +328,7 @@ async def test_no_one_can_grant_more_than_they_have(admin: Admin, boss: AsyncCli
             json={
                 "email": f"{role}@xspeeria.test",
                 "name": "Someone",
+                "phone": "+2348031234567",
                 "role_id": await admin.role_id(role),
             },
             headers=H,
@@ -504,3 +513,122 @@ async def test_only_one_first_super_admin(admin: Admin) -> None:
         await admin.service_call("create_first_super_admin", "second@xspeeria.test", "Two", BOSS_PW)
     with pytest.raises(ValueError):
         await admin.service_call("create_first_super_admin", "x@xspeeria.test", "X", "short")
+
+
+# --- phone and photo (owner decision 2026-10-26) ------------------------------------------------
+
+
+async def test_new_staff_need_a_valid_phone_and_changes_are_audited_without_it(
+    admin: Admin, boss: AsyncClient
+) -> None:
+    body = {
+        "email": "p@xspeeria.test",
+        "name": "Pat",
+        "role_id": await admin.role_id("support_agent"),
+    }
+    assert (await boss.post("/api/v1/admin/staff", json=body, headers=H)).status_code == 422
+    for bad in ("08031234567", "+234 abc", "+0234803123"):
+        r = await boss.post("/api/v1/admin/staff", json={**body, "phone": bad}, headers=H)
+        assert r.status_code == 422, bad
+    r = await boss.post(
+        "/api/v1/admin/staff", json={**body, "phone": "+234 803 123 4567"}, headers=H
+    )
+    assert r.status_code == 201 and r.json()["phone"] == "+2348031234567"
+    sid = r.json()["id"]
+    r = await boss.patch(f"/api/v1/admin/staff/{sid}", json={"phone": "+447700900123"}, headers=H)
+    assert r.status_code == 200 and r.json()["phone"] == "+447700900123"
+    log = (await boss.get("/api/v1/admin/audit-log?action=staff_updated", headers=H)).json()
+    assert log["items"][0]["detail"] == {"phone": True}
+    assert "447700900123" not in str(log)
+
+
+@pytest_asyncio.fixture
+async def photos(admin: Admin, tmp_path: Any) -> LocalFolderStore:
+    store = LocalFolderStore(tmp_path)
+    admin.runtime.object_store = store
+    return store
+
+
+async def test_photos_are_cleaned_stored_outside_the_database_and_served_safely(
+    admin: Admin, boss: AsyncClient, photos: LocalFolderStore, tmp_path: Any
+) -> None:
+    me = (await boss.get("/api/v1/admin/me", headers=H)).json()
+    dirty = png(_png_chunk(b"tEXt", b"Comment\x00" + SECRET))
+    r = await boss.put(
+        f"/api/v1/admin/staff/{me['id']}/photo",
+        json={"photo": base64.b64encode(dirty).decode()},
+        headers=H,
+    )
+    assert r.status_code == 200 and r.json()["has_photo"] is True
+    got = await boss.get(f"/api/v1/admin/staff/{me['id']}/photo", headers=H)
+    assert got.status_code == 200 and got.headers["content-type"] == "image/png"
+    assert got.content == png() and SECRET not in got.content
+    assert got.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in got.headers["content-security-policy"]
+    # Kept in the photo store, never in the database.
+    key = await _sql(
+        admin.db_settings, "SELECT photo_key FROM staff_accounts WHERE id = :i", i=me["id"]
+    )
+    assert key.startswith("staff/") and (tmp_path / key).read_bytes() == png()
+    # Replacing deletes the old file; removing deletes the new one.
+    await boss.put(
+        f"/api/v1/admin/staff/{me['id']}/photo",
+        json={"photo": base64.b64encode(png()).decode()},
+        headers=H,
+    )
+    assert not (tmp_path / key).exists()
+    assert (
+        await boss.delete(f"/api/v1/admin/staff/{me['id']}/photo", headers=H)
+    ).status_code == 204
+    assert (await boss.get(f"/api/v1/admin/staff/{me['id']}/photo", headers=H)).status_code == 404
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+@pytest.mark.parametrize(
+    "photo", [base64.b64encode(b"<svg onload=alert(1)>").decode(), "not base64!!"]
+)
+async def test_non_photos_are_refused(
+    boss: AsyncClient, photos: LocalFolderStore, photo: str
+) -> None:
+    me = (await boss.get("/api/v1/admin/me", headers=H)).json()
+    r = await boss.put(f"/api/v1/admin/staff/{me['id']}/photo", json={"photo": photo}, headers=H)
+    assert r.status_code == 422
+
+
+async def test_who_may_see_and_change_photos(
+    admin: Admin, boss: AsyncClient, photos: LocalFolderStore
+) -> None:
+    agent = await admin.invite(boss, "agent@xspeeria.test", "support_agent")
+    boss_id = (await boss.get("/api/v1/admin/me", headers=H)).json()["id"]
+    agent_id = (await agent.get("/api/v1/admin/me", headers=H)).json()["id"]
+    pic = {"photo": base64.b64encode(png()).decode()}
+    assert (
+        await boss.put(f"/api/v1/admin/staff/{boss_id}/photo", json=pic, headers=H)
+    ).status_code == 200
+    # Anyone may set their own photo.
+    assert (
+        await agent.put(f"/api/v1/admin/staff/{agent_id}/photo", json=pic, headers=H)
+    ).status_code == 200
+    # A support agent (no staff.read) can't see or change someone else's.
+    assert (await agent.get(f"/api/v1/admin/staff/{boss_id}/photo", headers=H)).status_code == 403
+    assert (
+        await agent.put(f"/api/v1/admin/staff/{boss_id}/photo", json=pic, headers=H)
+    ).status_code == 403
+    assert (
+        await agent.delete(f"/api/v1/admin/staff/{boss_id}/photo", headers=H)
+    ).status_code == 403
+    # The Super Admin can manage the agent's photo.
+    assert (await boss.get(f"/api/v1/admin/staff/{agent_id}/photo", headers=H)).status_code == 200
+    assert (
+        await boss.delete(f"/api/v1/admin/staff/{agent_id}/photo", headers=H)
+    ).status_code == 204
+
+
+async def test_photos_off_without_a_store(admin: Admin, boss: AsyncClient) -> None:
+    me = (await boss.get("/api/v1/admin/me", headers=H)).json()
+    r = await boss.put(
+        f"/api/v1/admin/staff/{me['id']}/photo",
+        json={"photo": base64.b64encode(png()).decode()},
+        headers=H,
+    )
+    assert r.status_code == 503

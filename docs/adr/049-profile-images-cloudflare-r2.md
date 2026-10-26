@@ -17,6 +17,10 @@ Profile photos and profile banners are stored in a **private Cloudflare R2 bucke
 - Viewing is through short-lived signed links only.
 - R2 keys live only in the server `.env`/secret store; never in the app, never in chat or git.
 
+## Built so far (2026-10-26, ADR-060)
+
+Staff photos in the admin console use this design's rules: server-made random keys, content-type check, 5 MB, metadata removed, served only through the server to signed-in staff. Storage interface `app/providers/object_store.py`; a local-folder stand-in for developer computers only. The R2 client itself and customer photos are not built yet.
+
 ## Needs before building
 
 A Cloudflare account and an R2 bucket (owner action); a data-processing agreement entry for Cloudflare (Standing Standards vendor rules); exact size limits confirmed.

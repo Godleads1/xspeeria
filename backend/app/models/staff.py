@@ -57,11 +57,17 @@ class StaffAccount(Base):
     __table_args__ = (
         CheckConstraint("status IN ('active', 'disabled')", name="status_allowed"),
         CheckConstraint("email = lower(email)", name="email_lowercase"),
+        CheckConstraint(r"phone ~ '^\+[1-9][0-9]{7,14}$'", name="phone_e164"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     email: Mapped[str] = mapped_column(String(254), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
+    #: International form (+234...). Required for new staff (owner decision 2026-10-26); not
+    #: checked by SMS.
+    phone: Mapped[str | None] = mapped_column(String(16))
+    #: Where the photo is kept in the photo store (ADR-049). Never the photo itself.
+    photo_key: Mapped[str | None] = mapped_column(String(64))
     role_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("staff_roles.id", ondelete="RESTRICT"), nullable=False
     )
