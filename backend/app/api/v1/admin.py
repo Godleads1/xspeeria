@@ -27,6 +27,7 @@ from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime
+from app.services.dashboard import DashboardService, Period
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 
 __all__ = ["COOKIE", "router"]
@@ -444,3 +445,29 @@ async def audit_log(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> Any:
     return await service.audit(staff, staff_id=staff_id, action=action, before=before, limit=limit)
+
+
+# --- analytics dashboard (ADR-061) ---------------------------------------------------------------
+
+
+@router.get("/dashboard", summary="Analytics Dashboard figures (dashboard.read)")
+async def dashboard(
+    staff: Staff,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    period: Annotated[Period, Query()] = "month",
+    month: Annotated[str | None, Query(pattern=r"^20[0-9]{2}-(0[1-9]|1[0-2])$")] = None,
+) -> Any:
+    if period == "custom" and month is None:
+        raise AppError(
+            "VAL_422_MISSING_FIELD", "Choose a month.", status_code=422, details={"field": "month"}
+        )
+    try:
+        return await DashboardService(db).figures(staff, period, runtime.clock(), month)
+    except ValueError:
+        raise AppError(
+            "VAL_422_MISSING_FIELD",
+            "Choose a month that has started.",
+            status_code=422,
+            details={"field": "month"},
+        ) from None

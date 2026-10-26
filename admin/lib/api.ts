@@ -74,6 +74,53 @@ export interface AuditPage {
 
 const BASE = '/api/v1/admin';
 
+
+/** Integer minor units as text, with the currency's scale (never a float). */
+export interface MoneyFigure {
+  currency: string;
+  scale: number;
+  minor: string;
+  previous_minor?: string;
+}
+export interface Compared {
+  value: number;
+  previous: number;
+}
+export type DashboardPeriod = 'today' | 'month' | 'year' | 'custom';
+export interface Dashboard {
+  period: { kind: DashboardPeriod; start: string; end: string; bucket: 'hour' | 'day' | 'month' };
+  overview: {
+    active_users: Compared;
+    new_users: Compared;
+    trades_started: Compared;
+    trades_completed: Compared;
+    value: MoneyFigure[];
+    fees: MoneyFigure[];
+    avg_settlement_seconds: number | null;
+    open_disputes: number;
+    kyc_waiting: number;
+  };
+  customers: {
+    growth: { at: string; signed_up: number; not_verified: number }[];
+    active_customers: number;
+    inactive_30_days: number;
+  };
+  transactions: { completed: number; failed: number; speed: Record<'lt_1m' | '1_5m' | '5_10m' | '10_60m' | 'gt_60m', number> };
+  revenue: {
+    fees_by_time: (MoneyFigure & { at: string })[];
+    waiting_in_escrow: (MoneyFigure & { legs: number })[];
+  };
+  corridors: { pair: [string, string]; trades: number; previous_trades: number; average_rate: string | null }[];
+  operations: {
+    disputes_opened: Compared;
+    disputes_resolved: Compared;
+    mean_seconds_to_resolve: number | null;
+    reconciliation_open: number;
+    open_offers_paying_naira: number;
+    open_offers_paying_foreign: number;
+  };
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -123,6 +170,11 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
         new_password: newPassword,
       }),
     me: () => call<Me>('GET', '/me'),
+    dashboard: (period: DashboardPeriod, month?: string) =>
+      call<Dashboard>(
+        'GET',
+        `/dashboard?period=${encodeURIComponent(period)}${month ? `&month=${encodeURIComponent(month)}` : ''}`,
+      ),
     /** Only my name and phone; the server refuses anything else. */
     updateMe: (changes: { name?: string; phone?: string }) => call<Me>('PATCH', '/me', changes),
     changePassword: (current: string, next: string) =>

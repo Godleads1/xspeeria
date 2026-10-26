@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { CodeBoxes } from '../components/CodeBoxes';
 import { Toast } from '../components/Toast';
+import { TAB_LABEL } from '../components/screens/DashboardScreen';
 import ar from '../lib/locales/ar.json';
 import es from '../lib/locales/es.json';
 import fr from '../lib/locales/fr.json';
@@ -42,7 +43,7 @@ function shownSentences(): Set<string> {
     for (const m of text.matchAll(/\btr\(\s*'((?:[^'\\]|\\.)*)'/g)) found.add(m[1].replace(/\\'/g, "'"));
   }
   for (const l of [...MODULES, ...ACTIONS, ...NAV_ITEMS, ...PLANNED_DESTINATIONS]) found.add(l.label);
-  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS)]) found.add(l);
+  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL)]) found.add(l);
   return found;
 }
 
