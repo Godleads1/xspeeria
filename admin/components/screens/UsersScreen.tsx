@@ -57,6 +57,16 @@ export function UsersScreen(): ReactElement {
   const [status, setStatus] = useState<'' | CustomerStatus>('');
   const [offset, setOffset] = useState(0);
   const [asking, setAsking] = useState<{ customer: Customer; action: CustomerAction } | null>(null);
+  // A link from another screen (e.g. a fraud alert) can open the list already searched. The value
+  // comes from the address bar: it is only ever used as search text (the server checks it).
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q');
+      if (q) setSearch(q.slice(0, 80));
+    } catch {
+      // No address to read (tests): start empty.
+    }
+  }, []);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);

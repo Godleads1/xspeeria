@@ -32,6 +32,7 @@ from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.dispute_admin import DisputeAdminService
+from app.services.fraud import FraudService
 from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
@@ -991,3 +992,94 @@ async def advert_image(advert_id: uuid.UUID, staff: Staff, service: Adverts) -> 
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     data, content_type = found
     return Response(content=data, media_type=content_type, headers=_PICTURE_HEADERS)
+
+
+# --- fraud alerts (ADR-068) --------------------------------------------------------------------
+
+
+async def get_fraud(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> FraudService:
+    return FraudService(db, runtime.clock)
+
+
+Fraud = Annotated[FraudService, Depends(get_fraud)]
+_Rule = Literal[
+    "pin_lockout", "code_lockout", "disputes_against", "payout_name_mismatch", "staff_report"
+]
+
+
+class FraudReportBody(_Strict):
+    user_id: uuid.UUID
+    severity: Literal["low", "medium", "high"]
+    note: str = Field(min_length=5, max_length=1000)
+
+
+class FraudResolveBody(_Strict):
+    resolution: Literal["confirmed", "false_alarm"]
+    note: str = Field(min_length=3, max_length=1000)
+
+
+@router.get("/fraud-alerts", summary="Fraud alerts (fraud_alerts.read)")
+async def list_fraud_alerts(
+    staff: Staff,
+    service: Fraud,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    status_in: Annotated[
+        Literal["open", "in_progress", "resolved"] | None, Query(alias="status")
+    ] = None,
+    rule: _Rule | None = None,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.list(
+        staff, search=q or None, status_in=status_in, rule=rule, offset=offset, limit=limit
+    )
+
+
+@router.get("/fraud-alerts/stats", summary="Fraud alert counts (fraud_alerts.read)")
+async def fraud_stats(staff: Staff, service: Fraud) -> Any:
+    return await service.stats(staff)
+
+
+@router.post(
+    "/fraud-alerts",
+    status_code=status.HTTP_201_CREATED,
+    summary="Raise an alert about a customer by hand (fraud_alerts.create)",
+)
+async def report_fraud(body: FraudReportBody, staff: Staff, service: Fraud, info: Info) -> Any:
+    return await service.report(
+        staff, info, user_id=body.user_id, severity=body.severity, note=body.note.strip()
+    )
+
+
+@router.get("/fraud-alerts/{alert_id}", summary="One fraud alert (fraud_alerts.read)")
+async def get_fraud_alert(alert_id: uuid.UUID, staff: Staff, service: Fraud) -> Any:
+    return await service.get(staff, alert_id)
+
+
+@router.post(
+    "/fraud-alerts/{alert_id}/start",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Mark in progress (fraud_alerts.update)",
+)
+async def start_fraud_alert(
+    alert_id: uuid.UUID, staff: Staff, service: Fraud, info: Info
+) -> Response:
+    await service.start(staff, info, alert_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/fraud-alerts/{alert_id}/resolve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Resolve: confirmed or false alarm, with a note (fraud_alerts.update)",
+)
+async def resolve_fraud_alert(
+    alert_id: uuid.UUID, body: FraudResolveBody, staff: Staff, service: Fraud, info: Info
+) -> Response:
+    await service.resolve(
+        staff, info, alert_id, resolution=body.resolution, note=" ".join(body.note.split())
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
