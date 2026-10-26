@@ -108,7 +108,7 @@ export function SetPasswordScreen({
               : 'If that email has a staff account, a 6-digit code is on its way. It works for 30 minutes.'}
           </p>
           <TextInput
-            label="Code"
+            label="Code from the email"
             inputMode="numeric"
             autoComplete="one-time-code"
             placeholder="6-digit code"
@@ -118,7 +118,7 @@ export function SetPasswordScreen({
             testId="reset-code"
           />
           <TextInput
-            label="New Password"
+            label="Enter New Password"
             type="password"
             autoComplete="new-password"
             placeholder="enter new password"
@@ -128,17 +128,19 @@ export function SetPasswordScreen({
             testId="reset-password"
           />
           <TextInput
-            label="Confirm Password"
+            label="Confirm New Password"
             type="password"
             autoComplete="new-password"
-            placeholder="enter it again"
+            placeholder="enter new password again"
             value={again}
             onChange={setAgain}
             testId="reset-again"
           />
           <FormError message={error} />
+          {/* Figma: a clear gap before the main button. */}
+          <div style={{ height: 40 }} />
           <Button type="submit" busy={busy} block testId="reset-save">
-            Save password
+            Reset Password
           </Button>
         </Form>
       )}
