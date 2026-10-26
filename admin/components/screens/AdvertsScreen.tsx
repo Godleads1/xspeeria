@@ -28,6 +28,7 @@ import { isoToLagos, lagosToIso } from './OutagesScreen';
 
 export const ADVERT_STATE: Record<AdvertState, string> = {
   showing: 'Showing now',
+  covered: 'Behind a newer advert',
   scheduled: 'Scheduled',
   ended: 'Ended',
   off: 'Switched off',

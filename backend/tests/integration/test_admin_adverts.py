@@ -125,6 +125,12 @@ async def test_an_advert_shows_in_the_app_slot_with_hidden_details_removed(
         assert (await staff.login(again, BOSS, BOSS_PW)).status_code == 200
         await owner.relogin()
         assert (await _current(owner))["id"] == later
+        # One slot: the older advert, still inside its dates, is marked as behind it.
+        states = {
+            i["id"]: i["state"]
+            for i in (await again.get("/api/v1/admin/adverts", headers=H)).json()["items"]
+        }
+        assert states == {later: "showing", aid: "covered"}
         assert (
             await again.patch(f"/api/v1/admin/adverts/{later}", json={"active": False}, headers=H)
         ).status_code == 204

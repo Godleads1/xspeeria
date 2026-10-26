@@ -315,7 +315,7 @@ export interface OutageInput {
   expected_end_at?: string | null;
 }
 
-export type AdvertState = 'showing' | 'scheduled' | 'ended' | 'off';
+export type AdvertState = 'showing' | 'covered' | 'scheduled' | 'ended' | 'off';
 export interface Advert {
   id: string;
   name: string;
