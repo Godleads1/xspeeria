@@ -27,7 +27,7 @@ Layering rule: api -> services -> domain + repositories + providers.
 """
 
 from app.models.currency_definition import CurrencyDefinition
-from app.models.disputes import Dispute, DisputeMessage
+from app.models.disputes import Dispute, DisputeCategory, DisputeMessage
 from app.models.identity import (
     AuthRefreshToken,
     AuthSession,
@@ -67,6 +67,7 @@ __all__ = [
     "PushDelivery",
     "PushToken",
     "Dispute",
+    "DisputeCategory",
     "DisputeMessage",
     "OutboxMessage",
     "Partner",

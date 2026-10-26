@@ -4,7 +4,15 @@ import { apiRequest, type RequestOptions } from './client';
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
 
-export type DisputeReason = 'funds_not_received' | 'wrong_amount' | 'counterparty_unresponsive' | 'other';
+/** A dispute category code. The first four are built in; staff may add more (ADR-063). */
+export type DisputeReason = string;
+
+export interface DisputeCategory {
+  code: string;
+  /** As staff wrote it (shown for categories the app has no translation for). */
+  name: string;
+  description: string;
+}
 
 export interface DisputeMessage {
   message_id: string;
@@ -36,6 +44,8 @@ const path = (id: string): string => `/api/v1/disputes/${encodeURIComponent(id)}
 export const disputesApi = {
   open: (token: string, body: { transaction_id?: string; reason: DisputeReason; description: string }, x: Extra = {}) =>
     apiRequest<ServerDispute>('POST', '/api/v1/disputes', { token, body, ...x }),
+  categories: (token: string, x: Extra = {}) =>
+    apiRequest<DisputeCategory[]>('GET', '/api/v1/disputes/categories', { token, ...x }),
   mine: (token: string, x: Extra = {}) => apiRequest<ServerDispute[]>('GET', '/api/v1/disputes', { token, ...x }),
   get: (token: string, id: string, x: Extra = {}) => apiRequest<ServerDispute>('GET', path(id), { token, ...x }),
   message: (token: string, id: string, message: string, x: Extra = {}) =>

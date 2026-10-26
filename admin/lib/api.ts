@@ -148,6 +148,73 @@ export interface CustomerStats {
 }
 export type CustomerAction = 'suspend' | 'reactivate' | 'close';
 
+export type DisputeStatus = 'open' | 'under_review' | 'resolved';
+export type DisputeOutcome = 'favor_initiator' | 'favor_counterparty' | 'split' | 'no_fault';
+export type Priority = 'low' | 'medium' | 'high';
+export interface DisputeCategory {
+  code: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+export interface DisputeRow {
+  id: string;
+  ref: string;
+  kind: 'dispute' | 'support';
+  customer: string;
+  customer_email: string;
+  category: string;
+  category_name: string;
+  status: DisputeStatus;
+  priority: Priority;
+  assigned_to: string | null;
+  assigned_name: string | null;
+  escalated: boolean;
+  created_at: string;
+  resolved_at: string | null;
+  /** 24 hours after opening (owner decision 2026-10-26). */
+  sla_due_at: string;
+}
+export interface DisputePage {
+  /** Server time, so the SLA timer doesn't depend on this computer's clock. */
+  now: string;
+  total: number;
+  items: DisputeRow[];
+}
+export interface DisputeStats {
+  total: number;
+  resolved_7_days: number;
+  pending: number;
+  overdue: number;
+  avg_resolution_seconds: number | null;
+}
+export interface Person {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string;
+  status: string;
+}
+export interface DisputeCase extends DisputeRow {
+  /** Server time, for the SLA timer. */
+  now: string;
+  description: string;
+  desired_resolution: string | null;
+  opened_by_staff: boolean;
+  customer_details: Person;
+  deal: null | {
+    transaction_id: string;
+    match_id: string;
+    rate: string;
+    phase: string | null;
+    escrow_paused: boolean;
+    legs: { party: string; paid_by: string; currency: string; scale: number; amount_minor: string; fee_minor: string; state: string }[];
+    other_party: Person;
+  };
+  messages: { id: string; author: 'staff' | 'customer' | 'other_party'; staff_name: string | null; body: string; created_at: string }[];
+  timeline: { at: string; who: 'staff' | 'customer'; name: string | null; event: string; detail: Record<string, unknown> | null }[];
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -206,6 +273,38 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
       return call<CustomerPage>('GET', `/users?${p.toString()}`);
     },
     customerStats: () => call<CustomerStats>('GET', '/users/stats'),
+    disputeCategories: () => call<DisputeCategory[]>('GET', '/dispute-categories'),
+    saveDisputeCategory: (code: string | null, body: { name: string; description: string; active: boolean }) =>
+      code === null
+        ? call<DisputeCategory>('POST', '/dispute-categories', body)
+        : call<DisputeCategory>('PUT', `/dispute-categories/${encodeURIComponent(code)}`, body),
+    listDisputes: (q: { search?: string; status?: DisputeStatus; mine?: boolean; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      if (q.status) p.set('status', q.status);
+      if (q.mine) p.set('mine', 'true');
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<DisputePage>('GET', `/disputes?${p.toString()}`);
+    },
+    disputeStats: () => call<DisputeStats>('GET', '/disputes/stats'),
+    dispute: (id: string) => call<DisputeCase>('GET', `/disputes/${encodeURIComponent(id)}`),
+    openDisputeFor: (body: {
+      user_id: string;
+      transaction_id?: string;
+      category: string;
+      description: string;
+      desired_resolution?: string;
+      priority: Priority;
+    }) => call<{ id: string; ref: string }>('POST', '/disputes', body),
+    replyDispute: (id: string, message: string) => call<void>('POST', `/disputes/${encodeURIComponent(id)}/messages`, { message }),
+    startDispute: (id: string) => call<void>('POST', `/disputes/${encodeURIComponent(id)}/start`),
+    assignDispute: (id: string, staffId: string | null) =>
+      call<void>('POST', `/disputes/${encodeURIComponent(id)}/assign`, { staff_id: staffId }),
+    escalateDispute: (id: string, reason: string) =>
+      call<void>('POST', `/disputes/${encodeURIComponent(id)}/escalate`, { reason }),
+    resolveDispute: (id: string, outcome: DisputeOutcome, note?: string) =>
+      call<void>('POST', `/disputes/${encodeURIComponent(id)}/resolve`, { outcome, ...(note ? { note } : {}) }),
     /** Super Admin only (the server checks); a reason is required. */
     changeCustomer: (id: string, action: CustomerAction, reason: string) =>
       call<{ id: string; status: CustomerStatus }>('POST', `/users/${encodeURIComponent(id)}/${action}`, { reason }),

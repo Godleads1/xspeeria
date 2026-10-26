@@ -362,6 +362,7 @@ class TestPackageRegistration:
             "verification_checks",
             "disputes",
             "dispute_messages",
+            "dispute_categories",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -410,7 +411,8 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'dispute_messages', 'disputes', 'idempotency_records', "
+            "'currency_definitions', 'dispute_categories', 'dispute_messages', 'disputes', "
+            "'idempotency_records', "
             "'kyc_cases', 'kyc_webhook_events', "
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "
@@ -487,4 +489,5 @@ class TestPackageRegistration:
             "0023_admin_staff.py",  # admin console staff (ADR-060)
             "0024_staff_phone_photo.py",  # staff phone and photo (ADR-060)
             "0025_customer_suspend_close.py",  # suspend / close customers (ADR-062)
+            "0026_dispute_categories_staff_work.py",  # dispute categories, staff work (ADR-063)
         ]

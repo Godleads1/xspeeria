@@ -7,7 +7,7 @@ import { RolesScreen } from '../../components/screens/RolesScreen';
 
 export default function Page(): ReactElement {
   return (
-    <SignedIn current="/roles">
+    <SignedIn current="/settings">
       <RolesScreen />
     </SignedIn>
   );

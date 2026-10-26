@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Cookie, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, Header, Path, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
+from app.services.dispute_admin import DisputeAdminService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 
 __all__ = ["COOKIE", "router"]
@@ -523,3 +524,189 @@ async def change_customer(
     return await CustomerAdminService(db, runtime.clock).change(
         staff, user_id, action, body.reason, info
     )
+
+
+# --- disputes (ADR-063) ------------------------------------------------------------------------
+
+
+async def get_dispute_admin(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> DisputeAdminService:
+    return DisputeAdminService(db, runtime.clock)
+
+
+Disputes = Annotated[DisputeAdminService, Depends(get_dispute_admin)]
+_CODE = r"^[a-z][a-z0-9_]{1,31}$"
+
+
+class CategoryBody(_Strict):
+    name: str = Field(min_length=2, max_length=60)
+    description: str = Field(default="", max_length=200)
+    active: bool = True
+
+
+class StaffDisputeBody(_Strict):
+    user_id: uuid.UUID
+    #: The deal, when the problem is about one (pauses its escrow, as from the app).
+    transaction_id: uuid.UUID | None = None
+    category: str = Field(pattern=_CODE)
+    description: str = Field(min_length=1, max_length=2000)
+    desired_resolution: str | None = Field(default=None, min_length=1, max_length=1000)
+    priority: Literal["low", "medium", "high"] = "medium"
+
+
+class ReplyBody(_Strict):
+    message: str = Field(min_length=1, max_length=2000)
+
+
+class AssignBody(_Strict):
+    staff_id: uuid.UUID | None
+
+
+class EscalateBody(_Strict):
+    reason: str = Field(min_length=5, max_length=300)
+
+
+class ResolveBody(_Strict):
+    outcome: Literal["favor_initiator", "favor_counterparty", "split", "no_fault"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+@router.get("/dispute-categories", summary="Dispute categories (disputes.read)")
+async def dispute_categories(staff: Staff, service: Disputes) -> Any:
+    return await service.categories(staff)
+
+
+@router.post(
+    "/dispute-categories",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a dispute category (disputes.approve)",
+)
+async def add_dispute_category(
+    body: CategoryBody, staff: Staff, service: Disputes, info: Info
+) -> Any:
+    return await service.save_category(
+        staff, info, code=None, name=body.name, description=body.description, active=body.active
+    )
+
+
+@router.put("/dispute-categories/{code}", summary="Change a dispute category (disputes.approve)")
+async def change_dispute_category(
+    code: Annotated[str, Path(pattern=_CODE)],
+    body: CategoryBody,
+    staff: Staff,
+    service: Disputes,
+    info: Info,
+) -> Any:
+    return await service.save_category(
+        staff, info, code=code, name=body.name, description=body.description, active=body.active
+    )
+
+
+@router.get("/disputes", summary="Disputes and support cases (disputes.read)")
+async def list_disputes(
+    staff: Staff,
+    service: Disputes,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    status_in: Annotated[
+        Literal["open", "under_review", "resolved"] | None, Query(alias="status")
+    ] = None,
+    mine: bool = False,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.list(
+        staff, search=q or None, status_in=status_in, mine=mine, offset=offset, limit=limit
+    )
+
+
+@router.get("/disputes/stats", summary="Dispute counts (disputes.read)")
+async def dispute_stats(staff: Staff, service: Disputes) -> Any:
+    return await service.stats(staff)
+
+
+@router.post(
+    "/disputes",
+    status_code=status.HTTP_201_CREATED,
+    summary="Open a case for a customer (disputes.create)",
+)
+async def staff_open_dispute(
+    body: StaffDisputeBody, staff: Staff, service: Disputes, info: Info
+) -> Any:
+    return await service.open_for_customer(
+        staff,
+        info,
+        user_id=body.user_id,
+        transaction_id=body.transaction_id,
+        category=body.category,
+        description=body.description.strip(),
+        desired_resolution=body.desired_resolution.strip() if body.desired_resolution else None,
+        priority=body.priority,
+    )
+
+
+@router.get("/disputes/{dispute_id}", summary="One case with both parties' words (disputes.read)")
+async def get_dispute(dispute_id: uuid.UUID, staff: Staff, service: Disputes) -> Any:
+    return await service.get(staff, dispute_id)
+
+
+@router.post(
+    "/disputes/{dispute_id}/messages",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reply to the customer (disputes.update)",
+)
+async def reply_dispute(
+    dispute_id: uuid.UUID, body: ReplyBody, staff: Staff, service: Disputes, info: Info
+) -> Response:
+    await service.reply(staff, info, dispute_id, body.message.strip())
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/disputes/{dispute_id}/start",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Mark in progress (disputes.update)",
+)
+async def start_dispute(
+    dispute_id: uuid.UUID, staff: Staff, service: Disputes, info: Info
+) -> Response:
+    await service.start(staff, info, dispute_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/disputes/{dispute_id}/assign",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Assign or unassign (disputes.update)",
+)
+async def assign_dispute(
+    dispute_id: uuid.UUID, body: AssignBody, staff: Staff, service: Disputes, info: Info
+) -> Response:
+    await service.assign(staff, info, dispute_id, body.staff_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/disputes/{dispute_id}/escalate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Escalate with a reason (disputes.update)",
+)
+async def escalate_dispute(
+    dispute_id: uuid.UUID, body: EscalateBody, staff: Staff, service: Disputes, info: Info
+) -> Response:
+    await service.escalate(staff, info, dispute_id, " ".join(body.reason.split()))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/disputes/{dispute_id}/resolve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Close with an outcome; the deal's escrow continues (disputes.approve)",
+)
+async def resolve_dispute(
+    dispute_id: uuid.UUID, body: ResolveBody, staff: Staff, service: Disputes, info: Info
+) -> Response:
+    note = " ".join(body.note.split()) if body.note else None
+    await service.resolve(staff, info, dispute_id, body.outcome, note or None)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
