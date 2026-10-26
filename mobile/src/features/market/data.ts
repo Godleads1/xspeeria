@@ -54,6 +54,11 @@ export interface Listing {
   readonly rateLabel?: string;
   /** Server offers only: the signed-in user's own offer. */
   readonly own?: boolean;
+  /**
+   * ADR-059 Decision 4 (server offers only): someone is paying for it (or it is held for
+   * someone's 5-minute turn). `availableMinor` is then what may come back.
+   */
+  readonly waiting?: { readonly queueLength: number; readonly inQueue: boolean; readonly yourTurn: boolean };
 }
 
 /**

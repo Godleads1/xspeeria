@@ -38,6 +38,10 @@ class SettlementResponse(BaseModel):
     closure_reason: str | None
     simulated: bool
     funding_deadline: str | None
+    #: ADR-059 Decision 4: the taker's one extra 5 minutes has been used.
+    funding_extended: bool = False
+    #: True for the taker while the window is open and the extra time is unused.
+    can_extend: bool = False
     on_hold: bool
     you_pay: YouPay
     you_receive: YouReceive

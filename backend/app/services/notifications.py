@@ -50,6 +50,8 @@ EVENTS: dict[str, tuple[str, frozenset[str]]] = {
     "settlement.refunded": ("settlement_update", frozenset({"match_id"})),
     # ADR-057: the other side of a deal opened a dispute (its escrow is paused).
     "dispute.opened": ("dispute_update", frozenset({"dispute_id", "match_id"})),
+    # ADR-059 Decision 4: an offer you waited for is free — 5 minutes to take it.
+    "queue.your_turn": ("match_found", frozenset({"offer_id", "deadline"})),
 }
 
 #: Settlement phase -> event (ADR-001 phases a person needs to hear about).

@@ -85,7 +85,7 @@ export const serverSearch: SearchSource = {
     const rows: Listing[] = [];
     page.items.forEach((o) => {
       // "Best rate" marks the first row only when the list is in best-rate order.
-      const row = toListing(o, now, rows.length === 0 && state.sort === 'best_rate');
+      const row = toListing(o, now, rows.every((r) => r.waiting) && state.sort === 'best_rate');
       if (row) rows.push(row);
     });
     return { kind: 'offers', rows };

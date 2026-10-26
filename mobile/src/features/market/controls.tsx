@@ -367,8 +367,20 @@ export function ListingRow({
 }): ReactElement {
   const selected = takingMinor !== undefined;
   const taken = !selected && availableMinor <= 0;
-  const action = selected ? "Remove" : taken ? "Taken" : side === "buy" ? "Buy" : "Sell";
-  const tint = taken ? color.text.disabled : side === "buy" ? color.brand.primary : color.trade.sell;
+  // ADR-059 Decision 4: someone is paying for it — you can wait in its queue.
+  const queued = !selected && listing.waiting !== undefined && !listing.waiting.yourTurn;
+  const action = selected
+    ? tr("Remove")
+    : taken
+      ? tr("Taken")
+      : queued
+        ? listing.waiting?.inQueue
+          ? tr("In queue")
+          : tr("Join queue")
+        : side === "buy"
+          ? tr("Buy")
+          : tr("Sell");
+  const tint = taken ? color.text.disabled : queued ? color.warning.text : side === "buy" ? color.brand.primary : color.trade.sell;
   return (
     <View testID={`listing-${listing.id}`} style={[styles.listing, selected ? styles.listingSelected : null]}>
       {number !== undefined ? (

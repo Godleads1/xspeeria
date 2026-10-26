@@ -25,6 +25,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 #: Everything that belongs to accounts, children before parents. Not `currency_definitions`
 #: (append-only reference data) or `partners` (the pretend banks).
 USER_TABLES = (
+    "offer_queue_entries",
     "dispute_messages",
     "disputes",
     "verification_checks",

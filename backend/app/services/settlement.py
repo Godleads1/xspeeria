@@ -52,6 +52,7 @@ from app.core.logging import get_logger
 from app.domain.payout_rules import counter_amount_minor
 from app.domain.settlement_rules import (
     DISPATCH_MAX_ATTEMPTS,
+    FUNDING_EXTENSION,
     FUNDING_WINDOW,
     JURISDICTION,
     LEG_TRANSITIONS,
@@ -77,8 +78,9 @@ from app.models.settlement import (
 )
 from app.providers.pretend_bank import LegCommand, PartnerError, PayoutLine, PretendBank
 from app.services.auth import Principal
-from app.services.notifications import notify_settlement
+from app.services.notifications import notify, notify_settlement
 from app.services.offers import money_text
+from app.services.queue import on_capacity_returned
 
 __all__ = ["IngestResult", "SettlementService", "settlement_view"]
 
@@ -284,6 +286,9 @@ class SettlementService:
         if offer.status in ("partially_matched", "fully_matched"):
             offer.status = "open" if offer.matched_amount_minor == 0 else "partially_matched"
         offer.version += 1
+        await self._db.flush()
+        # ADR-059 Decision 4: the next person waiting for this offer gets their turn.
+        await on_capacity_returned(self._db, offer, self._clock())
 
     # --- 1. a ready deal becomes a settlement ------------------------------------------------
 
@@ -908,6 +913,72 @@ class SettlementService:
             raise AppError("RES_404_SETTLEMENT_NOT_FOUND", "Not found.", status_code=404)
         return out
 
+    async def extend(self, principal: Principal, match_id: uuid.UUID) -> dict[str, Any]:
+        """ADR-059 Decision 4: the taker may ask once for 5 more minutes to pay into escrow.
+
+        Only while the funding window is still open and nobody has disputed the deal. Set once
+        (a database guard refuses any later change); both sides are told the new time.
+        """
+        found = await self._for_party(principal, match_id)
+        settlement_id = found.id  # read now: the rollback below expires loaded rows
+        taker = await self._db.scalar(
+            select(Match.counterparty_user_id).where(Match.id == match_id)
+        )
+        await self._db.rollback()
+        if taker != principal.user_id:
+            raise AppError(
+                "AUTH_403_FORBIDDEN",
+                "Only the person who took the offer can ask for more time.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        now = self._clock()
+        settlement, _legs = await self._lock(settlement_id)
+        if (
+            settlement.phase != "AWAITING_FUNDING"
+            or settlement.funding_deadline is None
+            or settlement.funding_deadline <= now
+        ):
+            await self._db.rollback()
+            raise AppError(
+                "RES_409_INVALID_SETTLEMENT_STATE",
+                "The time to pay for this deal has already ended.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        if settlement.funding_extended_at is not None:
+            await self._db.rollback()
+            raise AppError(
+                "RES_409_ALREADY_EXTENDED",
+                "You have already had your extra 5 minutes for this deal.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        settlement.funding_deadline = settlement.funding_deadline + FUNDING_EXTENSION
+        settlement.funding_extended_at = now
+        self._event(
+            settlement.id,
+            None,
+            "FundingExtended",
+            {"deadline": settlement.funding_deadline.isoformat()},
+        )
+        maker = await self._db.scalar(
+            select(Offer.user_id)
+            .join(Match, Match.offer_id == Offer.id)
+            .where(Match.id == match_id)
+        )
+        for user_id in {principal.user_id, maker}:
+            if user_id is not None:
+                await notify(
+                    self._db,
+                    user_id=user_id,
+                    event="settlement.awaiting_funding",
+                    dedupe_key=f"settlement:{settlement.id}:extended",
+                    now=now,
+                    match_id=str(match_id),
+                    deadline=settlement.funding_deadline.isoformat(),
+                )
+        await self._db.commit()
+        _logger.info("funding_extended", extra={"match_id": str(match_id)})
+        return await self.view(principal, match_id)
+
     async def simulate_transfer(self, principal: Principal, match_id: uuid.UUID) -> dict[str, Any]:
         """Dev only (ADR-037): pretend I made my bank transfer of amount + fee into escrow.
 
@@ -976,6 +1047,18 @@ async def settlement_view(
         "simulated": bank is not None,
         "funding_deadline": (
             settlement.funding_deadline.isoformat() if settlement.funding_deadline else None
+        ),
+        # ADR-059 Decision 4: the taker's one extra 5 minutes has been used, or may be asked.
+        "funding_extended": settlement.funding_extended_at is not None,
+        "can_extend": (
+            settlement.phase == "AWAITING_FUNDING"
+            and settlement.funding_extended_at is None
+            and await db.scalar(
+                select(Match.counterparty_user_id)
+                .join(Transaction, Transaction.match_id == Match.id)
+                .where(Transaction.id == settlement.transaction_id)
+            )
+            == viewer
         ),
         "on_hold": (
             await db.scalar(

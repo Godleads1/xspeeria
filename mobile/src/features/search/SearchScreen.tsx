@@ -48,7 +48,10 @@ export function SearchScreen({
   onBack,
   onTake,
   onPostRequest,
+  onQueue,
 }: {
+  /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
+  onQueue?: (listing: Listing) => Promise<string | null>;
   initial?: SearchState;
   initialQuery?: string;
   openFilters?: boolean;
@@ -65,6 +68,7 @@ export function SearchScreen({
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   /** Pairs the location rule hides for this user (ADR-059 Decision 2). */
   const [hiddenPairs, setHiddenPairs] = useState<readonly string[]>([]);
+  const [note, setNote] = useState<string | null>(null);
   const asked = useRef(0);
   // Kept in refs so a new function or list each render never re-runs the search by itself.
   const clock = useRef(now);
@@ -237,8 +241,29 @@ export function SearchScreen({
             <GhostButton testID="search-clear-filters" label={tr('Clear filters')} onPress={clearFilters} />
           </View>
         ) : null}
+        {note ? (
+          <Text testID="search-note" accessibilityRole="alert" style={styles.explain}>
+            {note}
+          </Text>
+        ) : null}
         {load.status === 'ready' && load.result.kind === 'offers'
-          ? load.result.rows.map((row) => <OfferCard key={row.id} row={row} side={state.side} onTake={onTake} />)
+          ? load.result.rows.map((row) => (
+              <OfferCard
+                key={row.id}
+                row={row}
+                side={state.side}
+                onTake={onTake}
+                onQueue={
+                  onQueue
+                    ? (l) =>
+                        void onQueue(l).then((text) => {
+                          setNote(text);
+                          void run(state);
+                        })
+                    : undefined
+                }
+              />
+            ))
           : null}
         {load.status === 'ready' && load.result.kind === 'trades' ? load.result.rows.map((row) => <TradeCard key={row.key} row={row} />) : null}
       </ScrollView>
@@ -260,8 +285,20 @@ function rateText(row: Listing): string {
   return `NGN ${row.rateLabel ?? formatHundredths(row.rateHundredths)} / ${row.currency}`;
 }
 
-function OfferCard({ row, side, onTake }: { row: Listing; side: 'buy' | 'sell'; onTake: (l: Listing) => void }): ReactElement {
+function OfferCard({
+  row,
+  side,
+  onTake,
+  onQueue,
+}: {
+  row: Listing;
+  side: 'buy' | 'sell';
+  onTake: (l: Listing) => void;
+  onQueue?: (l: Listing) => void;
+}): ReactElement {
   const amount = `${formatHundredths(row.availableMinor)} ${row.currency}`;
+  // ADR-059 Decision 4: someone is paying for it; you may wait in its queue.
+  const queued = row.waiting !== undefined && !row.waiting.yourTurn;
   return (
     <View testID={`search-row-${row.id}`} style={styles.card}>
       <View style={styles.row}>
@@ -270,6 +307,10 @@ function OfferCard({ row, side, onTake }: { row: Listing; side: 'buy' | 'sell'; 
           <View style={styles.tag}>
             <Text style={styles.tagText}>{tr('Best rate')}</Text>
           </View>
+        ) : queued ? (
+          <View style={[styles.tag, styles.tagWaiting]}>
+            <Text style={[styles.tagText, styles.tagWaitingText]}>{tr('Waiting for payment')}</Text>
+          </View>
         ) : null}
       </View>
       <View style={styles.row}>
@@ -277,7 +318,17 @@ function OfferCard({ row, side, onTake }: { row: Listing; side: 'buy' | 'sell'; 
           <Text style={styles.amount}>{tr('Up to {{amount}}', { amount })}</Text>
           <Text style={styles.meta}>{row.meta}</Text>
         </View>
-        {row.own ? null : (
+        {row.own ? null : queued ? (
+          <Pressable
+            testID={`search-queue-${row.id}`}
+            accessibilityRole="button"
+            onPress={() => onQueue?.(row)}
+            disabled={!onQueue}
+            style={({ pressed }) => [styles.act, styles.actQueue, pressed ? styles.pressed : null]}
+          >
+            <Text style={[styles.actText, styles.actQueueText]}>{row.waiting?.inQueue ? tr('In queue') : tr('Join queue')}</Text>
+          </Pressable>
+        ) : (
           <Pressable
             testID={`search-take-${row.id}`}
             accessibilityRole="button"
@@ -448,6 +499,10 @@ const styles = themed(() => ({
   rate: { ...brandWeight('700'), ...numericTextStyle, fontSize: 18, color: color.text.primary, flexShrink: 1 },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: color.success.surface },
   tagText: { ...typography.chipLabel, fontSize: 11, color: color.success.text },
+  tagWaiting: { backgroundColor: color.warning.surface },
+  tagWaitingText: { color: color.warning.text },
+  actQueue: { borderColor: color.border.subtle },
+  actQueueText: { color: color.text.primary },
   amount: { ...typography.rowLabel, fontSize: 14, color: color.text.primary },
   meta: { ...typography.caption, fontSize: 11, color: color.text.secondary },
   act: { height: 36, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: color.brand.primary, alignItems: 'center', justifyContent: 'center' },

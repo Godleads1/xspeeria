@@ -61,6 +61,13 @@ class OfferResponse(BaseModel):
     is_own: bool
     version: int
     created_at: str
+    #: ADR-059 Decision 4 (listings only): held by unpaid deals or by someone's turn; queue.
+    waiting: bool = False
+    #: What may come back to take (decimal text, offer currency), when waiting.
+    waiting_amount: str | None = None
+    queue_length: int = 0
+    in_queue: bool = False
+    your_turn: bool = False
 
 
 class CompletedTradeResponse(BaseModel):
@@ -149,3 +156,14 @@ class PayoutAccountResponse(BaseModel):
     validation_state: str
     payout_hold_until: str
     created_at: str
+
+
+class QueueEntryResponse(BaseModel):
+    """ADR-059 Decision 4: my place in an offer's waiting queue."""
+
+    offer_id: str
+    #: "waiting", or "notified" when it is my turn (5 minutes to take it).
+    status: str
+    position: int
+    queue_length: int
+    turn_deadline: str | None

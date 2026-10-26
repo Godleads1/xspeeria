@@ -5,7 +5,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
-import { marketServer } from '../../../src/features/market/serverOffers';
+import { marketServer, queueServer } from '../../../src/features/market/serverOffers';
+import { queueAction } from '../../../src/features/market/queueActions';
 import { tradeStore } from '../../../src/features/trade/tradeStore';
 import { useThemeMode } from '../../../src/theme';
 import { tr } from "../../../src/i18n";
@@ -47,6 +48,7 @@ export default function MarketplaceRoute(): ReactElement {
             }
           : undefined
       }
+      onQueueListing={SERVER_MODE ? (listing) => queueAction(listing, queueServer) : undefined}
       onTakeListing={(listing, side) => {
         if (SERVER_MODE) {
           router.push({ pathname: '/market/take', params: { offer: listing.id } });

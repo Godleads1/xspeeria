@@ -84,7 +84,10 @@ export function MarketScreen({
   unread = 0,
   server = null,
   refreshSignal = 0,
+  onQueueListing,
 }: {
+  /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
+  onQueueListing?: (listing: Listing) => Promise<string | null>;
   /** Changes when the screen comes back into view, so server offers are fetched again. */
   refreshSignal?: number;
   initialSide?: Side;
@@ -238,6 +241,14 @@ export function MarketScreen({
       setNotice({
         ok: false,
         text: side === "buy" ? tr("This is your offer. Manage it under ⋮ › My Offers.") : tr("This is your request. Manage it under ⋮ › My Requests."),
+      });
+      return;
+    }
+    // ADR-059 Decision 4: someone is paying for it — offer the queue instead of Take.
+    if (server && listing.waiting && !listing.waiting.yourTurn) {
+      void onQueueListing?.(listing).then((text) => {
+        if (text) setNotice({ ok: true, text });
+        setReload((n) => n + 1);
       });
       return;
     }

@@ -13,6 +13,7 @@ from datetime import timedelta
 __all__ = [
     "COORDINATION_FEE_BPS",
     "DISPATCH_MAX_ATTEMPTS",
+    "FUNDING_EXTENSION",
     "FUNDING_WINDOW",
     "JURISDICTION",
     "LEG_STATES",
@@ -30,6 +31,8 @@ __all__ = [
 COORDINATION_FEE_BPS = 100
 #: ADR-021 §2 (product owner, confirmed 2026-10-19: "Keep 5 minutes").
 FUNDING_WINDOW = timedelta(minutes=5)
+#: ADR-059 Decision 4 (product owner, 2026-10-21): the taker may ask once for 5 more minutes.
+FUNDING_EXTENSION = timedelta(minutes=5)
 #: Banking spec §5.3: partner timestamps outside ±5 minutes are replay-suspected.
 REPLAY_WINDOW = timedelta(minutes=5)
 #: PROPOSED (ADR-037): dispatch attempts before a DISPATCH_FAILURE hold (ADR-001 §6c says "N").

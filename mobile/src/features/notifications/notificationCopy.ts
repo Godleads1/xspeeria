@@ -80,6 +80,19 @@ export function notificationCopy(n: Pick<ServerNotification, 'event' | 'data'>):
         link: id && UUID.test(id) ? `/market/case?id=${id}` : '/market/disputes',
       };
     }
+    case 'queue.your_turn': {
+      // ADR-059 Decision 4: the offer the user waited for is free for 5 minutes.
+      const id = data.offer_id;
+      const by = clock(data.deadline);
+      return {
+        title: tr("It’s your turn"),
+        body: by
+          ? tr("The offer you waited for is free. Take it by {{by}}.", { by })
+          : tr("The offer you waited for is free. Take it within 5 minutes."),
+        tone: 'warning',
+        link: id && UUID.test(id) ? `/market/take?offer=${id}` : '/marketplace',
+      };
+    }
     case 'match.created':
       return {
         title: tr("Someone took your offer"),
