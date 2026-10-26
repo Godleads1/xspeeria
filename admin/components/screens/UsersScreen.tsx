@@ -34,13 +34,13 @@ export function CustomerStatusChip({ status }: { status: CustomerStatus }): Reac
   return <StatusChip label={tr('Active')} tone="success" />;
 }
 
-const QUESTION: Record<CustomerAction, string> = {
+export const QUESTION: Record<CustomerAction, string> = {
   suspend: 'Suspend {{name}}? They are logged out and can’t log in or trade until you lift it. Deals already under way keep settling.',
   reactivate: 'Lift the suspension for {{name}}? They can log in and trade again.',
   close: 'Close the account of {{name}} for good? This can’t be undone from the console.',
 };
-const CONFIRM: Record<CustomerAction, string> = { suspend: 'Yes, Suspend', reactivate: 'Yes, Reactivate', close: 'Yes, Close' };
-const DONE: Record<CustomerAction, string> = {
+export const CONFIRM: Record<CustomerAction, string> = { suspend: 'Yes, Suspend', reactivate: 'Yes, Reactivate', close: 'Yes, Close' };
+export const DONE: Record<CustomerAction, string> = {
   suspend: '{{name}} is suspended and was logged out.',
   reactivate: '{{name}} can log in again.',
   close: 'The account of {{name}} is closed.',
@@ -114,13 +114,13 @@ export function UsersScreen(): ReactElement {
     };
     if (c.status === 'active')
       return [
-        { label: 'Suspend', testId: `suspend-${c.id}`, onSelect: open('suspend') },
-        { label: 'Close account', danger: true, testId: `close-${c.id}`, onSelect: open('close') },
+        { label: tr('Suspend'), testId: `suspend-${c.id}`, onSelect: open('suspend') },
+        { label: tr('Close account'), danger: true, testId: `close-${c.id}`, onSelect: open('close') },
       ];
     if (c.status === 'suspended')
       return [
-        { label: 'Reactivate', testId: `reactivate-${c.id}`, onSelect: open('reactivate') },
-        { label: 'Close account', danger: true, testId: `close-${c.id}`, onSelect: open('close') },
+        { label: tr('Reactivate'), testId: `reactivate-${c.id}`, onSelect: open('reactivate') },
+        { label: tr('Close account'), danger: true, testId: `close-${c.id}`, onSelect: open('close') },
       ];
     return [];
   };
