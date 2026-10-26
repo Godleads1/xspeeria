@@ -61,6 +61,7 @@ approved SDK 57 stack.
 |---|---|---|
 | 2026-10-17 | Created; braces and node-forge accepted until 2026-11-16 | Product owner (option 1) |
 | 2026-10-17 | Gate hardened after review (ADR-018): future-dated approvals, unknown severities and npm count mismatches now fail | Independent review |
+| 2026-10-26 | braces exception removed (the advisory no longer matches any installed version). zod GHSA-mrhx-c7xc-m3w5 (high, <4.6.6) accepted until 2026-11-25: reached only via @expo/cli (zod 3), not in the app bundle; the fix is zod 4, which Expo has not adopted | Product owner ("yes") |
 
 ## 5. Consequences
 
