@@ -10,6 +10,7 @@
 import { useState, type ReactElement } from 'react';
 
 import { adminApi, messageFor, type AdminApi } from '../../lib/api';
+import { tr } from '../../lib/i18n';
 import { color } from '../../theme';
 import { Button, Form, FormError, TextInput } from '../forms';
 import { AuthLayout, linkGreen } from './AuthLayout';
@@ -36,7 +37,7 @@ export function SetPasswordScreen({
 
   async function sendCode(): Promise<void> {
     if (!email.trim()) {
-      setError('Enter your staff email.');
+      setError(tr('Enter your staff email.'));
       return;
     }
     setBusy(true);
@@ -53,15 +54,15 @@ export function SetPasswordScreen({
   async function save(): Promise<void> {
     if (!resetId) return;
     if (!/^[0-9]{6}$/.test(code)) {
-      setError('Enter the 6-digit code from the email.');
+      setError(tr('Enter the 6-digit code from the email.'));
       return;
     }
     if (password.length < 12) {
-      setError('Use at least 12 characters.');
+      setError(tr('Use at least 12 characters.'));
       return;
     }
     if (password !== again) {
-      setError('The two passwords don’t match.');
+      setError(tr('The two passwords don’t match.'));
       return;
     }
     setBusy(true);
@@ -79,59 +80,60 @@ export function SetPasswordScreen({
     <AuthLayout
       title={
         resetId === null
-          ? 'Trouble signing in? Enter your email address and we’ll send you a code to set a new password.'
-          : 'Enter your new password'
+          ? tr('Trouble signing in? Enter your email address and we’ll send you a code to set a new password.')
+          : tr('Enter your new password')
       }
     >
       {resetId === null ? (
-        <Form label="Get a code" onSubmit={() => void sendCode()}>
+        <Form label={tr('Get a code')} onSubmit={() => void sendCode()}>
           <TextInput
-            label="Email Address"
+            label={tr('Email Address')}
             type="email"
             autoComplete="username"
             inputMode="email"
-            placeholder="enter email address"
+            placeholder={tr('enter email address')}
             value={email}
             onChange={setEmail}
             testId="reset-email"
           />
           <FormError message={error} />
           <Button type="submit" busy={busy} block testId="reset-send">
-            Send code
+            {tr('Send code')}
           </Button>
         </Form>
       ) : (
-        <Form label="New password" onSubmit={() => void save()}>
+        <Form label={tr('New password')} onSubmit={() => void save()}>
           <p style={{ margin: 0, color: color.text.secondary }}>
             {inviteId
-              ? 'Enter the 6-digit code from your invitation email and choose a password.'
-              : 'If that email has a staff account, a 6-digit code is on its way. It works for 30 minutes.'}
+              ? tr('Enter the 6-digit code from your invitation email and choose a password.')
+              : tr('If that email has a staff account, a 6-digit code is on its way. It works for 30 minutes.')}
           </p>
           <TextInput
-            label="Code from the email"
+            label={tr('Code from the email')}
             inputMode="numeric"
             autoComplete="one-time-code"
-            placeholder="6-digit code"
+            placeholder={tr('6-digit code')}
             maxLength={6}
+            ltr
             value={code}
             onChange={(v) => setCode(v.replace(/\D/g, ''))}
             testId="reset-code"
           />
           <TextInput
-            label="Enter New Password"
+            label={tr('Enter New Password')}
             type="password"
             autoComplete="new-password"
-            placeholder="enter new password"
+            placeholder={tr('enter new password')}
             value={password}
             onChange={setPassword}
-            hint={PASSWORD_HINT}
+            hint={tr(PASSWORD_HINT)}
             testId="reset-password"
           />
           <TextInput
-            label="Confirm New Password"
+            label={tr('Confirm New Password')}
             type="password"
             autoComplete="new-password"
-            placeholder="enter new password again"
+            placeholder={tr('enter new password again')}
             value={again}
             onChange={setAgain}
             testId="reset-again"
@@ -140,12 +142,12 @@ export function SetPasswordScreen({
           {/* Figma: a clear gap before the main button. */}
           <div style={{ height: 40 }} />
           <Button type="submit" busy={busy} block testId="reset-save">
-            Reset Password
+            {tr('Reset Password')}
           </Button>
         </Form>
       )}
       <a href="/login" style={{ ...linkGreen, alignSelf: 'center' }}>
-        BACK TO LOGIN
+        {tr('BACK TO LOGIN')}
       </a>
     </AuthLayout>
   );

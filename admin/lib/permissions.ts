@@ -5,6 +5,8 @@
  * convenience, never the control.
  */
 
+import { tr } from './i18n';
+
 export const MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'users', label: 'Users' },
@@ -34,7 +36,9 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export function roleLabel(name: string): string {
-  return ROLE_LABELS[name] ?? name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  // Built-in roles have translated names; custom roles show the name they were given.
+  const known = ROLE_LABELS[name];
+  return known ? tr(known) : name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
 /** Audit log action names, in words. Unknown ones are shown as they are. */
@@ -55,8 +59,11 @@ export const ACTION_LABELS: Record<string, string> = {
   role_updated: 'Changed role',
   role_deleted: 'Deleted role',
   first_super_admin_created: 'First Super Admin created',
+  photo_set: 'Set a photo',
+  photo_removed: 'Removed a photo',
 };
 
 export function actionLabel(action: string): string {
-  return ACTION_LABELS[action] ?? action;
+  const known = ACTION_LABELS[action];
+  return known ? tr(known) : action;
 }

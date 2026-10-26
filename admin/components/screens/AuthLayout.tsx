@@ -6,6 +6,7 @@
 import type { ReactElement, ReactNode } from 'react';
 
 import { color, fontStack } from '../../theme';
+import { LanguagePicker } from '../LanguagePicker';
 import { Wordmark } from '../Wordmark';
 
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }): ReactElement {
@@ -25,8 +26,12 @@ export function AuthLayout({ title, children }: { title: string; children: React
         backgroundImage: 'url(/login-background.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        position: 'relative',
       }}
     >
+      <div style={{ position: 'absolute', top: 20, insetInlineEnd: 24 }}>
+        <LanguagePicker />
+      </div>
       <main
         style={{
           width: '100%',

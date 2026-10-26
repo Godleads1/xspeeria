@@ -5,6 +5,7 @@
 import { useId, type ReactElement, type ReactNode } from 'react';
 
 import { color } from '../theme';
+import { tr } from '../lib/i18n';
 import { Icon } from './icons';
 
 export function SearchBox({
@@ -57,7 +58,7 @@ export function FilterBar({ children, onReset }: { children: ReactNode; onReset?
   return (
     <div
       role="group"
-      aria-label="Filters"
+      aria-label={tr('Filters')}
       style={{
         display: 'flex',
         alignItems: 'stretch',
@@ -72,7 +73,7 @@ export function FilterBar({ children, onReset }: { children: ReactNode; onReset?
       <span style={{ ...cell, borderLeft: 'none' }}>
         <Icon name="filter" size={18} />
       </span>
-      <span style={cell}>Filter By</span>
+      <span style={cell}>{tr('Filter By')}</span>
       <span style={cell}>{children}</span>
       {onReset ? (
         <button
@@ -81,7 +82,7 @@ export function FilterBar({ children, onReset }: { children: ReactNode; onReset?
           style={{ ...cell, background: 'none', border: 'none', borderLeft: `1px solid ${color.border.subtle}`, cursor: 'pointer', color: color.error.text, fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}
         >
           <Icon name="reset" size={16} />
-          Reset Filter
+          {tr('Reset Filter')}
         </button>
       ) : null}
     </div>

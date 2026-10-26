@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 
 import { NAV_ITEMS, PLANNED_DESTINATIONS } from '../../fixtures';
 import { roleLabel } from '../../lib/permissions';
+import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
 import { color } from '../../theme';
 import { PageTitle } from '../forms';
@@ -15,24 +16,27 @@ export function OverviewScreen(): ReactElement {
   const open = NAV_ITEMS.filter((i) => i.href !== '/' && (!i.permission || can(i.permission)));
   return (
     <>
-      <PageTitle crumb="Dashboard" sub={`You are signed in as ${roleLabel(me.role)}.`}>Welcome, {me.name}</PageTitle>
+      <PageTitle crumb={tr('Dashboard')} sub={tr('You are signed in as {{role}}.', { role: roleLabel(me.role) })}>
+        {tr('Welcome, {{name}}', { name: me.name })}
+      </PageTitle>
       <Panel>
-        <h2 style={{ margin: 0, fontSize: 18 }}>What you can open</h2>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{tr('What you can open')}</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           {open.map((i) => (
             <li key={i.id}>
               <a href={i.href} style={{ color: color.brand.secondaryText }}>
-                {i.label}
+                {tr(i.label)}
               </a>
             </li>
           ))}
         </ul>
       </Panel>
       <Panel>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Coming next</h2>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{tr('Coming next')}</h2>
         <p style={{ margin: 0, color: color.text.secondary }}>
-          {PLANNED_DESTINATIONS.map((d) => d.label).join(', ')}. These open here once they are built,
-          for the roles allowed to use them.
+          {tr('{{list}}. These open here once they are built, for the roles allowed to use them.', {
+            list: PLANNED_DESTINATIONS.map((d) => tr(d.label)).join(', '),
+          })}
         </p>
       </Panel>
     </>

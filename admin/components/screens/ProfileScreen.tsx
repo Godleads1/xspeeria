@@ -6,6 +6,7 @@ import { useState, type ReactElement } from 'react';
 
 import { messageFor, type AdminApi } from '../../lib/api';
 import { roleLabel } from '../../lib/permissions';
+import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
 import { color } from '../../theme';
 import { Button, Form, FormError, Notice, PageTitle, TextInput } from '../forms';
@@ -28,7 +29,7 @@ export function ProfileScreen(): ReactElement {
       if (next) await api.setPhoto(me.id, next.base64);
       else await api.removePhoto(me.id);
       await refresh();
-      setPhotoDone(next ? 'Photo saved.' : 'Photo removed.');
+      setPhotoDone(next ? tr('Photo saved.') : tr('Photo removed.'));
     } catch (e) {
       setPhotoError(messageFor(e));
     }
@@ -43,11 +44,11 @@ export function ProfileScreen(): ReactElement {
   async function save(): Promise<void> {
     setDone(null);
     if (!current || next.length < 12) {
-      setError('Enter your current password and a new one of at least 12 characters.');
+      setError(tr('Enter your current password and a new one of at least 12 characters.'));
       return;
     }
     if (next !== again) {
-      setError('The two new passwords don’t match.');
+      setError(tr('The two new passwords don’t match.'));
       return;
     }
     setBusy(true);
@@ -57,7 +58,7 @@ export function ProfileScreen(): ReactElement {
       setCurrent('');
       setNext('');
       setAgain('');
-      setDone('Password changed. You were logged out everywhere else.');
+      setDone(tr('Password changed. You were logged out everywhere else.'));
     } catch (e) {
       setError(messageFor(e));
     } finally {
@@ -67,7 +68,7 @@ export function ProfileScreen(): ReactElement {
 
   return (
     <>
-      <PageTitle crumb="My profile">My profile</PageTitle>
+      <PageTitle crumb={tr('My profile')}>{tr('My profile')}</PageTitle>
       <Panel>
         <PhotoPicker
           preview={photo}
@@ -78,26 +79,26 @@ export function ProfileScreen(): ReactElement {
         <FormError message={photoError} />
         <Notice message={photoDone} />
         <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8 }}>
-          <dt style={label}>Name</dt>
+          <dt style={label}>{tr('Name')}</dt>
           <dd style={value}>{me.name}</dd>
-          <dt style={label}>Email</dt>
+          <dt style={label}>{tr('Email')}</dt>
           <dd style={value}>{me.email}</dd>
-          <dt style={label}>Phone Number</dt>
-          <dd style={value}>{me.phone ?? '—'}</dd>
-          <dt style={label}>Role</dt>
+          <dt style={label}>{tr('Phone Number')}</dt>
+          <dd style={value}>{me.phone ? <span dir="ltr">{me.phone}</span> : '—'}</dd>
+          <dt style={label}>{tr('Role')}</dt>
           <dd style={value}>{roleLabel(me.role)}</dd>
-          <dt style={label}>Last log-in</dt>
-          <dd style={value}>{when(me.last_login_at)} (Lagos time)</dd>
+          <dt style={label}>{tr('Last log-in')}</dt>
+          <dd style={value}>{tr('{{time}} (Lagos time)', { time: when(me.last_login_at) })}</dd>
         </dl>
         <p style={{ margin: 0, fontSize: 13, color: color.text.secondary }}>
-          Your name, email, phone and role are changed by staff who manage accounts. Your photo is yours to change.
+          {tr('Your name, email, phone and role are changed by staff who manage accounts. Your photo is yours to change.')}
         </p>
       </Panel>
       <Panel>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Change password</h2>
-        <Form label="Change password" onSubmit={() => void save()}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{tr('Change password')}</h2>
+        <Form label={tr('Change password')} onSubmit={() => void save()}>
           <TextInput
-            label="Current password"
+            label={tr('Current password')}
             type="password"
             autoComplete="current-password"
             value={current}
@@ -105,16 +106,16 @@ export function ProfileScreen(): ReactElement {
             testId="pw-current"
           />
           <TextInput
-            label="New password"
+            label={tr('New password')}
             type="password"
             autoComplete="new-password"
             value={next}
             onChange={setNext}
-            hint={PASSWORD_HINT}
+            hint={tr(PASSWORD_HINT)}
             testId="pw-new"
           />
           <TextInput
-            label="New password again"
+            label={tr('New password again')}
             type="password"
             autoComplete="new-password"
             value={again}
@@ -124,7 +125,7 @@ export function ProfileScreen(): ReactElement {
           <FormError message={error} />
           <Notice message={done} />
           <Button type="submit" busy={busy} testId="pw-save">
-            Change password
+            {tr('Change password')}
           </Button>
         </Form>
       </Panel>

@@ -10,6 +10,8 @@
  *   here logs at all (request bodies hold passwords and codes).
  */
 
+import { tr } from './i18n';
+
 export class AdminApiError extends Error {
   constructor(
     readonly code: string,
@@ -173,15 +175,16 @@ export const adminApi: AdminApi = makeAdminApi();
 
 /** Words for the operator. Server messages are already written for people. */
 export function messageFor(error: unknown): string {
-  if (!(error instanceof AdminApiError)) return 'Something went wrong. Please try again.';
+  if (!(error instanceof AdminApiError)) return tr('Something went wrong. Please try again.');
   if (error.code === 'AUTH_429_RATE_LIMITED') {
     const wait = Number(error.details?.retry_after_seconds);
     if (Number.isFinite(wait) && wait > 0) {
       const minutes = Math.ceil(wait / 60);
       return wait < 90
-        ? `Too many attempts. Try again in ${wait} seconds.`
-        : `Too many attempts. Try again in ${minutes} minutes.`;
+        ? tr('Too many attempts. Try again in {{count}} seconds.', { count: wait })
+        : tr('Too many attempts. Try again in {{count}} minutes.', { count: minutes });
     }
   }
-  return error.message;
+  // Server messages are English sentences; known ones have translations (lib/locales).
+  return tr(error.message);
 }

@@ -92,6 +92,25 @@ Owner: "staff photo or phone should be stored"; then chose **phone required, no 
 
 **Known limit (decide before going live):** the console forwards requests, so the API sees the **console server's address** for every staff request. The audit log's "Address" column then shows the console server, and the sign-in rate limit (10 a minute per address) is shared by all staff. Fixing it means trusting the console's `X-Forwarded-For` header only from the console server's own address — a change to ADR-025 §4 ("proxy headers are not trusted") that needs a decision when the hosting is chosen.
 
+## Console languages, code boxes and toast (built 2026-10-26)
+
+From the Figma "Web Design" frames (language dropdown, "Password Changed" Light Toast,
+Two-Factor screen with six boxes and Confirm):
+
+- The console uses the same seven languages as the mobile app (ADR-053): English UK, English US,
+  French, Arabic (right to left), Spanish, Chinese (Simplified), Portuguese. Same pattern: the
+  English UK sentence is the key, English shows when a translation is missing, Arabic sets
+  `dir="rtl"`. Sentences the app already translates reuse the app wording.
+- The picker is on the log-in pages and in the top bar. The choice is kept in this browser only
+  (`localStorage`, read and written inside try/catch); otherwise the browser language is used.
+  It is a display choice, never sent to the server, and changes no permission.
+- Emails, passwords, phone numbers and codes always read left to right, also in Arabic.
+- The six code boxes accept typing, Backspace, arrow keys and pasting the whole code; the server
+  check of the code is unchanged.
+- The toast shows after a password reset (`/login?done=password`) and closes by itself.
+- Translations are machine-quality first drafts; like the app (ADR-053), a native speaker should
+  review them before launch.
+
 ## Not built yet
 
 - **A-3:** users, identity-check review, disputes/support, reversals with the approval rule, fraud alerts, outages, dashboard.

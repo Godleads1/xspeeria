@@ -9,6 +9,7 @@
 import type { ReactElement, ReactNode } from 'react';
 
 import { color, density } from '../../theme';
+import { tr } from '../../lib/i18n';
 import { EmptyState, ErrorState, LoadingState } from '../primitives';
 
 export interface Column<Row> {
@@ -25,7 +26,7 @@ export function DataTable<Row extends { id: string }>({
   columns,
   rows,
   status = 'ready',
-  emptyTitle = 'Nothing to show',
+  emptyTitle,
   emptyActionLabel,
   onEmptyAction,
   onRetry,
@@ -43,13 +44,13 @@ export function DataTable<Row extends { id: string }>({
   onEmptyAction?: () => void;
   onRetry?: () => void;
 }): ReactElement {
-  if (status === 'loading') return <LoadingState label={`Loading ${caption.toLowerCase()}`} />;
+  if (status === 'loading') return <LoadingState label={tr('Loading…')} />;
   if (status === 'error') {
-    return <ErrorState title={`Could not load ${caption.toLowerCase()}`} onRetry={onRetry} />;
+    return <ErrorState title={tr('Could not load this list')} onRetry={onRetry} />;
   }
   if (rows.length === 0) {
     return (
-      <EmptyState title={emptyTitle} actionLabel={emptyActionLabel} onAction={onEmptyAction} />
+      <EmptyState title={emptyTitle ?? tr('Nothing to show')} actionLabel={emptyActionLabel} onAction={onEmptyAction} />
     );
   }
 

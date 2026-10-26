@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useId } from 'react';
 
 import { color, radius, space } from '../theme';
+import { tr } from '../lib/i18n';
 
 /** Hidden visually, still read out by screen readers. */
 export const visuallyHidden: CSSProperties = {
@@ -83,10 +84,13 @@ export function TextInput({
   hint,
   placeholder,
   required = true,
+  ltr,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Always left to right (emails, phone numbers, passwords, codes), also in Arabic. */
+  ltr?: boolean;
   type?: 'text' | 'email' | 'password';
   autoComplete?: string;
   inputMode?: 'numeric' | 'email' | 'text';
@@ -105,6 +109,7 @@ export function TextInput({
           type={type}
           value={value}
           placeholder={placeholder}
+          dir={(ltr ?? (type === 'email' || type === 'password')) ? 'ltr' : undefined}
           required={required}
           autoComplete={autoComplete}
           inputMode={inputMode}
@@ -203,7 +208,7 @@ export function Button({
         alignSelf: block ? 'stretch' : 'flex-start',
       }}
     >
-      {busy ? 'Please wait…' : children}
+      {busy ? tr('Please wait…') : children}
     </button>
   );
 }
@@ -281,6 +286,7 @@ const inner: CSSProperties = {
   fontFamily: 'inherit',
   color: color.text.primary,
   backgroundColor: 'transparent',
+  textAlign: 'start',
 };
 
 export const input: CSSProperties = {
@@ -310,11 +316,11 @@ export function PageTitle({
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.sm }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {crumb ? (
-          <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: color.text.secondary }}>
+          <nav aria-label={tr('Breadcrumb')} style={{ fontSize: 13, color: color.text.secondary }}>
             <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-              Home
+              {tr('Home')}
             </Link>
-            {'  /  '}Admin Panel{'  /  '}
+            {'  /  '}{tr('Admin Panel')}{'  /  '}
             <span aria-current="page" style={{ color: color.brand.secondaryText }}>
               {crumb}
             </span>
