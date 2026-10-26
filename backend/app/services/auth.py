@@ -80,6 +80,7 @@ from app.providers.face import FaceCheckError, FaceCheckProvider, NoReferenceFac
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import PushSender
 from app.providers.sms import SmsSender
+from app.providers.tier_checks import TierCheckProvider
 from app.repositories.identity import IdentityRepository
 
 __all__ = [
@@ -252,6 +253,8 @@ class AuthRuntime:
     email: EmailSender | None = None
     #: ADR-054: the face check (Didit biometric authentication). None: face checks are off.
     face: FaceCheckProvider | None = None
+    #: ADR-058: BVN and proof-of-address checks for higher tiers. None: those checks are off.
+    tier_checks: TierCheckProvider | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(
