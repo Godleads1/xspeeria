@@ -15,8 +15,8 @@ import json
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
-from decimal import Decimal
+from datetime import datetime, timedelta
+from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 
 from fastapi import status
@@ -38,13 +38,17 @@ from app.domain.offer_rules import (
     parse_rate,
     rate_problem,
 )
-from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Offer
+from app.domain.search_rules import Search
+from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
+from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
 
 __all__ = ["Created", "OfferService", "offer_view", "replay_idempotent"]
 
 _logger = get_logger(__name__)
 CREATE_OPERATION = "offer.create"
+#: How far back the "Success" list looks (ADR-059 Decision 4: "recent" completed trades).
+SUCCESS_WINDOW = timedelta(days=7)
 
 
 def _err(code: str, message: str, http: int) -> AppError:
@@ -247,33 +251,148 @@ class OfferService:
     # --- read ---------------------------------------------------------------------------
 
     async def marketplace(
-        self, principal: Principal, source: str, target: str, limit: int, offset: int
+        self,
+        principal: Principal,
+        source: str,
+        target: str,
+        limit: int,
+        offset: int,
+        search: Search | None = None,
     ) -> list[dict[str, Any]]:
-        """Listed offers for one pair: active and within today's official rate, best first."""
+        """Listed offers for one pair: active and within today's official rate.
+
+        ``search`` (ADR-059 Decision 1) narrows by rate and amount and picks the order; with
+        none, the order is the original one (best rate, then oldest).
+        """
         try:
             pair = parse_pair(source, target)
         except OfferInputError as e:
             raise _input_error(e) from None
+        search = search or Search()
         ceiling = OFFICIAL_RATE[pair.foreign]
+        remaining = Offer.source_amount_minor - Offer.matched_amount_minor
+        # The amount filter and sort are in the FOREIGN currency. A buy request (paying naira)
+        # holds naira, so its foreign size is naira / rate; bounds are multiplied, not divided,
+        # so the comparison stays exact (NUMERIC, never float).
+        selling_naira = pair.source == "NGN"
+        unit = Decimal(10) ** (SCALE["NGN"] - SCALE[pair.foreign])
+        conditions = [
+            Offer.source_currency == pair.source,
+            Offer.target_currency == pair.target,
+            Offer.status.in_(ACTIVE_STATUSES),
+            Offer.desired_rate <= ceiling,
+        ]
+        if search.min_rate is not None:
+            conditions.append(Offer.desired_rate >= search.min_rate)
+        if search.max_rate is not None:
+            conditions.append(Offer.desired_rate <= search.max_rate)
+        for bound, above in (
+            (search.min_amount_minor, True),
+            (search.max_amount_minor, False),
+        ):
+            if bound is None:
+                continue
+            limit_expr = Offer.desired_rate * (bound * unit) if selling_naira else bound
+            conditions.append(remaining >= limit_expr if above else remaining <= limit_expr)
         # Best for the taker: buying foreign currency → lowest NGN rate; buying naira → highest.
-        best = Offer.desired_rate.asc() if pair.source != "NGN" else Offer.desired_rate.desc()
+        best = Offer.desired_rate.asc() if not selling_naira else Offer.desired_rate.desc()
+        size = remaining / Offer.desired_rate if selling_naira else remaining
+        order = {
+            "best_rate": (best, Offer.created_at.asc()),
+            "newest": (Offer.created_at.desc(),),
+            "oldest": (Offer.created_at.asc(),),
+            "largest": (size.desc(), best),
+            "smallest": (size.asc(), best),
+        }[search.sort]
         rows = (
             await self._db.scalars(
                 select(Offer)
-                .where(
-                    and_(
-                        Offer.source_currency == pair.source,
-                        Offer.target_currency == pair.target,
-                        Offer.status.in_(ACTIVE_STATUSES),
-                        Offer.desired_rate <= ceiling,
-                    )
-                )
-                .order_by(best, Offer.created_at.asc(), Offer.id.asc())
+                .where(and_(*conditions))
+                .order_by(*order, Offer.id.asc())
                 .limit(limit)
                 .offset(offset)
             )
         ).all()
         return [offer_view(o, principal.user_id) for o in rows]
+
+    async def completed_trades(
+        self,
+        source: str,
+        target: str,
+        limit: int,
+        offset: int,
+        search: Search,
+    ) -> list[dict[str, Any]]:
+        """Recent completed trades for one pair: rate, foreign amount and time only.
+
+        ADR-059 Decision 4 ("Success"): a record of real recent rates. Nobody is named and
+        nothing here can be taken. Only settlements in the COMPLETED phase count.
+        """
+        try:
+            pair = parse_pair(source, target)
+        except OfferInputError as e:
+            raise _input_error(e) from None
+        selling_naira = pair.source == "NGN"
+        unit = Decimal(10) ** (SCALE["NGN"] - SCALE[pair.foreign])
+        allocated = Match.allocated_amount_minor
+        conditions = [
+            Offer.source_currency == pair.source,
+            Offer.target_currency == pair.target,
+            Settlement.phase == "COMPLETED",
+            Settlement.updated_at >= self._clock() - SUCCESS_WINDOW,
+        ]
+        if search.min_rate is not None:
+            conditions.append(Match.agreed_rate >= search.min_rate)
+        if search.max_rate is not None:
+            conditions.append(Match.agreed_rate <= search.max_rate)
+        for bound, above in (
+            (search.min_amount_minor, True),
+            (search.max_amount_minor, False),
+        ):
+            if bound is None:
+                continue
+            limit_expr = Match.agreed_rate * (bound * unit) if selling_naira else bound
+            conditions.append(allocated >= limit_expr if above else allocated <= limit_expr)
+        size = allocated / Match.agreed_rate if selling_naira else allocated
+        best = Match.agreed_rate.asc() if not selling_naira else Match.agreed_rate.desc()
+        order = {
+            "best_rate": (best, Settlement.updated_at.desc()),
+            "newest": (Settlement.updated_at.desc(),),
+            "oldest": (Settlement.updated_at.asc(),),
+            "largest": (size.desc(), Settlement.updated_at.desc()),
+            "smallest": (size.asc(), Settlement.updated_at.desc()),
+        }[search.sort]
+        rows = (
+            await self._db.execute(
+                select(Match.allocated_amount_minor, Match.agreed_rate, Settlement.updated_at)
+                .join(Offer, Offer.id == Match.offer_id)
+                .join(Transaction, Transaction.match_id == Match.id)
+                .join(Settlement, Settlement.transaction_id == Transaction.id)
+                .where(and_(*conditions))
+                .order_by(*order, Settlement.id.asc())
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+        scale = SCALE[pair.foreign]
+        out = []
+        for minor, rate, completed_at in rows:
+            if selling_naira:
+                foreign = (Decimal(minor) / unit / rate).quantize(
+                    Decimal(1), rounding=ROUND_HALF_EVEN
+                )
+                minor_foreign = int(foreign)
+            else:
+                minor_foreign = int(minor)
+            out.append(
+                {
+                    "currency": pair.foreign,
+                    "amount": money_text(minor_foreign, scale),
+                    "rate": rate_text(rate),
+                    "completed_at": completed_at.isoformat(),
+                }
+            )
+        return out
 
     async def mine(self, principal: Principal) -> list[dict[str, Any]]:
         open_first = case((Offer.status.in_(ACTIVE_STATUSES), 0), else_=1)

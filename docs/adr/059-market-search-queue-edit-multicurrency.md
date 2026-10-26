@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **not built** |
+| **Status** | **APPROVED** (owner) — 2026-10-21; corrected 2026-10-26; **Decision 1 built 2026-10-26**, Decisions 2–5 not built |
 | **Decision ID** | DEC-066 |
 | **Authority** | Product owner, 2026-10-21, in a design session (answers to direct questions quoted below). Owner said "build it" after reviewing the design. |
 | **Design** | Claude Design canvas "Xspeeria Home — Search" (6 artboards: Home with search, Search results, Sort & filter, No results, Request in several currencies, Success) |
@@ -70,3 +70,13 @@ Owner: "a user who want to sell nigeria can choose another other currencies make
 
 - 2026-10-21 (owner, answering questions from the build): CAD chip left out; search extends `marketplace/listings`; Rule A applies in every country; whole-amount-only only for 2+ currency requests.
 - 2026-10-26 (owner): status filter is **Available now / Success**; Success lists completed trades (rate, amount, time; no names; no action); waiting offers stay in Available with their queue note.
+
+## Build notes — Decision 1 (2026-10-26)
+
+Choices made while building, for the owner to confirm or change:
+
+- **Success window: 7 days.** "Recent" completed trades = settlements in the COMPLETED phase whose last update is within 7 days (`SUCCESS_WINDOW` in `backend/app/services/offers.py`).
+- **Buy / Sell switch on the results screen.** Until Decision 2 (location rule) is built, the search shows a "Buy USD / Sell USD" switch, the same choice the Market tab gives today. Decision 2 will hide the side a user's country may not see.
+- **The search box** reads a currency (code, word or symbol: "usd", "pounds", "€") and an amount; the amount becomes "at least this much". Other words are ignored.
+- **API:** `GET /api/v1/marketplace/listings` gains `sort` (best_rate, newest, oldest, largest, smallest), `filter[status]` (available, success), `filter[min_rate]`, `filter[max_rate]`, `filter[min_amount]`, `filter[max_amount]`. With `filter[status]=success` the answer's `trades` list holds `{currency, amount, rate, completed_at}` and `items` is empty. Amount filters and sorts are in the foreign currency for both sides (a buy request's size is naira ÷ rate).
+- **Waiting for payment** labels and **Join queue** are part of Decision 4 and not built yet.

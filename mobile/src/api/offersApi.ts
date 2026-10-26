@@ -21,8 +21,21 @@ export interface ServerOffer {
   created_at: string;
 }
 
+/** ADR-059 "Success": a recent completed trade. No ids, no names; nothing to take. */
+export interface CompletedTrade {
+  /** The pair's foreign currency; `amount` is in it. */
+  currency: string;
+  amount: string;
+  /** NGN per 1 unit of `currency`, as agreed. */
+  rate: string;
+  completed_at: string;
+}
+
 export interface ListingsPage {
+  /** "available" (offers in `items`) or "success" (trades in `trades`). Older servers omit it. */
+  status?: 'available' | 'success';
   items: ServerOffer[];
+  trades?: CompletedTrade[];
   limit: number;
   offset: number;
   next_offset: number | null;
@@ -61,11 +74,38 @@ export interface NewOffer {
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
 
+/** ADR-059 search. Values are decimal text; the server checks every one again. */
+export interface SearchParams {
+  sort?: 'best_rate' | 'newest' | 'oldest' | 'largest' | 'smallest';
+  status?: 'available' | 'success';
+  min_rate?: string;
+  max_rate?: string;
+  min_amount?: string;
+  max_amount?: string;
+}
+
+/** `filter[x]=value` pairs for the listings endpoint (sort is a plain `sort=`). */
+export function searchQuery(params: SearchParams): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(params) as [keyof SearchParams, string | undefined][]) {
+    if (value === undefined || value === '') continue;
+    const name = key === 'sort' ? 'sort' : `filter[${key}]`;
+    parts.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
+  }
+  return parts.length ? `&${parts.join('&')}` : '';
+}
+
 export const offersApi = {
   listings: (token: string, pair: string, limit = 50, offset = 0, x: Extra = {}) =>
     apiRequest<ListingsPage>(
       'GET',
       `/api/v1/marketplace/listings?filter%5Bcurrency_pair%5D=${encodeURIComponent(pair)}&limit=${limit}&offset=${offset}`,
+      { token, ...x },
+    ),
+  search: (token: string, pair: string, params: SearchParams, limit = 50, x: Extra = {}) =>
+    apiRequest<ListingsPage>(
+      'GET',
+      `/api/v1/marketplace/listings?filter%5Bcurrency_pair%5D=${encodeURIComponent(pair)}&limit=${limit}&offset=0${searchQuery(params)}`,
       { token, ...x },
     ),
   publish: (token: string, offer: NewOffer, idempotencyKey: string, x: Extra = {}) =>

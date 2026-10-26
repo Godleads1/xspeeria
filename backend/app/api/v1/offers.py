@@ -30,6 +30,8 @@ from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.domain.kyc_rules import COUNTRIES
+from app.domain.offer_rules import OfferInputError, parse_pair
+from app.domain.search_rules import parse_search
 from app.domain.settlement_rules import JURISDICTION
 from app.models.marketplace import Offer
 from app.schemas.offers import (
@@ -178,7 +180,7 @@ async def create_offer(
 @marketplace_router.get(
     "/listings",
     response_model=ListingsResponse,
-    summary="Marketplace-active offers for one currency pair, best rate first",
+    summary="Search one currency pair: offers that can be taken, or recent completed trades",
 )
 async def listings(
     principal: Verified,
@@ -187,15 +189,49 @@ async def listings(
         str, Query(alias="filter[currency_pair]", pattern=r"^[A-Za-z]{3}/[A-Za-z]{3}$")
     ],
     listing_type: Annotated[Literal["offer"], Query(alias="filter[type]")] = "offer",
+    sort: Annotated[str | None, Query(max_length=16)] = None,
+    listing_status: Annotated[str | None, Query(alias="filter[status]", max_length=16)] = None,
+    min_rate: Annotated[str | None, Query(alias="filter[min_rate]", max_length=16)] = None,
+    max_rate: Annotated[str | None, Query(alias="filter[max_rate]", max_length=16)] = None,
+    min_amount: Annotated[str | None, Query(alias="filter[min_amount]", max_length=24)] = None,
+    max_amount: Annotated[str | None, Query(alias="filter[max_amount]", max_length=24)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0, le=10_000)] = 0,
 ) -> Any:
-    """Requests (``filter[type]=request``) do not exist yet; only offers are listed."""
+    """ADR-059 Decision 1. Every filter and sort is checked on the server (allow-list, exact
+    decimals, lower bound not above upper). ``filter[status]=success`` lists recent completed
+    trades (rate, amount, time — never who traded)."""
     source, target = currency_pair.split("/")
-    items = await service.marketplace(principal, source, target, limit + 1, offset)
+    try:
+        pair = parse_pair(source, target)
+        search = parse_search(
+            pair,
+            sort=sort,
+            status=listing_status,
+            min_rate=min_rate,
+            max_rate=max_rate,
+            min_amount=min_amount,
+            max_amount=max_amount,
+        )
+    except OfferInputError as e:
+        raise AppError(e.code, e.message, status_code=422) from None
+    if search.status == "success":
+        trades = await service.completed_trades(pair.source, pair.target, limit + 1, offset, search)
+        more = len(trades) > limit
+        return {
+            "status": "success",
+            "items": [],
+            "trades": trades[:limit],
+            "limit": limit,
+            "offset": offset,
+            "next_offset": offset + limit if more else None,
+        }
+    items = await service.marketplace(principal, source, target, limit + 1, offset, search)
     more = len(items) > limit
     return {
+        "status": "available",
         "items": items[:limit],
+        "trades": [],
         "limit": limit,
         "offset": offset,
         "next_offset": offset + limit if more else None,

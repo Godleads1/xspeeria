@@ -59,6 +59,8 @@ export const SERVER_MESSAGES: readonly string[] = [
   k("That offer was not found."),
   k("That payout account was not found."),
   k("That session was not found."),
+  k("That sort order is not available."),
+  k("That status filter is not available."),
   k("The 30 minutes to choose payout accounts have passed, so this deal was cancelled."),
   k("The amount must be more than zero."),
   k("The escrow steps for this deal have not started."),
