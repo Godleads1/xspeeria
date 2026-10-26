@@ -8,20 +8,27 @@
  */
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { messageFor } from "../../api/client";
+import { ApiError, messageFor } from "../../api/client";
 import type { ServerOffer } from "../../api/offersApi";
 import { Icon } from "../../components/icons";
 import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTone } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
-import { formatHundredths } from "./money";
+import { formatHundredths, parseToHundredths } from "./money";
 import { exactHundredths, foreignMinorFor, groupedRate } from "./serverOffers";
 import { tr, k } from "../../i18n";
 
 export interface MyOffersSource {
   list(): Promise<ServerOffer[]>;
   withdraw(offerId: string): Promise<ServerOffer>;
+  /** ADR-059 Decision 3: new amount (foreign currency, hundredths) and rate (hundredths). */
+  edit?(offer: ServerOffer, amountMinor: number, rateHundredths: number): Promise<ServerOffer>;
+}
+
+/** Editable only while nobody has taken any of it (ADR-059 Decision 3). */
+export function canEdit(o: ServerOffer): boolean {
+  return o.status === "open" && /^0+(\.0+)?$/.test(o.matched_amount);
 }
 
 const STATUS: Record<ServerOffer["status"], { label: string; tone: StatusTone }> = {
@@ -55,6 +62,8 @@ export function MyOffersScreen({
   const [confirming, setConfirming] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** The offer being edited, with the amount (foreign currency) and rate as typed. */
+  const [editing, setEditing] = useState<{ id: string; amount: string; rate: string } | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -79,6 +88,30 @@ export function MyOffersScreen({
     } finally {
       setWorking(null);
       setConfirming(null);
+    }
+  };
+
+  const save = async (o: ServerOffer): Promise<void> => {
+    if (!editing || !source.edit) return;
+    const amountMinor = parseToHundredths(editing.amount);
+    const rateHundredths = parseToHundredths(editing.rate);
+    if (amountMinor === null || rateHundredths === null) {
+      setNotice(tr("Enter the amount and the rate as numbers, e.g. 1000.00."));
+      return;
+    }
+    setWorking(o.offer_id);
+    setNotice(null);
+    try {
+      const updated = await source.edit(o, amountMinor, rateHundredths);
+      setOffers((list) => (list ?? []).map((x) => (x.offer_id === o.offer_id ? updated : x)));
+      setEditing(null);
+      setNotice(updated.source_currency === "NGN" ? tr("Request updated.") : tr("Offer updated."));
+    } catch (e) {
+      setNotice(messageFor(e));
+      // Someone may have started a deal meanwhile: show the server's current state.
+      if (e instanceof ApiError && e.status === 409) load();
+    } finally {
+      setWorking(null);
     }
   };
 
@@ -149,19 +182,75 @@ export function MyOffersScreen({
                         source_currency: foreign,
                       })}
                 </Text>
-                {active ? (
-                  <Pressable
-                    testID={`my-offer-${o.offer_id}-withdraw`}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: working !== null, busy: working === o.offer_id }}
-                    disabled={working !== null}
-                    onPress={() => (asking ? void withdraw(o.offer_id) : setConfirming(o.offer_id))}
-                    style={({ pressed }) => [styles.withdraw, asking ? styles.withdrawConfirm : null, pressed ? styles.pressed : null]}
-                  >
-                    <Text style={[styles.withdrawLabel, asking ? styles.withdrawConfirmLabel : null]}>
-                      {working === o.offer_id ? tr("Withdrawing…") : asking ? tr("Tap again to withdraw") : tr("Withdraw")}
-                    </Text>
-                  </Pressable>
+                {editing?.id === o.offer_id ? (
+                  <View testID={`my-offer-${o.offer_id}-form`} style={styles.form}>
+                    <Text style={styles.formLabel}>{tr("Amount ({{currency}})", { currency: foreign })}</Text>
+                    <TextInput
+                      testID={`my-offer-${o.offer_id}-amount`}
+                      accessibilityLabel={tr("Amount ({{currency}})", { currency: foreign })}
+                      value={editing.amount}
+                      onChangeText={(t) => setEditing({ ...editing, amount: t.replace(/[^0-9.,]/g, "").slice(0, 16) })}
+                      keyboardType="decimal-pad"
+                      inputMode="decimal"
+                      style={styles.input}
+                    />
+                    <Text style={styles.formLabel}>{tr("Rate (NGN per {{currency}})", { currency: foreign })}</Text>
+                    <TextInput
+                      testID={`my-offer-${o.offer_id}-rate`}
+                      accessibilityLabel={tr("Rate (NGN per {{currency}})", { currency: foreign })}
+                      value={editing.rate}
+                      onChangeText={(t) => setEditing({ ...editing, rate: t.replace(/[^0-9.,]/g, "").slice(0, 16) })}
+                      keyboardType="decimal-pad"
+                      inputMode="decimal"
+                      style={styles.input}
+                    />
+                    <View style={styles.actions}>
+                      <Pressable
+                        testID={`my-offer-${o.offer_id}-save`}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: working !== null, busy: working === o.offer_id }}
+                        disabled={working !== null}
+                        onPress={() => void save(o)}
+                        style={({ pressed }) => [styles.save, pressed ? styles.pressed : null]}
+                      >
+                        <Text style={styles.saveLabel}>{working === o.offer_id ? tr("Saving…") : tr("Save changes")}</Text>
+                      </Pressable>
+                      <Pressable testID={`my-offer-${o.offer_id}-cancel`} accessibilityRole="button" onPress={() => setEditing(null)} style={styles.cancel}>
+                        <Text style={styles.cancelLabel}>{tr("Cancel")}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
+                {active && editing?.id !== o.offer_id ? (
+                  <View style={styles.actions}>
+                    {source.edit && canEdit(o) ? (
+                      <Pressable
+                        testID={`my-offer-${o.offer_id}-edit`}
+                        accessibilityRole="button"
+                        disabled={working !== null}
+                        onPress={() => {
+                          setConfirming(null);
+                          setNotice(null);
+                          setEditing({ id: o.offer_id, amount: request ? inForeign(o.source_amount) : grouped(o.source_amount), rate: groupedRate(o.desired_rate) });
+                        }}
+                        style={({ pressed }) => [styles.edit, pressed ? styles.pressed : null]}
+                      >
+                        <Text style={styles.editLabel}>{tr("Edit")}</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      testID={`my-offer-${o.offer_id}-withdraw`}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: working !== null, busy: working === o.offer_id }}
+                      disabled={working !== null}
+                      onPress={() => (asking ? void withdraw(o.offer_id) : setConfirming(o.offer_id))}
+                      style={({ pressed }) => [styles.withdraw, asking ? styles.withdrawConfirm : null, pressed ? styles.pressed : null]}
+                    >
+                      <Text style={[styles.withdrawLabel, asking ? styles.withdrawConfirmLabel : null]}>
+                        {working === o.offer_id ? tr("Withdrawing…") : asking ? tr("Tap again to withdraw") : tr("Withdraw")}
+                      </Text>
+                    </Pressable>
+                  </View>
                 ) : null}
               </View>
             );
@@ -188,6 +277,16 @@ const styles = themed(() => ({
   rowTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   strong: { ...typography.body, ...brandWeight("700"), color: color.text.primary, flexShrink: 1 },
   line: { ...typography.caption, fontSize: 13, color: color.text.secondary },
+  actions: { flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" },
+  edit: { minHeight: 40, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: color.brand.primary, justifyContent: "center" },
+  editLabel: { ...typography.caption, fontSize: 14, color: color.brand.primary },
+  form: { gap: 6, marginTop: 6 },
+  formLabel: { ...typography.caption, fontSize: 12, color: color.text.secondary },
+  input: { ...typography.body, minHeight: 44, borderWidth: 1, borderColor: color.border.subtle, borderRadius: 10, paddingHorizontal: 12, color: color.text.primary },
+  save: { minHeight: 40, paddingHorizontal: 16, borderRadius: 10, backgroundColor: color.brand.primary, justifyContent: "center" },
+  saveLabel: { ...typography.caption, ...brandWeight("700"), fontSize: 14, color: color.text.onFill },
+  cancel: { minHeight: 40, paddingHorizontal: 14, justifyContent: "center" },
+  cancelLabel: { ...typography.caption, fontSize: 14, color: color.text.secondary },
   withdraw: {
     alignSelf: "flex-start",
     marginTop: 6,

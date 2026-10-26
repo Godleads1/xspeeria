@@ -130,6 +130,9 @@ export const offersApi = {
       body: { desired_rate: desiredRate },
       ...x,
     }),
+  /** ADR-059 Decision 3: change the rate and amount (amount in the offer's own currency). */
+  edit: (token: string, offerId: string, change: { desired_rate: string; source_amount: string }, x: Extra = {}) =>
+    apiRequest<ServerOffer>('PATCH', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, body: change, ...x }),
   get: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('GET', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),
   /** Take some or all of an offer. Needs a `trade.accept` step-up token (ADR-026/031). */

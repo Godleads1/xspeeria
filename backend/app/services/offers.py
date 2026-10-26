@@ -29,6 +29,7 @@ from app.core.logging import get_logger
 from app.core.money import from_minor
 from app.domain.offer_rules import (
     CURRENCY_DEF_VERSION,
+    FORMAT_ERROR,
     IDEMPOTENCY_TTL,
     OFFICIAL_RATE,
     SCALE,
@@ -452,14 +453,37 @@ class OfferService:
         self,
         principal: Principal,
         offer_id: uuid.UUID,
-        desired_rate: str,
+        desired_rate: str | None,
+        source_amount: str | None = None,
     ) -> dict[str, Any]:
-        try:
-            rate = parse_rate(desired_rate)
-        except OfferInputError as e:
-            raise _input_error(e) from None
+        """Edit my offer's rate and/or amount (ADR-029; ADR-059 Decision 3).
+
+        Only while nobody has taken any of it. Every check a new offer gets runs again (amount,
+        minimum, rate, official-rate ceiling); ownership and state are read under the row lock
+        that taking an offer also uses, so an edit and a take can never both win.
+        """
+        if desired_rate is None and source_amount is None:
+            raise _input_error(OfferInputError(FORMAT_ERROR, "Change the rate or the amount."))
         offer = await self._owned_for_update(principal, offer_id)
-        if offer.status != "open" or offer.matched_amount_minor != 0:
+        try:
+            rate = parse_rate(desired_rate) if desired_rate is not None else offer.desired_rate
+            amount_minor = (
+                parse_amount_minor(source_amount, offer.source_currency)
+                if source_amount is not None
+                else offer.source_amount_minor
+            )
+        except OfferInputError as e:
+            await self._db.rollback()
+            raise _input_error(e) from None
+        if offer.matched_amount_minor != 0:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_OFFER_ALREADY_MATCHED",
+                "Someone has started a deal on this offer, so it can’t be changed now. "
+                "You can still withdraw what’s left.",
+                status.HTTP_409_CONFLICT,
+            )
+        if offer.status != "open":
             await self._db.rollback()
             raise _err(
                 "RES_409_OFFER_ALREADY_MATCHED",
@@ -471,11 +495,33 @@ class OfferService:
         if problem is not None:
             await self._db.rollback()
             raise _input_error(problem)
-        offer.desired_rate = rate
-        offer.version += 1
-        offer.rate_updated_at = self._clock()
+        changed = [
+            name
+            for name, differs in (
+                ("rate", rate != offer.desired_rate),
+                ("amount", amount_minor != offer.source_amount_minor),
+            )
+            if differs
+        ]
+        if changed:
+            if "rate" in changed:
+                offer.desired_rate = rate
+                offer.rate_updated_at = self._clock()
+            offer.source_amount_minor = amount_minor
+            offer.version += 1
         view = offer_view(offer, principal.user_id)
         await self._db.commit()
+        if changed:
+            # Audit trail: who, which offer, what kind of change, and the new version.
+            _logger.info(
+                "offer_edited",
+                extra={
+                    "user_id": str(principal.user_id),
+                    "offer_id": str(offer.id),
+                    "changed": ",".join(changed),
+                    "version": offer.version,
+                },
+            )
         return view
 
     async def withdraw(self, principal: Principal, offer_id: uuid.UUID) -> dict[str, Any]:
