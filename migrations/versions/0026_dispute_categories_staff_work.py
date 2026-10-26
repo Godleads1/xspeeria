@@ -63,6 +63,9 @@ def upgrade() -> None:
     op.create_index(
         "uq_dispute_categories_name", "dispute_categories", [sa.text("lower(name)")], unique=True
     )
+    # The app role reads, adds and changes categories; never deletes (old disputes point at them).
+    op.execute("REVOKE ALL ON dispute_categories FROM PUBLIC")
+    op.execute("GRANT SELECT, INSERT, UPDATE ON dispute_categories TO xspeeria_app")
     table = sa.table(
         "dispute_categories",
         sa.column("code", sa.String),
