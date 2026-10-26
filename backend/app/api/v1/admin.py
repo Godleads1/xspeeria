@@ -27,6 +27,7 @@ from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime
+from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 
@@ -471,3 +472,54 @@ async def dashboard(
             status_code=422,
             details={"field": "month"},
         ) from None
+
+
+# --- customers (ADR-062) -------------------------------------------------------------------------
+
+
+class CustomerChange(_Strict):
+    reason: str = Field(min_length=5, max_length=300)
+
+
+@router.get("/users", summary="Customers (users.read)")
+async def list_customers(
+    staff: Staff,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    status_in: Annotated[
+        Literal["active", "suspended", "closed"] | None, Query(alias="status")
+    ] = None,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await CustomerAdminService(db, runtime.clock).list(
+        staff, search=q or None, status_in=status_in, offset=offset, limit=limit
+    )
+
+
+@router.get("/users/stats", summary="Customer counts (users.read)")
+async def customer_stats(
+    staff: Staff,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> Any:
+    return await CustomerAdminService(db, runtime.clock).stats(staff)
+
+
+@router.post(
+    "/users/{user_id}/{action}",
+    summary="Suspend, reactivate or close a customer (Super Admin only)",
+)
+async def change_customer(
+    user_id: uuid.UUID,
+    action: CustomerAction,
+    body: CustomerChange,
+    staff: Staff,
+    info: Info,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> Any:
+    return await CustomerAdminService(db, runtime.clock).change(
+        staff, user_id, action, body.reason, info
+    )

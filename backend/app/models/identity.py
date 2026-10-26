@@ -45,7 +45,7 @@ __all__ = [
     "VerificationCheck",
 ]
 
-USER_STATUSES = ("pending_verification", "active")
+USER_STATUSES = ("pending_verification", "active", "suspended", "closed")
 REVOKE_REASONS = ("logout", "revoked_by_user", "token_reuse", "replaced")
 
 E164_CHECK = r"phone ~ '^\+[1-9][0-9]{7,14}$'"
@@ -58,21 +58,26 @@ class User(Base):
     __table_args__ = (
         CheckConstraint(E164_CHECK, name="phone_e164"),
         CheckConstraint("email = lower(email) AND email <> ''", name="email_normalised"),
-        CheckConstraint("status IN ('pending_verification', 'active')", name="status_allowed"),
+        CheckConstraint(
+            "status IN ('pending_verification', 'active', 'suspended', 'closed')",
+            name="status_allowed",
+        ),
         CheckConstraint("failed_pin_attempts >= 0", name="failed_pin_attempts_non_negative"),
         CheckConstraint(
-            "(status = 'active') = (phone_verified_at IS NOT NULL)", name="active_iff_verified"
+            "(status = 'pending_verification') = (phone_verified_at IS NULL)",
+            name="active_iff_verified",
         ),
         # A phone belongs to one account at a time, pending or not; a pending sign-up for a
         # number is replaced by a new one, never duplicated.
         Index("uq_users_phone", "phone", unique=True),
-        # Email is unique among active accounts only, so an abandoned sign-up cannot block
-        # the owner of that address from registering.
+        # Email is unique among finished accounts (active, suspended or closed), so an
+        # abandoned sign-up cannot block the owner of that address from registering, and a
+        # new sign-up can never take a suspended customer's address (ADR-062).
         Index(
             "uq_users_email_active",
             "email",
             unique=True,
-            postgresql_where=text("status = 'active'"),
+            postgresql_where=text("status <> 'pending_verification'"),
         ),
     )
 
@@ -109,7 +114,7 @@ class AuthSession(Base):
         CheckConstraint(
             "revoke_reason IS NULL OR revoke_reason IN "
             "('logout', 'revoked_by_user', 'token_reuse', 'replaced', 'pin_change', 'pin_reset', "
-            "'unlock_failed')",
+            "'unlock_failed', 'account_suspended', 'account_closed')",
             name="revoke_reason_allowed",
         ),
         CheckConstraint(

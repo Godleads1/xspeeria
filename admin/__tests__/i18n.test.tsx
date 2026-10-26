@@ -13,6 +13,7 @@ import { LanguagePicker } from '../components/LanguagePicker';
 import { CodeBoxes } from '../components/CodeBoxes';
 import { Toast } from '../components/Toast';
 import { TAB_LABEL } from '../components/screens/DashboardScreen';
+import { CONFIRM, DONE, QUESTION } from '../components/screens/UsersScreen';
 import ar from '../lib/locales/ar.json';
 import es from '../lib/locales/es.json';
 import fr from '../lib/locales/fr.json';
@@ -43,7 +44,7 @@ function shownSentences(): Set<string> {
     for (const m of text.matchAll(/\btr\(\s*'((?:[^'\\]|\\.)*)'/g)) found.add(m[1].replace(/\\'/g, "'"));
   }
   for (const l of [...MODULES, ...ACTIONS, ...NAV_ITEMS, ...PLANNED_DESTINATIONS]) found.add(l.label);
-  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL)]) found.add(l);
+  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL), ...Object.values(QUESTION), ...Object.values(CONFIRM), ...Object.values(DONE)]) found.add(l);
   return found;
 }
 

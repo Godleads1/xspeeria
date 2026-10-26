@@ -486,4 +486,5 @@ class TestPackageRegistration:
             "0022_tier_checks.py",  # higher-tier checks (ADR-058)
             "0023_admin_staff.py",  # admin console staff (ADR-060)
             "0024_staff_phone_photo.py",  # staff phone and photo (ADR-060)
+            "0025_customer_suspend_close.py",  # suspend / close customers (ADR-062)
         ]

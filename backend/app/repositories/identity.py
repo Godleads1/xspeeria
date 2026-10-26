@@ -51,6 +51,11 @@ class IdentityRepository:
             stmt = stmt.with_for_update()
         return (await self._db.execute(stmt)).scalar_one_or_none()
 
+    async def user_holding_email(self, email: str) -> User | None:
+        """The finished account (active, suspended or closed) that holds this email, if any."""
+        stmt = select(User).where(User.email == email, User.status != "pending_verification")
+        return (await self._db.execute(stmt)).scalar_one_or_none()
+
     async def user_by_id(self, user_id: uuid.UUID) -> User | None:
         return await self._db.get(User, user_id)
 

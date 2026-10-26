@@ -40,6 +40,7 @@ from app.domain.offer_rules import (
     rate_problem,
 )
 from app.domain.search_rules import Search
+from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import (
     ACTIVE_STATUSES,
@@ -428,6 +429,9 @@ class OfferService:
             # ADR-059 Decision 5: a request's other currencies hide while one is being paid.
             group_visible(),
             Offer.desired_rate <= ceiling,
+            # ADR-062: a suspended or closed customer's offers leave the market (and come back
+            # if a suspension is lifted).
+            Offer.user_id.in_(select(User.id).where(User.status == "active")),
         ]
         if search.min_rate is not None:
             conditions.append(Offer.desired_rate >= search.min_rate)

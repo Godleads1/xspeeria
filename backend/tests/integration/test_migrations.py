@@ -91,8 +91,9 @@ APPROVED_TABLES = {
 # face check replaces the authenticator (ADR-054) -> "0017"; gender from the ID (ADR-055) -> "0018";
 # disputes and support cases (ADR-057) -> "0019"; waiting queue (ADR-059) -> "0020";
 # requests in several currencies (ADR-059) -> "0021"; tier checks (ADR-058) -> "0022";
-# admin console staff (ADR-060) -> "0023"; staff phone and photo (ADR-060) -> "0024".
-EXPECTED_HEAD = "0024"
+# admin console staff (ADR-060) -> "0023"; staff phone and photo (ADR-060) -> "0024";
+# customers can be suspended or closed (ADR-062) -> "0025".
+EXPECTED_HEAD = "0025"
 
 
 def _config(database_url: str) -> Config:

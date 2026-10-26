@@ -50,7 +50,7 @@ ALLOW = may; DENY = may not; CONDITIONAL = may, under the condition given.
 | Read the audit log | DENY | ALLOW | ALLOW | ALLOW | `audit.read` (Compliance reviews Ops actions, COM §14.1) |
 | Edit or delete audit entries | DENY | DENY | DENY | DENY | The database refuses UPDATE and DELETE for everyone |
 | Read users | ALLOW | ALLOW | ALLOW | ALLOW | Built in A-3 |
-| Suspend users (`users.update`) | DENY | DENY | DENY | ALLOW | Built in A-3 |
+| Suspend users (`users.update`) | DENY | DENY | DENY | ALLOW | Built (ADR-062: Super Admin only) |
 | Review identity checks (`kyc.*`) | DENY | ALLOW | read only | ALLOW | Built in A-3; four-eyes for reversing a rejection (COM §14.1) |
 | Disputes (`disputes.*`) | read, create, update | read | read | ALLOW | Built in A-3 |
 | Reversals (`reversals.*`) | DENY | read | read, create, update, approve | ALLOW | Built in A-3; never approve own request (ADR-051 Decision 4) |

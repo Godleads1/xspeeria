@@ -55,6 +55,7 @@ from app.domain.payout_rules import (
     PREPARATION_WINDOW,
     counter_amount_minor,
 )
+from app.models.identity import User
 from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import Settlement, Transaction
@@ -227,6 +228,11 @@ class MatchService:
             raise _err("RES_404_NOT_FOUND", "That offer was not found.", status.HTTP_404_NOT_FOUND)
         # Read now: a rollback below expires the loaded row.
         currency, scale = offer.source_currency, offer.scale
+        owner_status = await self._db.scalar(select(User.status).where(User.id == offer.user_id))
+        if owner_status != "active":
+            # ADR-062: the owner is suspended or closed; looks the same as a missing offer.
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That offer was not found.", status.HTTP_404_NOT_FOUND)
         if offer.user_id == principal.user_id:
             await self._db.rollback()
             raise _err(

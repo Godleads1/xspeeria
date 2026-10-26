@@ -124,11 +124,11 @@ export function StaffScreen({
 
   const actionsFor = (s: StaffView): RowAction[] => {
     if (!canActOn(s)) return [];
-    const out: RowAction[] = [{ label: 'Edit', testId: `edit-${s.id}`, onSelect: () => setEditing(s) }];
+    const out: RowAction[] = [{ label: tr('Edit'), testId: `edit-${s.id}`, onSelect: () => setEditing(s) }];
     out.push(
       s.status === 'active'
-        ? { label: 'Disable', danger: true, testId: `disable-${s.id}`, onSelect: () => void update(s, { status: 'disabled' }) }
-        : { label: 'Enable', testId: `enable-${s.id}`, onSelect: () => void update(s, { status: 'active' }) },
+        ? { label: tr('Disable'), danger: true, testId: `disable-${s.id}`, onSelect: () => void update(s, { status: 'disabled' }) }
+        : { label: tr('Enable'), testId: `enable-${s.id}`, onSelect: () => void update(s, { status: 'active' }) },
     );
     return out;
   };
@@ -143,7 +143,7 @@ export function StaffScreen({
     {
       key: 'actions',
       header: tr('ACTION'),
-      render: (s) => <RowMenu label={`Actions for ${s.name}`} actions={actionsFor(s)} testId={`menu-${s.id}`} />,
+      render: (s) => <RowMenu label={tr('Actions for {{name}}', { name: s.name })} actions={actionsFor(s)} testId={`menu-${s.id}`} />,
     },
   ];
 
