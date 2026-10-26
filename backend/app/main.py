@@ -24,7 +24,17 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, disputes, health, kyc, notifications, offers, push, settlement
+from app.api.v1 import (
+    auth,
+    disputes,
+    health,
+    kyc,
+    limits,
+    notifications,
+    offers,
+    push,
+    settlement,
+)
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -300,6 +310,7 @@ def create_app(
     application.include_router(kyc.webhooks_router)
     application.include_router(notifications.router)
     application.include_router(disputes.router)
+    application.include_router(limits.router)
     application.include_router(push.router)
     application.include_router(settlement.router)
     application.include_router(settlement.webhooks_router)

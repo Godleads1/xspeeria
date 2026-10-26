@@ -39,6 +39,7 @@ from sqlalchemy import delete, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
 from app.domain.offer_rules import (
@@ -60,6 +61,7 @@ from app.models.settlement import Settlement, Transaction
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
 from app.services.groups import lock_group_for_take
+from app.services.limits import check_new_deal
 from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
 from app.services.queue import active_turn, mark_taken, on_capacity_returned
@@ -195,10 +197,12 @@ class MatchService:
         db: AsyncSession,
         clock: Callable[[], datetime],
         bank: PretendBank | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self._db = db
         self._clock = clock
         self._bank = bank
+        self._settings = settings
 
     async def accept(
         self,
@@ -297,6 +301,15 @@ class MatchService:
         # currency locks the others (the same naira cannot fund two deals).
         try:
             await lock_group_for_take(self._db, offer, amount, now)
+            # ADR-058: neither person may go over their daily or monthly limit.
+            await check_new_deal(
+                self._db,
+                offer,
+                principal.user_id,
+                amount,
+                now,
+                self._settings or get_settings(),
+            )
         except AppError:
             await self._db.rollback()
             raise

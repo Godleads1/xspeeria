@@ -234,8 +234,9 @@ async def test_without_kyc_offers_are_refused(no_kyc_env: Env) -> None:
     user = await _user(no_kyc_env)
     r = await user.publish()
     assert r.status_code == 403 and _code(r) == "AUTH_403_KYC_REQUIRED"
+    # ADR-058 Tier 0: signed up but not verified may look, not trade.
     r = await user.listings()
-    assert r.status_code == 403
+    assert r.status_code == 200 and r.json()["items"] == []
 
 
 async def test_kyc_bypass_outside_local_is_refused() -> None:
