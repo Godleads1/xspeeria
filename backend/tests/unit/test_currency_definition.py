@@ -365,6 +365,7 @@ class TestPackageRegistration:
             "dispute_categories",
             "reversals",
             "service_outages",
+            "adverts",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -412,7 +413,7 @@ class TestPackageRegistration:
         assert result.returncode == 0, result.stderr
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
-            "['auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
+            "['adverts', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
             "'currency_definitions', 'dispute_categories', 'dispute_messages', 'disputes', "
             "'idempotency_records', "
             "'kyc_cases', 'kyc_webhook_events', "
@@ -495,4 +496,5 @@ class TestPackageRegistration:
             "0026_dispute_categories_staff_work.py",  # dispute categories, staff work (ADR-063)
             "0027_reversals.py",  # reversals (ADR-065)
             "0028_service_outages.py",  # service outage notices (ADR-066)
+            "0029_adverts.py",  # adverts in the app slot (ADR-067)
         ]

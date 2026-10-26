@@ -2,8 +2,7 @@
 
 /**
  * Figma "Settings": a list of setup pages. Only those the signed-in role can open are shown
- * (display only; each page's server calls check again). Advert Placement Setup comes with
- * advert upload (ADR-056), so it is not listed yet.
+ * (display only; each page's server calls check again). Advert Placement Setup: ADR-067.
  */
 
 import type { ReactElement } from 'react';
@@ -19,6 +18,7 @@ export function SettingsScreen(): ReactElement {
   const items = [
     { href: '/roles', label: tr('Role Setup'), show: can('roles.read') },
     { href: '/settings/dispute-categories', label: tr('Dispute category Setup'), show: can('disputes.read') },
+    { href: '/settings/adverts', label: tr('Advert Placement Setup'), show: can('adverts.read') },
   ].filter((i) => i.show);
   return (
     <>

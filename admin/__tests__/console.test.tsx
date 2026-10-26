@@ -16,7 +16,7 @@ import { StaffScreen } from '../components/screens/StaffScreen';
 import { AdminApiError, makeAdminApi, messageFor, type AdminApi, type Me, type RoleView, type StaffView } from '../lib/api';
 import { SessionProvider } from '../lib/session';
 
-const ALL = ['dashboard', 'users', 'kyc', 'disputes', 'reversals', 'fraud_alerts', 'outages', 'staff', 'roles', 'audit'].flatMap(
+const ALL = ['dashboard', 'users', 'kyc', 'disputes', 'reversals', 'fraud_alerts', 'outages', 'adverts', 'staff', 'roles', 'audit'].flatMap(
   (m) => ['read', 'create', 'update', 'delete', 'approve'].map((a) => `${m}.${a}`),
 );
 

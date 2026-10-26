@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import struct
 
-__all__ = ["MAX_PHOTO_BYTES", "PhotoError", "clean_photo"]
+__all__ = ["MAX_PHOTO_BYTES", "PhotoError", "clean_photo", "image_size"]
 
 MAX_PHOTO_BYTES = 5 * 1024 * 1024  # ADR-049: 5 MB for a profile photo
 
@@ -155,3 +155,49 @@ def _webp(data: bytes) -> bytes:
     if not found_image:
         raise _bad()
     return b"RIFF" + struct.pack("<I", 4 + len(body)) + b"WEBP" + bytes(body)
+
+
+# --- size in pixels (adverts, ADR-067) -----------------------------------------------------
+
+_SOF = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+
+
+def image_size(data: bytes) -> tuple[int, int]:
+    """Width and height read from the file's own header (JPEG, PNG or WebP)."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n") and data[12:16] == b"IHDR" and len(data) >= 24:
+        w, h = struct.unpack(">II", data[16:24])
+        return _checked(w, h)
+    if data.startswith(b"\xff\xd8\xff"):
+        i, n = 2, len(data)
+        while i + 4 <= n:
+            if data[i] != 0xFF:
+                raise _bad()
+            marker = data[i + 1]
+            if marker in _STANDALONE or marker == 0xFF:
+                i += 1 if marker == 0xFF else 2
+                continue
+            (length,) = struct.unpack(">H", data[i + 2 : i + 4])
+            if marker in _SOF and i + 9 <= n:
+                h, w = struct.unpack(">HH", data[i + 5 : i + 9])
+                return _checked(w, h)
+            i += 2 + length
+        raise _bad()
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP" and len(data) >= 30:
+        chunk = data[12:16]
+        if chunk == b"VP8X":
+            w = 1 + int.from_bytes(data[24:27], "little")
+            h = 1 + int.from_bytes(data[27:30], "little")
+            return _checked(w, h)
+        if chunk == b"VP8 " and data[23:26] == b"\x9d\x01\x2a":
+            w, h = struct.unpack("<HH", data[26:30])
+            return _checked(w & 0x3FFF, h & 0x3FFF)
+        if chunk == b"VP8L" and data[20] == 0x2F:
+            b = int.from_bytes(data[21:25], "little")
+            return _checked((b & 0x3FFF) + 1, ((b >> 14) & 0x3FFF) + 1)
+    raise _bad()
+
+
+def _checked(w: int, h: int) -> tuple[int, int]:
+    if not (0 < w <= 20_000 and 0 < h <= 20_000):
+        raise _bad()
+    return w, h

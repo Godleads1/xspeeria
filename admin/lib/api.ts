@@ -315,6 +315,38 @@ export interface OutageInput {
   expected_end_at?: string | null;
 }
 
+export type AdvertState = 'showing' | 'scheduled' | 'ended' | 'off';
+export interface Advert {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  starts_at: string;
+  ends_at: string;
+  link_url: string | null;
+  active: boolean;
+  state: AdvertState;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface AdvertPage {
+  now: string;
+  total: number;
+  showing_id: string | null;
+  /** The app's advert slot in points (342 × 113). */
+  slot: { width: number; height: number };
+  items: Advert[];
+}
+export interface AdvertInput {
+  name: string;
+  /** base64 picture (JPEG, PNG or WebP). */
+  image: string;
+  starts_at: string;
+  ends_at: string;
+  link_url?: string | null;
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -427,6 +459,24 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
       p.set('offset', String(q.offset ?? 0));
       p.set('limit', String(q.limit ?? 50));
       return call<OutagePage>('GET', `/outages?${p.toString()}`);
+    },
+    listAdverts: () => call<AdvertPage>('GET', '/adverts'),
+    addAdvert: (body: AdvertInput) => call<{ id: string }>('POST', '/adverts', body),
+    changeAdvert: (id: string, body: Partial<AdvertInput> & { active?: boolean }) =>
+      call<void>('PATCH', `/adverts/${encodeURIComponent(id)}`, body),
+    advertImageUrl: async (id: string): Promise<string | null> => {
+      let response: Response;
+      try {
+        response = await doFetch(`${BASE}/adverts/${encodeURIComponent(id)}/image`, {
+          credentials: 'same-origin',
+          headers: { 'X-Xspeeria-Admin': '1' },
+        });
+      } catch {
+        return null;
+      }
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return /^image\/(jpeg|png|webp)$/.test(blob.type) ? URL.createObjectURL(blob) : null;
     },
     reportOutage: (body: OutageInput) => call<{ id: string; ref: string }>('POST', '/outages', body),
     changeOutage: (id: string, body: Partial<OutageInput> & { status?: OutageStatus }) =>

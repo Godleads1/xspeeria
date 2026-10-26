@@ -26,6 +26,7 @@ append-only audit log; separate from customers, no money.
 Layering rule: api -> services -> domain + repositories + providers.
 """
 
+from app.models.adverts import Advert
 from app.models.currency_definition import CurrencyDefinition
 from app.models.disputes import Dispute, DisputeCategory, DisputeMessage
 from app.models.identity import (
@@ -63,6 +64,7 @@ from app.models.staff import StaffAccount, StaffAuditEntry, StaffCode, StaffRole
 from app.models.tiers import TierCheck
 
 __all__ = [
+    "Advert",
     "KycCase",
     "KycWebhookEvent",
     "Notification",
