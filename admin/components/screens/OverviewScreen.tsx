@@ -15,7 +15,7 @@ export function OverviewScreen(): ReactElement {
   const open = NAV_ITEMS.filter((i) => i.href !== '/' && (!i.permission || can(i.permission)));
   return (
     <>
-      <PageTitle sub={`You are signed in as ${roleLabel(me.role)}.`}>Welcome, {me.name}</PageTitle>
+      <PageTitle crumb="Dashboard" sub={`You are signed in as ${roleLabel(me.role)}.`}>Welcome, {me.name}</PageTitle>
       <Panel>
         <h2 style={{ margin: 0, fontSize: 18 }}>What you can open</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>

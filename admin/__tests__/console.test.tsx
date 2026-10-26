@@ -115,7 +115,7 @@ describe('log-in', () => {
     fireEvent.change(screen.getByTestId('login-email'), { target: { value: ' boss@xspeeria.test ' } });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'secret words here' } });
     fireEvent.click(screen.getByTestId('login-submit'));
-    expect(await screen.findByText(/We sent a 6-digit code to b\*\*\*@xspeeria.test/)).toBeInTheDocument();
+    expect(await screen.findByText(/received via email at b\*\*\*@xspeeria.test/)).toBeInTheDocument();
     expect(login).toHaveBeenCalledWith('boss@xspeeria.test', 'secret words here');
     fireEvent.change(screen.getByTestId('login-code'), { target: { value: '12a34 56' } });
     expect(screen.getByTestId('login-code')).toHaveValue('123456');
@@ -210,50 +210,89 @@ describe('staff', () => {
   it('lists staff with status and offers no action on yourself', async () => {
     await signedIn(fakeApi(), <StaffScreen origin="https://admin.test" />);
     const table = await screen.findByRole('table', { name: 'Staff' });
-    expect(within(table).getByText('The Boss (you)')).toBeInTheDocument();
-    expect(within(table).getByText('Invited')).toBeInTheDocument();
-    expect(screen.queryByTestId('disable-s-boss')).toBeNull();
+    expect(await within(table).findByText('The Boss (you)')).toBeInTheDocument();
+    expect(within(table).getAllByText('Invited').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('menu-s-boss')).toBeNull();
+    fireEvent.click(screen.getByTestId('menu-s-agent'));
     expect(screen.getByTestId('disable-s-agent')).toBeInTheDocument();
+    expect(screen.getByTestId('change-role-s-agent')).toBeInTheDocument();
   });
 
-  it('a support agent sees the list but no buttons', async () => {
+  it('search and status filter narrow the list, and reset clears them', async () => {
+    await signedIn(fakeApi(), <StaffScreen origin="https://admin.test" />);
+    const table = await screen.findByRole('table', { name: 'Staff' });
+    await within(table).findByText('Ada Agent');
+    fireEvent.change(screen.getByTestId('staff-search'), { target: { value: 'ada' } });
+    expect(within(table).queryByText('New Person')).toBeNull();
+    expect(within(table).getByText('Ada Agent')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('staff-search'), { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('staff-status'), { target: { value: 'invited' } });
+    expect(within(table).getByText('New Person')).toBeInTheDocument();
+    expect(within(table).queryByText('Ada Agent')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Reset Filter/ }));
+    expect(within(table).getByText('Ada Agent')).toBeInTheDocument();
+  });
+
+  it('a support agent sees the list but no actions', async () => {
     const agent = me({ id: 's-agent', role: 'support_agent', role_id: 'r-support', permissions: ['staff.read'] });
     await signedIn(
       fakeApi({ listRoles: vi.fn(async () => Promise.reject(new AdminApiError('AUTH_403_FORBIDDEN', 403, 'No'))) }, agent),
       <StaffScreen origin="https://admin.test" />,
     );
-    await screen.findByRole('table', { name: 'Staff' });
-    expect(screen.queryByRole('button', { name: 'Disable' })).toBeNull();
-    expect(screen.queryByText('Invite a staff member')).toBeNull();
+    const table = await screen.findByRole('table', { name: 'Staff' });
+    await within(table).findByText('The Boss');
+    expect(screen.queryByRole('button', { name: /Actions for/ })).toBeNull();
+    expect(screen.queryByTestId('add-staff')).toBeNull();
   });
 
-  it('a manager can only invite into roles within their own permissions', async () => {
+  it('a manager can only add staff into roles within their own permissions', async () => {
     const manager = me({ id: 's-m', role: 'staff_manager', role_id: 'r-m', permissions: ['staff.read', 'staff.create', 'staff.update', 'users.read', 'disputes.read'] });
     await signedIn(fakeApi({}, manager), <StaffScreen origin="https://admin.test" />);
+    await screen.findByRole('table', { name: 'Staff' });
+    await waitFor(() => expect(screen.getByTestId('add-staff')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('add-staff'));
     const select = await screen.findByTestId('invite-role');
-    const options = within(select).getAllByRole('option').map((o) => o.textContent);
-    expect(options).toEqual(['Choose a role', 'Support agent', 'Temp viewer']);
+    await waitFor(() =>
+      expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['Select', 'Support agent', 'Temp viewer']),
+    );
   });
 
-  it('invites and shows the set-password link', async () => {
+  it('Add Staff sends first and last name together and shows the set-password link', async () => {
     const inviteStaff = vi.fn(async () => ({ ...STAFF[1], id: 's-x', invite_id: '11111111-2222-3333-4444-555555555555' }));
     await signedIn(fakeApi({ inviteStaff }), <StaffScreen origin="https://admin.test" />);
-    fireEvent.change(await screen.findByTestId('invite-email'), { target: { value: 'kemi@xspeeria.test' } });
-    fireEvent.change(screen.getByTestId('invite-name'), { target: { value: 'Kemi' } });
+    await screen.findByRole('table', { name: 'Staff' });
+    fireEvent.click(screen.getByTestId('add-staff'));
+    expect(screen.getByTestId('invite-submit')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('invite-first'), { target: { value: 'Kemi' } });
+    fireEvent.change(screen.getByTestId('invite-last'), { target: { value: 'Okafor' } });
+    fireEvent.change(screen.getByTestId('invite-email'), { target: { value: 'kemi@xspeeria.test' } });
+    await waitFor(() => expect(within(screen.getByTestId('invite-role')).getAllByRole('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('invite-role'), { target: { value: 'r-comp' } });
     fireEvent.click(screen.getByTestId('invite-submit'));
     expect(await screen.findByTestId('invite-link')).toHaveTextContent(
       'https://admin.test/set-password?id=11111111-2222-3333-4444-555555555555',
     );
-    expect(inviteStaff).toHaveBeenCalledWith('kemi@xspeeria.test', 'Kemi', 'r-comp');
+    expect(inviteStaff).toHaveBeenCalledWith('kemi@xspeeria.test', 'Kemi Okafor', 'r-comp');
   });
 
-  it('disabling asks the server and says what happened', async () => {
+  it('disabling from the row menu asks the server and says what happened', async () => {
     const updateStaff = vi.fn(async () => ({ ...STAFF[1], status: 'disabled' as const }));
     await signedIn(fakeApi({ updateStaff }), <StaffScreen origin="https://admin.test" />);
-    fireEvent.click(await screen.findByTestId('disable-s-agent'));
+    fireEvent.click(await screen.findByTestId('menu-s-agent'));
+    fireEvent.click(screen.getByTestId('disable-s-agent'));
     expect(await screen.findByText(/Ada Agent is disabled and was logged out/)).toBeInTheDocument();
     expect(updateStaff).toHaveBeenCalledWith('s-agent', { status: 'disabled' });
+  });
+
+  it('changing a role from the row menu', async () => {
+    const updateStaff = vi.fn(async () => ({ ...STAFF[1], role: 'compliance_officer', role_id: 'r-comp' }));
+    await signedIn(fakeApi({ updateStaff }), <StaffScreen origin="https://admin.test" />);
+    fireEvent.click(await screen.findByTestId('menu-s-agent'));
+    fireEvent.click(screen.getByTestId('change-role-s-agent'));
+    expect(screen.getByTestId('save-role-s-agent')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('role-s-agent'), { target: { value: 'r-comp' } });
+    fireEvent.click(screen.getByTestId('save-role-s-agent'));
+    await waitFor(() => expect(updateStaff).toHaveBeenCalledWith('s-agent', { role_id: 'r-comp' }));
   });
 });
 

@@ -11,7 +11,8 @@ import { messageFor, type AdminApi, type AuditItem } from '../../lib/api';
 import { ACTION_LABELS, actionLabel, roleLabel } from '../../lib/permissions';
 import { useSession } from '../../lib/session';
 import { color } from '../../theme';
-import { Button, PageTitle, Select } from '../forms';
+import { BarSelect, FilterBar } from '../FilterBar';
+import { Button, PageTitle } from '../forms';
 import { Panel } from '../primitives';
 import { DataTable, type Column } from '../table/DataTable';
 import { when } from './common';
@@ -70,33 +71,37 @@ export function AuditScreen(): ReactElement {
   type Row = Omit<AuditItem, 'id'> & { id: string };
 
   const columns: readonly Column<Row>[] = [
-    { key: 'at', header: 'When (Lagos)', render: (i) => when(i.at) },
-    { key: 'who', header: 'Who', render: (i) => i.staff_email ?? 'Unknown email' },
-    { key: 'action', header: 'What', render: (i) => actionLabel(i.action) },
-    { key: 'detail', header: 'Details', render: (i) => describe(i) },
-    { key: 'ip', header: 'Address', render: (i) => i.ip_address ?? '—' },
+    { key: 'id', header: 'ID', render: (i) => String(i.id).padStart(5, '0') },
+    { key: 'who', header: 'NAME', render: (i) => i.staff_email ?? 'Unknown email' },
+    { key: 'action', header: 'ACTION', render: (i) => actionLabel(i.action) },
+    { key: 'detail', header: 'DETAILS', render: (i) => describe(i) },
+    { key: 'ip', header: 'ADDRESS', render: (i) => i.ip_address ?? '—' },
+    { key: 'at', header: 'DATE (LAGOS)', render: (i) => when(i.at) },
   ];
 
   return (
     <>
-      <PageTitle sub="Every log-in and change in the console. Nothing here can be edited or deleted.">
-        Audit log
+      <PageTitle crumb="Audit Logs" sub="Every log-in and change in the console. Nothing here can be edited or deleted.">
+        Audit Logs
       </PageTitle>
-      <div style={{ maxWidth: 320 }}>
-        <Select
-          label="Show"
-          value={action}
-          onChange={setAction}
-          testId="audit-action"
-          options={[
-            { value: '', label: 'Everything' },
-            ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label })),
-          ]}
-        />
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <FilterBar onReset={action ? () => setAction('') : undefined}>
+          <BarSelect
+            label="Show"
+            value={action}
+            onChange={setAction}
+            testId="audit-action"
+            options={[
+              { value: '', label: 'Everything' },
+              ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label })),
+            ]}
+          />
+        </FilterBar>
       </div>
       <Panel>
         <DataTable
           caption="Audit log"
+          hideCaption
           columns={columns}
           rows={(items ?? []).map((i) => ({ ...i, id: String(i.id) }))}
           status={error && items === null ? 'error' : items === null ? 'loading' : 'ready'}

@@ -78,6 +78,8 @@ Next.js console in `admin/`: **Log-in** (password, then email code), **Set your 
 - Signed-out visits go to log-in; log-out ends the session on the server. Route parameters are untrusted (the invite id is used only if it is a well-formed id).
 - Tests: 44 console tests (`admin/__tests__/`), plus a real-browser run against the real API (log-in with the email code, invite, create role, audit entry, log-out).
 
+**Matched to the owner's Figma admin file** (`Web Design` page, 2026-10-26): log-in frames (frosted card, labels on the input border, green "FORGOT PASSWORD ?", Two-Factor Authentication step, reset steps), the shell (top bar, white menu with an ADMIN section, red Logout, grey content, breadcrumbs), Staff list (search, Filter By / Status / Reset Filter, Add Staff, ⋮ row menu) and Add Staff form, Audit Logs. Not copied from Figma, on purpose: the bell and language picker (no admin notifications or console translations yet — no control that does nothing), staff photo, phone and typed User ID (ADR-051: IDs are made by the server; none stored). **Still to come from the owner:** the logo (SVG) and the log-in background image — Figma's Starter plan limit stopped the download, so a text wordmark and a CSS gradient stand in.
+
 **Known limit (decide before going live):** the console forwards requests, so the API sees the **console server's address** for every staff request. The audit log's "Address" column then shows the console server, and the sign-in rate limit (10 a minute per address) is shared by all staff. Fixing it means trusting the console's `X-Forwarded-For` header only from the console server's own address — a change to ADR-025 §4 ("proxy headers are not trusted") that needs a decision when the hosting is chosen.
 
 ## Not built yet

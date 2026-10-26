@@ -94,12 +94,25 @@ export function RolesScreen(): ReactElement {
 
   return (
     <>
-      <PageTitle sub="What each role may do. You can only give permissions you have yourself.">Roles</PageTitle>
+      <PageTitle
+        crumb="Setups"
+        sub="What each role may do. You can only give permissions you have yourself."
+        action={
+          !editing && can('roles.create') ? (
+            <Button testId="new-role" onClick={() => setEditing({ mode: 'new' })}>
+              Create Role
+            </Button>
+          ) : undefined
+        }
+      >
+        Role Setup
+      </PageTitle>
       <FormError message={error} />
       <Notice message={notice} />
       <Panel>
         <DataTable
           caption="Roles"
+          hideCaption
           columns={columns}
           rows={roles ?? []}
           status={loadError ? 'error' : roles === null ? 'loading' : 'ready'}
@@ -119,10 +132,6 @@ export function RolesScreen(): ReactElement {
             void load();
           }}
         />
-      ) : can('roles.create') ? (
-        <Button testId="new-role" onClick={() => setEditing({ mode: 'new' })}>
-          Create a role
-        </Button>
       ) : null}
     </>
   );

@@ -12,7 +12,7 @@ import { useState, type ReactElement } from 'react';
 import { adminApi, messageFor, type AdminApi } from '../../lib/api';
 import { color } from '../../theme';
 import { Button, Form, FormError, TextInput } from '../forms';
-import { card, page } from './LoginScreen';
+import { AuthLayout, linkGreen } from './AuthLayout';
 
 export const PASSWORD_HINT =
   'At least 12 characters. A few words you will remember works well. Don’t use your email.';
@@ -76,71 +76,75 @@ export function SetPasswordScreen({
   }
 
   return (
-    <div style={page}>
-      <div style={card}>
-        <h1 style={{ margin: 0, fontSize: 24 }}>Set your password</h1>
-        {resetId === null ? (
-          <Form label="Get a code" onSubmit={() => void sendCode()}>
-            <p style={{ margin: 0, color: color.text.secondary }}>
-              Enter your staff email. If it has an account, we’ll email you a 6-digit code.
-            </p>
-            <TextInput
-              label="Email"
-              type="email"
-              autoComplete="username"
-              inputMode="email"
-              value={email}
-              onChange={setEmail}
-              testId="reset-email"
-            />
-            <FormError message={error} />
-            <Button type="submit" busy={busy} testId="reset-send">
-              Email me a code
-            </Button>
-          </Form>
-        ) : (
-          <Form label="New password" onSubmit={() => void save()}>
-            <p style={{ margin: 0, color: color.text.secondary }}>
-              {inviteId
-                ? 'Enter the 6-digit code from your invitation email and choose a password.'
-                : 'If that email has a staff account, a 6-digit code is on its way. It works for 30 minutes.'}
-            </p>
-            <TextInput
-              label="Code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(v) => setCode(v.replace(/\D/g, ''))}
-              testId="reset-code"
-            />
-            <TextInput
-              label="New password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={setPassword}
-              hint={PASSWORD_HINT}
-              testId="reset-password"
-            />
-            <TextInput
-              label="New password again"
-              type="password"
-              autoComplete="new-password"
-              value={again}
-              onChange={setAgain}
-              testId="reset-again"
-            />
-            <FormError message={error} />
-            <Button type="submit" busy={busy} testId="reset-save">
-              Save password
-            </Button>
-          </Form>
-        )}
-        <a href="/login" style={{ color: color.brand.secondaryText, fontSize: 14 }}>
-          Back to log in
-        </a>
-      </div>
-    </div>
+    <AuthLayout
+      title={
+        resetId === null
+          ? 'Trouble signing in? Enter your email address and we’ll send you a code to set a new password.'
+          : 'Enter your new password'
+      }
+    >
+      {resetId === null ? (
+        <Form label="Get a code" onSubmit={() => void sendCode()}>
+          <TextInput
+            label="Email Address"
+            type="email"
+            autoComplete="username"
+            inputMode="email"
+            placeholder="enter email address"
+            value={email}
+            onChange={setEmail}
+            testId="reset-email"
+          />
+          <FormError message={error} />
+          <Button type="submit" busy={busy} block testId="reset-send">
+            Send code
+          </Button>
+        </Form>
+      ) : (
+        <Form label="New password" onSubmit={() => void save()}>
+          <p style={{ margin: 0, color: color.text.secondary }}>
+            {inviteId
+              ? 'Enter the 6-digit code from your invitation email and choose a password.'
+              : 'If that email has a staff account, a 6-digit code is on its way. It works for 30 minutes.'}
+          </p>
+          <TextInput
+            label="Code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="6-digit code"
+            maxLength={6}
+            value={code}
+            onChange={(v) => setCode(v.replace(/\D/g, ''))}
+            testId="reset-code"
+          />
+          <TextInput
+            label="New Password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="enter new password"
+            value={password}
+            onChange={setPassword}
+            hint={PASSWORD_HINT}
+            testId="reset-password"
+          />
+          <TextInput
+            label="Confirm Password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="enter it again"
+            value={again}
+            onChange={setAgain}
+            testId="reset-again"
+          />
+          <FormError message={error} />
+          <Button type="submit" busy={busy} block testId="reset-save">
+            Save password
+          </Button>
+        </Form>
+      )}
+      <a href="/login" style={{ ...linkGreen, alignSelf: 'center' }}>
+        BACK TO LOGIN
+      </a>
+    </AuthLayout>
   );
 }

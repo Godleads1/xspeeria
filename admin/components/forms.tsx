@@ -4,6 +4,7 @@
  */
 
 import type { CSSProperties, FormEvent, ReactElement, ReactNode } from 'react';
+import Link from 'next/link';
 import { useId } from 'react';
 
 import { color, radius, space } from '../theme';
@@ -30,16 +31,37 @@ export function Field({
   hint?: string;
   /** For controls inside a table row, where the column header already says what it is. */
   hideLabel?: boolean;
-  children: (id: string, hintId: string | undefined) => ReactNode;
+  children: (id: string, hintId: string | undefined, outlined: boolean) => ReactNode;
 }): ReactElement {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
+  if (hideLabel) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <label htmlFor={id} style={visuallyHidden}>
+          {label}
+        </label>
+        {children(id, hintId, false)}
+      </div>
+    );
+  }
+  // Figma admin inputs: an outlined box with the label sitting on its top border.
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label htmlFor={id} style={hideLabel ? visuallyHidden : { fontWeight: 600, fontSize: 14 }}>
-        {label}
-      </label>
-      {children(id, hintId)}
+      <fieldset
+        style={{
+          margin: 0,
+          padding: '0 12px 2px',
+          border: `1px solid ${color.border.strong}`,
+          borderRadius: 4,
+          minWidth: 0,
+        }}
+      >
+        <legend style={{ padding: '0 4px', fontSize: 12, color: color.text.primary }}>
+          <label htmlFor={id}>{label}</label>
+        </legend>
+        {children(id, hintId, true)}
+      </fieldset>
       {hint ? (
         <span id={hintId} style={{ fontSize: 12, color: color.text.secondary }}>
           {hint}
@@ -59,10 +81,12 @@ export function TextInput({
   testId,
   label,
   hint,
+  placeholder,
   required = true,
 }: {
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
   type?: 'text' | 'email' | 'password';
   autoComplete?: string;
   inputMode?: 'numeric' | 'email' | 'text';
@@ -74,19 +98,20 @@ export function TextInput({
 }): ReactElement {
   return (
     <Field label={label} hint={hint}>
-      {(id, hintId) => (
+      {(id, hintId, outlined) => (
         <input
           id={id}
           data-testid={testId}
           type={type}
           value={value}
+          placeholder={placeholder}
           required={required}
           autoComplete={autoComplete}
           inputMode={inputMode}
           maxLength={maxLength}
           aria-describedby={hintId}
           onChange={(e) => onChange(e.target.value)}
-          style={input}
+          style={outlined ? inner : input}
         />
       )}
     </Field>
@@ -110,13 +135,13 @@ export function Select({
 }): ReactElement {
   return (
     <Field label={label} hideLabel={hideLabel}>
-      {(id) => (
+      {(id, _hint, outlined) => (
         <select
           id={id}
           data-testid={testId}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={input}
+          style={outlined ? inner : input}
         >
           {options.map((o) => (
             <option key={o.value} value={o.value} disabled={o.disabled}>
@@ -137,6 +162,7 @@ export function Button({
   variant = 'primary',
   testId,
   disabled = false,
+  block = false,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -145,6 +171,8 @@ export function Button({
   variant?: 'primary' | 'secondary' | 'danger';
   testId?: string;
   disabled?: boolean;
+  /** Full width (Figma log-in button). */
+  block?: boolean;
 }): ReactElement {
   const palette =
     variant === 'primary'
@@ -163,13 +191,16 @@ export function Button({
         backgroundColor: palette.bg,
         color: palette.fg,
         border: `1px solid ${palette.border}`,
-        borderRadius: radius.lg,
-        padding: '10px 16px',
+        borderRadius: 8,
+        padding: '10px 20px',
+        minHeight: 40,
         fontWeight: 600,
         fontFamily: 'inherit',
+        width: block ? '100%' : undefined,
+        boxShadow: variant === 'primary' ? '0 4px 10px rgba(0, 26, 110, 0.25)' : undefined,
         cursor: busy || disabled ? 'not-allowed' : 'pointer',
         opacity: busy || disabled ? 0.6 : 1,
-        alignSelf: 'flex-start',
+        alignSelf: block ? 'stretch' : 'flex-start',
       }}
     >
       {busy ? 'Please wait…' : children}
@@ -239,6 +270,19 @@ export function Form({
   );
 }
 
+/** Inside the outlined box: the box draws the border. */
+const inner: CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '6px 0 10px',
+  border: 'none',
+  outline: 'none',
+  fontSize: 15,
+  fontFamily: 'inherit',
+  color: color.text.primary,
+  backgroundColor: 'transparent',
+};
+
 export const input: CSSProperties = {
   padding: '10px 12px',
   borderRadius: radius.md,
@@ -249,11 +293,37 @@ export const input: CSSProperties = {
   backgroundColor: color.bg.canvas,
 };
 
-export function PageTitle({ children, sub }: { children: ReactNode; sub?: string }): ReactElement {
+/** Figma admin page header: breadcrumb, title, and an optional main action on the right. */
+export function PageTitle({
+  children,
+  sub,
+  crumb,
+  action,
+}: {
+  children: ReactNode;
+  sub?: string;
+  /** Last breadcrumb step, e.g. "Staff" (shown as Home / Admin Panel / Staff). */
+  crumb?: string;
+  action?: ReactNode;
+}): ReactElement {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>{children}</h1>
-      {sub ? <p style={{ margin: 0, color: color.text.secondary }}>{sub}</p> : null}
+    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.sm }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {crumb ? (
+          <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: color.text.secondary }}>
+            <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
+              Home
+            </Link>
+            {'  /  '}Admin Panel{'  /  '}
+            <span aria-current="page" style={{ color: color.brand.secondaryText }}>
+              {crumb}
+            </span>
+          </nav>
+        ) : null}
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>{children}</h1>
+        {sub ? <p style={{ margin: 0, color: color.text.secondary }}>{sub}</p> : null}
+      </div>
+      {action ?? null}
     </div>
   );
 }

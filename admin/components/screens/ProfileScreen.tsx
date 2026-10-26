@@ -49,7 +49,7 @@ export function ProfileScreen(): ReactElement {
 
   return (
     <>
-      <PageTitle>My profile</PageTitle>
+      <PageTitle crumb="My profile">My profile</PageTitle>
       <Panel>
         <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8 }}>
           <dt style={label}>Name</dt>
