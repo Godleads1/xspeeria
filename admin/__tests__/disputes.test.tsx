@@ -39,6 +39,8 @@ const CASE: DisputeCase = {
     ],
     other_party: { id: 'u-2', name: null, email: 'ada@example.com', phone: '+2348031111111', status: 'active' },
   },
+  reversals: [],
+  can_refund: true,
   messages: [{ id: 'm1', author: 'other_party', staff_name: null, body: 'Not paid either', created_at: '2026-10-26T11:00:00Z' }],
   timeline: [{ at: '2026-10-26T10:00:00Z', who: 'customer', name: null, event: 'created', detail: null }],
 };

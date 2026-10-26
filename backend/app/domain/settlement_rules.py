@@ -123,3 +123,18 @@ def coordination_fee_minor(sent_minor: int) -> int:
     if 2 * r > 10_000 or (2 * r == 10_000 and q % 2 == 1):
         q += 1
     return q
+
+
+def reversal_problem(phase: str, release_authorized: bool, leg_states: list[str]) -> str | None:
+    """ADR-065: why staff cannot return this deal's escrow now, or ``None`` if they can.
+
+    Only money still sitting in escrow can go back: the deal is waiting for funding, the payout
+    has not been authorised, at least one escrow is funded and nothing has been sent out.
+    """
+    if phase != "AWAITING_FUNDING" or release_authorized:
+        return "closed"
+    if any(s in ("RELEASE_SENT", "PAID_OUT", "RETURN_SENT", "RETURNED") for s in leg_states):
+        return "closed"
+    if not any(s == "FUNDED" for s in leg_states):
+        return "nothing_paid_in"
+    return None

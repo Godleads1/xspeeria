@@ -32,12 +32,30 @@ function systemDark(): boolean {
 
 let current: ThemeChoice = typeof window === 'undefined' ? 'system' : read();
 
+function wanted(): 'dark' | 'light' {
+  return current === 'dark' || (current === 'system' && systemDark()) ? 'dark' : 'light';
+}
+
 function apply(): void {
-  const dark = current === 'dark' || (current === 'system' && systemDark());
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  if (document.documentElement.dataset.theme !== wanted()) document.documentElement.dataset.theme = wanted();
 }
 
 if (typeof window !== 'undefined') {
+  apply();
+  // Keep the choice even if something rewrites <html>: React can reset that element's
+  // attributes when the page re-mounts it, and browser extensions sometimes touch it.
+  try {
+    new MutationObserver(() => apply()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  } catch {
+    // No MutationObserver: the boot script and the switch still apply the choice.
+  }
+  // Another tab changed the choice: follow it here too, so tabs never disagree.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY) return;
+    current = read();
+    apply();
+    listeners.forEach((l) => l());
+  });
   try {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (current === 'system') {

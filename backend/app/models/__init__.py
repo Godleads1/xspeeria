@@ -44,6 +44,7 @@ from app.models.kyc import KycCase, KycWebhookEvent
 from app.models.marketplace import IdempotencyRecord, Match, Offer
 from app.models.notifications import Notification, PushDelivery, PushToken
 from app.models.payouts import Beneficiary, MatchPayoutSelection
+from app.models.reversals import Reversal
 from app.models.settlement import (
     OutboxMessage,
     Partner,
@@ -66,6 +67,7 @@ __all__ = [
     "Notification",
     "PushDelivery",
     "PushToken",
+    "Reversal",
     "Dispute",
     "DisputeCategory",
     "DisputeMessage",

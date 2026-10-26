@@ -30,6 +30,7 @@ from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.dispute_admin import DisputeAdminService
+from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 
 __all__ = ["COOKIE", "router"]
@@ -709,4 +710,91 @@ async def resolve_dispute(
 ) -> Response:
     note = " ".join(body.note.split()) if body.note else None
     await service.resolve(staff, info, dispute_id, body.outcome, note or None)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- reversals (ADR-065) -----------------------------------------------------------------------
+
+
+async def get_reversals(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> ReversalService:
+    return ReversalService(db, runtime.clock)
+
+
+Reversals = Annotated[ReversalService, Depends(get_reversals)]
+
+
+class RefundBody(_Strict):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ApproveBody(_Strict):
+    note: str | None = Field(default=None, max_length=500)
+
+
+class RejectBody(_Strict):
+    note: str = Field(min_length=3, max_length=500)
+
+
+@router.post(
+    "/disputes/{dispute_id}/refund",
+    status_code=status.HTTP_201_CREATED,
+    summary="Ask for the deal's escrow to go back to whoever paid it in (reversals.create)",
+)
+async def request_refund(
+    dispute_id: uuid.UUID, body: RefundBody, staff: Staff, service: Reversals, info: Info
+) -> Any:
+    return await service.request(staff, info, dispute_id, " ".join(body.reason.split()))
+
+
+@router.get("/reversals", summary="Reversal requests (reversals.read)")
+async def list_reversals(
+    staff: Staff,
+    service: Reversals,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    status_in: Annotated[
+        Literal["pending", "approved", "rejected"] | None, Query(alias="status")
+    ] = None,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.list(
+        staff, search=q or None, status_in=status_in, offset=offset, limit=limit
+    )
+
+
+@router.get("/reversals/stats", summary="Reversal counts (reversals.read)")
+async def reversal_stats(staff: Staff, service: Reversals) -> Any:
+    return await service.stats(staff)
+
+
+@router.get("/reversals/{reversal_id}", summary="One reversal request (reversals.read)")
+async def get_reversal(reversal_id: uuid.UUID, staff: Staff, service: Reversals) -> Any:
+    return await service.get(staff, reversal_id)
+
+
+@router.post(
+    "/reversals/{reversal_id}/approve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Approve: the escrow goes back; never your own request (reversals.approve)",
+)
+async def approve_reversal(
+    reversal_id: uuid.UUID, body: ApproveBody, staff: Staff, service: Reversals, info: Info
+) -> Response:
+    note = " ".join(body.note.split()) if body.note else None
+    await service.approve(staff, info, reversal_id, note or None)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/reversals/{reversal_id}/reject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reject with a reason; never your own request (reversals.approve)",
+)
+async def reject_reversal(
+    reversal_id: uuid.UUID, body: RejectBody, staff: Staff, service: Reversals, info: Info
+) -> Response:
+    await service.reject(staff, info, reversal_id, " ".join(body.note.split()))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -122,7 +122,7 @@ class Settlement(Base):
         CheckConstraint(f"phase IN ({_PHASES})", name="phase_allowed"),
         CheckConstraint(
             "closure_reason IS NULL OR closure_reason IN ('TIMEOUT', 'REMATCH', "
-            "'PARTY_CANCELLED', 'PROVISION_FAILED', 'RECOVERED', 'LOSS_RECOGNIZED')",
+            "'PARTY_CANCELLED', 'PROVISION_FAILED', 'RECOVERED', 'LOSS_RECOGNIZED', 'REVERSED')",
             name="closure_reason_allowed",
         ),
         CheckConstraint(
@@ -326,7 +326,8 @@ class SettlementHold(Base):
     __tablename__ = "settlement_holds"
     __table_args__ = (
         CheckConstraint(
-            "type IN ('COMPLIANCE', 'DISPUTE', 'RECONCILIATION', 'DISPATCH_FAILURE', 'RISK')",
+            "type IN ('COMPLIANCE', 'DISPUTE', 'RECONCILIATION', 'DISPATCH_FAILURE', 'RISK', "
+            "'REVERSAL')",
             name="type_allowed",
         ),
         Index("ix_settlement_holds_open", "settlement_id", "closed_at"),

@@ -28,6 +28,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 USER_TABLES = (
     "tier_checks",
     "offer_queue_entries",
+    "reversals",
     "dispute_messages",
     "disputes",
     "verification_checks",

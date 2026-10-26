@@ -142,7 +142,9 @@ export function DashboardScreen(): ReactElement {
         data-testid="hero"
         style={{
           position: 'relative',
-          overflow: 'hidden',
+          // Not `overflow: hidden`: the Export Report menu opens below the banner and must
+          // not be cut off. The picture is clipped by its own layer instead.
+          zIndex: 2,
           borderRadius: 18,
           padding: '26px 28px',
           backgroundImage: `linear-gradient(110deg, ${admin.heroFrom}, ${admin.heroTo})`,
@@ -154,22 +156,22 @@ export function DashboardScreen(): ReactElement {
           gap: 18,
         }}
       >
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            insetBlock: 0,
-            insetInlineEnd: 0,
-            width: '42%',
-            backgroundImage: 'url(/profile-banner.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.22,
-            maskImage: 'linear-gradient(to left, black, transparent)',
-            WebkitMaskImage: 'linear-gradient(to left, black, transparent)',
-            pointerEvents: 'none',
-          }}
-        />
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden', pointerEvents: 'none' }}>
+          <div
+            style={{
+              position: 'absolute',
+              insetBlock: 0,
+              insetInlineEnd: 0,
+              width: '42%',
+              backgroundImage: 'url(/profile-banner.jpg)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.22,
+              maskImage: 'linear-gradient(to left, black, transparent)',
+              WebkitMaskImage: 'linear-gradient(to left, black, transparent)',
+            }}
+          />
+        </div>
         <div style={{ position: 'relative' }}>
           <p data-testid="greeting" style={{ margin: 0, fontSize: 15, fontWeight: 600, color: admin.greet }}>
             {greeting} <span aria-hidden="true">👋</span>

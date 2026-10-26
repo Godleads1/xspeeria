@@ -224,8 +224,64 @@ export interface DisputeCase extends DisputeRow {
     legs: { party: string; paid_by: string; currency: string; scale: number; amount_minor: string; fee_minor: string; state: string }[];
     other_party: Person;
   };
+  /** Refund requests made from this case (ADR-065). */
+  reversals: { id: string; ref: string; status: ReversalStatus }[];
+  /** Whether a refund can be asked for now (display only; the server checks again). */
+  can_refund: boolean;
   messages: { id: string; author: 'staff' | 'customer' | 'other_party'; staff_name: string | null; body: string; created_at: string }[];
   timeline: { at: string; who: 'staff' | 'customer'; name: string | null; event: string; detail: Record<string, unknown> | null }[];
+}
+
+export type ReversalStatus = 'pending' | 'approved' | 'rejected';
+/** Money going back to one person: what they paid in, fee included (integer minor units). */
+export interface ReversalReturn {
+  currency: string;
+  scale: number;
+  minor: string;
+}
+export interface ReversalRow {
+  id: string;
+  ref: string;
+  requested_by: string;
+  customer: string;
+  returns: ReversalReturn[];
+  category_name: string;
+  reason: string;
+  status: ReversalStatus;
+  requested_at: string;
+  decided_at: string | null;
+}
+export interface ReversalPage {
+  total: number;
+  items: ReversalRow[];
+}
+export interface ReversalStats {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+}
+export interface ReversalDetail {
+  id: string;
+  ref: string;
+  status: ReversalStatus;
+  reason: string;
+  requested_by: string | null;
+  requested_by_id: string;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  dispute: { id: string; ref: string; category_name: string; description: string; status: DisputeStatus };
+  customer: { name: string | null; email: string | null; phone: string | null };
+  deal: {
+    transaction_id: string;
+    phase: string;
+    closure_reason: string | null;
+    legs: { party: string; currency: string; scale: number; amount_minor: string; fee_minor: string; state: string }[];
+  };
+  returns: (ReversalReturn & { user_id: string; name: string | null; email: string | null; phone: string | null; state: string })[];
+  can_return: boolean;
 }
 
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
@@ -318,6 +374,21 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
       call<void>('POST', `/disputes/${encodeURIComponent(id)}/escalate`, { reason }),
     resolveDispute: (id: string, outcome: DisputeOutcome, note?: string) =>
       call<void>('POST', `/disputes/${encodeURIComponent(id)}/resolve`, { outcome, ...(note ? { note } : {}) }),
+    requestRefund: (disputeId: string, reason: string) =>
+      call<{ id: string; ref: string }>('POST', `/disputes/${encodeURIComponent(disputeId)}/refund`, { reason }),
+    listReversals: (q: { search?: string; status?: ReversalStatus; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      if (q.status) p.set('status', q.status);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<ReversalPage>('GET', `/reversals?${p.toString()}`);
+    },
+    reversalStats: () => call<ReversalStats>('GET', '/reversals/stats'),
+    reversal: (id: string) => call<ReversalDetail>('GET', `/reversals/${encodeURIComponent(id)}`),
+    approveReversal: (id: string, note?: string) =>
+      call<void>('POST', `/reversals/${encodeURIComponent(id)}/approve`, note ? { note } : {}),
+    rejectReversal: (id: string, note: string) => call<void>('POST', `/reversals/${encodeURIComponent(id)}/reject`, { note }),
     /** Super Admin only (the server checks); a reason is required. */
     changeCustomer: (id: string, action: CustomerAction, reason: string) =>
       call<{ id: string; status: CustomerStatus }>('POST', `/users/${encodeURIComponent(id)}/${action}`, { reason }),

@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED** — 2026-10-26 (server, console, app category list) |
+| **Status** | **IMPLEMENTED** — 2026-10-26 (server, console, app category list); re-check after closing fixed in ADR-065 |
 | **Decision ID** | DEC-070 |
 | **Authority** | Product owner, 2026-10-26, on the Figma "Dispute Resolution", "Dispute Details", "Raise Dispute", "Dispute category Setup" frames: categories "Staff-managed list" (start with the app's four; staff can add, rename or switch off; the app shows the active list); SLA "24 hours". Builds on ADR-057 (disputes and support), ADR-051 (decisions 4 and 6), ADR-060 (permissions). |
 | **Constraints** | ADR-001 (escrow, no money moved by staff here), SEC-008, ADR-057 privacy (each party sees only their own words and staff replies). |
