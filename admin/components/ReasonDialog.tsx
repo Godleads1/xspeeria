@@ -12,6 +12,7 @@ import { admin, color } from '../theme';
 
 export function ReasonDialog({
   title,
+  description,
   confirm,
   danger = false,
   busy = false,
@@ -20,6 +21,8 @@ export function ReasonDialog({
   onConfirm,
 }: {
   title: string;
+  /** Optional line under the title (e.g. what happens next). */
+  description?: string;
   confirm: string;
   danger?: boolean;
   busy?: boolean;
@@ -57,6 +60,11 @@ export function ReasonDialog({
         <p id={`${id}-title`} style={{ margin: 0, padding: '28px 28px 16px', fontSize: 18, fontWeight: 500, textAlign: 'center', lineHeight: 1.4 }}>
           {title}
         </p>
+        {description ? (
+          <p data-testid="reason-description" style={{ margin: '-6px 28px 14px', fontSize: 14, color: color.text.secondary, textAlign: 'center', lineHeight: 1.45 }}>
+            {description}
+          </p>
+        ) : null}
         <fieldset style={{ margin: '0 28px', padding: '0 12px 6px', border: `1px solid ${color.border.strong}`, borderRadius: 4 }}>
           <legend style={{ padding: '0 4px', fontSize: 12 }}>
             <label htmlFor={`${id}-reason`}>{tr('Enter reason')}</label>

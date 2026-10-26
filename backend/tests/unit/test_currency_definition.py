@@ -363,6 +363,7 @@ class TestPackageRegistration:
             "disputes",
             "dispute_messages",
             "dispute_categories",
+            "reversals",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -421,7 +422,7 @@ class TestPackageRegistration:
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', "
-            "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
+            "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', "
             "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_roles', 'staff_sessions', "
             "'step_up_grants', "
@@ -490,4 +491,5 @@ class TestPackageRegistration:
             "0024_staff_phone_photo.py",  # staff phone and photo (ADR-060)
             "0025_customer_suspend_close.py",  # suspend / close customers (ADR-062)
             "0026_dispute_categories_staff_work.py",  # dispute categories, staff work (ADR-063)
+            "0027_reversals.py",  # reversals (ADR-065)
         ]

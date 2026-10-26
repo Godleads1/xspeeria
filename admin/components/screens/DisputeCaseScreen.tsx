@@ -6,8 +6,9 @@
  * (In Progress), assign, escalate (with a reason), export (print), close with an outcome.
  *
  * Buttons show only to staff whose role allows them (display only; the server checks again).
- * Figma's "Process Refund" comes with the Reversal screens: a refund is a reversal that needs a
- * second person to approve it (ADR-051 decision 4), never a button here that moves money.
+ * "Process Refund" (ADR-065) only *asks*: it sends a reversal request that another staff member
+ * must approve (ADR-051 decision 4). Figma's amount box is left out: the money still in escrow
+ * goes back in full, fee included (owner rule 2026-10-19), so there is no amount to type.
  */
 
 import { useCallback, useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
@@ -24,6 +25,7 @@ import { ErrorState, LoadingState, StatusChip } from '../primitives';
 import { DisputeStatusChip, Sla, useServerNow } from './DisputesScreen';
 import { when } from './common';
 import { PRIORITY } from './RaiseDispute';
+import { ReversalStatusChip } from './ReversalsScreen';
 
 export const OUTCOMES: Record<DisputeOutcome, string> = {
   favor_initiator: 'In favour of the person who raised it',
@@ -40,6 +42,9 @@ export const EVENTS: Record<string, string> = {
   dispute_replied: 'Replied to the customer',
   dispute_escalated: 'Escalated',
   dispute_resolved: 'Closed',
+  dispute_refund_requested: 'Refund requested',
+  dispute_refund_approved: 'Refund approved',
+  dispute_refund_rejected: 'Refund rejected',
 };
 
 
@@ -53,6 +58,7 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
   const [busy, setBusy] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [refunding, setRefunding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const now = useServerNow(c?.now ?? null);
 
@@ -156,6 +162,17 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
               {tr('Escalate dispute')}
             </button>
           ) : null}
+          {open && c.can_refund && can('reversals.create') ? (
+            <button type="button" data-testid="process-refund" onClick={() => setRefunding(true)} style={tool}>
+              {tr('Process Refund')}
+            </button>
+          ) : null}
+          {c.reversals.map((rv) => (
+            <a key={rv.id} href={`/reversals/case?id=${encodeURIComponent(rv.id)}`} data-testid={`reversal-${rv.status}`} style={{ ...tool, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
+              <span dir="ltr">{rv.ref}</span>
+              <ReversalStatusChip status={rv.status} />
+            </a>
+          ))}
           <button type="button" data-testid="export-case" onClick={() => window.print()} style={tool}>
             {tr('Export Details')}
           </button>
@@ -283,6 +300,21 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
           error={error}
           onCancel={() => setEscalating(false)}
           onConfirm={(reason) => void run(() => api.escalateDispute(c.id, reason), tr('Dispute escalated')).then((ok) => ok && setEscalating(false))}
+        />
+      ) : null}
+      {refunding ? (
+        <ReasonDialog
+          title={tr('Process Refund')}
+          description={tr('The money still in escrow goes back to whoever paid it in, in full (fee included). This will be sent for approval.')}
+          confirm={tr('Process refund')}
+          busy={busy}
+          error={error}
+          onCancel={() => setRefunding(false)}
+          onConfirm={(reason) =>
+            void run(async () => {
+              await api.requestRefund(c.id, reason);
+            }, tr('Refund sent for approval')).then((ok) => ok && setRefunding(false))
+          }
         />
       ) : null}
       {closing ? (

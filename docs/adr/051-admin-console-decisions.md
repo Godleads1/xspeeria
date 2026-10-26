@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner answers) — 2026-10-19; **A-1 and A-2 built 2026-10-26 (ADR-060)**; A-3: dashboard built 2026-10-26 (ADR-061), the rest not built |
+| **Status** | **APPROVED** (owner answers) — 2026-10-19; **A-1 and A-2 built 2026-10-26 (ADR-060)**; A-3: dashboard (ADR-061), users (ADR-062), disputes (ADR-063) and reversals (ADR-065) built 2026-10-26; the rest not built |
 | **Decision ID** | DEC-058 |
 | **Authority** | Product owner, 2026-10-19: Figma admin screens (56 exports, "finished") and answers to six questions recorded below. Constraints: SEC-002, SEC-008, FX-04 (`XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md`); Compliance Operations Manual §14; API contract §3.9 (admin access token in an httpOnly cookie; `users.read`, `users.suspend`, `disputes.resolve`, `kyc.review` permissions). |
 

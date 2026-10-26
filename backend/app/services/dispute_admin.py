@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.core.exceptions import AppError
+from app.domain.settlement_rules import reversal_problem
 from app.models.disputes import (
     DISPUTE_OUTCOMES,
     DISPUTE_PRIORITIES,
@@ -39,6 +40,7 @@ from app.models.disputes import (
 from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import Match, Offer
+from app.models.reversals import Reversal
 from app.models.settlement import (
     Settlement,
     SettlementEvent,
@@ -48,6 +50,7 @@ from app.models.settlement import (
 )
 from app.models.staff import StaffAccount, StaffAuditEntry, StaffRole
 from app.services.notifications import notify
+from app.services.reversals import ref as reversal_ref
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
 __all__ = ["SLA", "DisputeAdminService", "list_categories"]
@@ -323,6 +326,8 @@ class DisputeAdminService:
         view["opened_by_staff"] = d.opened_by_staff_id is not None
         view["customer_details"] = await self._person(d.initiator_user_id)
         view["deal"] = None
+        view["reversals"] = []
+        view["can_refund"] = False
         if d.transaction_id is not None:
             m = (
                 await self._db.execute(
@@ -360,6 +365,27 @@ class DisputeAdminService:
                 offer.user_id
                 if d.initiator_user_id == match.counterparty_user_id
                 else match.counterparty_user_id
+            )
+            reversals = (
+                await self._db.scalars(
+                    select(Reversal)
+                    .where(Reversal.dispute_id == d.id)
+                    .order_by(Reversal.requested_at.desc())
+                )
+            ).all()
+            view["reversals"] = [
+                {"id": r.id, "ref": reversal_ref(r.id), "status": r.status} for r in reversals
+            ]
+            view["can_refund"] = (
+                settlement is not None
+                and d.status != "resolved"
+                and not any(r.status == "pending" for r in reversals)
+                and reversal_problem(
+                    settlement.phase,
+                    settlement.release_authorized_at is not None,
+                    [str(leg["state"]) for leg in legs],
+                )
+                is None
             )
             view["deal"] = {
                 "transaction_id": d.transaction_id,
@@ -551,6 +577,14 @@ class DisputeAdminService:
                         created_at=now,
                     )
                 )
+        if d.hold_id is not None:
+            # The hold is gone: if both sides paid in and nothing else holds the deal, it pays
+            # out now (ADR-063; ADR-065 fixed the case where nothing re-checked it).
+            hold_row = await self._db.get(SettlementHold, d.hold_id)
+            if hold_row is not None:
+                from app.services.settlement import SettlementService
+
+                await SettlementService(self._db, self._clock, None).recheck(hold_row.settlement_id)
         self._audit(
             principal, info, "dispute_resolved", "dispute", d.id, {"outcome": outcome, "note": note}
         )

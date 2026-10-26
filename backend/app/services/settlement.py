@@ -60,6 +60,7 @@ from app.domain.settlement_rules import (
     REPLAY_WINDOW,
     TERMINAL_PHASES,
     coordination_fee_minor,
+    reversal_problem,
 )
 from app.models.marketplace import Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
@@ -245,11 +246,12 @@ class SettlementService:
         return len(rows.all())
 
     async def _open_dispute_hold(self, settlement_id: uuid.UUID) -> bool:
+        """An open dispute or a pending reversal: staff decide, the clock does not (ADR-065)."""
         found = await self._db.scalar(
             select(SettlementHold.id)
             .where(
                 SettlementHold.settlement_id == settlement_id,
-                SettlementHold.type == "DISPUTE",
+                SettlementHold.type.in_(("DISPUTE", "REVERSAL")),
                 SettlementHold.closed_at.is_(None),
             )
             .limit(1)
@@ -835,7 +837,17 @@ class SettlementService:
                 if leg.state == "FUNDED" and not await self._has_outbox(leg.leg_id, "RETURN"):
                     self._outbox(settlement, leg, "RETURN", now)
             if not any(s in ("FUNDED", "RETURN_SENT") for s in states):
-                await self._set_phase(settlement, "CLOSED_UNWOUND", "TIMEOUT")
+                reversed_by_staff = await self._db.scalar(
+                    select(SettlementEvent.id)
+                    .where(
+                        SettlementEvent.settlement_id == settlement.id,
+                        SettlementEvent.event_type == "ReversalApproved",
+                    )
+                    .limit(1)
+                )
+                await self._set_phase(
+                    settlement, "CLOSED_UNWOUND", "REVERSED" if reversed_by_staff else "TIMEOUT"
+                )
                 self._event(settlement.id, None, "SettlementUnwound", {})
                 await self._return_capacity(settlement)
 
@@ -871,6 +883,14 @@ class SettlementService:
             ):
                 await self._db.rollback()
                 continue
+            if all(leg.state == "FUNDED" for leg in legs):
+                # Both sides paid in while staff held the deal (ADR-063: closing a dispute lets
+                # the escrow continue under its own rules) -> pay out if the gates hold.
+                await self._advance(settlement, legs)
+                if settlement.phase != "AWAITING_FUNDING":
+                    await self._db.commit()
+                    done += 1
+                    continue
             self._event(settlement.id, None, "FundingWindowExpired", {})
             if any(leg.state == "FUNDED" for leg in legs):
                 await self._set_phase(settlement, "UNWINDING")
@@ -1023,6 +1043,50 @@ class SettlementService:
         await self.dispatch_due()
         await self._bank.deliver(self.ingest)
         return await self.view(principal, match_id)
+
+    # --- 6. staff decisions (admin console) --------------------------------------------------
+
+    async def recheck(self, settlement_id: uuid.UUID) -> None:
+        """After staff close a hold: apply any phase move whose gate now holds. No commit."""
+        await self._db.flush()  # the caller's closed hold must be visible to the gate query
+        settlement, legs = await self._lock(settlement_id)
+        await self._advance(settlement, legs)
+
+    async def reverse(self, settlement_id: uuid.UUID) -> list[dict[str, Any]]:
+        """ADR-065: a staff-approved reversal. The funded escrows go back to whoever paid them
+        in, in full (fee included), exactly as when the funding window runs out (ADR-001
+        transition 5, here started by an approved staff decision). No commit: the caller records
+        the decision in the same transaction."""
+        settlement, legs = await self._lock(settlement_id)
+        problem = reversal_problem(
+            settlement.phase,
+            settlement.release_authorized_at is not None,
+            [leg.state for leg in legs],
+        )
+        if problem is not None:
+            raise AppError(
+                "RES_409_INVALID_SETTLEMENT_STATE",
+                "Nothing is in escrow to return for this deal."
+                if problem == "nothing_paid_in"
+                else "This deal's escrow can no longer be returned.",
+                status_code=status.HTTP_409_CONFLICT,
+                details={"problem": problem},
+            )
+        now = self._clock()
+        self._event(settlement.id, None, "ReversalApproved", {"at": now.isoformat()})
+        await self._set_phase(settlement, "UNWINDING")
+        returned = []
+        for leg in legs:
+            if leg.state == "FUNDED":
+                self._outbox(settlement, leg, "RETURN", now)
+                returned.append(
+                    {
+                        "leg_id": leg.leg_id,
+                        "currency": leg.currency,
+                        "minor": leg.amount_minor + leg.fee_minor,
+                    }
+                )
+        return returned
 
     async def tick(self) -> None:
         """One pass of background work: windows, commands, then the pretend bank's messages."""
