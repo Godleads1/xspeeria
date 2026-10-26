@@ -307,7 +307,7 @@ class AuthService:
         code = generate_code()
 
         # Checked for every request, existing number or not, so the answer is the same.
-        taken = await self._repo.active_user_by_email(email)
+        taken = await self._repo.user_holding_email(email)
         if taken is not None:
             await self._db.rollback()
             raise _err(
@@ -316,8 +316,9 @@ class AuthService:
                 status.HTTP_400_BAD_REQUEST,
             )
 
-        if existing is not None and existing.status == "active":
-            # The number already has an account. Record an unusable code (nobody knows it)
+        if existing is not None and existing.status != "pending_verification":
+            # The number already has an account (active, suspended or closed — ADR-062: a
+            # sign-up never replaces a finished account). Record an unusable code (nobody knows it)
             # so the SMS limits count this request like any other, send nothing, and answer
             # exactly as for a new sign-up.
             self._repo.add(self._verification(phone, secrets.token_hex(16), now))

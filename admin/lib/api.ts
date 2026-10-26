@@ -121,6 +121,33 @@ export interface Dashboard {
   };
 }
 
+export type CustomerStatus = 'active' | 'suspended' | 'closed';
+export interface Customer {
+  id: string;
+  /** Short reference shown as the ID, e.g. "3F2A9C1B". */
+  ref: string;
+  /** Legal name from an approved identity check; null before one. */
+  name: string | null;
+  email: string;
+  phone: string;
+  status: CustomerStatus;
+  kyc_status: string | null;
+  created_at: string;
+  last_login_at: string | null;
+}
+export interface CustomerPage {
+  total: number;
+  items: Customer[];
+}
+export interface CustomerStats {
+  total: number;
+  active_30_days: number;
+  inactive_30_days: number;
+  suspended: number;
+  kyc_waiting: number;
+}
+export type CustomerAction = 'suspend' | 'reactivate' | 'close';
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -170,6 +197,18 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
         new_password: newPassword,
       }),
     me: () => call<Me>('GET', '/me'),
+    listCustomers: (q: { search?: string; status?: CustomerStatus; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      if (q.status) p.set('status', q.status);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<CustomerPage>('GET', `/users?${p.toString()}`);
+    },
+    customerStats: () => call<CustomerStats>('GET', '/users/stats'),
+    /** Super Admin only (the server checks); a reason is required. */
+    changeCustomer: (id: string, action: CustomerAction, reason: string) =>
+      call<{ id: string; status: CustomerStatus }>('POST', `/users/${encodeURIComponent(id)}/${action}`, { reason }),
     dashboard: (period: DashboardPeriod, month?: string) =>
       call<Dashboard>(
         'GET',

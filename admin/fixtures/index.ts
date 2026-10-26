@@ -26,6 +26,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: 'Dashboard', href: '/', section: 'work', icon: 'dashboard' },
   { id: 'staff', label: 'Staff', href: '/staff', permission: 'staff.read', section: 'admin', icon: 'staff' },
+  { id: 'users', label: 'Users', href: '/users', permission: 'users.read', section: 'admin', icon: 'staff' },
   { id: 'audit', label: 'Audit Logs', href: '/audit', permission: 'audit.read', section: 'admin', icon: 'audit' },
   { id: 'roles', label: 'Setups', href: '/roles', permission: 'roles.read', section: 'admin', icon: 'setups' },
   { id: 'profile', label: 'My profile', href: '/profile', section: 'admin', icon: 'profile' },
@@ -40,7 +41,6 @@ export const PLANNED_DESTINATIONS: readonly NavItem[] = [
   { id: 'disputes', label: 'Dispute Resolution', href: '/disputes' },
   { id: 'reversals', label: 'Reversal', href: '/reversals' },
   { id: 'fraud', label: 'Fraud Management', href: '/fraud' },
-  { id: 'users', label: 'Users', href: '/users' },
   { id: 'kyc', label: 'Identity checks', href: '/kyc' },
   { id: 'outages', label: 'Service Outage Mgt', href: '/outages' },
 ];
