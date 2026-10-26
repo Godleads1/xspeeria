@@ -30,7 +30,7 @@
 7. **Design corrections to Figma:**
    - "Select Audience" is left out, because the owner said everyone sees the advert;
    - the sample adverts ("FCMB Advert", "Qatar Airways Advert") are placeholders;
-   - the list shows a status (Showing now, Scheduled, Ended, Switched off) and a thumbnail.
+   - the list shows a status (Showing now, Behind a newer advert, Scheduled, Ended, Switched off) and a thumbnail. Only the advert in the slot says "Showing now".
 
 ## Not built
 
