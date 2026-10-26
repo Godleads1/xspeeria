@@ -127,7 +127,13 @@ Super Admin exists; add everyone else from the console (ADR-060).
 
 ```bash
 cd backend
-uv run python -m app.cli.create_super_admin --email you@example.com --name "Your Name"
+uv run python -m app.cli.create_super_admin --email you@example.com --name "Your Name" --phone +2348031234567
+```
+
+To try staff photos on this computer, add to `.env` (until the Cloudflare R2 bucket exists):
+
+```bash
+LOCAL_PHOTO_DIR=.local-photos
 ```
 
 ## Admin console: open it in your browser

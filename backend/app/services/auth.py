@@ -77,6 +77,7 @@ from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
 from app.providers.email import EmailSender, mask_email
 from app.providers.face import FaceCheckError, FaceCheckProvider, NoReferenceFace
+from app.providers.object_store import ObjectStore
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import PushSender
 from app.providers.sms import SmsSender
@@ -255,6 +256,8 @@ class AuthRuntime:
     face: FaceCheckProvider | None = None
     #: ADR-058: BVN and proof-of-address checks for higher tiers. None: those checks are off.
     tier_checks: TierCheckProvider | None = None
+    #: ADR-049/060: where photos are kept. None: photo uploads are off.
+    object_store: ObjectStore | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: SlidingWindowLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(

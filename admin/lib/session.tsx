@@ -17,6 +17,8 @@ interface Session {
   /** The API the signed-in pages use (tests pass a fake one to the provider). */
   api: AdminApi;
   can: (permission: string) => boolean;
+  /** Changes each time `refresh` runs, so photos shown for me reload. */
+  version: number;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -41,10 +43,12 @@ export function SessionProvider({
 }): ReactElement {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
 
   const refresh = useCallback(async () => {
     try {
       setMe(await api.me());
+      setVersion((v) => v + 1);
       setError(null);
     } catch (e) {
       if (e instanceof AdminApiError && e.status === 401) onSignedOut();
@@ -83,7 +87,7 @@ export function SessionProvider({
   }
   const permissions = new Set(me.permissions);
   return (
-    <SessionContext.Provider value={{ me, api, can: (p) => permissions.has(p), refresh, logout }}>
+    <SessionContext.Provider value={{ me, api, version, can: (p) => permissions.has(p), refresh, logout }}>
       {children}
     </SessionContext.Provider>
   );

@@ -128,6 +128,9 @@ class StaffView(BaseModel):
     id: uuid.UUID
     email: str
     name: str
+    #: International form; null for accounts made before phones were required.
+    phone: str | None
+    has_photo: bool
     role_id: uuid.UUID
     role: str
     status: str
@@ -248,6 +251,8 @@ async def change_password(
 class InviteStaff(_Strict):
     email: str = Field(min_length=3, max_length=254)
     name: str = Field(min_length=2, max_length=80)
+    #: Required (owner decision 2026-10-26); international form, e.g. +2348031234567.
+    phone: str = Field(min_length=8, max_length=20)
     role_id: uuid.UUID
 
 
@@ -259,6 +264,7 @@ class InvitedStaff(StaffView):
 
 class UpdateStaff(_Strict):
     name: str | None = Field(default=None, min_length=2, max_length=80)
+    phone: str | None = Field(default=None, min_length=8, max_length=20)
     role_id: uuid.UUID | None = None
     status: Literal["active", "disabled"] | None = None
 
@@ -275,7 +281,9 @@ async def list_staff(staff: Staff, service: Service) -> Any:
     summary="Invite a staff member (staff.create)",
 )
 async def invite_staff(body: InviteStaff, staff: Staff, service: Service, info: Info) -> Any:
-    return await service.create_staff(staff, body.email, body.name, body.role_id, info)
+    return await service.create_staff(
+        staff, body.email, body.name, body.role_id, info, phone_in=body.phone
+    )
 
 
 @router.patch(
@@ -288,6 +296,53 @@ async def update_staff(
 ) -> Any:
     changes = body.model_dump(exclude_none=True)
     return await service.update_staff(staff, staff_id, changes, info)
+
+
+# --- photos (ADR-049, ADR-060) -----------------------------------------------------------------
+
+
+class PhotoUpload(_Strict):
+    #: JPEG, PNG or WebP, base64; at most 5 MB once decoded (checked by the service).
+    photo: str = Field(min_length=8, max_length=7_000_000)
+
+
+@router.put(
+    "/staff/{staff_id}/photo",
+    response_model=StaffView,
+    summary="Set a staff photo (your own, or staff.update within your permissions)",
+)
+async def set_photo(
+    staff_id: uuid.UUID, body: PhotoUpload, staff: Staff, service: Service, info: Info
+) -> Any:
+    return await service.set_photo(staff, staff_id, body.photo, info)
+
+
+@router.delete(
+    "/staff/{staff_id}/photo",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a staff photo",
+)
+async def remove_photo(staff_id: uuid.UUID, staff: Staff, service: Service, info: Info) -> Response:
+    await service.remove_photo(staff, staff_id, info)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/staff/{staff_id}/photo", summary="A staff photo (staff.read, or your own)")
+async def get_photo(staff_id: uuid.UUID, staff: Staff, service: Service) -> Response:
+    found = await service.photo(staff, staff_id)
+    if found is None:
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+    data, content_type = found
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Content-Disposition": "inline",
+        },
+    )
 
 
 # --- roles -------------------------------------------------------------------------------------

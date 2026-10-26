@@ -15,16 +15,12 @@ import type { ReactElement, ReactNode } from 'react';
 import { NAV_ITEMS, type NavItem } from '../../fixtures';
 import { roleLabel } from '../../lib/permissions';
 import { color, fontStack, space } from '../../theme';
+import { Avatar } from '../Avatar';
 import { Icon } from '../icons';
 import { Wordmark } from '../Wordmark';
 
 const SIDEBAR = 240;
 export const PAGE_BG = '#F5F6FA';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase();
-}
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }): ReactElement {
   return (
@@ -64,7 +60,7 @@ export function AppShell({
   children: ReactNode;
   /** The signed-in person's permissions; without it, only the open entries show. */
   permissions?: readonly string[];
-  who?: { name: string; role: string };
+  who?: { name: string; role: string; photo?: string | null };
   /** The href of the page being shown. */
   current?: string;
   onLogout?: () => void;
@@ -95,7 +91,7 @@ export function AppShell({
         }}
       >
         <Link href="/" aria-label="Xspeeria Admin home" style={{ textDecoration: 'none' }}>
-          <Wordmark size={22} />
+          <Wordmark size={30} />
         </Link>
       </div>
       <header
@@ -115,22 +111,7 @@ export function AppShell({
             data-testid="who"
             style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit' }}
           >
-            <span
-              aria-hidden="true"
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                backgroundColor: color.brand.tint,
-                color: color.brand.primary,
-                fontWeight: 700,
-                fontSize: 14,
-              }}
-            >
-              {initials(who.name)}
-            </span>
+            <Avatar name={who.name} src={who.photo ?? null} size={40} />
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{who.name}</span>
               <span style={{ fontSize: 12, color: color.text.secondary }}>{roleLabel(who.role)}</span>

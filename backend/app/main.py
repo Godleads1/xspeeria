@@ -49,6 +49,7 @@ from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
 from app.providers.email import DevConsoleEmailSender, EmailSender
 from app.providers.face import DevFaceCheck, DiditFaceCheck, FaceCheckProvider
+from app.providers.object_store import LocalFolderStore, ObjectStore
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import ExpoPushSender
 from app.providers.sms import DevConsoleSmsSender, SmsSender
@@ -123,7 +124,17 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         email=email,
         face=_face_check(settings),
         tier_checks=_tier_checks(settings),
+        object_store=_object_store(settings),
     )
+
+
+def _object_store(settings: Settings) -> ObjectStore | None:
+    """ADR-049/060: the Cloudflare R2 client comes with the bucket; locally, a folder."""
+    if not settings.local_photo_dir:
+        return None
+    if settings.app_env != "local":
+        raise ValueError("LOCAL_PHOTO_DIR is allowed only with APP_ENV=local (ADR-060)")
+    return LocalFolderStore(settings.local_photo_dir)
 
 
 def _tier_checks(settings: Settings) -> TierCheckProvider | None:

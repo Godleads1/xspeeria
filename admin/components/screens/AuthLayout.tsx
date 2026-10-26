@@ -1,7 +1,6 @@
 /**
  * The log-in pages' frame, after the Figma "Xspeeria Login" frames: a frosted card on the
- * left over a deep-blue background. The background is a CSS gradient standing in for the
- * Figma wave image until that image is exported into the project.
+ * left over the blue wave background.
  */
 
 import type { ReactElement, ReactNode } from 'react';
@@ -19,10 +18,12 @@ export function AuthLayout({ title, children }: { title: string; children: React
         display: 'flex',
         alignItems: 'stretch',
         fontFamily: fontStack.brand,
-        background:
-          'radial-gradient(ellipse 70% 55% at 75% 30%, #1d4ed8 0%, rgba(29,78,216,0) 70%),' +
-          'radial-gradient(ellipse 60% 45% at 60% 85%, #2563eb 0%, rgba(37,99,235,0) 70%),' +
-          'linear-gradient(135deg, #0b1d6b 0%, #020617 45%, #0b2fa8 100%)',
+        // The owner's Figma background (public/login-background.jpg), with a dark blue
+        // behind it while it loads.
+        backgroundColor: '#020617',
+        backgroundImage: 'url(/login-background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     >
       <main
@@ -39,7 +40,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
           boxSizing: 'border-box',
         }}
       >
-        <Wordmark size={40} />
+        <Wordmark size={64} />
         <div style={{ width: '100%', maxWidth: 370, marginTop: 64, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: color.text.primary }}>{title}</h1>
           {children}

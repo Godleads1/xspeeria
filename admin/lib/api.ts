@@ -28,6 +28,9 @@ export interface StaffView {
   id: string;
   email: string;
   name: string;
+  /** International form (+234…); null for accounts made before phones were required. */
+  phone: string | null;
+  has_photo: boolean;
   role_id: string;
   role: string;
   status: 'active' | 'disabled';
@@ -121,12 +124,31 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     changePassword: (current: string, next: string) =>
       call<void>('POST', '/me/password', { current_password: current, new_password: next }),
     listStaff: () => call<StaffView[]>('GET', '/staff'),
-    inviteStaff: (email: string, name: string, roleId: string) =>
-      call<StaffView & { invite_id: string }>('POST', '/staff', { email, name, role_id: roleId }),
+    inviteStaff: (email: string, name: string, roleId: string, phone: string) =>
+      call<StaffView & { invite_id: string }>('POST', '/staff', { email, name, role_id: roleId, phone }),
     updateStaff: (
       id: string,
-      changes: { name?: string; role_id?: string; status?: 'active' | 'disabled' },
+      changes: { name?: string; phone?: string; role_id?: string; status?: 'active' | 'disabled' },
     ) => call<StaffView>('PATCH', `/staff/${encodeURIComponent(id)}`, changes),
+    /** `photo`: the file as base64 (JPEG, PNG or WebP; the server cleans and checks it). */
+    setPhoto: (id: string, photo: string) =>
+      call<StaffView>('PUT', `/staff/${encodeURIComponent(id)}/photo`, { photo }),
+    removePhoto: (id: string) => call<void>('DELETE', `/staff/${encodeURIComponent(id)}/photo`),
+    /** The photo as a local object URL (null: none). Fetched with the admin header. */
+    photoUrl: async (id: string): Promise<string | null> => {
+      let response: Response;
+      try {
+        response = await doFetch(`${BASE}/staff/${encodeURIComponent(id)}/photo`, {
+          credentials: 'same-origin',
+          headers: { 'X-Xspeeria-Admin': '1' },
+        });
+      } catch {
+        return null;
+      }
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return /^image\/(jpeg|png|webp)$/.test(blob.type) ? URL.createObjectURL(blob) : null;
+    },
     listRoles: () => call<RoleView[]>('GET', '/roles'),
     createRole: (name: string, description: string, permissions: string[]) =>
       call<RoleView>('POST', '/roles', { name, description, permissions }),

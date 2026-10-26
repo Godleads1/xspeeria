@@ -35,6 +35,8 @@ function me(over: Partial<Me> = {}): Me {
     role_id: 'r-super',
     role: 'super_admin',
     status: 'active',
+    phone: '+2348030000001',
+    has_photo: false,
     password_set: true,
     last_login_at: '2026-10-26T09:00:00Z',
     created_at: '2026-10-26T08:00:00Z',
@@ -45,8 +47,8 @@ function me(over: Partial<Me> = {}): Me {
 
 const STAFF: StaffView[] = [
   { ...me(), permissions: undefined } as unknown as StaffView,
-  { id: 's-agent', email: 'agent@xspeeria.test', name: 'Ada Agent', role_id: 'r-support', role: 'support_agent', status: 'active', password_set: true, last_login_at: null, created_at: '2026-10-26T08:00:00Z' },
-  { id: 's-new', email: 'new@xspeeria.test', name: 'New Person', role_id: 'r-support', role: 'support_agent', status: 'active', password_set: false, last_login_at: null, created_at: '2026-10-26T08:00:00Z' },
+  { id: 's-agent', email: 'agent@xspeeria.test', name: 'Ada Agent', role_id: 'r-support', role: 'support_agent', status: 'active', phone: '+2348030000002', has_photo: false, password_set: true, last_login_at: null, created_at: '2026-10-26T08:00:00Z' },
+  { id: 's-new', email: 'new@xspeeria.test', name: 'New Person', role_id: 'r-support', role: 'support_agent', status: 'active', phone: null, has_photo: false, password_set: false, last_login_at: null, created_at: '2026-10-26T08:00:00Z' },
 ];
 
 function fakeApi(over: Partial<AdminApi> = {}, who: Me = me()): AdminApi {
@@ -54,6 +56,7 @@ function fakeApi(over: Partial<AdminApi> = {}, who: Me = me()): AdminApi {
   return {
     ...api,
     me: vi.fn(async () => who),
+    photoUrl: vi.fn(async () => null),
     listStaff: vi.fn(async () => STAFF),
     listRoles: vi.fn(async () => ROLES),
     ...over,
@@ -215,7 +218,8 @@ describe('staff', () => {
     expect(screen.queryByTestId('menu-s-boss')).toBeNull();
     fireEvent.click(screen.getByTestId('menu-s-agent'));
     expect(screen.getByTestId('disable-s-agent')).toBeInTheDocument();
-    expect(screen.getByTestId('change-role-s-agent')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-s-agent')).toBeInTheDocument();
+    expect(within(table).getByText('+2348030000002')).toBeInTheDocument();
   });
 
   it('search and status filter narrow the list, and reset clears them', async () => {
@@ -266,13 +270,19 @@ describe('staff', () => {
     fireEvent.change(screen.getByTestId('invite-first'), { target: { value: 'Kemi' } });
     fireEvent.change(screen.getByTestId('invite-last'), { target: { value: 'Okafor' } });
     fireEvent.change(screen.getByTestId('invite-email'), { target: { value: 'kemi@xspeeria.test' } });
+    expect(screen.getByTestId('invite-phone')).toHaveValue('+234');
     await waitFor(() => expect(within(screen.getByTestId('invite-role')).getAllByRole('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('invite-role'), { target: { value: 'r-comp' } });
+    fireEvent.change(screen.getByTestId('invite-phone'), { target: { value: '0803 123 4567' } });
+    fireEvent.click(screen.getByTestId('invite-submit'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('valid phone number');
+    expect(inviteStaff).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByTestId('invite-phone'), { target: { value: '+234 803 123 4567' } });
     fireEvent.click(screen.getByTestId('invite-submit'));
     expect(await screen.findByTestId('invite-link')).toHaveTextContent(
       'https://admin.test/set-password?id=11111111-2222-3333-4444-555555555555',
     );
-    expect(inviteStaff).toHaveBeenCalledWith('kemi@xspeeria.test', 'Kemi Okafor', 'r-comp');
+    expect(inviteStaff).toHaveBeenCalledWith('kemi@xspeeria.test', 'Kemi Okafor', 'r-comp', '+2348031234567');
   });
 
   it('disabling from the row menu asks the server and says what happened', async () => {
@@ -284,15 +294,38 @@ describe('staff', () => {
     expect(updateStaff).toHaveBeenCalledWith('s-agent', { status: 'disabled' });
   });
 
-  it('changing a role from the row menu', async () => {
+  it('editing name, phone and role from the row menu sends only what changed', async () => {
     const updateStaff = vi.fn(async () => ({ ...STAFF[1], role: 'compliance_officer', role_id: 'r-comp' }));
     await signedIn(fakeApi({ updateStaff }), <StaffScreen origin="https://admin.test" />);
     fireEvent.click(await screen.findByTestId('menu-s-agent'));
-    fireEvent.click(screen.getByTestId('change-role-s-agent'));
-    expect(screen.getByTestId('save-role-s-agent')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('edit-s-agent'));
+    expect(screen.getByTestId('phone-s-agent')).toHaveValue('+2348030000002');
+    fireEvent.change(screen.getByTestId('phone-s-agent'), { target: { value: '+44 7700 900123' } });
     fireEvent.change(screen.getByTestId('role-s-agent'), { target: { value: 'r-comp' } });
-    fireEvent.click(screen.getByTestId('save-role-s-agent'));
-    await waitFor(() => expect(updateStaff).toHaveBeenCalledWith('s-agent', { role_id: 'r-comp' }));
+    fireEvent.click(screen.getByTestId('save-s-agent'));
+    await waitFor(() => expect(updateStaff).toHaveBeenCalledWith('s-agent', { phone: '+447700900123', role_id: 'r-comp' }));
+    expect(await screen.findByText(/Their role changed, so they were logged out/)).toBeInTheDocument();
+  });
+
+  it('a photo is uploaded with the edit and the wrong file type is refused before sending', async () => {
+    const setPhoto = vi.fn(async () => STAFF[1]);
+    const updateStaff = vi.fn();
+    const created: string[] = [];
+    URL.createObjectURL = vi.fn(() => {
+      created.push('blob:x');
+      return 'blob:x';
+    });
+    await signedIn(fakeApi({ setPhoto, updateStaff }), <StaffScreen origin="https://admin.test" />);
+    fireEvent.click(await screen.findByTestId('menu-s-agent'));
+    fireEvent.click(screen.getByTestId('edit-s-agent'));
+    const input = screen.getByTestId('photo-s-agent');
+    fireEvent.change(input, { target: { files: [new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' })] } });
+    expect(await screen.findByText('Choose a JPG, PNG or WebP photo.')).toBeInTheDocument();
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([137, 80, 78, 71])], 'me.png', { type: 'image/png' })] } });
+    await waitFor(() => expect(created).toHaveLength(1));
+    fireEvent.click(screen.getByTestId('save-s-agent'));
+    await waitFor(() => expect(setPhoto).toHaveBeenCalledWith('s-agent', 'iVBORw=='));
+    expect(updateStaff).not.toHaveBeenCalled(); // nothing else changed
   });
 });
 
@@ -370,6 +403,18 @@ describe('audit log', () => {
 });
 
 describe('profile', () => {
+  it('shows my phone and lets me change my own photo', async () => {
+    const setPhoto = vi.fn(async () => STAFF[0]);
+    URL.createObjectURL = vi.fn(() => 'blob:me');
+    await signedIn(fakeApi({ setPhoto }), <ProfileScreen />);
+    expect(screen.getByText('+2348030000001')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('my-photo'), {
+      target: { files: [new File([new Uint8Array([255, 216, 255])], 'me.jpg', { type: 'image/jpeg' })] },
+    });
+    expect(await screen.findByText('Photo saved.')).toBeInTheDocument();
+    expect(setPhoto).toHaveBeenCalledWith('s-boss', '/9j/');
+  });
+
   it('changes my password', async () => {
     const changePassword = vi.fn(async () => undefined);
     await signedIn(fakeApi({ changePassword }), <ProfileScreen />);

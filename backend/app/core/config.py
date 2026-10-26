@@ -189,6 +189,9 @@ class Settings(BaseSettings):
     #: ADR-052: how often new notifications are pushed.
     push_tick_seconds: int = 5
 
+    #: ADR-060: on a developer's own computer only (APP_ENV=local), staff photos are kept in
+    #: this folder until the Cloudflare R2 bucket exists (ADR-049). Empty: photos are off.
+    local_photo_dir: str = ""
     cors_allowed_origins: str = ""
 
     @field_validator("database_url")

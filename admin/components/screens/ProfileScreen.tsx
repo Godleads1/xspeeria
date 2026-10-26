@@ -9,12 +9,30 @@ import { roleLabel } from '../../lib/permissions';
 import { useSession } from '../../lib/session';
 import { color } from '../../theme';
 import { Button, Form, FormError, Notice, PageTitle, TextInput } from '../forms';
+import { PhotoPicker } from '../Avatar';
 import { Panel } from '../primitives';
+import { useStaffPhoto } from '../../lib/photos';
 import { when } from './common';
 import { PASSWORD_HINT } from './SetPasswordScreen';
 
 export function ProfileScreen(): ReactElement {
-  const { me, api } = useSession();
+  const { me, api, version, refresh } = useSession();
+  const photo = useStaffPhoto(api, me.id, me.has_photo, version);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoDone, setPhotoDone] = useState<string | null>(null);
+
+  async function changePhoto(next: { base64: string } | null): Promise<void> {
+    setPhotoError(null);
+    setPhotoDone(null);
+    try {
+      if (next) await api.setPhoto(me.id, next.base64);
+      else await api.removePhoto(me.id);
+      await refresh();
+      setPhotoDone(next ? 'Photo saved.' : 'Photo removed.');
+    } catch (e) {
+      setPhotoError(messageFor(e));
+    }
+  }
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [again, setAgain] = useState('');
@@ -51,18 +69,28 @@ export function ProfileScreen(): ReactElement {
     <>
       <PageTitle crumb="My profile">My profile</PageTitle>
       <Panel>
+        <PhotoPicker
+          preview={photo}
+          onPick={(p) => void changePhoto(p)}
+          onRemove={() => void changePhoto(null)}
+          testId="my-photo"
+        />
+        <FormError message={photoError} />
+        <Notice message={photoDone} />
         <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8 }}>
           <dt style={label}>Name</dt>
           <dd style={value}>{me.name}</dd>
           <dt style={label}>Email</dt>
           <dd style={value}>{me.email}</dd>
+          <dt style={label}>Phone Number</dt>
+          <dd style={value}>{me.phone ?? '—'}</dd>
           <dt style={label}>Role</dt>
           <dd style={value}>{roleLabel(me.role)}</dd>
           <dt style={label}>Last log-in</dt>
           <dd style={value}>{when(me.last_login_at)} (Lagos time)</dd>
         </dl>
         <p style={{ margin: 0, fontSize: 13, color: color.text.secondary }}>
-          Your name, email and role are changed by staff who manage accounts.
+          Your name, email, phone and role are changed by staff who manage accounts. Your photo is yours to change.
         </p>
       </Panel>
       <Panel>

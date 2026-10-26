@@ -6,16 +6,18 @@
  *
  * Actions appear only where the server would allow them (your own permissions cover the
  * role; never yourself; Super Admins only by a Super Admin). The server checks again.
- * Figma's photo, phone number and typed User ID are not here: staff IDs are made by the
- * server and no staff photo or phone is stored (ADR-051 design corrections).
+ * Phone (required) and photo per the owner, 2026-10-26; Figma's typed User ID is not here —
+ * staff IDs are made by the server (ADR-051).
  */
 
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
 import { AdminApiError, messageFor, type AdminApi, type RoleView, type StaffView } from '../../lib/api';
 import { roleLabel } from '../../lib/permissions';
+import { useStaffPhoto } from '../../lib/photos';
 import { useSession } from '../../lib/session';
 import { color, space } from '../../theme';
+import { Avatar, PhotoPicker } from '../Avatar';
 import { BarSelect, FilterBar, SearchBox } from '../FilterBar';
 import { Button, Form, FormError, Notice, PageTitle, Select, TextInput } from '../forms';
 import { Panel } from '../primitives';
@@ -24,6 +26,24 @@ import { DataTable, type Column } from '../table/DataTable';
 import { StaffStatus, when, withinMine } from './common';
 
 type StatusFilter = '' | 'active' | 'invited' | 'disabled';
+
+/** International form, as the server requires: + and 8–15 digits (spaces allowed while typing). */
+export function cleanPhone(value: string): string | null {
+  const compact = value.replace(/[\s()-]/g, '');
+  return /^\+[1-9][0-9]{7,14}$/.test(compact) ? compact : null;
+}
+
+const PHONE_HINT = 'International form, e.g. +234 803 123 4567';
+
+function StaffName({ api, staff, you }: { api: AdminApi; staff: StaffView; you: boolean }): ReactElement {
+  const src = useStaffPhoto(api, staff.id, staff.has_photo);
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Avatar name={staff.name} src={src} size={28} />
+      {you ? `${staff.name} (you)` : staff.name}
+    </span>
+  );
+}
 
 function statusOf(s: StaffView): Exclude<StatusFilter, ''> {
   if (s.status === 'disabled') return 'disabled';
@@ -44,7 +64,7 @@ export function StaffScreen({
   const [notice, setNotice] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [changingRole, setChangingRole] = useState<StaffView | null>(null);
+  const [editing, setEditing] = useState<StaffView | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('');
 
@@ -85,19 +105,12 @@ export function StaffScreen({
     );
   }, [staff, search, status]);
 
-  async function update(s: StaffView, changes: { role_id?: string; status?: 'active' | 'disabled' }): Promise<void> {
+  async function update(s: StaffView, changes: { status: 'active' | 'disabled' }): Promise<void> {
     setRowError(null);
     setNotice(null);
     try {
       await api.updateStaff(s.id, changes);
-      setNotice(
-        changes.status === 'disabled'
-          ? `${s.name} is disabled and was logged out.`
-          : changes.status === 'active'
-            ? `${s.name} can log in again.`
-            : `${s.name}’s role is changed. They were logged out and see the new role when they log in.`,
-      );
-      setChangingRole(null);
+      setNotice(changes.status === 'disabled' ? `${s.name} is disabled and was logged out.` : `${s.name} can log in again.`);
       await load();
     } catch (e) {
       setRowError(messageFor(e));
@@ -106,10 +119,7 @@ export function StaffScreen({
 
   const actionsFor = (s: StaffView): RowAction[] => {
     if (!canActOn(s)) return [];
-    const out: RowAction[] = [];
-    if (assignable.length > 0) {
-      out.push({ label: 'Change role', testId: `change-role-${s.id}`, onSelect: () => setChangingRole(s) });
-    }
+    const out: RowAction[] = [{ label: 'Edit', testId: `edit-${s.id}`, onSelect: () => setEditing(s) }];
     out.push(
       s.status === 'active'
         ? { label: 'Disable', danger: true, testId: `disable-${s.id}`, onSelect: () => void update(s, { status: 'disabled' }) }
@@ -119,8 +129,9 @@ export function StaffScreen({
   };
 
   const columns: readonly Column<StaffView>[] = [
-    { key: 'name', header: 'NAME', render: (s) => (s.id === me.id ? `${s.name} (you)` : s.name) },
+    { key: 'name', header: 'NAME', render: (s) => <StaffName api={api} staff={s} you={s.id === me.id} /> },
     { key: 'email', header: 'E-MAIL ADDRESS', render: (s) => s.email },
+    { key: 'phone', header: 'Phone Number', render: (s) => s.phone ?? '—' },
     { key: 'role', header: 'Role', render: (s) => roleLabel(s.role) },
     { key: 'status', header: 'Status', render: (s) => <StaffStatus status={s.status} passwordSet={s.password_set} /> },
     { key: 'last', header: 'Last log-in', render: (s) => when(s.last_login_at) },
@@ -176,12 +187,19 @@ export function StaffScreen({
           </code>
         </div>
       ) : null}
-      {changingRole ? (
-        <ChangeRole
-          staff={changingRole}
+      {editing ? (
+        <EditStaff
+          key={editing.id}
+          api={api}
+          staff={editing}
           roles={assignable}
-          onCancel={() => setChangingRole(null)}
-          onSave={(roleId) => void update(changingRole, { role_id: roleId })}
+          onCancel={() => setEditing(null)}
+          onSaved={(message) => {
+            setEditing(null);
+            setRowError(null);
+            setNotice(message);
+            void load();
+          }}
         />
       ) : null}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' }}>
@@ -216,45 +234,98 @@ export function StaffScreen({
   );
 }
 
-function ChangeRole({
+function EditStaff({
+  api,
   staff,
   roles,
   onCancel,
-  onSave,
+  onSaved,
 }: {
+  api: AdminApi;
   staff: StaffView;
   roles: RoleView[];
   onCancel: () => void;
-  onSave: (roleId: string) => void;
+  onSaved: (message: string) => void;
 }): ReactElement {
-  const [value, setValue] = useState(staff.role_id);
+  const current = useStaffPhoto(api, staff.id, staff.has_photo);
+  const [name, setName] = useState(staff.name);
+  const [phone, setPhone] = useState(staff.phone ?? '+234');
+  const [roleId, setRoleId] = useState(staff.role_id);
+  const [photo, setPhoto] = useState<{ base64: string; preview: string } | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const known = roles.some((r) => r.id === staff.role_id);
+
+  async function save(): Promise<void> {
+    const cleanedPhone = cleanPhone(phone);
+    if (name.trim().length < 2) return setError('Enter their name.');
+    if (!cleanedPhone) return setError(`Enter a valid phone number. ${PHONE_HINT}.`);
+    const changes: { name?: string; phone?: string; role_id?: string } = {};
+    if (name.trim() !== staff.name) changes.name = name.trim();
+    if (cleanedPhone !== staff.phone) changes.phone = cleanedPhone;
+    if (roleId !== staff.role_id) changes.role_id = roleId;
+    setBusy(true);
+    setError(null);
+    try {
+      if (Object.keys(changes).length > 0) await api.updateStaff(staff.id, changes);
+      if (photo) await api.setPhoto(staff.id, photo.base64);
+      else if (removePhoto) await api.removePhoto(staff.id);
+      onSaved(
+        changes.role_id
+          ? `${name.trim()} is saved. Their role changed, so they were logged out and see it when they log in.`
+          : `${name.trim()} is saved.`,
+      );
+    } catch (e) {
+      setError(messageFor(e));
+      setBusy(false);
+    }
+  }
+
   return (
     <Panel>
-      <h2 style={{ margin: 0, fontSize: 16 }}>Change role for {staff.name}</h2>
-      <div style={{ display: 'flex', gap: space.sm, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 260 }}>
-          <Select
-            label="Role"
-            value={value}
-            onChange={setValue}
-            testId={`role-${staff.id}`}
-            options={[
-              ...(known ? [] : [{ value: staff.role_id, label: roleLabel(staff.role), disabled: true }]),
-              ...roles.map((r) => ({ value: r.id, label: roleLabel(r.name) })),
-            ]}
-          />
+      <h2 style={{ margin: 0, fontSize: 16 }}>Edit {staff.name}</h2>
+      <Form label={`Edit ${staff.name}`} onSubmit={() => void save()}>
+        <PhotoPicker
+          preview={photo?.preview ?? (removePhoto ? null : current)}
+          onPick={(p) => {
+            setPhoto(p);
+            setRemovePhoto(false);
+          }}
+          onRemove={() => {
+            setPhoto(null);
+            setRemovePhoto(true);
+          }}
+          testId={`photo-${staff.id}`}
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${space.sm}px 40px`, maxWidth: 680, width: '100%', margin: '0 auto' }}>
+          <TextInput label="Name" value={name} onChange={setName} testId={`name-${staff.id}`} />
+          <TextInput label="Phone Number" value={phone} onChange={setPhone} inputMode="text" hint={PHONE_HINT} testId={`phone-${staff.id}`} />
+          {roles.length > 0 ? (
+            <Select
+              label="Role"
+              value={roleId}
+              onChange={setRoleId}
+              testId={`role-${staff.id}`}
+              options={[
+                ...(known ? [] : [{ value: staff.role_id, label: roleLabel(staff.role), disabled: true }]),
+                ...roles.map((r) => ({ value: r.id, label: roleLabel(r.name) })),
+              ]}
+            />
+          ) : null}
         </div>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button testId={`save-role-${staff.id}`} disabled={value === staff.role_id} onClick={() => onSave(value)}>
-          Save role
-        </Button>
-      </div>
-      <p style={{ margin: 0, fontSize: 13, color: color.text.secondary }}>
-        They are logged out and see the new role when they log in again.
-      </p>
+        <div style={{ maxWidth: 680, width: '100%', margin: '0 auto' }}>
+          <FormError message={error} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: space.sm, maxWidth: 680, width: '100%', margin: '0 auto' }}>
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" busy={busy} testId={`save-${staff.id}`}>
+            Save
+          </Button>
+        </div>
+      </Form>
     </Panel>
   );
 }
@@ -273,21 +344,37 @@ function AddStaffForm({
   const [first, setFirst] = useState('');
   const [last, setLast] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('+234');
   const [roleId, setRoleId] = useState('');
+  const [photo, setPhoto] = useState<{ base64: string; preview: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ready = first.trim() !== '' && last.trim() !== '' && email.trim() !== '' && roleId !== '';
+  const ready = first.trim() !== '' && last.trim() !== '' && email.trim() !== '' && roleId !== '' && phone.trim().length > 4;
 
   async function save(): Promise<void> {
     if (!ready) {
-      setError('Enter their first name, last name and email, and choose a role.');
+      setError('Enter their first name, last name, email and phone number, and choose a role.');
+      return;
+    }
+    const cleanedPhone = cleanPhone(phone);
+    if (!cleanedPhone) {
+      setError(`Enter a valid phone number. ${PHONE_HINT}.`);
       return;
     }
     setBusy(true);
     setError(null);
     const name = `${first.trim()} ${last.trim()}`;
     try {
-      const r = await api.inviteStaff(email.trim(), name, roleId);
+      const r = await api.inviteStaff(email.trim(), name, roleId, cleanedPhone);
+      if (photo) {
+        try {
+          await api.setPhoto(r.id, photo.base64);
+        } catch {
+          // The account exists; the photo can be added from Edit. Say so rather than fail.
+          onInvited(r.invite_id, `${name} (the photo didn’t save — add it from Edit)`);
+          return;
+        }
+      }
       onInvited(r.invite_id, name);
     } catch (e) {
       setError(messageFor(e));
@@ -303,10 +390,14 @@ function AddStaffForm({
         </p>
       ) : (
         <Form label="Add Staff" onSubmit={() => void save()}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${space.sm}px 40px`, maxWidth: 680, width: '100%', margin: '24px auto 0' }}>
+          <div style={{ marginTop: 16 }}>
+            <PhotoPicker preview={photo?.preview ?? null} onPick={setPhoto} onRemove={() => setPhoto(null)} testId="invite-photo" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${space.sm}px 40px`, maxWidth: 680, width: '100%', margin: '8px auto 0' }}>
             <TextInput label="First Name" placeholder="enter" value={first} onChange={setFirst} testId="invite-first" />
             <TextInput label="Last Name" placeholder="enter" value={last} onChange={setLast} testId="invite-last" />
             <TextInput label="Email address" type="email" placeholder="enter" value={email} onChange={setEmail} testId="invite-email" />
+            <TextInput label="Phone Number" value={phone} onChange={setPhone} hint={PHONE_HINT} testId="invite-phone" />
             <Select
               label="Role"
               value={roleId}

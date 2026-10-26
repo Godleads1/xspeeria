@@ -5,15 +5,17 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 
+import { useStaffPhoto } from '../lib/photos';
 import { SessionProvider, useSession } from '../lib/session';
 import { AppShell } from './shell/AppShell';
 
 function Shell({ current, children }: { current: string; children: ReactNode }): ReactElement {
-  const { me, logout } = useSession();
+  const { me, api, version, logout } = useSession();
+  const photo = useStaffPhoto(api, me.id, me.has_photo, version);
   return (
     <AppShell
       permissions={me.permissions}
-      who={{ name: me.name, role: me.role }}
+      who={{ name: me.name, role: me.role, photo }}
       current={current}
       onLogout={() => void logout()}
     >
