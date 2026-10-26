@@ -19,6 +19,9 @@ export interface ServerOffer {
   is_own: boolean;
   version: number;
   created_at: string;
+  /** ADR-059 Decision 5: one currency of a request in several; taken whole only. */
+  group_id?: string | null;
+  whole_only?: boolean;
   /** ADR-059 Decision 4 (listings): someone is paying for it, or it is held for someone's turn. */
   waiting?: boolean;
   /** What may come back to take, in the offer's own currency. */
@@ -140,6 +143,19 @@ export const offersApi = {
       ...x,
     }),
   mine: (token: string, x: Extra = {}) => apiRequest<ServerOffer[]>('GET', '/api/v1/offers/mine', { token, ...x }),
+  /** ADR-059 Decision 5: one naira amount for any one of 2–5 currencies. */
+  publishGroup: (
+    token: string,
+    body: { source_amount: string; currencies: { currency: string; desired_rate: string }[] },
+    idempotencyKey: string,
+    x: Extra = {},
+  ) =>
+    apiRequest<{ group_id: string; offers: ServerOffer[] }>('POST', '/api/v1/offers/requests', {
+      token,
+      body,
+      headers: { 'Idempotency-Key': idempotencyKey },
+      ...x,
+    }),
   /** ADR-059 Decision 4: wait for an offer someone else is paying for. */
   joinQueue: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<QueueEntry>('POST', `/api/v1/offers/${encodeURIComponent(offerId)}/queue`, { token, ...x }),
@@ -153,7 +169,7 @@ export const offersApi = {
       ...x,
     }),
   /** ADR-059 Decision 3: change the rate and amount (amount in the offer's own currency). */
-  edit: (token: string, offerId: string, change: { desired_rate: string; source_amount: string }, x: Extra = {}) =>
+  edit: (token: string, offerId: string, change: { desired_rate: string; source_amount?: string }, x: Extra = {}) =>
     apiRequest<ServerOffer>('PATCH', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, body: change, ...x }),
   get: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('GET', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),

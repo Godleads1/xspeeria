@@ -184,6 +184,10 @@ export function MyOffersScreen({
                 </Text>
                 {editing?.id === o.offer_id ? (
                   <View testID={`my-offer-${o.offer_id}-form`} style={styles.form}>
+                    {o.group_id ? (
+                      <Text style={styles.formLabel}>{tr("This request is in several currencies, so only its rate can change.")}</Text>
+                    ) : (
+                    <>
                     <Text style={styles.formLabel}>{tr("Amount ({{currency}})", { currency: foreign })}</Text>
                     <TextInput
                       testID={`my-offer-${o.offer_id}-amount`}
@@ -194,6 +198,8 @@ export function MyOffersScreen({
                       inputMode="decimal"
                       style={styles.input}
                     />
+                    </>
+                    )}
                     <Text style={styles.formLabel}>{tr("Rate (NGN per {{currency}})", { currency: foreign })}</Text>
                     <TextInput
                       testID={`my-offer-${o.offer_id}-rate`}

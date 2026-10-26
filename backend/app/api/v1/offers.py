@@ -39,7 +39,9 @@ from app.schemas.offers import (
     AcceptRequest,
     AddPayoutAccountRequest,
     ChoosePayoutAccountsRequest,
+    CreateGroupRequest,
     CreateOfferRequest,
+    GroupResponse,
     ListingsResponse,
     MatchResponse,
     OfferResponse,
@@ -176,6 +178,32 @@ async def create_offer(
         body.target_currency,
         body.source_amount,
         body.desired_rate,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@router.post(
+    "/requests",
+    status_code=status.HTTP_201_CREATED,
+    response_model=GroupResponse,
+    summary="Publish a buy request in 2–5 currencies (repeat-safe with Idempotency-Key)",
+)
+async def create_group(
+    body: CreateGroupRequest,
+    principal: Verified,
+    service: Service,
+    key: IdempotencyKey,
+    settings: Settings_,
+    runtime: Runtime,
+    db: Db,
+) -> Any:
+    """ADR-059 Decision 5. The maker pays naira, so the Nigeria identity check applies."""
+    await require_pay_country(principal, "NGN", settings, runtime, db)
+    result = await service.create_group(
+        principal,
+        key,
+        body.source_amount,
+        [(c.currency, c.desired_rate) for c in body.currencies],
     )
     return JSONResponse(status_code=result.status_code, content=result.body)
 

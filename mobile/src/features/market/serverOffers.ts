@@ -195,6 +195,9 @@ export const myOffers = {
    * The server checks everything again and refuses once anyone has taken part of it.
    */
   edit: async (offer: ServerOffer, amountMinor: number, rateHundredths: number) => {
+    const desired_rate = formatHundredths(rateHundredths).replace(/,/g, '');
+    // ADR-059 Decision 5: every currency of a request pays the same naira; only the rate changes.
+    if (offer.group_id) return offersApi.edit(token(), offer.offer_id, { desired_rate }, serverAuth.apiOptions());
     const request = offer.source_currency === 'NGN';
     const own = request ? quoteMinorOrNull(amountMinor, rateHundredths) : amountMinor;
     if (own === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
@@ -240,4 +243,19 @@ export const queueServer = {
   join: async (offerId: string) => offersApi.joinQueue(token(), offerId, serverAuth.apiOptions()),
   leave: async (offerId: string) => offersApi.leaveQueue(token(), offerId, serverAuth.apiOptions()),
   mine: async () => offersApi.myQueue(token(), serverAuth.apiOptions()),
+};
+
+/** ADR-059 Decision 5: post one naira amount for any one of 2–5 currencies (repeat-safe). */
+export const multiRequestServer = {
+  publish: async (nairaMinor: number, lines: readonly { currency: string; rateHundredths: number }[], key: string) =>
+    offersApi.publishGroup(
+      token(),
+      {
+        source_amount: formatHundredths(nairaMinor).replace(/,/g, ''),
+        currencies: lines.map((l) => ({ currency: l.currency, desired_rate: formatHundredths(l.rateHundredths).replace(/,/g, '') })),
+      },
+      key,
+      serverAuth.apiOptions(),
+    ),
+  newKey: () => Crypto.randomUUID(),
 };

@@ -78,6 +78,7 @@ from app.models.settlement import (
 )
 from app.providers.pretend_bank import LegCommand, PartnerError, PayoutLine, PretendBank
 from app.services.auth import Principal
+from app.services.groups import complete_group
 from app.services.notifications import notify, notify_settlement
 from app.services.offers import money_text
 from app.services.queue import on_capacity_returned
@@ -819,6 +820,16 @@ class SettlementService:
         if settlement.phase == "RELEASING" and all(s == "PAID_OUT" for s in states):
             await self._set_phase(settlement, "COMPLETED")
             self._event(settlement.id, None, "SettlementCompleted", {})
+            # ADR-059 Decision 5: one currency of a request completed; withdraw the others.
+            done_offer = await self._db.scalar(
+                select(Offer)
+                .join(Match, Match.offer_id == Offer.id)
+                .join(Transaction, Transaction.match_id == Match.id)
+                .where(Transaction.id == settlement.transaction_id)
+                .with_for_update(of=Offer)
+            )
+            if done_offer is not None:
+                await complete_group(self._db, done_offer, now)
         if settlement.phase == "UNWINDING":
             for leg in legs:  # money that arrives while unwinding goes straight back
                 if leg.state == "FUNDED" and not await self._has_outbox(leg.leg_id, "RETURN"):

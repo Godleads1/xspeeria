@@ -47,16 +47,19 @@ from app.models.marketplace import (
     IdempotencyRecord,
     Match,
     Offer,
+    OfferGroup,
     OfferQueueEntry,
 )
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
+from app.services.groups import GROUP_MAX, GROUP_MIN, group_visible
 from app.services.queue import QUEUE_OFFER_STATUSES, pending_minor_expr, queue_facts
 
 __all__ = ["Created", "OfferService", "offer_view", "replay_idempotent"]
 
 _logger = get_logger(__name__)
 CREATE_OPERATION = "offer.create"
+GROUP_OPERATION = "offer.create_group"
 #: How far back the "Success" list looks (ADR-059 Decision 4: "recent" completed trades).
 SUCCESS_WINDOW = timedelta(days=7)
 
@@ -99,6 +102,9 @@ def offer_view(offer: Offer, viewer: uuid.UUID) -> dict[str, Any]:
         "is_own": offer.user_id == viewer,
         "version": offer.version,
         "created_at": offer.created_at.isoformat(),
+        # ADR-059 Decision 5: one currency of a request in several; taken whole only.
+        "group_id": str(offer.group_id) if offer.group_id else None,
+        "whole_only": offer.group_id is not None,
     }
 
 
@@ -260,6 +266,130 @@ class OfferService:
 
     # --- read ---------------------------------------------------------------------------
 
+    async def create_group(
+        self,
+        principal: Principal,
+        idempotency_key: uuid.UUID,
+        source_amount: str,
+        currencies: list[tuple[str, str]],
+    ) -> Created:
+        """ADR-059 Decision 5: one naira amount offered for 2–5 currencies, each with a rate.
+
+        Every check a single request gets runs for each currency (amount, minimum, official-
+        rate ceiling). Each currency becomes an ordinary offer in the group; they are taken
+        whole only and only one of them can ever be paid (see `app.services.groups`).
+        """
+        now = self._clock()
+        if not GROUP_MIN <= len(currencies) <= GROUP_MAX:
+            raise _input_error(OfferInputError(FORMAT_ERROR, "Choose between 2 and 5 currencies."))
+        try:
+            amount_minor = parse_amount_minor(source_amount, "NGN")
+            parsed: list[tuple[str, Decimal]] = []
+            for code, rate_text_ in currencies:
+                pair = parse_pair("NGN", code)
+                parsed.append((pair.target, parse_rate(rate_text_)))
+        except OfferInputError as e:
+            raise _input_error(e) from None
+        if len({code for code, _ in parsed}) != len(parsed):
+            raise _input_error(OfferInputError(FORMAT_ERROR, "Each currency can be chosen once."))
+        for code, rate in parsed:
+            problem = rate_problem(rate, code)
+            if problem is not None:
+                raise _input_error(problem)
+
+        request_hash = hashlib.sha256(
+            json.dumps(
+                {
+                    "op": GROUP_OPERATION,
+                    "amount_minor": amount_minor,
+                    "currencies": sorted((c, rate_text(r)) for c, r in parsed),
+                },
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
+        replay = await replay_idempotent(
+            self._db, principal.user_id, GROUP_OPERATION, idempotency_key, request_hash, now
+        )
+        if replay is not None:
+            return replay
+        defined = await self._db.scalar(
+            text(
+                "SELECT 1 FROM currency_definitions "
+                "WHERE currency = 'NGN' AND currency_def_version = :v AND scale = :s"
+            ),
+            {"v": CURRENCY_DEF_VERSION, "s": SCALE["NGN"]},
+        )
+        if defined is None:
+            await self._db.rollback()
+            raise _err(
+                "SYS_503_SERVICE_UNAVAILABLE",
+                "Offers are not available right now.",
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        group = OfferGroup(
+            id=uuid.uuid4(),
+            user_id=principal.user_id,
+            status="open",
+            created_at=now,
+            updated_at=now,
+        )
+        self._db.add(group)
+        await self._db.flush()
+        offers = []
+        for code, rate in parsed:
+            offer = Offer(
+                id=uuid.uuid4(),
+                user_id=principal.user_id,
+                source_currency="NGN",
+                target_currency=code,
+                source_amount_minor=amount_minor,
+                matched_amount_minor=0,
+                scale=SCALE["NGN"],
+                currency_def_version=CURRENCY_DEF_VERSION,
+                desired_rate=rate,
+                status="open",
+                version=1,
+                created_at=now,
+                group_id=group.id,
+            )
+            self._db.add(offer)
+            offers.append(offer)
+        await self._db.flush()
+        body = {
+            "group_id": str(group.id),
+            "offers": [offer_view(o, principal.user_id) for o in offers],
+        }
+        self._db.add(
+            IdempotencyRecord(
+                id=uuid.uuid4(),
+                user_id=principal.user_id,
+                operation=GROUP_OPERATION,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                response_status=status.HTTP_201_CREATED,
+                response_body=body,
+                created_at=now,
+                expires_at=now + IDEMPOTENCY_TTL,
+            )
+        )
+        try:
+            await self._db.commit()
+        except IntegrityError as exc:
+            await self._db.rollback()
+            if "uq_idempotency_records_user_operation_key" not in str(exc.orig):
+                raise
+            replay = await replay_idempotent(
+                self._db, principal.user_id, GROUP_OPERATION, idempotency_key, request_hash, now
+            )
+            if replay is None:  # pragma: no cover - the winner's row must exist
+                raise
+            return replay
+        _logger.info(
+            "offer_group_created",
+            extra={"user_id": str(principal.user_id), "group_id": body["group_id"]},
+        )
+        return Created(status.HTTP_201_CREATED, body)
+
     async def marketplace(
         self,
         principal: Principal,
@@ -295,6 +425,8 @@ class OfferService:
             Offer.target_currency == pair.target,
             Offer.status.in_(QUEUE_OFFER_STATUSES),
             or_(remaining > 0, pending > 0),
+            # ADR-059 Decision 5: a request's other currencies hide while one is being paid.
+            group_visible(),
             Offer.desired_rate <= ceiling,
         ]
         if search.min_rate is not None:
@@ -523,6 +655,16 @@ class OfferService:
                 "RES_409_OFFER_ALREADY_MATCHED",
                 "This offer can no longer be edited.",
                 status.HTTP_409_CONFLICT,
+            )
+        if offer.group_id is not None and amount_minor != offer.source_amount_minor:
+            # ADR-059 Decision 5: every currency of a request pays the same naira.
+            await self._db.rollback()
+            raise _input_error(
+                OfferInputError(
+                    FORMAT_ERROR,
+                    "The amount of a request in several currencies can’t be changed. "
+                    "Change the rate, or withdraw it and post a new one.",
+                )
             )
         foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
         problem = rate_problem(rate, foreign)

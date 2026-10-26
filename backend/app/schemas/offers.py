@@ -41,6 +41,25 @@ class CreateOfferRequest(_Strict):
     desired_rate: str = Field(min_length=1, max_length=24)
 
 
+class GroupCurrency(_Strict):
+    currency: str = Field(pattern=_CURRENCY)
+    #: NGN per 1 unit of this currency, e.g. "1320.50".
+    desired_rate: str = Field(min_length=1, max_length=24)
+
+
+class CreateGroupRequest(_Strict):
+    """ADR-059 Decision 5: pay one naira amount for any one of 2–5 currencies."""
+
+    #: Decimal text in naira, e.g. "1000000.00".
+    source_amount: str = Field(min_length=1, max_length=24)
+    currencies: list[GroupCurrency] = Field(min_length=1, max_length=8)
+
+
+class GroupResponse(BaseModel):
+    group_id: str
+    offers: list[OfferResponse]
+
+
 class UpdateRateRequest(_Strict):
     """ADR-059 Decision 3: change the rate, the amount, or both (at least one)."""
 
@@ -61,6 +80,9 @@ class OfferResponse(BaseModel):
     is_own: bool
     version: int
     created_at: str
+    #: ADR-059 Decision 5: one currency of a request in several (taken whole only).
+    group_id: str | None = None
+    whole_only: bool = False
     #: ADR-059 Decision 4 (listings only): held by unpaid deals or by someone's turn; queue.
     waiting: bool = False
     #: What may come back to take (decimal text, offer currency), when waiting.
@@ -167,3 +189,6 @@ class QueueEntryResponse(BaseModel):
     position: int
     queue_length: int
     turn_deadline: str | None
+
+
+GroupResponse.model_rebuild()
