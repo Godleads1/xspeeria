@@ -364,6 +364,7 @@ class TestPackageRegistration:
             "dispute_messages",
             "offer_queue_entries",
             "offer_groups",
+            "tier_checks",
         }
 
     @pytest.mark.parametrize(
@@ -415,7 +416,7 @@ class TestPackageRegistration:
             "'push_deliveries', 'push_tokens', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
-            "'transactions', 'trusted_devices', 'users', 'verification_checks', "
+            "'tier_checks', 'transactions', 'trusted_devices', 'users', 'verification_checks', "
             "'webhook_receipts']"
         )
 
@@ -475,4 +476,5 @@ class TestPackageRegistration:
             "0019_disputes.py",  # disputes and support cases (ADR-057)
             "0020_offer_queue_and_extension.py",  # waiting queue (ADR-059)
             "0021_offer_groups.py",  # requests in several currencies (ADR-059)
+            "0022_tier_checks.py",  # higher-tier checks (ADR-058)
         ]

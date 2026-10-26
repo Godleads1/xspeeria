@@ -55,6 +55,7 @@ from app.models.settlement import (
     Transaction,
     WebhookReceipt,
 )
+from app.models.tiers import TierCheck
 
 __all__ = [
     "KycCase",
@@ -88,6 +89,7 @@ __all__ = [
     "PhoneVerification",
     "RecoveryCode",
     "StepUpGrant",
+    "TierCheck",
     "TrustedDevice",
     "User",
     "VerificationCheck",

@@ -74,6 +74,7 @@ APPROVED_TABLES = {
     "dispute_messages",
     "offer_queue_entries",
     "offer_groups",
+    "tier_checks",
 }
 # The current approved head. Advances with each approved migration; 4.1B Step 8 -> "0002";
 # Milestone AUTH-1 (ADR-025) -> "0003"; AUTH-2 (ADR-026) -> "0004"; CD3 (ADR-028) -> "0005";
@@ -84,8 +85,8 @@ APPROVED_TABLES = {
 # biometric unlock (ADR-048) -> "0015"; phone push (ADR-052) -> "0016";
 # face check replaces the authenticator (ADR-054) -> "0017"; gender from the ID (ADR-055) -> "0018";
 # disputes and support cases (ADR-057) -> "0019"; waiting queue (ADR-059) -> "0020";
-# requests in several currencies (ADR-059) -> "0021".
-EXPECTED_HEAD = "0021"
+# requests in several currencies (ADR-059) -> "0021"; tier checks (ADR-058) -> "0022".
+EXPECTED_HEAD = "0022"
 
 
 def _config(database_url: str) -> Config:
