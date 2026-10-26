@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
+    admin,
     auth,
     disputes,
     health,
@@ -316,6 +317,7 @@ def create_app(
         )
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(admin.router)
     application.include_router(offers.router)
     application.include_router(offers.marketplace_router)
     application.include_router(offers.matches_router)

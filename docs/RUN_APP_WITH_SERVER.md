@@ -116,3 +116,18 @@ the currencies and pretend banks. Refused unless `APP_ENV=local`.
 cd backend
 uv run python -m app.cli.reset_local_data --yes-delete-everything
 ```
+
+Staff accounts for the admin console are kept.
+
+## Admin console: create the first Super Admin (once)
+
+Needs `DEV_EMAIL=true` (codes print in the server window) and `APP_ENV=local` on this computer.
+It asks for a password of at least 12 characters without showing it. Only works while no
+Super Admin exists; add everyone else from the console (ADR-060).
+
+```bash
+cd backend
+uv run python -m app.cli.create_super_admin --email you@example.com --name "Your Name"
+```
+
+The console screens are not built yet; the server side is (`/api/v1/admin/...`).
