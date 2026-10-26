@@ -29,3 +29,24 @@ def test_naira_equivalent_is_exact() -> None:
     assert naira_minor_of("USD", 1, Decimal("1320.125")) == 1320
     assert naira_minor_of("USD", 1, Decimal("1320.135")) == 1320  # .135 kobo rounds down
     assert naira_minor_of("USD", 2, Decimal("1320.125")) == 2640  # exactly 2,640.25 → 2,640
+
+
+def test_lagos_time_works_without_a_system_time_zone_database() -> None:
+    """Windows has no built-in time-zone database; the ``tzdata`` package must supply it, or
+    the server cannot start there (found 2026-10-26 on the owner's PC)."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    backend_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, "-c", "import app.domain.tier_rules as t; print(t.LAGOS)"],
+        capture_output=True,
+        text=True,
+        check=False,
+        # An empty search path is how Python behaves on Windows: only ``tzdata`` is left.
+        env={**os.environ, "PYTHONPATH": str(backend_root), "PYTHONTZPATH": ""},
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "Africa/Lagos"

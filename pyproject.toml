@@ -20,6 +20,9 @@ dependencies = [
     "cryptography>=43",
     # KYC-1 (ADR-039): calls to the identity-verification provider (Didit).
     "httpx>=0.27",
+    # ADR-058: Lagos calendar days and months need the time-zone database. Linux and macOS
+    # have one built in; Windows does not, so the server would not start there.
+    "tzdata>=2025.2",
 ]
 
 [dependency-groups]
