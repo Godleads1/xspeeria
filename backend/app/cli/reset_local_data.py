@@ -29,6 +29,7 @@ USER_TABLES = (
     "tier_checks",
     "offer_queue_entries",
     "fraud_alerts",
+    "kyc_reviews",
     "reversals",
     "dispute_messages",
     "disputes",

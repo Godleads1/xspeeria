@@ -19,6 +19,7 @@ const PATHS: Record<string, string> = {
   close: 'M6 6l8 8M14 6l-8 8',
   reversals: 'M7 5 4 8l3 3M4 8h8a4 4 0 0 1 0 8H8',
   outages: 'M10 3 2.5 16h15L10 3ZM10 8v4M10 14.5h.01',
+  kyc: 'M3 5h14v10H3zM6 9.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0ZM5 13c.4-1 1.3-1.5 2.5-1.5S9.6 12 10 13M12 8.5h3M12 11h3',
   fraud: 'M10 2.5 4 5v4.5c0 3.8 2.6 6.6 6 8 3.4-1.4 6-4.2 6-8V5l-6-2.5ZM10 7v3.5M10 13h.01',
 };
 
