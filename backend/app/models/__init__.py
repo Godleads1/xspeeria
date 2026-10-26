@@ -20,6 +20,8 @@ MILESTONE KYC-1 (ADR-039): `KycCase` (data dictionary KYCCases) and `KycWebhookE
 identity-check outcomes only; ID images stay with the provider.
 ADR-057: `Dispute`, `DisputeMessage` -- cases and messages; a dispute pauses escrow only
 through a `settlement_holds` row, never by changing money state.
+ADR-060: the admin console staff tables -- accounts, roles, codes, sessions and an
+append-only audit log; separate from customers, no money.
 
 Layering rule: api -> services -> domain + repositories + providers.
 """
@@ -55,6 +57,8 @@ from app.models.settlement import (
     Transaction,
     WebhookReceipt,
 )
+from app.models.staff import StaffAccount, StaffAuditEntry, StaffCode, StaffRole, StaffSession
+from app.models.tiers import TierCheck
 
 __all__ = [
     "KycCase",
@@ -87,7 +91,13 @@ __all__ = [
     "MfaFactor",
     "PhoneVerification",
     "RecoveryCode",
+    "StaffAccount",
+    "StaffAuditEntry",
+    "StaffCode",
+    "StaffRole",
+    "StaffSession",
     "StepUpGrant",
+    "TierCheck",
     "TrustedDevice",
     "User",
     "VerificationCheck",

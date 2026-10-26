@@ -364,6 +364,12 @@ class TestPackageRegistration:
             "dispute_messages",
             "offer_queue_entries",
             "offer_groups",
+            "tier_checks",
+            "staff_roles",
+            "staff_accounts",
+            "staff_codes",
+            "staff_sessions",
+            "staff_audit_log",
         }
 
     @pytest.mark.parametrize(
@@ -414,8 +420,10 @@ class TestPackageRegistration:
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', "
             "'reconciliation_exceptions', 'recovery_codes', 'settlement_events', "
-            "'settlement_holds', 'settlement_legs', 'settlements', 'step_up_grants', "
-            "'transactions', 'trusted_devices', 'users', 'verification_checks', "
+            "'settlement_holds', 'settlement_legs', 'settlements', "
+            "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_roles', 'staff_sessions', "
+            "'step_up_grants', "
+            "'tier_checks', 'transactions', 'trusted_devices', 'users', 'verification_checks', "
             "'webhook_receipts']"
         )
 
@@ -475,4 +483,6 @@ class TestPackageRegistration:
             "0019_disputes.py",  # disputes and support cases (ADR-057)
             "0020_offer_queue_and_extension.py",  # waiting queue (ADR-059)
             "0021_offer_groups.py",  # requests in several currencies (ADR-059)
+            "0022_tier_checks.py",  # higher-tier checks (ADR-058)
+            "0023_admin_staff.py",  # admin console staff (ADR-060)
         ]

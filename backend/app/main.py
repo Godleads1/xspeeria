@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
+    admin,
     auth,
     disputes,
     health,
@@ -51,6 +52,7 @@ from app.providers.face import DevFaceCheck, DiditFaceCheck, FaceCheckProvider
 from app.providers.pretend_bank import PretendBank
 from app.providers.push import ExpoPushSender
 from app.providers.sms import DevConsoleSmsSender, SmsSender
+from app.providers.tier_checks import DevTierChecks, DiditTierChecks, TierCheckProvider
 from app.services.auth import AuthRuntime
 
 __all__ = ["build_auth_runtime", "create_app", "app"]
@@ -120,7 +122,20 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         push_sender=ExpoPushSender(settings.expo_access_token) if settings.push_enabled else None,
         email=email,
         face=_face_check(settings),
+        tier_checks=_tier_checks(settings),
     )
+
+
+def _tier_checks(settings: Settings) -> TierCheckProvider | None:
+    """ADR-058: Didit BVN and proof-of-address checks; locally, with the identity bypass, a
+    developer stand-in that makes no call and costs nothing."""
+    if settings.kyc_dev_bypass and settings.app_env == "local":
+        return DevTierChecks()
+    if not settings.didit_api_key:
+        return None
+    if not settings.didit_base_url.startswith("https://"):
+        raise ValueError("DIDIT_BASE_URL must be https")
+    return DiditTierChecks(settings.didit_api_key, settings.didit_base_url)
 
 
 def _face_check(settings: Settings) -> FaceCheckProvider | None:
@@ -302,6 +317,7 @@ def create_app(
         )
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(admin.router)
     application.include_router(offers.router)
     application.include_router(offers.marketplace_router)
     application.include_router(offers.matches_router)

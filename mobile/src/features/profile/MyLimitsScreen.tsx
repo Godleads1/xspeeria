@@ -39,10 +39,13 @@ export function MyLimitsScreen({
   source,
   onBack,
   onVerifyIdentity,
+  onUpgrade,
 }: {
   source: LimitsSource;
   onBack: () => void;
   onVerifyIdentity: () => void;
+  /** Opens the Tier 2 / Tier 3 checks. */
+  onUpgrade?: () => void;
 }): ReactElement {
   const [view, setView] = useState<LimitsView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +87,9 @@ export function MyLimitsScreen({
               </>
             )}
             {view.tier === 0 ? <PrimaryButton testID="limits-verify" label={tr('Verify your identity')} onPress={onVerifyIdentity} /> : null}
+            {view.tier >= 1 && view.tier < 3 && onUpgrade ? (
+              <PrimaryButton testID="limits-upgrade" label={tr('Raise my limits to Tier {{tier}}', { tier: view.tier + 1 })} onPress={onUpgrade} />
+            ) : null}
           </View>
 
           {TIERS.map((t) => (
@@ -98,7 +104,6 @@ export function MyLimitsScreen({
                   ? tr('Look only, no trading')
                   : tr('NGN {{daily}} a day · NGN {{monthly}} a month', { daily: t.daily, monthly: t.monthly ?? '' })}
               </Text>
-              {t.level > view.tier && t.level >= 2 ? <Text style={styles.small}>{tr('Coming soon')}</Text> : null}
             </View>
           ))}
         </>

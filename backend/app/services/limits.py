@@ -1,7 +1,7 @@
 """Trade limits by verification tier (ADR-058).
 
-* ``tier_of``: 0 without an approved identity check, 1 with one. Tiers 2 and 3 need the BVN,
-  address, proof-of-address and source-of-funds checks, which are not built yet.
+* ``tier_of``: 0 without an approved identity check, 1 with one, 2 with BVN and address, 3 with
+  proof of address and the source-of-funds answer too (``app.services.tier_checks``).
 * ``usage``: kobo traded today and this month (Lagos calendar), both sides, from deal start;
   deals that ended unpaid do not count.
 * ``check_new_deal``: inside `accept`, holding the Offer lock — locks both people's user rows
@@ -27,6 +27,7 @@ from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import Match, Offer
 from app.models.settlement import Settlement, Transaction
+from app.models.tiers import TierCheck
 from app.services.offers import money_text
 
 __all__ = ["check_new_deal", "limits_view", "tier_of", "usage"]
@@ -36,15 +37,27 @@ _GIVEN_BACK_PHASES = ("CANCELLED", "UNWINDING", "CLOSED_UNWOUND")
 
 
 async def tier_of(db: AsyncSession, user_id: uuid.UUID, settings: Settings) -> int:
+    """ADR-058: 0 look only; 1 identity check; 2 + BVN and address; 3 + proof of address and
+    source of funds. The local identity bypass counts as an identity check."""
     approved = await db.scalar(
         select(KycCase.id).where(KycCase.user_id == user_id, KycCase.status == "approved").limit(1)
     )
-    if approved is not None:
+    if approved is None and not (settings.kyc_dev_bypass and settings.app_env == "local"):
+        return 0
+    done = set(
+        (
+            await db.scalars(
+                select(TierCheck.kind).where(
+                    TierCheck.user_id == user_id, TierCheck.status == "approved"
+                )
+            )
+        ).all()
+    )
+    if not {"bvn", "address"} <= done:
         return 1
-    # Local development without real identity checks trades as Tier 1 (ADR-040 bypass).
-    if settings.kyc_dev_bypass and settings.app_env == "local":
-        return 1
-    return 0
+    if not {"proof_of_address", "source_of_funds"} <= done:
+        return 2
+    return 3
 
 
 async def usage(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> tuple[int, int]:
