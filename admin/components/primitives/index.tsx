@@ -8,7 +8,7 @@
 
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
-import { color, density, numericStyle, radius, space } from '../../theme';
+import { admin, color, density, numericStyle, radius, space } from '../../theme';
 import { tr } from '../../lib/i18n';
 
 export type StatusTone = 'neutral' | 'success' | 'warning' | 'error';
@@ -155,7 +155,7 @@ const panel: CSSProperties = {
 
 const buttonStyle: CSSProperties = {
   alignSelf: 'flex-start',
-  backgroundColor: color.brand.primary,
+  backgroundColor: color.brand.fill,
   color: color.text.onFill,
   border: 'none',
   borderRadius: radius.lg,

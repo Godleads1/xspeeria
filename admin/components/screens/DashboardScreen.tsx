@@ -13,15 +13,17 @@
 
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 
-import type { Dashboard, DashboardPeriod } from '../../lib/api';
+import type { Dashboard, DashboardPeriod, MoneyFigure } from '../../lib/api';
 import { messageFor } from '../../lib/api';
 import { change, count, duration, money, moneyChange, share } from '../../lib/figures';
 import { language, tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
+import { CountUp, Donut, Glance, glanceText, MoneyLines, shadowCard, Tile, TrendLine } from '../dashboard/overview';
 import { BarChart, card, Grid, ShareBar, StatTile, Trend } from '../dashboard/parts';
 import { Icon } from '../icons';
 import { ErrorState, LoadingState } from '../primitives';
+import { Wordmark } from '../Wordmark';
 
 const TABS = ['overview', 'customers', 'transactions', 'revenue', 'corridors', 'operations'] as const;
 type Tab = (typeof TABS)[number];
@@ -91,7 +93,7 @@ export function dashboardCsv(d: Dashboard): string {
 }
 
 export function DashboardScreen(): ReactElement {
-  const { api } = useSession();
+  const { api, me } = useSession();
   const [period, setPeriod] = useState<DashboardPeriod>('month');
   const [month, setMonth] = useState(thisMonth());
   const [tab, setTab] = useState<Tab>('overview');
@@ -125,14 +127,57 @@ export function DashboardScreen(): ReactElement {
     setExportOpen(false);
   }
 
+  const firstName = me.name.trim().split(/\s+/)[0] ?? '';
+  const hour = new Date(Date.now() + LAGOS_MS).getUTCHours();
+  const greeting =
+    hour < 12
+      ? tr('Good morning, {{name}}', { name: firstName })
+      : hour < 17
+        ? tr('Good afternoon, {{name}}', { name: firstName })
+        : tr('Good evening, {{name}}', { name: firstName });
+
   return (
     <>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600 }}>{tr('Analytics Dashboard')}</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: color.text.secondary }}>{tr('Figures from Xspeeria’s own records, in Lagos time')}</p>
+      <section
+        data-testid="hero"
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 18,
+          padding: '26px 28px',
+          backgroundImage: `linear-gradient(110deg, ${admin.heroFrom}, ${admin.heroTo})`,
+          border: `1px solid ${color.border.subtle}`,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 18,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            insetBlock: 0,
+            insetInlineEnd: 0,
+            width: '42%',
+            backgroundImage: 'url(/profile-banner.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.22,
+            maskImage: 'linear-gradient(to left, black, transparent)',
+            WebkitMaskImage: 'linear-gradient(to left, black, transparent)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ position: 'relative' }}>
+          <p data-testid="greeting" style={{ margin: 0, fontSize: 15, fontWeight: 600, color: admin.greet }}>
+            {greeting} <span aria-hidden="true">👋</span>
+          </p>
+          <h1 style={{ margin: '4px 0 0', fontSize: 28, fontWeight: 800 }}>{tr('Analytics Dashboard')}</h1>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: color.text.secondary }}>{tr('Figures from Xspeeria’s own records, in Lagos time')}</p>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ display: 'inline-flex' }}>
             <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{tr('Period')}</span>
             <select data-testid="period" value={period} onChange={(e) => setPeriod(e.target.value as DashboardPeriod)} style={control}>
@@ -150,7 +195,10 @@ export function DashboardScreen(): ReactElement {
           ) : null}
           <div style={{ position: 'relative' }}>
             <button type="button" data-testid="export" aria-haspopup="menu" aria-expanded={exportOpen} disabled={!data} onClick={() => setExportOpen((o) => !o)} style={exportButton}>
-              {tr('Export')} <Icon name="chevron" size={16} />
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 3v10M6 9l4 4 4-4M4 16h12" />
+              </svg>
+              {tr('Export Report')} <Icon name="chevron" size={16} />
             </button>
             {exportOpen ? (
               <div role="menu" style={{ position: 'absolute', insetInlineEnd: 0, top: 'calc(100% + 6px)', zIndex: 20, minWidth: 180, ...card, padding: 6 }}>
@@ -174,7 +222,7 @@ export function DashboardScreen(): ReactElement {
             ) : null}
           </div>
         </div>
-      </div>
+      </section>
       <section style={{ ...card, padding: '8px 16px 20px' }}>
         <div role="tablist" aria-label={tr('Analytics Dashboard')} style={{ display: 'flex', gap: 22, overflowX: 'auto', borderBottom: `1px solid ${color.border.subtle}`, marginBottom: 16 }}>
           {TABS.map((t) => (
@@ -195,6 +243,7 @@ export function DashboardScreen(): ReactElement {
                 padding: '10px 0',
                 fontFamily: 'inherit',
                 fontSize: 16,
+                fontWeight: tab === t ? 600 : 400,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 color: tab === t ? color.brand.primary : color.text.secondary,
@@ -210,7 +259,7 @@ export function DashboardScreen(): ReactElement {
           ) : !data ? (
             <LoadingState />
           ) : tab === 'overview' ? (
-            <Overview d={data} before={before} />
+            <Overview d={data} before={before} monthName={monthName(month)} />
           ) : tab === 'customers' ? (
             <Customers d={data} />
           ) : tab === 'transactions' ? (
@@ -224,69 +273,122 @@ export function DashboardScreen(): ReactElement {
           )}
         </div>
       </section>
+      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', fontSize: 12, color: color.text.secondary }}>
+        <span>{tr('Xspeeria Admin · figures in Lagos time')}</span>
+        <Wordmark size={18} />
+      </footer>
     </>
   );
 }
 
-function Money({ list }: { list: Dashboard['overview']['value'] }): ReactElement {
-  if (list.length === 0) return <>0</>;
-  return (
-    <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {list.map((m) => (
-        <span key={m.currency} style={{ fontSize: list.length > 1 ? 20 : undefined }}>
-          {money(m)}
-        </span>
-      ))}
-    </span>
-  );
+function monthName(month: string): string {
+  return new Intl.DateTimeFormat(language.get(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`));
 }
 
-function Overview({ d, before }: { d: Dashboard; before: string }): ReactElement {
+type SeriesKey = Exclude<keyof Dashboard['overview']['series'][number], 'at'>;
+
+/** One value per bucket of the period (gaps are 0), for a tile's trend line. */
+export function seriesOf(d: Dashboard, k: SeriesKey): number[] {
+  const by = new Map(d.overview.series.map((r) => [keyOf(r.at, d.period.bucket), r[k]]));
+  return bucketKeys(d.period.start, d.period.end, d.period.bucket).map((key) => by.get(key) ?? 0);
+}
+
+/** Money per bucket for one currency (drawing only — the tile shows the exact amount). */
+function moneySeries(d: Dashboard, list: (MoneyFigure & { at: string })[], currency: string | undefined): number[] {
+  if (!currency) return [];
+  const by = new Map<string, number>();
+  for (const m of list) if (m.currency === currency) by.set(keyOf(m.at, d.period.bucket), Number(m.minor));
+  return bucketKeys(d.period.start, d.period.end, d.period.bucket).map((key) => by.get(key) ?? 0);
+}
+
+export const STATUS_LABEL = {
+  active: 'Active',
+  pending_verification: 'Waiting verification',
+  suspended: 'Suspended',
+  closed: 'Closed',
+} as const;
+const STATUS_COLOR: Record<keyof typeof STATUS_LABEL, string> = {
+  active: admin.tintGreenFg,
+  pending_verification: admin.tintBlueFg,
+  suspended: admin.tintOrangeFg,
+  closed: admin.tintGreyFg,
+};
+
+function Overview({ d, before, monthName: mName }: { d: Dashboard; before: string; monthName: string }): ReactElement {
   const o = d.overview;
-  const first = o.value[0];
+  const trend = tr('Trend over the period');
+  const corridorParts = [
+    ...d.corridors.slice(0, 2).map((c, i) => ({ name: c.pair.join(' ⇄ '), value: c.trades, color: i === 0 ? admin.series1 : admin.series2 })),
+    ...(d.corridors.length > 2 ? [{ name: tr('Other'), value: d.corridors.slice(2).reduce((s, c) => s + c.trades, 0), color: admin.tintGreyFg }] : []),
+  ];
+  const ranked = [...d.corridors].sort((a, b) => b.trades - a.trades).slice(0, 5);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Grid>
-        <StatTile testId="tile-active" label={tr('Active Users')} value={count(o.active_users.value)} tint="blue">
-          <Trend change={change(o.active_users.value, o.active_users.previous)} label={before} />
-        </StatTile>
-        <StatTile testId="tile-new" label={tr('New Users Onboarded')} value={count(o.new_users.value)} tint="green">
-          <Trend change={change(o.new_users.value, o.new_users.previous)} label={before} />
-        </StatTile>
-        <StatTile testId="tile-trades" label={tr('Total Transactions')} value={count(o.trades_started.value)} tint="orange">
-          <Trend change={change(o.trades_started.value, o.trades_started.previous)} label={before} />
-        </StatTile>
-        <StatTile testId="tile-value" label={tr('Transaction Value')} value={<Money list={o.value} />} tint="grey">
-          {first ? <Trend change={moneyChange(first)} label={before} /> : null}
-        </StatTile>
-        <StatTile testId="tile-fees" label={tr('Fees earned')} value={<Money list={o.fees} />} tint="blue">
-          {o.fees[0] ? <Trend change={moneyChange(o.fees[0])} label={before} /> : null}
-        </StatTile>
-        <StatTile testId="tile-speed" label={tr('Avg Settlement Time')} value={duration(o.avg_settlement_seconds) ?? '—'} tint="green" />
-        <StatTile testId="tile-disputes" label={tr('Open disputes')} value={count(o.open_disputes)} tint="orange" />
-        <StatTile testId="tile-kyc" label={tr('Waiting for identity check')} value={count(o.kyc_waiting)} tint="grey" />
+      <Glance text={glanceText(d, d.period.kind, mName)} />
+      <Grid min={240}>
+        <Tile index={0} testId="tile-active" label={tr('Active Users')} icon="users" accent="green" value={<CountUp value={o.active_users.value} />} spark={seriesOf(d, 'active_users')} sparkLabel={trend} footer={<TrendLine c={change(o.active_users.value, o.active_users.previous)} before={before} />} />
+        <Tile index={1} testId="tile-new" label={tr('New Users Onboarded')} icon="newUser" accent="blue" value={<CountUp value={o.new_users.value} />} spark={seriesOf(d, 'new_users')} sparkLabel={trend} footer={<TrendLine c={change(o.new_users.value, o.new_users.previous)} before={before} />} />
+        <Tile index={2} testId="tile-trades" label={tr('Total Transactions')} icon="trades" accent="orange" value={<CountUp value={o.trades_started.value} />} spark={seriesOf(d, 'trades_started')} sparkLabel={trend} footer={<TrendLine c={change(o.trades_started.value, o.trades_started.previous)} before={before} />} />
+        <Tile index={3} testId="tile-value" label={tr('Transaction Value')} icon="value" accent="blue" value={<MoneyLines list={o.value} />} spark={moneySeries(d, o.value_by_time, o.value[0]?.currency)} sparkLabel={trend} footer={o.value[0] ? <TrendLine c={moneyChange(o.value[0])} before={before} /> : null} />
+        <Tile index={4} testId="tile-fees" label={tr('Fees earned')} icon="fees" accent="green" value={<MoneyLines list={o.fees} />} spark={moneySeries(d, d.revenue.fees_by_time, o.fees[0]?.currency)} sparkLabel={trend} footer={o.fees[0] ? <TrendLine c={moneyChange(o.fees[0])} before={before} /> : null} />
+        <Tile index={5} testId="tile-speed" label={tr('Avg Settlement Time')} icon="clock" accent="blue" value={duration(o.avg_settlement_seconds) ?? '—'} spark={seriesOf(d, 'settlement_seconds')} sparkLabel={trend} />
+        <Tile index={6} testId="tile-disputes" label={tr('Open disputes')} icon="disputes" accent="orange" value={<CountUp value={o.open_disputes} />} spark={seriesOf(d, 'disputes_opened')} sparkLabel={tr('Disputes opened over the period')} />
+        <Tile index={7} testId="tile-kyc" label={tr('Waiting for identity check')} icon="id" accent="grey" value={<CountUp value={o.kyc_waiting} />} spark={seriesOf(d, 'kyc_started')} sparkLabel={tr('Identity checks started over the period')} />
       </Grid>
-      <section style={{ ...card, boxShadow: 'none', border: `1px solid ${color.border.subtle}` }}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>{tr('Top corridors')}</h2>
-        {d.corridors.length === 0 ? (
-          <p style={{ margin: 0, color: color.text.secondary }}>{tr('No trades in this period.')}</p>
-        ) : (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {d.corridors.slice(0, 5).map((c) => (
-              <li key={c.pair.join('')} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#F5F6FA', borderRadius: 6 }}>
-                <span>
-                  <strong dir="ltr">{c.pair.join(' ⇄ ')}</strong>
-                  {c.average_rate ? <span style={{ display: 'block', fontSize: 12, color: color.text.secondary }}>{tr('Avg rate: {{rate}}', { rate: c.average_rate })}</span> : null}
-                </span>
-                <span style={{ textAlign: 'end' }}>
-                  {tr('Trades: {{n}}', { n: count(c.trades) })}
-                  <Growth value={c.trades} previous={c.previous_trades} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+        <section style={{ ...shadowCard, padding: 20 }}>
+          <h2 style={{ margin: '0 0 14px', fontSize: 16 }}>{tr('Customers by status')}</h2>
+          <Donut
+            testId="donut-status"
+            label={tr('Customers by status')}
+            centre={tr('customers')}
+            parts={(Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[]).map((k) => ({ name: tr(STATUS_LABEL[k]), value: d.customers.by_status[k], color: STATUS_COLOR[k] }))}
+          />
+        </section>
+        <section style={{ ...shadowCard, padding: 20 }}>
+          <h2 style={{ margin: '0 0 14px', fontSize: 16 }}>{tr('Trades by corridor')}</h2>
+          {corridorParts.length === 0 ? (
+            <p style={{ margin: 0, color: color.text.secondary }}>{tr('No trades in this period.')}</p>
+          ) : (
+            <Donut testId="donut-corridors" label={tr('Trades by corridor')} centre={tr('trades')} parts={corridorParts} />
+          )}
+        </section>
+        <section style={{ ...shadowCard, padding: 20 }}>
+          <h2 style={{ margin: '0 0 14px', fontSize: 16 }}>{tr('Top corridors')}</h2>
+          {ranked.length === 0 ? (
+            <p style={{ margin: 0, color: color.text.secondary }}>{tr('No trades in this period.')}</p>
+          ) : (
+            <table data-testid="top-corridors" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ color: color.text.secondary, textAlign: 'start' }}>
+                  <th style={rankTh}>#</th>
+                  <th style={rankTh}>{tr('Corridor')}</th>
+                  <th style={{ ...rankTh, textAlign: 'end' }}>{tr('Trades')}</th>
+                  <th style={{ ...rankTh, textAlign: 'end' }}>{tr('Avg rate')}</th>
+                  <th style={{ ...rankTh, textAlign: 'end' }}>{tr('Change')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranked.map((c, i) => (
+                  <tr key={c.pair.join('')}>
+                    <td style={rankTd}>
+                      <span style={{ display: 'inline-grid', placeItems: 'center', width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: 700, backgroundColor: i === 0 ? admin.tintGreen : admin.tintGrey, color: i === 0 ? admin.tintGreenFg : admin.tintGreyFg }}>{i + 1}</span>
+                    </td>
+                    <td style={{ ...rankTd, fontWeight: 600, whiteSpace: 'nowrap' }} dir="ltr">
+                      {c.pair.join(' ⇄ ')}
+                    </td>
+                    <td style={{ ...rankTd, textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{count(c.trades)}</td>
+                    <td style={{ ...rankTd, textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{c.average_rate ?? '—'}</td>
+                    <td style={{ ...rankTd, textAlign: 'end' }}>
+                      {change(c.trades, c.previous_trades) ? <Growth value={c.trades} previous={c.previous_trades} /> : <span style={{ color: color.text.secondary }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -294,7 +396,7 @@ function Overview({ d, before }: { d: Dashboard; before: string }): ReactElement
 function Growth({ value, previous }: { value: number; previous: number }): ReactElement | null {
   const c = change(value, previous);
   if (!c) return null;
-  return <span style={{ display: 'block', fontSize: 12, color: c.up ? '#13A36B' : '#E5484D' }}>{`${c.up ? '+' : '-'}${c.pct}`}</span>;
+  return <span style={{ display: 'block', fontSize: 12, color: c.up ? admin.up : admin.down }}>{`${c.up ? '+' : '-'}${c.pct}`}</span>;
 }
 
 function Customers({ d }: { d: Dashboard }): ReactElement {
@@ -337,9 +439,9 @@ function Transactions({ d }: { d: Dashboard }): ReactElement {
           <p style={{ color: color.text.secondary }}>{tr('No trades finished in this period.')}</p>
         ) : (
           <>
-            <p data-testid="success-rate" style={{ margin: 0, fontSize: 52, fontWeight: 700, color: '#13A36B' }}>{share(t.completed, finished)}</p>
+            <p data-testid="success-rate" style={{ margin: 0, fontSize: 52, fontWeight: 700, color: admin.up }}>{share(t.completed, finished)}</p>
             <p style={{ margin: '0 0 16px', color: color.text.secondary }}>{tr('successful transactions ({{n}})', { n: count(t.completed) })}</p>
-            <p style={{ margin: 0, fontSize: 40, fontWeight: 700, color: '#E5484D' }}>{share(t.failed, finished)}</p>
+            <p style={{ margin: 0, fontSize: 40, fontWeight: 700, color: admin.down }}>{share(t.failed, finished)}</p>
             <p style={{ margin: 0, color: color.text.secondary }}>{tr('failed or cancelled ({{n}})', { n: count(t.failed) })}</p>
           </>
         )}
@@ -412,7 +514,7 @@ function Corridors({ d }: { d: Dashboard }): ReactElement {
     <div style={{ border: `1px solid ${color.border.subtle}`, borderRadius: 12, overflowX: 'auto' }}>
       <table data-testid="corridors" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
-          <tr style={{ backgroundColor: '#F8F9FB' }}>
+          <tr style={{ backgroundColor: admin.rowAlt }}>
             {[tr('Corridor'), tr('Trades'), tr('Growth'), tr('Avg Rate')].map((h, i) => (
               <th key={h} scope="col" style={{ ...th, textAlign: i === 0 ? 'start' : 'end' }}>
                 {h}
@@ -436,7 +538,7 @@ function Corridors({ d }: { d: Dashboard }): ReactElement {
                     {c.pair.join(' ⇄ ')}
                   </td>
                   <td style={{ ...td, textAlign: 'end' }}>{count(c.trades)}</td>
-                  <td style={{ ...td, textAlign: 'end', color: g ? (g.up ? '#13A36B' : '#E5484D') : color.text.secondary }}>{g ? `${g.up ? '+' : '-'}${g.pct}` : '—'}</td>
+                  <td style={{ ...td, textAlign: 'end', color: g ? (g.up ? admin.up : admin.down) : color.text.secondary }}>{g ? `${g.up ? '+' : '-'}${g.pct}` : '—'}</td>
                   <td style={{ ...td, textAlign: 'end' }} dir="ltr">
                     {c.average_rate ?? '—'}
                   </td>
@@ -491,9 +593,10 @@ const exportButton = {
   height: 40,
   padding: '0 18px',
   border: 'none',
-  borderRadius: 6,
-  backgroundColor: color.brand.primary,
-  color: color.text.onFill,
+  borderRadius: 10,
+  backgroundColor: admin.sideActive,
+  color: '#FFFFFF',
+  boxShadow: `0 4px 14px ${admin.shadow}`,
   fontFamily: 'inherit',
   fontWeight: 600,
   display: 'inline-flex',
@@ -515,3 +618,6 @@ const menuItem = {
 } as const;
 const th = { padding: '12px 16px', fontWeight: 600, borderBottom: `1px solid ${color.border.subtle}` } as const;
 const td = { padding: '14px 16px', borderBottom: `1px solid ${color.border.subtle}` } as const;
+
+const rankTh = { padding: '8px 6px', fontWeight: 600, fontSize: 12, textAlign: 'start', borderBottom: `1px solid ${color.border.subtle}` } as const;
+const rankTd = { padding: '10px 6px', borderBottom: `1px solid ${color.border.subtle}` } as const;

@@ -5,7 +5,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 
 import { tr } from '../lib/i18n';
-import { color } from '../theme';
+import { admin, color } from '../theme';
 
 export function Toast({
   title,
@@ -44,7 +44,7 @@ export function Toast({
         padding: '16px 16px 16px 14px',
         backgroundColor: color.bg.canvas,
         borderRadius: 10,
-        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.18)',
+        boxShadow: `0 12px 32px ${admin.shadow}`,
       }}
     >
       <span

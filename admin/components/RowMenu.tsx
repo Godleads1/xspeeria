@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
-import { color } from '../theme';
+import { admin, color } from '../theme';
 import { Icon } from './icons';
 
 export interface RowAction {
@@ -66,7 +66,7 @@ export function RowMenu({ label, actions, testId }: { label: string; actions: Ro
             backgroundColor: color.bg.canvas,
             border: `1px solid ${color.border.subtle}`,
             borderRadius: 8,
-            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+            boxShadow: `0 8px 24px ${admin.shadow}`,
           }}
         >
           {actions.map((a) => (

@@ -8,7 +8,7 @@
 import { useEffect, useId, useRef, useState, type ReactElement } from 'react';
 
 import { tr } from '../lib/i18n';
-import { color } from '../theme';
+import { admin, color } from '../theme';
 
 export function ReasonDialog({
   title,
@@ -42,7 +42,7 @@ export function ReasonDialog({
   }, [onCancel]);
   const button = { flex: 1, height: 48, borderRadius: 10, fontFamily: 'inherit', fontSize: 16, fontWeight: 500, cursor: 'pointer' } as const;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(15, 23, 42, 0.35)', display: 'grid', placeItems: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: admin.scrim, display: 'grid', placeItems: 'center', padding: 16 }}>
       <form
         role="dialog"
         aria-modal="true"
@@ -52,7 +52,7 @@ export function ReasonDialog({
           e.preventDefault();
           if (ok && !busy) onConfirm(clean);
         }}
-        style={{ width: 420, maxWidth: '100%', backgroundColor: color.bg.canvas, borderRadius: 6, boxShadow: '0 16px 40px rgba(15, 23, 42, 0.25)' }}
+        style={{ width: 420, maxWidth: '100%', backgroundColor: color.bg.canvas, borderRadius: 6, boxShadow: `0 16px 40px ${admin.shadow}` }}
       >
         <p id={`${id}-title`} style={{ margin: 0, padding: '28px 28px 16px', fontSize: 18, fontWeight: 500, textAlign: 'center', lineHeight: 1.4 }}>
           {title}
@@ -87,7 +87,7 @@ export function ReasonDialog({
             type="submit"
             data-testid="reason-confirm"
             disabled={!ok || busy}
-            style={{ ...button, border: 'none', color: '#fff', backgroundColor: danger ? '#EF4444' : '#12B981', opacity: !ok || busy ? 0.55 : 1, cursor: !ok || busy ? 'not-allowed' : 'pointer' }}
+            style={{ ...button, border: 'none', color: color.text.onFill, backgroundColor: danger ? color.error.fill : color.success.fill, opacity: !ok || busy ? 0.55 : 1, cursor: !ok || busy ? 'not-allowed' : 'pointer' }}
           >
             {confirm}
           </button>

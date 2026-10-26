@@ -16,7 +16,7 @@ import { messageFor, type DisputeCase, type DisputeOutcome, type StaffView } fro
 import { money } from '../../lib/figures';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
 import { Icon } from '../icons';
 import { ReasonDialog } from '../ReasonDialog';
 import { Toast } from '../Toast';
@@ -160,7 +160,7 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
             {tr('Export Details')}
           </button>
           {open && can('disputes.approve') ? (
-            <button type="button" data-testid="close-case" onClick={() => setClosing(true)} style={{ ...tool, borderColor: '#E5484D', color: '#E5484D', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" data-testid="close-case" onClick={() => setClosing(true)} style={{ ...tool, borderColor: admin.down, color: admin.down, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
               {tr('Close')} <Icon name="close" size={14} />
             </button>
           ) : null}
@@ -225,7 +225,7 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
               <ol data-testid="timeline" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 260, overflowY: 'auto' }}>
                 {c.timeline.map((t, i) => (
                   <li key={i} style={{ display: 'flex', gap: 10 }}>
-                    <span aria-hidden="true" style={{ width: 8, height: 8, marginTop: 6, borderRadius: '50%', backgroundColor: color.brand.primary, flex: '0 0 auto' }} />
+                    <span aria-hidden="true" style={{ width: 8, height: 8, marginTop: 6, borderRadius: '50%', backgroundColor: color.brand.fill, flex: '0 0 auto' }} />
                     <span>
                       <strong style={{ fontSize: 13 }}>{t.name ?? (t.who === 'customer' ? tr('Customer') : tr('Staff'))}</strong>
                       <span style={{ display: 'block', fontSize: 13 }}>
@@ -246,7 +246,7 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
               </p>
               {c.messages.length === 0 ? <p style={{ margin: 0, color: color.text.secondary }}>{tr('No messages yet.')}</p> : null}
               {c.messages.map((m) => (
-                <div key={m.id} style={{ alignSelf: m.author === 'staff' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '8px 12px', borderRadius: 10, backgroundColor: m.author === 'staff' ? '#E3E8FF' : '#F2F3F6' }}>
+                <div key={m.id} style={{ alignSelf: m.author === 'staff' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '8px 12px', borderRadius: 10, backgroundColor: m.author === 'staff' ? admin.bubbleStaff : admin.bubbleUser }}>
                   <div style={{ fontSize: 12, fontWeight: 600 }}>
                     {m.author === 'staff' ? (m.staff_name ?? tr('Staff')) : m.author === 'customer' ? tr('Customer') : tr('Other side')}
                   </div>
@@ -265,7 +265,7 @@ export function DisputeCaseScreen({ id }: { id: string }): ReactElement {
                   style={{ display: 'flex', gap: 8 }}
                 >
                   <textarea data-testid="reply" aria-label={tr('Reply to the customer')} placeholder={tr('Reply to the customer')} rows={2} maxLength={2000} value={reply} onChange={(e) => setReply(e.target.value)} style={{ flex: 1, fontFamily: 'inherit', fontSize: 14, padding: 8, borderRadius: 6, border: `1px solid ${color.border.strong}`, resize: 'vertical' }} />
-                  <button type="submit" data-testid="send-reply" disabled={busy || !reply.trim()} style={{ ...tool, backgroundColor: color.brand.primary, color: '#fff', border: 'none', opacity: busy || !reply.trim() ? 0.55 : 1 }}>
+                  <button type="submit" data-testid="send-reply" disabled={busy || !reply.trim()} style={{ ...tool, backgroundColor: color.brand.fill, color: color.text.onFill, border: 'none', opacity: busy || !reply.trim() ? 0.55 : 1 }}>
                     {tr('Send')}
                   </button>
                 </form>
@@ -312,7 +312,7 @@ function CloseDialog({
   const [outcome, setOutcome] = useState<DisputeOutcome | ''>('');
   const [note, setNote] = useState('');
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(15, 23, 42, 0.35)', display: 'grid', placeItems: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: admin.scrim, display: 'grid', placeItems: 'center', padding: 16 }}>
       <form
         role="dialog"
         aria-modal="true"
@@ -354,7 +354,7 @@ function CloseDialog({
           <button type="button" onClick={onCancel} style={{ ...tool, minWidth: 90 }}>
             {tr('Cancel')}
           </button>
-          <button type="submit" data-testid="close-confirm" disabled={!outcome || busy} style={{ ...tool, minWidth: 110, backgroundColor: color.brand.primary, color: '#fff', border: 'none', opacity: !outcome || busy ? 0.55 : 1 }}>
+          <button type="submit" data-testid="close-confirm" disabled={!outcome || busy} style={{ ...tool, minWidth: 110, backgroundColor: color.brand.fill, color: color.text.onFill, border: 'none', opacity: !outcome || busy ? 0.55 : 1 }}>
             {tr('Close dispute')}
           </button>
         </div>
@@ -366,7 +366,7 @@ function CloseDialog({
 function Card({ title, testId, children }: { title: string; testId?: string; children: ReactNode }): ReactElement {
   return (
     <section data-testid={testId} aria-label={title} style={{ border: `1px solid ${color.border.subtle}`, borderRadius: 14, overflow: 'hidden' }}>
-      <h2 style={{ margin: 0, padding: '10px 14px', fontSize: 15, fontWeight: 600, backgroundColor: '#F5F6FA' }}>{title}</h2>
+      <h2 style={{ margin: 0, padding: '10px 14px', fontSize: 15, fontWeight: 600, backgroundColor: color.bg.sunken }}>{title}</h2>
       <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </section>
   );

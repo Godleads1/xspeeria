@@ -99,11 +99,24 @@ export interface Dashboard {
     avg_settlement_seconds: number | null;
     open_disputes: number;
     kyc_waiting: number;
+    /** Per bucket (Lagos time) for the tiles' trend lines; only buckets with something in them. */
+    series: {
+      at: string;
+      active_users: number;
+      new_users: number;
+      trades_started: number;
+      trades_completed: number;
+      settlement_seconds: number;
+      disputes_opened: number;
+      kyc_started: number;
+    }[];
+    value_by_time: (MoneyFigure & { at: string })[];
   };
   customers: {
     growth: { at: string; signed_up: number; not_verified: number }[];
     active_customers: number;
     inactive_30_days: number;
+    by_status: Record<'active' | 'pending_verification' | 'suspended' | 'closed', number>;
   };
   transactions: { completed: number; failed: number; speed: Record<'lt_1m' | '1_5m' | '5_10m' | '10_60m' | 'gt_60m', number> };
   revenue: {

@@ -88,7 +88,7 @@ export function PhotoPicker({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="" width={72} height={72} style={{ width: 72, height: 72, objectFit: 'cover' }} />
           ) : (
-            <svg width="26" height="26" viewBox="0 0 24 24" fill={color.text.primary} aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" style={{ fill: color.text.primary }} aria-hidden="true">
               <path d="M9 4.5 7.6 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2.6L15 4.5H9Zm3 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
             </svg>
           )}
