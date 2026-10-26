@@ -14,7 +14,7 @@ export interface NavItem {
   readonly permission?: string;
   /** Figma admin menu: work areas on top, then the "ADMIN" section. */
   readonly section?: 'work' | 'admin';
-  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile';
+  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile';
 }
 
 /**
@@ -27,6 +27,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: 'Dashboard', href: '/', section: 'work', icon: 'dashboard' },
   { id: 'disputes', label: 'Dispute Resolution', href: '/disputes', permission: 'disputes.read', section: 'work', icon: 'disputes' },
   { id: 'reversals', label: 'Reversal', href: '/reversals', permission: 'reversals.read', section: 'work', icon: 'reversals' },
+  { id: 'fraud', label: 'Fraud Management', href: '/fraud', permission: 'fraud_alerts.read', section: 'work', icon: 'fraud' },
   { id: 'staff', label: 'Staff', href: '/staff', permission: 'staff.read', section: 'admin', icon: 'staff' },
   { id: 'users', label: 'Users', href: '/users', permission: 'users.read', section: 'admin', icon: 'staff' },
   { id: 'audit', label: 'Audit Logs', href: '/audit', permission: 'audit.read', section: 'admin', icon: 'audit' },
@@ -41,7 +42,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
  * in the same change that adds its page and its server-side permission check.
  */
 export const PLANNED_DESTINATIONS: readonly NavItem[] = [
-  { id: 'fraud', label: 'Fraud Management', href: '/fraud' },
   { id: 'kyc', label: 'Identity checks', href: '/kyc' },
 ];
 

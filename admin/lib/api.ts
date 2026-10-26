@@ -347,6 +347,45 @@ export interface AdvertInput {
   link_url?: string | null;
 }
 
+export type FraudRule = 'pin_lockout' | 'code_lockout' | 'disputes_against' | 'payout_name_mismatch' | 'staff_report';
+export type FraudStatus = 'open' | 'in_progress' | 'resolved';
+export type FraudSeverity = 'low' | 'medium' | 'high';
+export interface FraudAlertRow {
+  id: string;
+  ref: string;
+  user_id: string;
+  customer: string;
+  customer_email: string;
+  rule: FraudRule;
+  severity: FraudSeverity;
+  status: FraudStatus;
+  /** What the rule found: counts, dates, bank and last 4 digits only. */
+  details: Record<string, unknown>;
+  created_at: string;
+  resolved_at: string | null;
+  resolution: 'confirmed' | 'false_alarm' | null;
+}
+export interface FraudAlert extends FraudAlertRow {
+  customer_status: string | null;
+  customer_phone: string | null;
+  note: string | null;
+  resolution_note: string | null;
+  raised_by: string | null;
+  resolved_by: string | null;
+  account_name?: string | null;
+  verified_name?: string | null;
+}
+export interface FraudPage {
+  total: number;
+  items: FraudAlertRow[];
+}
+export interface FraudStats {
+  open: number;
+  in_progress: number;
+  resolved: number;
+  high_open: number;
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -478,6 +517,22 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
       const blob = await response.blob();
       return /^image\/(jpeg|png|webp)$/.test(blob.type) ? URL.createObjectURL(blob) : null;
     },
+    listFraudAlerts: (q: { search?: string; status?: FraudStatus; rule?: FraudRule; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      if (q.status) p.set('status', q.status);
+      if (q.rule) p.set('rule', q.rule);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<FraudPage>('GET', `/fraud-alerts?${p.toString()}`);
+    },
+    fraudStats: () => call<FraudStats>('GET', '/fraud-alerts/stats'),
+    fraudAlert: (id: string) => call<FraudAlert>('GET', `/fraud-alerts/${encodeURIComponent(id)}`),
+    reportFraud: (body: { user_id: string; severity: FraudSeverity; note: string }) =>
+      call<{ id: string; ref: string }>('POST', '/fraud-alerts', body),
+    startFraudAlert: (id: string) => call<void>('POST', `/fraud-alerts/${encodeURIComponent(id)}/start`),
+    resolveFraudAlert: (id: string, resolution: 'confirmed' | 'false_alarm', note: string) =>
+      call<void>('POST', `/fraud-alerts/${encodeURIComponent(id)}/resolve`, { resolution, note }),
     reportOutage: (body: OutageInput) => call<{ id: string; ref: string }>('POST', '/outages', body),
     changeOutage: (id: string, body: Partial<OutageInput> & { status?: OutageStatus }) =>
       call<void>('PATCH', `/outages/${encodeURIComponent(id)}`, body),
