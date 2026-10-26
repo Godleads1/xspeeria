@@ -76,8 +76,16 @@ def _check_link(url: str | None) -> str | None:
     return url
 
 
-def _view(a: Advert, who: str | None, now: datetime) -> dict[str, Any]:
-    showing = a.active and a.starts_at <= now < a.ends_at
+def _view(
+    a: Advert, who: str | None, now: datetime, showing_id: uuid.UUID | None
+) -> dict[str, Any]:
+    in_dates = a.active and a.starts_at <= now < a.ends_at
+    # One slot: inside its dates but not the one in the slot -> behind a newer advert.
+    state = (
+        ("showing" if a.id == showing_id else "covered")
+        if in_dates
+        else ("off" if not a.active else ("ended" if now >= a.ends_at else "scheduled"))
+    )
     return {
         "id": a.id,
         "name": a.name,
@@ -87,9 +95,7 @@ def _view(a: Advert, who: str | None, now: datetime) -> dict[str, Any]:
         "ends_at": a.ends_at,
         "link_url": a.link_url,
         "active": a.active,
-        "state": "showing"
-        if showing
-        else ("off" if not a.active else ("ended" if now >= a.ends_at else "scheduled")),
+        "state": state,
         "created_by": who,
         "created_at": a.created_at,
         "updated_at": a.updated_at,
@@ -195,7 +201,7 @@ class AdvertService:
         now = self._clock()
         showing = await current_advert(self._db, now)
         showing_id = showing.id if showing else None  # read before the rollback expires it
-        items = [_view(a, who, now) for a, who in rows]
+        items = [_view(a, who, now, showing_id) for a, who in rows]
         total = await self._db.scalar(select(func.count(Advert.id)))
         await self._db.rollback()
         return {
