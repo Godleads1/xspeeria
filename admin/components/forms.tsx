@@ -85,12 +85,18 @@ export function TextInput({
   placeholder,
   required = true,
   ltr,
+  readOnly = false,
+  leading,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   /** Always left to right (emails, phone numbers, passwords, codes), also in Arabic. */
   ltr?: boolean;
+  /** Shown but not editable (e.g. my email and role on My profile). */
+  readOnly?: boolean;
+  /** Something drawn before the text inside the box, e.g. a flag. */
+  leading?: ReactNode;
   type?: 'text' | 'email' | 'password';
   autoComplete?: string;
   inputMode?: 'numeric' | 'email' | 'text';
@@ -103,21 +109,29 @@ export function TextInput({
   return (
     <Field label={label} hint={hint}>
       {(id, hintId, outlined) => (
-        <input
-          id={id}
-          data-testid={testId}
-          type={type}
-          value={value}
-          placeholder={placeholder}
-          dir={(ltr ?? (type === 'email' || type === 'password')) ? 'ltr' : undefined}
-          required={required}
-          autoComplete={autoComplete}
-          inputMode={inputMode}
-          maxLength={maxLength}
-          aria-describedby={hintId}
-          onChange={(e) => onChange(e.target.value)}
-          style={outlined ? inner : input}
-        />
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {leading}
+          <input
+            id={id}
+            data-testid={testId}
+            type={type}
+            value={value}
+            placeholder={placeholder}
+            dir={(ltr ?? (type === 'email' || type === 'password')) ? 'ltr' : undefined}
+            required={required && !readOnly}
+            readOnly={readOnly}
+            aria-readonly={readOnly || undefined}
+            autoComplete={autoComplete}
+            inputMode={inputMode}
+            maxLength={maxLength}
+            aria-describedby={hintId}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              ...(outlined ? inner : input),
+              ...(readOnly ? { color: color.text.secondary, cursor: 'default' } : null),
+            }}
+          />
+        </span>
       )}
     </Field>
   );

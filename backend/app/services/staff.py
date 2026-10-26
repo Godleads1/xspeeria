@@ -491,6 +491,54 @@ class StaffService:
     async def me(self, principal: StaffPrincipal) -> dict[str, Any]:
         return await self._profile(principal.staff_id)
 
+    async def update_me(
+        self,
+        principal: StaffPrincipal,
+        changes: dict[str, Any],
+        info: RequestInfo,
+    ) -> dict[str, Any]:
+        """Change my own name and phone (owner decision 2026-10-26).
+
+        Only these two: email (the log-in) and role are changed by staff who manage accounts,
+        so a stolen session can't take the account over or raise its own permissions.
+        """
+        staff = await self._db.get(StaffAccount, principal.staff_id, with_for_update=True)
+        if staff is None or staff.status != "active":
+            await self._db.rollback()
+            raise unauthorized()
+        done: dict[str, Any] = {}
+        if "name" in changes:
+            name = changes["name"].strip()
+            if len(name) < 2:
+                await self._db.rollback()
+                raise _err("VAL_422_MISSING_FIELD", "Enter your name.", 422, {"field": "name"})
+            if name != staff.name:
+                done["name"] = True
+                staff.name = name
+        if "phone" in changes:
+            try:
+                phone = _phone_or_422(changes["phone"])
+            except AppError:
+                await self._db.rollback()
+                raise
+            if phone != staff.phone:
+                done["phone"] = True  # the audit says it changed, never the number
+                staff.phone = phone
+        if done:
+            staff.updated_at = self._now()
+            self._audit(
+                info,
+                staff.id,
+                "profile_updated",
+                target_type="staff",
+                target_id=staff.id,
+                detail=done,
+            )
+            await self._db.commit()
+        else:
+            await self._db.rollback()
+        return await self._profile(principal.staff_id)
+
     # --- staff ------------------------------------------------------------------------------
 
     def _need(self, principal: StaffPrincipal, permission: str) -> None:

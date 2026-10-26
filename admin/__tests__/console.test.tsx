@@ -409,7 +409,7 @@ describe('profile', () => {
     const setPhoto = vi.fn(async () => STAFF[0]);
     URL.createObjectURL = vi.fn(() => 'blob:me');
     await signedIn(fakeApi({ setPhoto }), <ProfileScreen />);
-    expect(screen.getByText('+2348030000001')).toBeInTheDocument();
+    expect(screen.getByTestId('me-phone')).toHaveValue('+2348030000001');
     fireEvent.change(screen.getByTestId('my-photo'), {
       target: { files: [new File([new Uint8Array([255, 216, 255])], 'me.jpg', { type: 'image/jpeg' })] },
     });
@@ -417,9 +417,40 @@ describe('profile', () => {
     expect(setPhoto).toHaveBeenCalledWith('s-boss', '/9j/');
   });
 
-  it('changes my password', async () => {
+  it('saves only my name and phone; email, role and ID are read-only', async () => {
+    const updateMe = vi.fn(async () => me());
+    await signedIn(fakeApi({ updateMe }), <ProfileScreen />);
+    for (const id of ['me-email', 'me-role', 'me-id']) expect(screen.getByTestId(id)).toHaveAttribute('readonly');
+    // Nothing changed yet: Save is off.
+    expect(screen.getByTestId('me-save')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('me-first'), { target: { value: 'Ada' } });
+    fireEvent.change(screen.getByTestId('me-last'), { target: { value: ' Obi ' } });
+    fireEvent.change(screen.getByTestId('me-phone'), { target: { value: '+44 7700 900123' } });
+    fireEvent.click(screen.getByTestId('me-save'));
+    expect(await screen.findByText('Profile saved.')).toBeInTheDocument();
+    expect(updateMe).toHaveBeenCalledWith({ name: 'Ada Obi', phone: '+44 7700 900123' });
+  });
+
+  it('shows the server refusal when my phone is not valid', async () => {
+    const updateMe = vi.fn(async () => {
+      throw new AdminApiError('VAL_422_INVALID_PHONE', 422, 'Enter the phone number in international form, e.g. +2348031234567.');
+    });
+    await signedIn(fakeApi({ updateMe }), <ProfileScreen />);
+    fireEvent.change(screen.getByTestId('me-phone'), { target: { value: '0803' } });
+    fireEvent.click(screen.getByTestId('me-save'));
+    expect(await screen.findByText(/international form/)).toBeInTheDocument();
+  });
+
+  it('changes my password, and two-factor is on and can\'t be switched off', async () => {
     const changePassword = vi.fn(async () => undefined);
     await signedIn(fakeApi({ changePassword }), <ProfileScreen />);
+    fireEvent.click(screen.getByTestId('tab-password'));
+    expect(screen.getByTestId('tab-password')).toHaveAttribute('aria-selected', 'true');
+    const twofa = screen.getByTestId('twofa');
+    expect(twofa).toHaveAttribute('aria-checked', 'true');
+    expect(twofa).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(twofa);
+    expect(twofa).toHaveAttribute('aria-checked', 'true');
     fireEvent.change(screen.getByTestId('pw-current'), { target: { value: 'old password' } });
     fireEvent.change(screen.getByTestId('pw-new'), { target: { value: 'a new long password' } });
     fireEvent.change(screen.getByTestId('pw-again'), { target: { value: 'a new long password' } });

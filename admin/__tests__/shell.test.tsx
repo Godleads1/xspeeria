@@ -1,7 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { color } from '@xspeeria/tokens';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -101,6 +101,40 @@ describe('AppShell', () => {
     expect(screen.queryByTestId('nav-audit')).toBeNull();
     expect(screen.getByTestId('nav-overview')).toBeInTheDocument();
     expect(screen.getByTestId('nav-profile')).toBeInTheDocument();
+  });
+
+  it('opens the notification panel with no made-up count, and closes it', () => {
+    render(<AppShell who={{ name: 'Ada Obi', role: 'support_agent' }}>{null}</AppShell>);
+    const bell = screen.getByTestId('bell');
+    expect(bell).toHaveAccessibleName('Notifications');
+    expect(within(bell).queryByText(/\d/)).toBeNull();
+    fireEvent.click(bell);
+    const panel = screen.getByRole('dialog', { name: 'Notification' });
+    expect(within(panel).getByText('No notification')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(bell);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('asks before logging out', () => {
+    const onLogout = vi.fn();
+    render(<AppShell who={{ name: 'Ada Obi', role: 'support_agent' }} onLogout={onLogout}>{null}</AppShell>);
+    fireEvent.click(screen.getByTestId('logout'));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Are you sure you want to log out of the application?');
+    fireEvent.click(screen.getByTestId('logout-cancel'));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(onLogout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('logout'));
+    fireEvent.click(screen.getByTestId('logout-confirm'));
+    expect(onLogout).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('shows no bell before anyone is signed in', () => {
+    render(<AppShell>{null}</AppShell>);
+    expect(screen.queryByTestId('bell')).toBeNull();
   });
 
   it('does not render the destinations that have no page yet', () => {

@@ -111,6 +111,26 @@ Two-Factor screen with six boxes and Confirm):
 - Translations are machine-quality first drafts; like the app (ADR-053), a native speaker should
   review them before launch.
 
+## My profile, bell and notification panel (owner decision 2026-10-26)
+
+From the Figma "User Profile" frames and the top-bar bell:
+
+- **Owner decision 2026-10-26** ("On My Profile, what can a staff member change about
+  themselves?" → "Name and phone only"): `PATCH /api/v1/admin/me` accepts only `name` and
+  `phone`; any other field (email, role, status, permissions) is refused with 422. Email is the
+  log-in and role is power, so a stolen session can't take the account over or raise itself.
+  Changes are audited as `profile_updated` with which fields changed, never the number.
+- The page shows First Name and Last Name boxes over the one stored name (split at the first
+  space, joined back with one space). Email, role and a short staff ID are shown read-only.
+- Password tab: change password as before. Two-factor authentication is shown switched on and
+  can't be switched off (every staff log-in needs the email code).
+- Bell and Notification panel: staff notifications (new disputes, fraud alerts, approvals) come
+  with A-3; until then the panel shows "No notification" and the bell shows no count. The Figma
+  sample count is not shown.
+- Log out asks first (Figma "Are you sure you want to log out of the application?").
+- The profile banner is the owner's Figma image, taken out of the supplied SVG (checked: no
+  scripts or links), cropped and saved without metadata as `admin/public/profile-banner.jpg`.
+
 ## Not built yet
 
 - **A-3:** users, identity-check review, disputes/support, reversals with the approval rule, fraud alerts, outages, dashboard.

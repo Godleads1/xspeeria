@@ -60,6 +60,13 @@ export function Flag({ flag, size = 24 }: { flag: string; size?: number }): Reac
         <path d="m8 5 1.2 3.6H13l-3 2.2 1.1 3.6L8 12.2l-3.1 2.2L6 10.8 3 8.6h3.8Z" fill="#FFFF00" />
       </>
     ),
+    ng: (
+      <>
+        <rect width="24" height="24" fill="#fff" />
+        <rect width="8" height="24" fill="#008751" />
+        <rect x="16" width="8" height="24" fill="#008751" />
+      </>
+    ),
     pt: (
       <>
         <rect width="24" height="24" fill="#DA291C" />

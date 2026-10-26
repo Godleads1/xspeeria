@@ -245,6 +245,18 @@ async def change_password(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+class UpdateMe(_Strict):
+    """Only name and phone; anything else (email, role, status) is refused with 422."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    phone: str | None = Field(default=None, min_length=8, max_length=20)
+
+
+@router.patch("/me", response_model=MeView, summary="Change my own name or phone")
+async def update_me(body: UpdateMe, staff: Staff, service: Service, info: Info) -> Any:
+    return await service.update_me(staff, body.model_dump(exclude_none=True), info)
+
+
 # --- staff -------------------------------------------------------------------------------------
 
 
