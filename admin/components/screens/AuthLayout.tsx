@@ -14,7 +14,8 @@ export function AuthLayout({ title, children }: { title: string; children: React
       style={{
         minHeight: '100vh',
         boxSizing: 'border-box',
-        padding: 22,
+        // Owner, 2026-10-26: room between the card and the left edge of the screen.
+        padding: 'clamp(24px, 4vh, 48px) clamp(24px, 4vw, 48px) clamp(24px, 4vh, 48px) clamp(32px, 6vw, 96px)',
         display: 'flex',
         alignItems: 'stretch',
         fontFamily: fontStack.brand,
