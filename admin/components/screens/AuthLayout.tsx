@@ -5,8 +5,9 @@
 
 import type { ReactElement, ReactNode } from 'react';
 
-import { color, fontStack } from '../../theme';
+import { admin, color, fontStack } from '../../theme';
 import { LanguagePicker } from '../LanguagePicker';
+import { ThemeSwitch } from '../ThemeSwitch';
 import { Wordmark } from '../Wordmark';
 
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }): ReactElement {
@@ -29,7 +30,8 @@ export function AuthLayout({ title, children }: { title: string; children: React
         position: 'relative',
       }}
     >
-      <div style={{ position: 'absolute', top: 20, insetInlineEnd: 24 }}>
+      <div style={{ position: 'absolute', top: 20, insetInlineEnd: 24, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <ThemeSwitch compact />
         <LanguagePicker />
       </div>
       <main
@@ -37,7 +39,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
           width: '100%',
           maxWidth: 600,
           borderRadius: 24,
-          backgroundColor: 'rgba(235, 241, 255, 0.86)',
+          backgroundColor: admin.glass,
           backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',

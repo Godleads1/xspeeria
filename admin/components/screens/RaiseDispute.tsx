@@ -16,7 +16,7 @@ import { useEffect, useId, useState, type CSSProperties, type ReactElement } fro
 import { messageFor, type Customer, type DisputeCategory, type Priority } from '../../lib/api';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
 import { Icon } from '../icons';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -94,7 +94,7 @@ export function RaiseDispute({ onCancel, onCreated }: { onCancel: () => void; on
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(15, 23, 42, 0.35)', display: 'flex', justifyContent: 'flex-end' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: admin.scrim, display: 'flex', justifyContent: 'flex-end' }}>
       <section
         role="dialog"
         aria-modal="true"
@@ -112,8 +112,8 @@ export function RaiseDispute({ onCancel, onCreated }: { onCancel: () => void; on
             </button>
           </div>
           <p style={{ margin: '14px 0 6px', fontSize: 13, color: color.text.secondary }}>{tr('Step {{n}} of 3', { n: step })}</p>
-          <div style={{ height: 5, borderRadius: 3, backgroundColor: '#E2E4EA' }} aria-hidden="true">
-            <div style={{ width: `${(step / 3) * 100}%`, height: '100%', borderRadius: 3, backgroundColor: color.brand.primary }} />
+          <div style={{ height: 5, borderRadius: 3, backgroundColor: admin.track }} aria-hidden="true">
+            <div style={{ width: `${(step / 3) * 100}%`, height: '100%', borderRadius: 3, backgroundColor: color.brand.fill }} />
           </div>
         </header>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -212,7 +212,7 @@ export function RaiseDispute({ onCancel, onCreated }: { onCancel: () => void; on
             data-testid="raise-next"
             disabled={busy || (step === 1 && !step1) || (step === 2 && !step2)}
             onClick={() => (step < 3 ? setStep(step + 1) : void submit())}
-            style={{ ...big, border: 'none', color: '#fff', backgroundColor: color.brand.primary, opacity: busy || (step === 1 && !step1) || (step === 2 && !step2) ? 0.55 : 1 }}
+            style={{ ...big, border: 'none', color: color.text.onFill, backgroundColor: color.brand.fill, opacity: busy || (step === 1 && !step1) || (step === 2 && !step2) ? 0.55 : 1 }}
           >
             {step < 3 ? tr('Next') : busy ? tr('Please wait…') : tr('Submit Dispute')}
           </button>
@@ -245,7 +245,7 @@ function Item({ label, value }: { label: string; value: string }): ReactElement 
 
 const h3: CSSProperties = { margin: 0, fontSize: 15, fontWeight: 600 };
 const inner: CSSProperties = { width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 15, padding: '8px 0' };
-const tile: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'start', padding: 14, borderRadius: 8, border: '1px solid', background: '#FAFAFB', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, minHeight: 88 };
+const tile: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'start', padding: 14, borderRadius: 8, border: '1px solid', background: admin.tile, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, minHeight: 88 };
 const big: CSSProperties = { flex: 1, height: 50, borderRadius: 10, fontFamily: 'inherit', fontSize: 16, fontWeight: 500, cursor: 'pointer' };
 const linkButton: CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: color.brand.secondaryText };
 const roundClose: CSSProperties = { width: 24, height: 24, borderRadius: '50%', border: `1px solid ${color.text.secondary}`, background: 'none', cursor: 'pointer', color: color.text.secondary, display: 'grid', placeItems: 'center', padding: 0 };

@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { messageFor, type DisputeCategory } from '../../lib/api';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
 import { Button, Notice, PageTitle } from '../forms';
 import { Panel, StatusChip } from '../primitives';
 import { RowMenu } from '../RowMenu';
@@ -147,7 +147,7 @@ function CategoryDialog({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(15, 23, 42, 0.35)', display: 'grid', placeItems: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: admin.scrim, display: 'grid', placeItems: 'center', padding: 16 }}>
       <form
         role="dialog"
         aria-modal="true"
@@ -184,7 +184,7 @@ function CategoryDialog({
           <button type="button" onClick={onCancel} style={{ flex: 1, height: 48, borderRadius: 10, border: `1px solid ${color.text.primary}`, background: color.bg.canvas, fontFamily: 'inherit', fontSize: 16, cursor: 'pointer' }}>
             {tr('Cancel')}
           </button>
-          <button type="submit" data-testid="cat-save" disabled={!ok || busy} style={{ flex: 1, height: 48, borderRadius: 10, border: 'none', background: color.brand.primary, color: '#fff', fontFamily: 'inherit', fontSize: 16, cursor: 'pointer', opacity: !ok || busy ? 0.55 : 1 }}>
+          <button type="submit" data-testid="cat-save" disabled={!ok || busy} style={{ flex: 1, height: 48, borderRadius: 10, border: 'none', background: color.brand.fill, color: color.text.onFill, fontFamily: 'inherit', fontSize: 16, cursor: 'pointer', opacity: !ok || busy ? 0.55 : 1 }}>
             {tr('Save')}
           </button>
         </div>

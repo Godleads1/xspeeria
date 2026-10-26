@@ -9,7 +9,7 @@
 import { useRef, type ClipboardEvent, type KeyboardEvent, type ReactElement } from 'react';
 
 import { tr } from '../lib/i18n';
-import { color } from '../theme';
+import { admin, color } from '../theme';
 
 const LENGTH = 6;
 
@@ -85,7 +85,7 @@ export function CodeBoxes({
             fontFamily: 'inherit',
             fontWeight: 600,
             color: color.text.primary,
-            backgroundColor: 'rgba(255, 255, 255, 0.35)',
+            backgroundColor: admin.field,
             border: `1px solid ${color.border.strong}`,
             borderRadius: 6,
             marginInlineStart: i === 3 ? 6 : 0,

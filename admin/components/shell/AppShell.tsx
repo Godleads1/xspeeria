@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * Admin shell, following the Figma admin frames: a white top bar (logo, bell, language,
- * signed-in person), a white side menu with the work areas, an "ADMIN" section and a red
- * Log out, and a light grey content area.
+ * Admin shell (owner-approved preview, 2026-10-26, ADR-064): a navy side menu with the
+ * logo-green active item, the work areas, an "ADMIN" section and Log out; a top bar with the
+ * bell, Light / Dark / System, language and the signed-in person; a light grey (or, in dark
+ * mode, night) content area.
  *
  * The menu lists only the areas the signed-in person's role allows (display only — the
  * server checks every call).
@@ -14,17 +15,18 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 
 import { NAV_ITEMS, type NavItem } from '../../fixtures';
 import { roleLabel } from '../../lib/permissions';
-import { color, fontStack, space } from '../../theme';
+import { admin, color, fontStack, space } from '../../theme';
 import { Avatar } from '../Avatar';
 import { Icon } from '../icons';
 import { LanguagePicker } from '../LanguagePicker';
 import { LogoutDialog } from '../LogoutDialog';
 import { NotificationBell } from '../Notifications';
+import { ThemeSwitch } from '../ThemeSwitch';
 import { tr } from '../../lib/i18n';
 import { Wordmark } from '../Wordmark';
 
-const SIDEBAR = 240;
-export const PAGE_BG = '#F5F6FA';
+const SIDEBAR = 250;
+export const PAGE_BG = admin.page;
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }): ReactElement {
   return (
@@ -36,15 +38,16 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }): ReactEle
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
-          margin: '2px 16px',
-          padding: '10px 12px',
-          color: active ? color.text.onFill : color.text.primary,
-          backgroundColor: active ? color.brand.primary : 'transparent',
+          gap: 14,
+          margin: '3px 16px',
+          padding: '11px 14px',
+          color: active ? '#FFFFFF' : admin.sideText,
+          backgroundColor: active ? admin.sideActive : 'transparent',
+          boxShadow: active ? '0 6px 16px rgba(26, 122, 50, 0.35)' : undefined,
           fontWeight: active ? 600 : 500,
-          fontSize: 14,
+          fontSize: 15,
           textDecoration: 'none',
-          borderRadius: 6,
+          borderRadius: 10,
         }}
       >
         {item.icon ? <Icon name={item.icon} /> : null}
@@ -73,13 +76,13 @@ export function AppShell({
   const held = new Set(permissions ?? []);
   const items = NAV_ITEMS.filter((i) => !i.permission || held.has(i.permission));
   const work = items.filter((i) => i.section !== 'admin');
-  const admin = items.filter((i) => i.section === 'admin');
+  const adminItems = items.filter((i) => i.section === 'admin');
   return (
     <div
       style={{
         display: 'grid',
         gridTemplateColumns: `${SIDEBAR}px 1fr`,
-        gridTemplateRows: '64px 1fr',
+        gridTemplateRows: '72px 1fr',
         minHeight: '100vh',
         backgroundColor: PAGE_BG,
         fontFamily: fontStack.brand,
@@ -91,8 +94,9 @@ export function AppShell({
           gridColumn: '1 / 2',
           display: 'flex',
           alignItems: 'center',
-          padding: `0 ${space.md}px`,
+          padding: '0 26px',
           backgroundColor: color.bg.canvas,
+          borderBottom: `1px solid ${color.border.subtle}`,
         }}
       >
         <Link href="/" aria-label={tr('Xspeeria Admin home')} style={{ textDecoration: 'none' }}>
@@ -108,9 +112,11 @@ export function AppShell({
           gap: space.md,
           padding: `0 ${space.md}px`,
           backgroundColor: color.bg.canvas,
+          borderBottom: `1px solid ${color.border.subtle}`,
         }}
       >
         {who ? <NotificationBell /> : null}
+        <ThemeSwitch compact />
         <LanguagePicker />
         {who ? (
           <a
@@ -130,10 +136,12 @@ export function AppShell({
         aria-label={tr('Primary')}
         style={{
           gridColumn: '1 / 2',
-          backgroundColor: color.bg.canvas,
+          backgroundColor: admin.side,
           paddingTop: space.sm,
           display: 'flex',
           flexDirection: 'column',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -141,12 +149,12 @@ export function AppShell({
             <NavLink key={item.id} item={item} active={current === item.href} />
           ))}
         </ul>
-        {admin.length > 0 ? (
+        {adminItems.length > 0 ? (
           <>
-            <div style={{ borderTop: `1px solid ${color.border.subtle}`, margin: '12px 0 8px' }} />
-            <p style={{ margin: '4px 28px 6px', fontSize: 12, fontWeight: 600, color: color.text.secondary }}>{tr('ADMIN')}</p>
+            <div style={{ borderTop: `1px solid ${admin.sideLine}`, margin: '14px 26px 8px' }} />
+            <p style={{ margin: '8px 30px 6px', fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: admin.sideText, opacity: 0.8 }}>{tr('ADMIN')}</p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {admin.map((item) => (
+              {adminItems.map((item) => (
                 <NavLink key={item.id} item={item} active={current === item.href} />
               ))}
             </ul>
@@ -154,30 +162,51 @@ export function AppShell({
         ) : null}
         {onLogout ? (
           <>
-            <div style={{ borderTop: `1px solid ${color.border.subtle}`, margin: '12px 0 8px' }} />
+            <div style={{ borderTop: `1px solid ${admin.sideLine}`, margin: '14px 26px 8px' }} />
             <button
               type="button"
               data-testid="logout"
               onClick={() => setAskLogout(true)}
               style={{
-                alignSelf: 'flex-start',
-                margin: '4px 16px',
-                paddingBlock: 10,
-                paddingInlineStart: 40,
-                paddingInlineEnd: 12,
+                alignSelf: 'stretch',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                margin: '3px 16px',
+                padding: '11px 14px',
                 background: 'none',
                 border: 'none',
+                borderRadius: 10,
                 cursor: 'pointer',
-                color: color.error.text,
+                color: admin.sideDanger,
                 fontFamily: 'inherit',
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 500,
+                textAlign: 'start',
               }}
             >
+              <Icon name="logout" />
               {tr('Logout')}
             </button>
           </>
         ) : null}
+        {/* A faint Xspeeria mark at the bottom of the menu (decoration only). */}
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: -36,
+            insetInlineStart: -28,
+            width: 230,
+            height: 120,
+            opacity: 0.07,
+            backgroundImage: 'url(/xspeeria-logo-dark.svg)',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            filter: 'grayscale(1)',
+            pointerEvents: 'none',
+          }}
+        />
       </nav>
       <main
         style={{

@@ -195,7 +195,7 @@ export function Button({
 }): ReactElement {
   const palette =
     variant === 'primary'
-      ? { bg: color.brand.primary, fg: color.text.onFill, border: color.brand.primary }
+      ? { bg: color.brand.fill, fg: color.text.onFill, border: color.brand.fill }
       : variant === 'danger'
         ? { bg: color.bg.canvas, fg: color.error.text, border: color.error.border }
         : { bg: color.bg.canvas, fg: color.text.primary, border: color.border.strong };

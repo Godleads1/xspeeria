@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { color } from '@xspeeria/tokens';
+import { color } from '../theme';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Amount, EmptyState, ErrorState, LoadingState, StatusChip } from '../components/primitives';
@@ -17,13 +17,6 @@ import {
 } from '../fixtures';
 
 const EVERY_PERMISSION = NAV_ITEMS.flatMap((i) => (i.permission ? [i.permission] : []));
-
-/** jsdom serialises colours as rgb(), so compare tokens in the same form. */
-function asRgb(hex: string): string {
-  const v = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
-  return `rgb(${r}, ${g}, ${b})`;
-}
 
 const columns: readonly Column<SettlementRow>[] = [
   { key: 'reference', header: 'Reference', render: (row) => row.reference },
@@ -170,8 +163,8 @@ describe('DataTable', () => {
     render(<DataTable caption="Settlements" columns={columns} rows={SETTLEMENT_ROWS} />);
     const header = screen.getByRole('columnheader', { name: 'Reference' });
     const inline = header.getAttribute('style') ?? '';
-    expect(inline).toContain(asRgb(color.border.strong));
-    expect(inline).not.toContain(asRgb(color.border.subtle));
+    expect(inline).toContain(color.border.strong);
+    expect(inline).not.toContain(color.border.subtle);
   });
 
   it('names a next action when empty and something is wired to it', () => {

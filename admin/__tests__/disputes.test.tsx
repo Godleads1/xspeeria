@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { admin } from '../theme';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DisputeCaseScreen } from '../components/screens/DisputeCaseScreen';
@@ -64,9 +65,9 @@ describe('SLA timer', () => {
   it('counts down, turns amber under 6 hours, shows overdue, and met or missed once closed', () => {
     const due = Date.parse(ROW.sla_due_at);
     const { rerender } = render(<Sla row={ROW} now={due - (22 * 3600 + 5) * 1000} />);
-    expect(screen.getByText('22:00:05')).toHaveStyle({ color: '#13A36B' });
+    expect(screen.getByText('22:00:05').getAttribute('style')).toContain(admin.up);
     rerender(<Sla row={ROW} now={due - 3600_000} />);
-    expect(screen.getByText('01:00:00')).toHaveStyle({ color: '#C27803' });
+    expect(screen.getByText('01:00:00').getAttribute('style')).toContain(admin.amber);
     rerender(<Sla row={ROW} now={due + 1} />);
     expect(screen.getByText('SLA Overdue')).toBeInTheDocument();
     rerender(<Sla row={{ ...ROW, status: 'resolved', resolved_at: '2026-10-26T20:00:00Z' }} now={due + 1} />);

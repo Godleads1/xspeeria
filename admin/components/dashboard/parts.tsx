@@ -12,32 +12,32 @@
 import { useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 
 import { tr } from '../../lib/i18n';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
 
-export const SERIES = ['#4A5BD0', '#D98A1F'] as const;
+export const SERIES = [admin.series1, admin.series2] as const;
 
 const TINTS = {
-  blue: { bg: '#E3E8FF', fg: '#4A5BD0' },
-  green: { bg: '#D9F7E8', fg: '#1F9D63' },
-  orange: { bg: '#FFE4DA', fg: '#E0703F' },
-  grey: { bg: '#E6E7EA', fg: '#5E6470' },
+  blue: { bg: admin.tintBlue, fg: admin.tintBlueFg },
+  green: { bg: admin.tintGreen, fg: admin.tintGreenFg },
+  orange: { bg: admin.tintOrange, fg: admin.tintOrangeFg },
+  grey: { bg: admin.tintGrey, fg: admin.tintGreyFg },
 } as const;
 export type Tint = keyof typeof TINTS;
 
 export const card: CSSProperties = {
   backgroundColor: color.bg.canvas,
   borderRadius: 14,
-  boxShadow: '0 4px 18px rgba(15, 23, 42, 0.05)',
+  boxShadow: `0 4px 18px ${admin.shadow}`,
   padding: 16,
   boxSizing: 'border-box',
 };
 
 export function Trend({ change, label }: { change: { pct: string; up: boolean } | null; label: string }): ReactElement {
   if (!change) return <span style={{ fontSize: 13, color: color.text.secondary }}>{tr('Nothing to compare with yet')}</span>;
-  const tone = change.up ? '#13A36B' : '#E5484D';
+  const tone = change.up ? admin.up : admin.down;
   return (
     <span style={{ fontSize: 13, color: color.text.secondary, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke={tone} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" style={{ stroke: tone }} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         {change.up ? <path d="M2 11l4-4 3 3 5-5M10 5h4v4" /> : <path d="M2 5l4 4 3-3 5 5M10 11h4V7" />}
       </svg>
       <span style={{ color: tone, fontWeight: 600 }}>{change.pct}</span>
@@ -115,14 +115,14 @@ export function BarChart({
       <div style={{ position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={title} style={{ display: 'block', maxHeight: 260 }} onMouseLeave={() => setHover(null)}>
           {[0.25, 0.5, 0.75, 1].map((f) => (
-            <line key={f} x1={pad.l} x2={W - pad.r} y1={pad.t + plotH * (1 - f)} y2={pad.t + plotH * (1 - f)} stroke={color.border.subtle} strokeDasharray="4 4" />
+            <line key={f} x1={pad.l} x2={W - pad.r} y1={pad.t + plotH * (1 - f)} y2={pad.t + plotH * (1 - f)} style={{ stroke: color.border.subtle }} strokeDasharray="4 4" />
           ))}
-          <line x1={pad.l} x2={W - pad.r} y1={pad.t + plotH} y2={pad.t + plotH} stroke={color.border.strong} />
+          <line x1={pad.l} x2={W - pad.r} y1={pad.t + plotH} y2={pad.t + plotH} style={{ stroke: color.border.strong }} />
           {labels.map((label, i) => {
             const x0 = pad.l + step * i + (step - series.length * (barW + 2)) / 2;
             return (
               <g key={label} onMouseEnter={() => setHover(i)}>
-                <rect x={pad.l + step * i} y={pad.t} width={step} height={plotH} fill={hover === i ? 'rgba(74, 91, 208, 0.06)' : 'transparent'} />
+                <rect x={pad.l + step * i} y={pad.t} width={step} height={plotH} style={{ fill: hover === i ? admin.hover : 'transparent' }} />
                 {series.map((s, k) => {
                   const v = s.values[i] ?? 0;
                   const h = v === 0 ? 0 : Math.max(2, (v / max) * plotH);
@@ -130,11 +130,11 @@ export function BarChart({
                   const y = pad.t + plotH - h;
                   const r = Math.min(4, barW / 2, h);
                   return h > 0 ? (
-                    <path key={s.name} fill={SERIES[k]} d={`M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + barW - r}Q${x + barW},${y} ${x + barW},${y + r}V${y + h}Z`} />
+                    <path key={s.name} style={{ fill: SERIES[k] }} d={`M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + barW - r}Q${x + barW},${y} ${x + barW},${y + r}V${y + h}Z`} />
                   ) : null;
                 })}
                 {i % every === 0 ? (
-                  <text x={pad.l + step * i + step / 2} y={H - 8} textAnchor="middle" fontSize="11" fill={color.text.secondary}>
+                  <text x={pad.l + step * i + step / 2} y={H - 8} textAnchor="middle" fontSize="11" style={{ fill: color.text.secondary }}>
                     {label}
                   </text>
                 ) : null}
@@ -143,7 +143,7 @@ export function BarChart({
           })}
         </svg>
         {hover !== null ? (
-          <div role="status" style={{ position: 'absolute', top: 0, left: `${Math.min(80, ((hover + 0.5) / labels.length) * 100)}%`, pointerEvents: 'none', backgroundColor: color.bg.canvas, border: `1px solid ${color.border.subtle}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, boxShadow: '0 6px 16px rgba(15,23,42,0.12)', whiteSpace: 'nowrap' }}>
+          <div role="status" style={{ position: 'absolute', top: 0, left: `${Math.min(80, ((hover + 0.5) / labels.length) * 100)}%`, pointerEvents: 'none', backgroundColor: color.bg.canvas, border: `1px solid ${color.border.subtle}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, boxShadow: `0 6px 16px ${admin.shadow}`, whiteSpace: 'nowrap' }}>
             <strong>{labels[hover]}</strong>
             {series.map((s, k) => (
               <div key={s.name} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -208,8 +208,8 @@ export function ShareBar({ label, part, whole }: { label: string; part: number; 
           {pct}% <span style={{ color: color.text.secondary }}>({part})</span>
         </span>
       </div>
-      <div style={{ height: 6, borderRadius: 3, backgroundColor: '#E2E4EA', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color.brand.primary, borderRadius: 3 }} />
+      <div style={{ height: 6, borderRadius: 3, backgroundColor: admin.track, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color.brand.fill, borderRadius: 3 }} />
       </div>
     </div>
   );

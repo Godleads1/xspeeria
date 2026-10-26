@@ -15,7 +15,7 @@ import { messageFor, type DisputePage, type DisputeRow, type DisputeStats, type 
 import { count, duration } from '../../lib/figures';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
-import { space } from '../../theme';
+import { admin, space } from '../../theme';
 import { Grid, StatTile } from '../dashboard/parts';
 import { BarSelect, FilterBar, SearchBox } from '../FilterBar';
 import { Button, FormError, Notice, PageTitle } from '../forms';
@@ -44,12 +44,12 @@ export function Sla({ row, now }: { row: Pick<DisputeRow, 'sla_due_at' | 'resolv
   const due = Date.parse(row.sla_due_at);
   if (row.status === 'resolved' && row.resolved_at) {
     const met = Date.parse(row.resolved_at) <= due;
-    return <span style={{ color: met ? '#13A36B' : '#E5484D' }}>{met ? tr('Met') : tr('Missed')}</span>;
+    return <span style={{ color: met ? admin.up : admin.down }}>{met ? tr('Met') : tr('Missed')}</span>;
   }
   const left = due - now;
-  if (left <= 0) return <span style={{ color: '#E5484D', fontWeight: 600 }}>{tr('SLA Overdue')}</span>;
+  if (left <= 0) return <span style={{ color: admin.down, fontWeight: 600 }}>{tr('SLA Overdue')}</span>;
   return (
-    <span dir="ltr" style={{ color: left < AMBER_UNDER_MS ? '#C27803' : '#13A36B', fontVariantNumeric: 'tabular-nums' }}>
+    <span dir="ltr" style={{ color: left < AMBER_UNDER_MS ? admin.amber : admin.up, fontVariantNumeric: 'tabular-nums' }}>
       {hms(left)}
     </span>
   );
@@ -166,7 +166,7 @@ export function DisputesScreen(): ReactElement {
           <span style={{ fontSize: 13 }}>{tr('Closed in the last 7 days')}</span>
         </StatTile>
         <StatTile testId="disputes-pending" label={tr('Pending Dispute')} value={stats ? count(stats.pending) : '—'} tint="orange">
-          {stats && stats.overdue > 0 ? <span style={{ fontSize: 13, color: '#E5484D' }}>{tr('{{n}} past the 24-hour SLA', { n: count(stats.overdue) })}</span> : null}
+          {stats && stats.overdue > 0 ? <span style={{ fontSize: 13, color: admin.down }}>{tr('{{n}} past the 24-hour SLA', { n: count(stats.overdue) })}</span> : null}
         </StatTile>
         <StatTile testId="disputes-avg" label={tr('Average Resolution')} value={stats ? (duration(stats.avg_resolution_seconds) ?? '—') : '—'} tint="grey">
           <span style={{ fontSize: 13 }}>{tr('Cases closed in the last 30 days')}</span>

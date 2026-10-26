@@ -18,7 +18,7 @@ import { tr } from '../../lib/i18n';
 import { roleLabel } from '../../lib/permissions';
 import { useStaffPhoto } from '../../lib/photos';
 import { useSession } from '../../lib/session';
-import { color } from '../../theme';
+import { admin, color } from '../../theme';
 import { PhotoPicker } from '../Avatar';
 import { Button, Form, FormError, Notice, TextInput } from '../forms';
 import { Flag } from '../LanguagePicker';
@@ -39,12 +39,12 @@ export function ProfileScreen(): ReactElement {
   return (
     <>
       <h1 style={{ margin: '4px 0 8px', fontSize: 24, fontWeight: 600 }}>{tr('User Profile')}</h1>
-      <div style={{ position: 'relative', backgroundColor: '#EEF0F6', border: `1px solid ${color.border.subtle}`, minHeight: 480 }}>
+      <div style={{ position: 'relative', backgroundColor: color.bg.sunken, border: `1px solid ${color.border.subtle}`, minHeight: 480 }}>
         <div
           aria-hidden="true"
           style={{
             height: 120,
-            backgroundColor: '#0A1A8C',
+            backgroundColor: admin.banner,
             backgroundImage: 'url(/profile-banner.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -283,7 +283,7 @@ function PasswordTab(): ReactElement {
             aria-label={tr('Two-Factor Authentication')}
             aria-describedby="twofa-why"
             data-testid="twofa"
-            style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: color.brand.primary, position: 'relative', display: 'inline-block', opacity: 0.9 }}
+            style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: color.brand.fill, position: 'relative', display: 'inline-block', opacity: 0.9 }}
           >
             <span style={{ position: 'absolute', top: 3, insetInlineEnd: 3, width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff' }} />
           </span>

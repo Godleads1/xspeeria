@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { tr } from '../lib/i18n';
-import { color } from '../theme';
+import { admin, color } from '../theme';
 import { Icon } from './icons';
 
 export function NotificationBell({ count = 0 }: { count?: number }): ReactElement {
@@ -49,7 +49,7 @@ export function NotificationBell({ count = 0 }: { count?: number }): ReactElemen
         {count > 0 ? (
           <span
             aria-hidden="true"
-            style={{ position: 'absolute', top: 0, insetInlineEnd: 0, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#F93C65', color: '#fff', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center' }}
+            style={{ position: 'absolute', top: 0, insetInlineEnd: 0, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#F93C65', color: color.text.onFill, fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center' }}
           >
             {count > 99 ? '99+' : count}
           </span>
@@ -57,7 +57,7 @@ export function NotificationBell({ count = 0 }: { count?: number }): ReactElemen
       </button>
       {open ? (
         <>
-          <div aria-hidden="true" onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 40, backgroundColor: 'rgba(15, 23, 42, 0.12)' }} />
+          <div aria-hidden="true" onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 40, backgroundColor: admin.scrim }} />
           <aside
             role="dialog"
             aria-modal="true"
@@ -72,7 +72,7 @@ export function NotificationBell({ count = 0 }: { count?: number }): ReactElemen
               width: 340,
               maxWidth: '100vw',
               backgroundColor: color.bg.canvas,
-              boxShadow: '0 0 32px rgba(15, 23, 42, 0.18)',
+              boxShadow: `0 0 32px ${admin.shadow}`,
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -91,7 +91,7 @@ export function NotificationBell({ count = 0 }: { count?: number }): ReactElemen
                 <Icon name="close" size={14} />
               </button>
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#B0B3BC' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: color.text.disabled }}>
               <Icon name="bell" size={64} />
               <p style={{ margin: 0, fontSize: 12 }}>{tr('No notification')}</p>
             </div>

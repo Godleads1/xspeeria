@@ -154,6 +154,8 @@ class DashboardService:
             e=w.end,
         )
         return {
+            "series": await self._series(w),
+            "value_by_time": await self._money_by_time(w, "amount"),
             "active_users": await self._both(active, w),
             "new_users": await self._both(new, w),
             "trades_started": await self._both(trades, w),
@@ -173,6 +175,81 @@ class DashboardService:
                 )
             ),
         }
+
+    async def _per_bucket(self, sql: str, w: Window) -> dict[str, int]:
+        """``sql`` selects (bucket, count) with :b, :s and :e; returns bucket ISO -> count."""
+        rows = await self._rows(sql, b=w.bucket, s=w.start, e=w.end)
+        return {t.isoformat(): int(n or 0) for t, n in rows}
+
+    async def _series(self, w: Window) -> list[dict[str, Any]]:
+        """One row per bucket (hour, day or month, Lagos time) for the tiles' trend lines.
+
+        Only buckets with something in them are returned; the console fills the gaps with 0.
+        """
+        q = {
+            "active_users": (
+                "SELECT date_trunc(:b, last_active_at AT TIME ZONE 'Africa/Lagos') t,"
+                " count(DISTINCT user_id) "
+                "FROM auth_sessions WHERE last_active_at >= :s AND last_active_at < :e GROUP BY t"
+            ),
+            "new_users": (
+                "SELECT date_trunc(:b, created_at AT TIME ZONE 'Africa/Lagos') t,"
+                " count(*) FROM users "
+                "WHERE created_at >= :s AND created_at < :e GROUP BY t"
+            ),
+            "trades_started": (
+                "SELECT date_trunc(:b, created_at AT TIME ZONE 'Africa/Lagos') t,"
+                " count(*) FROM transactions "
+                "WHERE created_at >= :s AND created_at < :e GROUP BY t"
+            ),
+            "trades_completed": (
+                "SELECT date_trunc(:b, done AT TIME ZONE 'Africa/Lagos') t,"
+                " count(*) FROM ("
+                " SELECT max(l.paid_out_at) AS done FROM settlements s JOIN settlement_legs l"
+                " ON l.settlement_id = s.id WHERE s.phase = 'COMPLETED' GROUP BY s.id"
+                " HAVING max(l.paid_out_at) >= :s AND max(l.paid_out_at) < :e) x GROUP BY t"
+            ),
+            "settlement_seconds": (
+                "SELECT date_trunc(:b, done AT TIME ZONE 'Africa/Lagos') t,"
+                " avg(extract(epoch FROM done - started))"
+                " FROM (SELECT s.created_at AS started, max(l.paid_out_at) AS done"
+                " FROM settlements s JOIN settlement_legs l ON l.settlement_id = s.id"
+                " WHERE s.phase = 'COMPLETED' GROUP BY s.id"
+                " HAVING max(l.paid_out_at) >= :s AND max(l.paid_out_at) < :e) x GROUP BY t"
+            ),
+            "disputes_opened": (
+                "SELECT date_trunc(:b, created_at AT TIME ZONE 'Africa/Lagos') t,"
+                " count(*) FROM disputes "
+                "WHERE kind = 'dispute' AND created_at >= :s AND created_at < :e GROUP BY t"
+            ),
+            "kyc_started": (
+                "SELECT date_trunc(:b, created_at AT TIME ZONE 'Africa/Lagos') t,"
+                " count(*) FROM kyc_cases "
+                "WHERE created_at >= :s AND created_at < :e GROUP BY t"
+            ),
+        }
+        per = {name: await self._per_bucket(sql, w) for name, sql in q.items()}
+        keys = sorted({k for counts in per.values() for k in counts})
+        return [{"at": k, **{name: per[name].get(k, 0) for name in q}} for k in keys]
+
+    async def _money_by_time(
+        self, w: Window, which: Literal["amount", "fee"]
+    ) -> list[dict[str, Any]]:
+        rows = await self._rows(
+            "SELECT date_trunc(:b, l.paid_out_at AT TIME ZONE 'Africa/Lagos') AS t, l.currency,"
+            " l.scale, sum(CASE WHEN :col = 'fee' THEN l.fee_minor ELSE l.amount_minor END)"
+            " FROM settlement_legs l JOIN settlements s ON s.id = l.settlement_id"
+            " WHERE s.phase = 'COMPLETED' AND l.paid_out_at >= :s AND l.paid_out_at < :e"
+            " GROUP BY t, l.currency, l.scale ORDER BY t",
+            b=w.bucket,
+            s=w.start,
+            e=w.end,
+            col=which,
+        )
+        return [
+            {"at": t.isoformat(), "currency": c, "scale": sc, "minor": str(int(v))}
+            for t, c, sc, v in rows
+        ]
 
     async def _money_completed(
         self, w: Window, column: Literal["amount_minor", "fee_minor"]
@@ -220,7 +297,16 @@ class DashboardService:
                 since=now - timedelta(days=30),
             )
         )
+        by_status = {
+            st: int(n)
+            for st, n in await self._rows("SELECT status, count(*) FROM users GROUP BY status")
+        }
         return {
+            # Every account, by status now (ADR-062): the "Customers by status" donut.
+            "by_status": {
+                st: by_status.get(st, 0)
+                for st in ("active", "pending_verification", "suspended", "closed")
+            },
             "growth": [
                 {"at": t.isoformat(), "signed_up": int(n), "not_verified": int(p)}
                 for t, n, p in rows

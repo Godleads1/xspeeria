@@ -122,6 +122,20 @@ async def test_a_completed_trade_shows_up_everywhere_with_exact_money(
     # Nothing is waiting in escrow once both sides were paid out.
     assert f["revenue"]["waiting_in_escrow"] == []
     assert sum(g["signed_up"] for g in f["customers"]["growth"]) == 2
+    # Trend lines: one row per day with something in it, summing to the totals.
+    series = o["series"]
+    assert sum(r["trades_started"] for r in series) == 1
+    assert sum(r["trades_completed"] for r in series) == 1
+    assert sum(r["new_users"] for r in series) == 2
+    assert {v["currency"] for v in o["value_by_time"]} == {"NGN", "USD"}
+    assert all(isinstance(v["minor"], str) for v in o["value_by_time"])
+    # Customers by status (every account now).
+    assert f["customers"]["by_status"] == {
+        "active": 2,
+        "pending_verification": 0,
+        "suspended": 0,
+        "closed": 0,
+    }
     # The month before had nothing: the console compares with zero.
     assert o["trades_completed"]["previous"] == 0
 
