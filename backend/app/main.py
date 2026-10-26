@@ -219,6 +219,7 @@ def _kyc_identity_key(settings: Settings) -> bytes | None:
 async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
     """Expire deals whose payout-account window ran out (ADR-035). Runs until cancelled."""
     from app.db.session import get_sessionmaker
+    from app.services.fraud import FraudService
     from app.services.matches import MatchService
     from app.services.queue import QueueService
 
@@ -230,6 +231,8 @@ async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
                 await MatchService(db, runtime.clock).expire_due()
                 # ADR-059 Decision 4: missed turns pass on; finished offers end their queues.
                 await QueueService(db, runtime.clock).sweep()
+                # ADR-068: simple fraud rules over data Xspeeria already has.
+                await FraudService(db, runtime.clock).scan()
         except Exception:  # noqa: BLE001 - keep sweeping; the next pass retries
             log.exception("preparation_sweep_failed")
 
