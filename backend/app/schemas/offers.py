@@ -73,6 +73,12 @@ class CompletedTradeResponse(BaseModel):
 class ListingsResponse(BaseModel):
     #: "available" (offers in ``items``) or "success" (completed trades in ``trades``).
     status: str = "available"
+    #: ADR-059 Decision 2: the country used for the location rule (null when unknown).
+    viewer_country: str | None = None
+    #: True when this pair sells the viewer's own currency, so nothing is shown.
+    hidden: bool = False
+    #: True when no country is known (location off and no approved check): nothing is shown.
+    needs_location: bool = False
     items: list[OfferResponse]
     trades: list[CompletedTradeResponse] = []
     limit: int

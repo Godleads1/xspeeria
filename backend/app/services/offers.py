@@ -39,6 +39,7 @@ from app.domain.offer_rules import (
     rate_problem,
 )
 from app.domain.search_rules import Search
+from app.models.kyc import KycCase
 from app.models.marketplace import ACTIVE_STATUSES, IdempotencyRecord, Match, Offer
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
@@ -314,6 +315,18 @@ class OfferService:
             )
         ).all()
         return [offer_view(o, principal.user_id) for o in rows]
+
+    async def viewer_country(self, principal: Principal, device: str | None) -> str | None:
+        """ADR-059 Decision 2: the phone's country, else the latest approved check's country."""
+        if device is not None:
+            return device
+        row = await self._db.scalar(
+            select(KycCase.country)
+            .where(KycCase.user_id == principal.user_id, KycCase.status == "approved")
+            .order_by(KycCase.decided_at.desc())
+            .limit(1)
+        )
+        return str(row) if row is not None else None
 
     async def completed_trades(
         self,

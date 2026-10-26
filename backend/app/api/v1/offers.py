@@ -30,6 +30,7 @@ from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.domain.kyc_rules import COUNTRIES
+from app.domain.location_rules import currency_of, device_country
 from app.domain.offer_rules import OfferInputError, parse_pair
 from app.domain.search_rules import parse_search
 from app.domain.settlement_rules import JURISDICTION
@@ -197,6 +198,7 @@ async def listings(
     max_amount: Annotated[str | None, Query(alias="filter[max_amount]", max_length=24)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0, le=10_000)] = 0,
+    x_device_country: Annotated[str | None, Header(max_length=8)] = None,
 ) -> Any:
     """ADR-059 Decision 1. Every filter and sort is checked on the server (allow-list, exact
     decimals, lower bound not above upper). ``filter[status]=success`` lists recent completed
@@ -215,27 +217,31 @@ async def listings(
         )
     except OfferInputError as e:
         raise AppError(e.code, e.message, status_code=422) from None
-    if search.status == "success":
-        trades = await service.completed_trades(pair.source, pair.target, limit + 1, offset, search)
-        more = len(trades) > limit
-        return {
-            "status": "success",
-            "items": [],
-            "trades": trades[:limit],
-            "limit": limit,
-            "offset": offset,
-            "next_offset": offset + limit if more else None,
-        }
-    items = await service.marketplace(principal, source, target, limit + 1, offset, search)
-    more = len(items) > limit
-    return {
-        "status": "available",
-        "items": items[:limit],
+    # ADR-059 Decision 2 (rule A): nobody sees listings selling their own country's currency.
+    # The country is a visibility hint only; it grants and decides nothing else.
+    country = await service.viewer_country(principal, device_country(x_device_country))
+    page: dict[str, Any] = {
+        "status": search.status,
+        "viewer_country": country,
+        "hidden": False,
+        "needs_location": False,
+        "items": [],
         "trades": [],
         "limit": limit,
         "offset": offset,
-        "next_offset": offset + limit if more else None,
+        "next_offset": None,
     }
+    if country is None:
+        return {**page, "needs_location": True}
+    if currency_of(country) == pair.source:
+        return {**page, "hidden": True}
+    if search.status == "success":
+        trades = await service.completed_trades(pair.source, pair.target, limit + 1, offset, search)
+        more = len(trades) > limit
+        return {**page, "trades": trades[:limit], "next_offset": offset + limit if more else None}
+    items = await service.marketplace(principal, source, target, limit + 1, offset, search)
+    more = len(items) > limit
+    return {**page, "items": items[:limit], "next_offset": offset + limit if more else None}
 
 
 @router.get("/mine", response_model=list[OfferResponse], summary="My offers, open ones first")
