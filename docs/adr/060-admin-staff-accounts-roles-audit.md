@@ -125,7 +125,7 @@ From the Figma "User Profile" frames and the top-bar bell:
 - Password tab: change password as before. Two-factor authentication is shown switched on and
   can't be switched off (every staff log-in needs the email code).
 - Bell and Notification panel: staff notifications (new disputes, fraud alerts, approvals) come
-  with A-3; until then the panel shows "No notification" and the bell shows no count. The Figma
+  with A-3 — **built 2026-10-27 (ADR-070)**; until then the panel showed "No notification" and the bell showed no count. The Figma
   sample count is not shown.
 - Log out asks first (Figma "Are you sure you want to log out of the application?").
 - The profile banner is the owner's Figma image, taken out of the supplied SVG (checked: no

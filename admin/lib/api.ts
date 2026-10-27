@@ -386,6 +386,25 @@ export interface FraudStats {
   high_open: number;
 }
 
+/** Staff bell (ADR-070): work waiting for the signed-in person, read live from the queues. */
+export type StaffWorkKind = 'kyc_confirm' | 'kyc_recommend' | 'reversal' | 'fraud' | 'dispute';
+export interface StaffWorkItem {
+  kind: StaffWorkKind;
+  id: string;
+  ref: string;
+  at: string;
+  /** Fraud severity or dispute priority; otherwise null. */
+  detail: string | null;
+  /** Arrived since the person last opened the panel. */
+  new: boolean;
+}
+export interface StaffWorkFeed {
+  items: StaffWorkItem[];
+  total: number;
+  new: number;
+  seen_at: string | null;
+}
+
 export type KycQueue = 'held' | 'in_didit' | 'decided';
 export type KycReviewReason = 'DUPLICATE_IDENTITY' | 'IDENTITY_MISMATCH' | 'CHECKS_INCOMPLETE';
 export interface KycRow {
@@ -581,6 +600,8 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     confirmKyc: (id: string, note?: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/confirm`, note ? { note } : {}),
     declineKyc: (id: string, note: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/decline`, { note }),
     rejectKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/reject`, { reason }),
+    staffWork: () => call<StaffWorkFeed>('GET', '/notifications'),
+    staffWorkSeen: () => call<void>('POST', '/notifications/seen'),
     listFraudAlerts: (q: { search?: string; status?: FraudStatus; rule?: FraudRule; offset?: number; limit?: number }) => {
       const p = new URLSearchParams();
       if (q.search) p.set('q', q.search);

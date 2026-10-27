@@ -37,6 +37,7 @@ from app.services.kyc_review import KycReviewService
 from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
+from app.services.staff_work import StaffWorkService
 
 __all__ = ["COOKIE", "router"]
 
@@ -87,6 +88,23 @@ async def current_staff(
 
 
 Staff = Annotated[StaffPrincipal, Depends(current_staff)]
+
+
+async def current_staff_passive(
+    request: Request,
+    service: Service,
+    session: Annotated[str | None, Cookie(alias=COOKIE)] = None,
+) -> StaffPrincipal:
+    """Like ``current_staff`` but does not count as activity: the bell checks in the background
+    and must not keep an idle session from ending (ADR-070)."""
+    if session is None:
+        raise unauthorized()
+    principal = await service.authenticate(session, touch=False)
+    request.state.user_id = f"staff:{principal.staff_id}"
+    return principal
+
+
+PassiveStaff = Annotated[StaffPrincipal, Depends(current_staff_passive)]
 
 
 def _set_cookie(response: Response, token: str, settings: Settings) -> None:
@@ -1097,6 +1115,34 @@ async def get_kyc_review(
 
 
 KycReviews = Annotated[KycReviewService, Depends(get_kyc_review)]
+
+
+# --- Staff bell (ADR-070) ---------------------------------------------------------------------
+
+
+async def get_staff_work(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> StaffWorkService:
+    return StaffWorkService(db, runtime.clock)
+
+
+StaffWork = Annotated[StaffWorkService, Depends(get_staff_work)]
+
+
+@router.get("/notifications", summary="Work waiting for you (the bell); not activity")
+async def staff_notifications(staff: PassiveStaff, service: StaffWork) -> Any:
+    return await service.feed(staff)
+
+
+@router.post(
+    "/notifications/seen",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Opened the bell: later work counts as new",
+)
+async def staff_notifications_seen(staff: Staff, service: StaffWork) -> Response:
+    await service.mark_seen(staff)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 class KycReasonBody(_Strict):
