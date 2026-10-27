@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
-import { advertImageSource, advertsApi } from '../../../src/api/advertsApi';
+import { advertImageSource, advertsApi, loadForWeb } from '../../../src/api/advertsApi';
 import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer, queueServer } from '../../../src/features/market/serverOffers';
@@ -37,8 +37,10 @@ export default function MarketplaceRoute(): ReactElement {
     let alive = true;
     advertsApi
       .current(token, serverAuth.apiOptions())
-      .then((a) => {
-        const source = a ? advertImageSource(a, token, serverAuth.apiOptions().baseUrl ?? undefined) : null;
+      .then(async (a) => {
+        const header = a ? advertImageSource(a, token, serverAuth.apiOptions().baseUrl ?? undefined) : null;
+        // The web build (local testing) can't send the token with an image: load it first.
+        const source = header && Platform.OS === 'web' ? await loadForWeb(header) : header;
         if (alive) setAdvert(a && source ? { name: a.name, link_url: a.link_url, source } : null);
       })
       .catch(() => alive && setAdvert(null));

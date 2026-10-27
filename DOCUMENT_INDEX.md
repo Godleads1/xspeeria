@@ -622,6 +622,12 @@ Do not delete or silently ignore it.
 
 Report material conflicts.
 
+## Testing locally with demo data
+
+`docs/TEST_FROM_START_TO_FINISH.md`
+
+Owner request 2026-10-27. `app.cli.seed_demo` adds demo customers, demo staff, pretend escrow banks and offers. `TEST_LIMITS_DEV` raises the sign-in limits. The app's browser version runs at localhost:8081. Everything is refused unless `APP_ENV=local`.
+
 ## Production Readiness Review (2026-10-27)
 
 `docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md`

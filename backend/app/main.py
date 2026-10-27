@@ -46,7 +46,13 @@ from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
-from app.domain.auth_rules import LOGIN_REQUESTS_PER_MINUTE, MAX_PIN_TRIES, PIN_LOCK
+from app.domain.auth_rules import (
+    CHECKS_PER_DAY,
+    CHECKS_PER_HOUR,
+    LOGIN_REQUESTS_PER_MINUTE,
+    MAX_PIN_TRIES,
+    PIN_LOCK,
+)
 from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
 from app.providers.email import DevConsoleEmailSender, EmailSender
@@ -107,6 +113,10 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         if settings.app_env != "local":
             raise ValueError("DEV_EMAIL is allowed only with APP_ENV=local (ADR-054)")
         email = DevConsoleEmailSender()
+    # Local demo testing only (owner 2026-10-27): one person signs in and approves many times.
+    relaxed = settings.test_limits_dev
+    if relaxed and settings.app_env != "local":
+        raise ValueError("TEST_LIMITS_DEV is allowed only with APP_ENV=local")
     return AuthRuntime(
         keys=keys,
         secret_box=box,
@@ -114,7 +124,7 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         sms=sms,
         clock=clock,
         address_limiter=SlidingWindowLimiter(
-            limit=LOGIN_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
+            limit=LOGIN_REQUESTS_PER_MINUTE * (20 if relaxed else 1), window=timedelta(minutes=1)
         ),
         unknown_identifier_limiter=SlidingWindowLimiter(limit=MAX_PIN_TRIES, window=PIN_LOCK),
         beneficiary_box=beneficiary_box,
@@ -125,6 +135,8 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         push_sender=ExpoPushSender(settings.expo_access_token) if settings.push_enabled else None,
         email=email,
         face=_face_check(settings),
+        checks_per_hour=CHECKS_PER_HOUR * (20 if relaxed else 1),
+        checks_per_day=CHECKS_PER_DAY * (20 if relaxed else 1),
         tier_checks=_tier_checks(settings),
         object_store=_object_store(settings),
     )

@@ -121,3 +121,21 @@ def test_face_check_needs_the_api_key() -> None:
         Settings(_env_file=None, face_check_dev=True, dev_email=True)  # type: ignore[call-arg]
     )
     assert isinstance(rt.face, DevFaceCheck) and rt.email is not None
+
+
+def test_test_limits_dev_raises_limits_only_on_a_developer_computer() -> None:
+    """Owner 2026-10-27 (demo testing): TEST_LIMITS_DEV is refused outside APP_ENV=local."""
+    from app.domain.auth_rules import CHECKS_PER_DAY, CHECKS_PER_HOUR, LOGIN_REQUESTS_PER_MINUTE
+
+    normal = build_auth_runtime(Settings(_env_file=None))  # type: ignore[call-arg]
+    assert (normal.checks_per_hour, normal.checks_per_day) == (CHECKS_PER_HOUR, CHECKS_PER_DAY)
+    relaxed = build_auth_runtime(
+        Settings(_env_file=None, test_limits_dev=True)  # type: ignore[call-arg]
+    )
+    assert relaxed.checks_per_hour == CHECKS_PER_HOUR * 20
+    assert relaxed.checks_per_day == CHECKS_PER_DAY * 20
+    assert relaxed.address_limiter._limit == LOGIN_REQUESTS_PER_MINUTE * 20  # noqa: SLF001
+    with pytest.raises(ValueError, match="TEST_LIMITS_DEV"):
+        build_auth_runtime(
+            Settings(_env_file=None, test_limits_dev=True, app_env="staging")  # type: ignore[call-arg]
+        )

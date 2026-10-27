@@ -146,6 +146,9 @@ class Settings(BaseSettings):
     #: ADR-054: pass every face check without a camera (no cost). Refused unless app_env is
     #: "local".
     face_check_dev: bool = False
+    #: Local only (owner 2026-10-27, demo testing): sign-in and second-check limits raised so
+    #: one person can test all day. Refused unless APP_ENV=local.
+    test_limits_dev: bool = False
     #: ADR-054: the Didit workflow of type BIOMETRIC_AUTHENTICATION (face check). Needs the
     #: Didit API key too. Unset: face checks are off (only FACE_CHECK_DEV, locally).
     didit_auth_workflow_id: str | None = None

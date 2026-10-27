@@ -1,5 +1,7 @@
 # Run the App Against the Real Server (on your computer and phone)
 
+> **Testing everything with demo people?** Start with `docs/TEST_FROM_START_TO_FINISH.md`: one command adds demo customers, staff, pretend escrow banks and offers. Parts of this page (the authenticator app) predate ADR-054.
+
 For development only (ADR-027). The phone and the computer must be on the same Wi-Fi.
 
 ## 1. Start the database

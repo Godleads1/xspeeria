@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
-import { advertImageSource, advertsApi, safeAdvertLink, type ServerAdvert } from '../src/api/advertsApi';
+import { advertImageSource, advertsApi, loadForWeb, safeAdvertLink, type ServerAdvert } from '../src/api/advertsApi';
 import { MarketScreen } from '../src/features/market/MarketScreen';
 
 const AD: ServerAdvert = {
@@ -70,5 +70,24 @@ describe('market advert slot', () => {
     fireEvent.press(screen.getByTestId('market-advert-live'));
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
+  });
+});
+
+
+describe('advert picture in the web build', () => {
+  const header = { uri: 'http://localhost:8000/api/v1/adverts/00000000-0000-0000-0000-000000000001/image', headers: { Authorization: 'Bearer t' } };
+
+  it('downloads with the token and shows a local copy', async () => {
+    const fetchFn = jest.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) })) as unknown as typeof fetch;
+    const got = await loadForWeb(header, fetchFn, () => 'blob:local-1');
+    expect(fetchFn).toHaveBeenCalledWith(header.uri, { headers: header.headers });
+    expect(got).toEqual({ uri: 'blob:local-1', headers: {} });
+  });
+
+  it('shows nothing when the download is refused or fails', async () => {
+    const refused = jest.fn(async () => ({ ok: false })) as unknown as typeof fetch;
+    expect(await loadForWeb(header, refused, () => 'blob:x')).toBeNull();
+    const broken = jest.fn(async () => Promise.reject(new Error('offline'))) as unknown as typeof fetch;
+    expect(await loadForWeb(header, broken, () => 'blob:x')).toBeNull();
   });
 });
