@@ -254,6 +254,9 @@ class AuthRuntime:
     email: EmailSender | None = None
     #: ADR-054: the face check (Didit biometric authentication). None: face checks are off.
     face: FaceCheckProvider | None = None
+    #: ADR-054 limits on second checks per account; raised only by local TEST_LIMITS_DEV.
+    checks_per_hour: int = CHECKS_PER_HOUR
+    checks_per_day: int = CHECKS_PER_DAY
     #: ADR-058: BVN and proof-of-address checks for higher tiers. None: those checks are off.
     tier_checks: TierCheckProvider | None = None
     #: ADR-049/060: where photos are kept. None: photo uploads are off.
@@ -767,11 +770,10 @@ class AuthService:
         await self._refuse_if_mfa_locked(user, now)
         since_hour = await self._repo.checks_since(user.id, now - timedelta(hours=1))
         since_day = await self._repo.checks_since(user.id, now - timedelta(days=1))
-        if since_hour >= CHECKS_PER_HOUR or since_day >= CHECKS_PER_DAY:
+        per_hour, per_day = self._rt.checks_per_hour, self._rt.checks_per_day
+        if since_hour >= per_hour or since_day >= per_day:
             await self._db.rollback()
-            raise _rate_limited(
-                timedelta(hours=1) if since_hour >= CHECKS_PER_HOUR else timedelta(days=1)
-            )
+            raise _rate_limited(timedelta(hours=1) if since_hour >= per_hour else timedelta(days=1))
         method = await self._method_for(user, purpose)
         if method != "face" and self._rt.email is None:
             await self._db.rollback()

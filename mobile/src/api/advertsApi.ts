@@ -30,6 +30,25 @@ export function advertImageSource(
   return { uri: `${baseUrl}${a.image_path}`, headers: { Authorization: `Bearer ${token}` } };
 }
 
+/**
+ * Browsers (the app's web build, used for local testing) can't send headers with an <img>, so
+ * the picture would come back 401. There, download it with the token and show a local
+ * object URL instead. Phones keep the header source. Returns null if the download fails.
+ */
+export async function loadForWeb(
+  source: { uri: string; headers: Record<string, string> },
+  fetchFn: typeof fetch = fetch,
+  toUrl: (b: Blob) => string = (b) => URL.createObjectURL(b),
+): Promise<{ uri: string; headers: Record<string, string> } | null> {
+  try {
+    const r = await fetchFn(source.uri, { headers: source.headers });
+    if (!r.ok) return null;
+    return { uri: toUrl(await r.blob()), headers: {} };
+  } catch {
+    return null;
+  }
+}
+
 /** Only full https links open (never javascript:, http: or app-internal schemes). */
 export function safeAdvertLink(url: string | null): string | null {
   return url && /^https:\/\/[^\s<>"]+$/.test(url) ? url : null;
