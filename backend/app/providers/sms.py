@@ -19,6 +19,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Protocol, TextIO
 
+from app.core.api_metrics import track_outside
+
 __all__ = ["DevConsoleSmsSender", "RecordingSmsSender", "SentCode", "SmsSender"]
 
 
@@ -55,7 +57,8 @@ class DevConsoleSmsSender:
         self._stream = stream
 
     async def send_code(self, phone: str, code: str) -> None:
-        out = self._stream or sys.stderr
-        masked = f"***{phone[-4:]}"
-        out.write(f"\n[DEV SMS — local only] code for {masked}: {code}\n\n")
-        out.flush()
+        async with track_outside("SMS (developer window)", "send code"):  # ADR-072
+            out = self._stream or sys.stderr
+            masked = f"***{phone[-4:]}"
+            out.write(f"\n[DEV SMS — local only] code for {masked}: {code}\n\n")
+            out.flush()

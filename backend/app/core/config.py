@@ -187,6 +187,8 @@ class Settings(BaseSettings):
     pretend_bank: bool = False
     #: ADR-037: how often escrow background work runs (funding windows, partner commands).
     escrow_tick_seconds: int = 5
+    #: ADR-072: how often each server adds its API and job figures to the database.
+    metrics_flush_seconds: int = 60
 
     #: ADR-052: send phone push through Expo (FCM/APNs). Off: notifications stay in-app.
     push_enabled: bool = False

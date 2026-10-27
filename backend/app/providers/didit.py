@@ -25,6 +25,11 @@ from typing import Any, Protocol
 
 import httpx
 
+from app.core.api_metrics import tracked_transport
+
+#: How this service is named on the System Health page (ADR-072).
+_MONITOR_NAME = "Didit identity check"
+
 __all__ = [
     "DiditClient",
     "KycProviderError",
@@ -118,7 +123,10 @@ class DiditClient:
         if self._callback:
             body["callback"] = self._callback
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT, transport=self._transport) as c:
+            async with httpx.AsyncClient(
+                timeout=_TIMEOUT,
+                transport=tracked_transport(_MONITOR_NAME, self._transport),
+            ) as c:
                 r = await c.post(
                     f"{self._base}/v3/session/", json=body, headers={"x-api-key": self._key}
                 )

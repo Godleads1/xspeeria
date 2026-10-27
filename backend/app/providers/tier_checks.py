@@ -20,7 +20,11 @@ from typing import Any, Protocol
 
 import httpx
 
+from app.core.api_metrics import tracked_transport
 from app.core.logging import get_logger
+
+#: How this service is named on the System Health page (ADR-072).
+_MONITOR_NAME = "Didit BVN/address check"
 
 __all__ = ["DevTierChecks", "DiditTierChecks", "TierCheckProvider", "TierOutcome"]
 
@@ -70,7 +74,9 @@ class DiditTierChecks:
         self, path: str, data: dict[str, str], files: dict[str, Any] | None = None
     ) -> dict[str, Any] | None:
         try:
-            async with httpx.AsyncClient(transport=self._transport, timeout=60) as client:
+            async with httpx.AsyncClient(
+                transport=tracked_transport(_MONITOR_NAME, self._transport), timeout=60
+            ) as client:
                 r = await client.post(
                     f"{self._base}{path}", headers={"x-api-key": self._key}, data=data, files=files
                 )

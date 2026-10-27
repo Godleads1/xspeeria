@@ -16,6 +16,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 from starlette.routing import Match
 
+from app.core.api_metrics import recorder
 from app.core.logging import get_logger
 
 __all__ = ["install_request_logging"]
@@ -54,14 +55,19 @@ def install_request_logging(app: FastAPI) -> None:
             response.headers["X-Request-ID"] = request_id
             return response
         finally:
+            route = _route_template(request)
+            duration_ms = (time.perf_counter() - started) * 1000
+            # ADR-072: counts and timings per route template (no user, no identifiers).
+            kind = "webhook" if route.startswith("/api/v1/webhooks") else "own"
+            recorder.record(kind, route, request.method, status_code, duration_ms)
             _logger.info(
                 "request",
                 extra={
                     "request_id": request_id,
                     "method": request.method,
-                    "route": _route_template(request),
+                    "route": route,
                     "status": status_code,
-                    "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                    "duration_ms": round(duration_ms, 1),
                     "user_id": getattr(request.state, "user_id", None),
                 },
             )

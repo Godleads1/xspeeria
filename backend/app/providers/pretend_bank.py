@@ -23,6 +23,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from app.core.api_metrics import track_outside
+
 __all__ = ["LegCommand", "PartnerError", "PayInInstructions", "PayoutLine", "PretendBank", "sign"]
 
 #: Pretend partner per currency: (code, display name). Seeded by `app.cli.pretend_bank`.
@@ -99,41 +101,44 @@ class PretendBank:
     # --- commands (synchronous acknowledgements) --------------------------------------------
 
     async def provision(self, cmd: LegCommand, key: str) -> str:
-        self._maybe_fail("PROVISION")
-        existing = self._escrows.get(cmd.leg_id)
-        if existing is not None:  # same key again: same escrow (idempotent)
-            return existing.ref
-        digits = str(int(hashlib.sha256(cmd.leg_id.bytes).hexdigest(), 16))[-8:]
-        name = next(n for c, n in PRETEND_PARTNERS.values() if c == cmd.partner_code)
-        instructions = PayInInstructions(
-            bank_name=name,
-            account_name="Xspeeria Escrow (pretend)",
-            account_number=f"99{digits}",
-            reference=f"XSP-{cmd.leg_id.hex[:8].upper()}",
-        )
-        ref = f"pretend:{secrets.token_hex(12)}"
-        self._escrows[cmd.leg_id] = _Escrow(cmd, ref, instructions)
-        self._seen_keys.add(key)
-        return ref
+        async with track_outside("Pretend bank", "open escrow"):  # ADR-072
+            self._maybe_fail("PROVISION")
+            existing = self._escrows.get(cmd.leg_id)
+            if existing is not None:  # same key again: same escrow (idempotent)
+                return existing.ref
+            digits = str(int(hashlib.sha256(cmd.leg_id.bytes).hexdigest(), 16))[-8:]
+            name = next(n for c, n in PRETEND_PARTNERS.values() if c == cmd.partner_code)
+            instructions = PayInInstructions(
+                bank_name=name,
+                account_name="Xspeeria Escrow (pretend)",
+                account_number=f"99{digits}",
+                reference=f"XSP-{cmd.leg_id.hex[:8].upper()}",
+            )
+            ref = f"pretend:{secrets.token_hex(12)}"
+            self._escrows[cmd.leg_id] = _Escrow(cmd, ref, instructions)
+            self._seen_keys.add(key)
+            return ref
 
     def pay_in_instructions(self, leg_id: uuid.UUID) -> PayInInstructions | None:
         e = self._escrows.get(leg_id)
         return e.instructions if e else None
 
     async def release(self, cmd: LegCommand, payouts: list[PayoutLine], key: str) -> None:
-        self._maybe_fail("RELEASE")
-        if key in self._seen_keys:
-            return  # deduplicated by the partner: no second payout
-        self._seen_keys.add(key)
-        self._emit(cmd, "completed", sum(p.amount_minor for p in payouts))
+        async with track_outside("Pretend bank", "pay out"):  # ADR-072
+            self._maybe_fail("RELEASE")
+            if key in self._seen_keys:
+                return  # deduplicated by the partner: no second payout
+            self._seen_keys.add(key)
+            self._emit(cmd, "completed", sum(p.amount_minor for p in payouts))
 
     async def return_funds(self, cmd: LegCommand, key: str) -> None:
-        self._maybe_fail("RETURN")
-        if key in self._seen_keys:
-            return
-        self._seen_keys.add(key)
-        # Product owner, 2026-10-19: refunded in full, fee included.
-        self._emit(cmd, "reversed", cmd.amount_minor + cmd.fee_minor)
+        async with track_outside("Pretend bank", "return funds"):  # ADR-072
+            self._maybe_fail("RETURN")
+            if key in self._seen_keys:
+                return
+            self._seen_keys.add(key)
+            # Product owner, 2026-10-19: refunded in full, fee included.
+            self._emit(cmd, "reversed", cmd.amount_minor + cmd.fee_minor)
 
     # --- the user's bank transfer (simulated) -------------------------------------------------
 
