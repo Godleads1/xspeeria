@@ -30,7 +30,7 @@ None of these can be fixed by writing more code alone. They need accounts, partn
 | Tests (app) | jest **696 passed**, `tsc`, `eslint` (27 Oct) | VERIFIED |
 | CI | `.github/workflows/ci.yml`: ruff, mypy strict, bandit, pytest with an "integration tests really ran" check, pip-audit, npm audit gate (ADR-017), gitleaks over full history, sensitive-file guard. Last finished run on `main` (`0c1e8c5`) **succeeded**. Runs for `b6b4fd8` and `540921e` were still going during this review. | VERIFIED / runs pending |
 | Repository | Private: yes. Branch protection on `main`: **not available** (GitHub plan, HTTP 403). | VERIFIED |
-| Security register | `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`: 40 SEC + 5 FX items. **10 not started**, 6 documented only, 1 blocked (SEC-031). | VERIFIED |
+| Security register | `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`: 40 SEC + 5 FX items. **9 not started** (SEC-012, 014, 033, 034, 035, 037, 038, 039, 040), 8 documented only (SEC-019, 020, 024, 028, 030; FX-01, 02, 04), 1 blocked (SEC-031), FX-03 open. SEC-012's "no cookie auth" note is out of date: the console uses a cookie, protected as below. | VERIFIED |
 | Deployment | `docker-compose.yml` starts a local database only. No application image, no environments, no deploy pipeline. | VERIFIED (absent) |
 | Money | Integer minor units everywhere. Escrow is a simulation with a pretend bank that only works locally (ADR-037). Dev flags refuse to start outside `APP_ENV=local` (`main.py` checks). | VERIFIED |
 | Webhooks | Didit results: forged, old and replayed events change nothing (`test_kyc_api.py`). Partner-bank webhook: signed simulation only (SEC-021). | VERIFIED (simulation) |
