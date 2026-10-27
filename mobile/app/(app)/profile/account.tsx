@@ -26,6 +26,7 @@ export default function AccountDetailsRoute(): ReactElement {
       onBack={() => router.back()}
       onEdit={() => router.push('/profile/edit')}
       serverRegions={SERVER_MODE ? regions : undefined}
+      onVerifyAnotherCountry={SERVER_MODE ? () => router.push('/profile/verify-country') : undefined}
     />
   );
 }

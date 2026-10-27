@@ -140,6 +140,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `068-fraud-management.md` | Fraud Management: simple rules over Xspeeria's own data (PIN and sign-in code lock-outs, 3+ disputes against one person in 30 days, payout account in another name) plus staff reports; raised once per thing; work and resolve (confirmed or false alarm); an alert never blocks by itself; migration 0030 (DEC-075) | **IMPLEMENTED** — 2026-10-26 |
 | `069-identity-check-review.md` | Staff review of identity checks: checks Xspeeria holds (duplicate, mismatch, incomplete) are approved by two people (recommend + confirm by someone else) or rejected by one with a reason the customer reads; Didit's own reviews stay in Didit's console; held approvals keep their identity facts; migration 0031 (DEC-076) | **IMPLEMENTED** — 2026-10-27 |
 | `062-customer-suspend-close.md` | Admin Users: customer list and counts; Suspend (temporary: logged out, offers leave the market, deals keep settling), Reactivate, Close (for good, phone and email stay taken); Super Admin only with a reason, audit-logged; migration 0025 (DEC-069) | **IMPLEMENTED** — 2026-10-26 |
+| `071-app-choose-country-to-verify.md` | App: "Verify your identity" asks which country you will pay from (Nigeria, UK, US) with each one's status from the server, then opens that country's check; Account details offers "Verify another country" (DEC-078) | **IMPLEMENTED** — 2026-10-27 |
 
 ### Accounting policy is not architecture
 

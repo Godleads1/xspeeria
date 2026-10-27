@@ -11,5 +11,5 @@ export default function LimitsRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   if (!SERVER_MODE) return <Redirect href="/profile/kyc" />;
-  return <MyLimitsScreen source={serverLimits} onBack={() => router.back()} onVerifyIdentity={() => router.push('/profile/kyc')} onUpgrade={() => router.push('/profile/upgrade')} />;
+  return <MyLimitsScreen source={serverLimits} onBack={() => router.back()} onVerifyIdentity={() => router.push('/profile/verify-country')} onUpgrade={() => router.push('/profile/upgrade')} />;
 }

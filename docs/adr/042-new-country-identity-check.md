@@ -42,4 +42,4 @@ Migration 0012: `kyc_cases.country CHAR(2)` (existing rows `NG`; immutable), one
 - How long an unused country verification stays valid.
 - Whether a new country also needs 2FA (ADR-016 open item).
 - Who clears held cases (staff tools wait for the Figma file).
-- App screens: the Figma region prompt and "KYC approved regions" are not yet connected to the server.
+- ~~App screens: the Figma region prompt and "KYC approved regions" are not yet connected to the server.~~ Connected (ADR-045); choosing a country from "Verify your identity" added 2026-10-27 (ADR-071).

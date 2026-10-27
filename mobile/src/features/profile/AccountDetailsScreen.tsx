@@ -48,11 +48,14 @@ export function AccountDetailsScreen({
   onBack,
   onEdit,
   serverRegions,
+  onVerifyAnotherCountry,
 }: {
   onBack: () => void;
   onEdit?: () => void;
   /** Server builds: the countries verified on the server (ADR-042) instead of the demo list. */
   serverRegions?: readonly KycRegion[] | null;
+  /** Server builds: opens the country choice (ADR-071). */
+  onVerifyAnotherCountry?: () => void;
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const user = useProfile();
@@ -125,6 +128,17 @@ export function AccountDetailsScreen({
               </View>
             ))}
           </View>
+          {onVerifyAnotherCountry ? (
+            <Pressable
+              testID="verify-another-country"
+              accessibilityRole="button"
+              onPress={onVerifyAnotherCountry}
+              style={styles.addCountry}
+            >
+              <Text style={styles.addCountryText}>{regions.length === 0 ? tr('Verify your identity') : tr('Verify another country')}</Text>
+              <Icon name="chevron" color={color.brand.primary} size={18} />
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -167,5 +181,7 @@ const styles = themed(() => ({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.subtle,
   },
+  addCountry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  addCountryText: { ...typography.caption, ...brandWeight('700'), fontSize: 14, color: color.brand.primary },
   regionName: { flex: 1, ...typography.body, fontSize: 16, color: color.text.primary },
 }));
