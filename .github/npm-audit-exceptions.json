@@ -5,19 +5,10 @@
       "id": "GHSA-86w9-cpqp-85rv",
       "package": "node-forge",
       "severity": "high",
-      "reason": "No patched version exists (<=1.4.0, latest is 1.4.0). Reached via @expo/cli and @expo/code-signing-certificates (CLI-side code signing); not in the app bundle. npm's only fix is expo@44.",
-      "approved_by": "Product owner (Godleads), 2026-10-17, option 1",
-      "approved": "2026-10-17",
-      "expires": "2026-11-16"
-    },
-    {
-      "id": "GHSA-mrhx-c7xc-m3w5",
-      "package": "zod",
-      "severity": "high",
-      "reason": "Fix is zod 4.6.6, a major version @expo/cli (zod 3) has not adopted; forcing it could break the Expo CLI. Reached only via @expo/cli (developer tooling on the PC); not in the app bundle. npm's only fix is expo@44.",
-      "approved_by": "Product owner (Godleads), 2026-10-26, \"yes\"",
-      "approved": "2026-10-26",
-      "expires": "2026-11-25"
+      "reason": "No patched version exists (<=1.4.0, latest is 1.4.0; still required by @expo/cli 57.0.32 and 58.1.15, checked 2026-10-27). Reached via @expo/cli and @expo/code-signing-certificates (CLI-side code signing); not in the app bundle; expo-updates is not installed. npm's only fix is expo@44.",
+      "approved_by": "Product owner (Godleads), 2026-10-27, \"Renew to 27 Nov\"",
+      "approved": "2026-10-27",
+      "expires": "2026-11-27"
     }
   ]
 }
