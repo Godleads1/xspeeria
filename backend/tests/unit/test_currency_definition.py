@@ -370,6 +370,7 @@ class TestPackageRegistration:
             "kyc_reviews",
             "api_metrics",
             "job_status",
+            "customer_activity",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -418,7 +419,8 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['adverts', 'api_metrics', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'dispute_categories', 'dispute_messages', 'disputes', "
+            "'currency_definitions', 'customer_activity', "
+            "'dispute_categories', 'dispute_messages', 'disputes', "
             "'fraud_alerts', "
             "'idempotency_records', 'job_status', "
             "'kyc_cases', 'kyc_reviews', 'kyc_webhook_events', "
@@ -506,4 +508,5 @@ class TestPackageRegistration:
             "0031_kyc_reviews.py",  # identity-check review (ADR-069)
             "0032_staff_notifications_seen.py",  # staff bell (ADR-070)
             "0033_api_monitoring.py",  # API monitoring (ADR-072)
+            "0034_customer_activity.py",  # customer activity log (ADR-073)
         ]

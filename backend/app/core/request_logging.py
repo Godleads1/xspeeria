@@ -16,6 +16,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 from starlette.routing import Match
 
+from app.core import activity
 from app.core.api_metrics import recorder
 from app.core.logging import get_logger
 
@@ -39,6 +40,33 @@ def _route_template(request: Request) -> str:
     return "unmatched"
 
 
+async def _record_activity(request: Request, route: str, status_code: int) -> None:
+    """ADR-073: a signed-in customer's change (any non-GET request) goes in their activity log."""
+    if request.method in ("GET", "HEAD", "OPTIONS") or route == "unmatched":
+        return
+    who = getattr(request.state, "user_id", None)
+    if not who or str(who).startswith("staff:"):
+        return
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or not settings.database_url:
+        return
+    try:
+        from app.db.session import get_sessionmaker
+
+        row = activity.for_request(
+            uuid.UUID(str(who)),
+            request.method,
+            route,
+            status_code,
+            dict(request.scope.get("path_params") or {}),
+        )
+        async with get_sessionmaker(settings)() as db:
+            db.add(row)
+            await db.commit()
+    except Exception:  # noqa: BLE001 - never fail the answer because the log failed
+        _logger.exception("activity_record_failed", extra={"route": route})
+
+
 def install_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log(
@@ -47,6 +75,14 @@ def install_request_logging(app: FastAPI) -> None:
         supplied = request.headers.get("x-request-id", "")
         request_id = supplied if _SAFE_ID.fullmatch(supplied) else str(uuid.uuid4())
         request.state.request_id = request_id
+        # ADR-073: what the activity log needs from this request (no body, query or headers
+        # beyond a shortened device name and the hosting's country code).
+        activity.current_request.set(request_id)
+        activity.current_device.set(activity.short_device(request.headers.get("user-agent")))
+        header = getattr(request.app.state, "settings", None)
+        header = header.client_country_header if header is not None else None
+        country = (request.headers.get(header, "") if header else "").upper()
+        activity.current_country.set(country if len(country) == 2 and country.isalpha() else None)
         started = time.perf_counter()
         status_code = 500
         try:
@@ -60,6 +96,7 @@ def install_request_logging(app: FastAPI) -> None:
             # ADR-072: counts and timings per route template (no user, no identifiers).
             kind = "webhook" if route.startswith("/api/v1/webhooks") else "own"
             recorder.record(kind, route, request.method, status_code, duration_ms)
+            await _record_activity(request, route, status_code)
             _logger.info(
                 "request",
                 extra={

@@ -143,6 +143,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `062-customer-suspend-close.md` | Admin Users: customer list and counts; Suspend (temporary: logged out, offers leave the market, deals keep settling), Reactivate, Close (for good, phone and email stay taken); Super Admin only with a reason, audit-logged; migration 0025 (DEC-069) | **IMPLEMENTED** — 2026-10-26 |
 | `071-app-choose-country-to-verify.md` | App: "Verify your identity" asks which country you will pay from (Nigeria, UK, US) with each one's status from the server, then opens that country's check; Account details offers "Verify another country" (DEC-078) | **IMPLEMENTED** — 2026-10-27 |
 | `072-api-monitoring-system-health.md` | API monitoring: every API counted and timed per minute (our own routes by template, webhooks, every outside system: Didit, push, SMS, email, bank), background jobs, escrow queues and the database on a System Health page; warnings in plain words; counts and timings only; Super Admin only; 30 days; migration 0033 (DEC-079) | **IMPLEMENTED** — 2026-10-27 |
+| `073-customer-activity-log-deal-timeline.md` | Customer activity log and deal timeline: every customer change and sign-in step recorded by route template (no body, no secrets), merged with staff actions about them; deals found by the reference customers see, with every step from offer to payout; append-only, kept 5 years; Super Admin only; migration 0034 (DEC-080) | **IMPLEMENTED** — 2026-10-27 |
 
 ### Accounting policy is not architecture
 

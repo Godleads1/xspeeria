@@ -289,6 +289,27 @@ async def _demo_autopilot_loop(settings: Settings, runtime: AuthRuntime) -> None
             log.exception("demo_autopilot_failed")
 
 
+async def _activity_retention_loop(settings: Settings) -> None:
+    """ADR-073: the customer activity log is kept 5 years; older rows are deleted hourly (the
+    database refuses to delete anything younger)."""
+    from sqlalchemy import text
+
+    from app.db.session import get_sessionmaker
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(3600)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                with track_job("Activity log retention", 3600):
+                    await db.execute(
+                        text("DELETE FROM customer_activity WHERE at < now() - interval '5 years'")
+                    )
+                    await db.commit()
+        except Exception:  # noqa: BLE001 - try again next hour
+            log.exception("activity_retention_failed")
+
+
 async def _metrics_loop(settings: Settings) -> None:
     """ADR-072: add this server's API and job figures to the database once a minute."""
     from app.db.session import get_sessionmaker
@@ -342,6 +363,8 @@ def create_app(
             and resolved.escrow_tick_seconds > 0
         ):
             tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
+        if resolved.database_url and resolved.preparation_sweep_seconds > 0:
+            tasks.append(asyncio.create_task(_activity_retention_loop(resolved)))
         if resolved.database_url and resolved.metrics_flush_seconds > 0:
             tasks.append(asyncio.create_task(_metrics_loop(resolved)))
         if resolved.demo_autopilot and resolved.database_url:

@@ -25,6 +25,7 @@ from fastapi import status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import activity
 from app.core.auth_tokens import (
     AccessClaims,
     InvalidAccessToken,
@@ -482,7 +483,18 @@ class AuthService:
 
         if not self._rt.hasher.verify(user.pin_hash, pin):
             user.failed_pin_attempts += 1
-            if user.failed_pin_attempts >= MAX_PIN_TRIES:
+            locked = user.failed_pin_attempts >= MAX_PIN_TRIES
+            self._db.add(
+                activity.entry(
+                    user.id,
+                    "sign_in_failed",
+                    "security",
+                    outcome="refused",
+                    detail={"reason": "pin_locked" if locked else "wrong_pin"},
+                    at=now,
+                )
+            )
+            if locked:
                 user.failed_pin_attempts = 0
                 user.pin_locked_until = now + PIN_LOCK
                 await self._db.commit()
@@ -500,6 +512,11 @@ class AuthService:
         if trusted is not None:
             trusted.last_used_at = now
             pair = await self._open_session(user, device, now)
+            self._db.add(
+                activity.entry(
+                    user.id, "signed_in", "account", detail={"how": "trusted_phone"}, at=now
+                )
+            )
             await self._db.commit()
             _logger.info("login", extra={"user_id": str(user.id), "second_factor": "trusted"})
             return SignedIn(tokens=pair, device_token=None)
@@ -976,6 +993,15 @@ class AuthService:
         row.consumed_at = now
         device_token = self._trust_device(user, device.device_id, device.user_agent, now)
         pair = await self._open_session(user, device, now, pin_verified_at=row.created_at)
+        self._db.add(
+            activity.entry(
+                user.id,
+                "signed_up" if row.purpose == "signup" else "signed_in",
+                "account",
+                detail={"how": row.method, "new_phone": row.purpose == "login"},
+                at=now,
+            )
+        )
         await self._db.commit()
         _logger.info("signed_in", extra={"user_id": str(user.id), "check": row.method})
         if row.purpose == "login":
@@ -1277,6 +1303,9 @@ class AuthService:
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_reset")
         await self._repo.revoke_trusted_devices(user.id, now)
+        self._db.add(
+            activity.entry(user.id, "pin_reset", "security", detail={"how": row.method}, at=now)
+        )
         await self._db.commit()
         await self._alert(user, "pin_reset")
 
@@ -1479,6 +1508,9 @@ class AuthService:
             )
         )
         access = self._keys.issue_access(AccessClaims(session.user_id, session.id), now)
+        self._db.add(
+            activity.entry(session.user_id, "unlocked_with_fingerprint", "security", at=now)
+        )
         await self._db.commit()
         _logger.info("biometric_unlock", extra={"user_id": str(session.user_id)})
         return TokenPair(access_token=access, refresh_token=new_refresh)

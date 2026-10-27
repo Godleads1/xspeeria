@@ -47,8 +47,10 @@ export const DONE: Record<CustomerAction, string> = {
 };
 
 export function UsersScreen(): ReactElement {
-  const { me, api } = useSession();
+  const { me, api, can } = useSession();
   const isSuper = me.role === 'super_admin';
+  // ADR-073: everything a customer did (Super Admin, activity.read).
+  const canActivity = can('activity.read');
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [page, setPage] = useState<CustomerPage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +118,13 @@ export function UsersScreen(): ReactElement {
   }
 
   const actionsFor = (c: Customer): RowAction[] => {
+    const activity: RowAction[] = canActivity
+      ? [{ label: tr('View activity'), testId: `activity-${c.id}`, onSelect: () => window.location.assign(`/users/activity?id=${encodeURIComponent(c.id)}`) }]
+      : [];
+    return [...activity, ...changesFor(c)];
+  };
+
+  const changesFor = (c: Customer): RowAction[] => {
     if (!isSuper) return [];
     const open = (action: CustomerAction) => () => {
       setActionError(null);
@@ -142,7 +151,7 @@ export function UsersScreen(): ReactElement {
     { key: 'phone', header: tr('PHONE'), render: (c) => <span dir="ltr">{c.phone}</span> },
     { key: 'last', header: tr('LAST LOGIN'), render: (c) => when(c.last_login_at) },
     { key: 'status', header: tr('STATUS'), render: (c) => <CustomerStatusChip status={c.status} /> },
-    ...(isSuper
+    ...(isSuper || canActivity
       ? [{ key: 'actions', header: tr('ACTION'), render: (c: Customer) => <RowMenu label={tr('Actions for {{name}}', { name: nameOf(c) })} actions={actionsFor(c)} testId={`menu-${c.id}`} /> }]
       : []),
   ];

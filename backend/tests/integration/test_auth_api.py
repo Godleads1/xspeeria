@@ -51,7 +51,7 @@ EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
     "staff_audit_log, staff_sessions, staff_codes, staff_accounts, "
-    "api_metrics, job_status, "
+    "api_metrics, job_status, customer_activity, "
     "tier_checks, offer_queue_entries, kyc_reviews, fraud_alerts, adverts, service_outages, "
     "reversals, dispute_messages, disputes, "
     "verification_checks, "
