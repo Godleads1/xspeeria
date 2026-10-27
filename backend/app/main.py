@@ -38,6 +38,7 @@ from app.api.v1 import (
     push,
     settlement,
 )
+from app.core.api_metrics import recorder, track_job
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -242,11 +243,15 @@ async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
         await asyncio.sleep(settings.preparation_sweep_seconds)
         try:
             async with get_sessionmaker(settings)() as db:
-                await MatchService(db, runtime.clock).expire_due()
+                every = settings.preparation_sweep_seconds
+                with track_job("Deal expiry", every):  # ADR-072: each job is monitored
+                    await MatchService(db, runtime.clock).expire_due()
                 # ADR-059 Decision 4: missed turns pass on; finished offers end their queues.
-                await QueueService(db, runtime.clock).sweep()
+                with track_job("Waiting queues", every):
+                    await QueueService(db, runtime.clock).sweep()
                 # ADR-068: simple fraud rules over data Xspeeria already has.
-                await FraudService(db, runtime.clock).scan()
+                with track_job("Fraud scan", every):
+                    await FraudService(db, runtime.clock).scan()
         except Exception:  # noqa: BLE001 - keep sweeping; the next pass retries
             log.exception("preparation_sweep_failed")
 
@@ -261,7 +266,8 @@ async def _escrow_loop(settings: Settings, runtime: AuthRuntime) -> None:
         await asyncio.sleep(settings.escrow_tick_seconds)
         try:
             async with get_sessionmaker(settings)() as db:
-                await SettlementService(db, runtime.clock, runtime.pretend_bank).tick()
+                with track_job("Escrow processing", settings.escrow_tick_seconds):
+                    await SettlementService(db, runtime.clock, runtime.pretend_bank).tick()
         except Exception:  # noqa: BLE001 - keep going; the next pass retries
             log.exception("escrow_tick_failed")
 
@@ -276,9 +282,25 @@ async def _demo_autopilot_loop(settings: Settings, runtime: AuthRuntime) -> None
         await asyncio.sleep(settings.escrow_tick_seconds)
         try:
             async with get_sessionmaker(settings)() as db:
-                await DemoAutopilot(db, runtime.clock, runtime.pretend_bank, settings).run_once()
+                with track_job("Demo robots", settings.escrow_tick_seconds):
+                    robots = DemoAutopilot(db, runtime.clock, runtime.pretend_bank, settings)
+                    await robots.run_once()
         except Exception:  # noqa: BLE001 - a failed round must not stop the loop
             log.exception("demo_autopilot_failed")
+
+
+async def _metrics_loop(settings: Settings) -> None:
+    """ADR-072: add this server's API and job figures to the database once a minute."""
+    from app.db.session import get_sessionmaker
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(settings.metrics_flush_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                await recorder.flush(db)
+        except Exception:  # noqa: BLE001 - figures are best effort; the next minute retries
+            log.exception("metrics_flush_failed")
 
 
 async def _push_loop(settings: Settings, runtime: AuthRuntime) -> None:
@@ -294,7 +316,8 @@ async def _push_loop(settings: Settings, runtime: AuthRuntime) -> None:
         await asyncio.sleep(settings.push_tick_seconds)
         try:
             async with get_sessionmaker(settings)() as db:
-                await PushDispatcher(db, runtime.clock, sender).run_once()
+                with track_job("Phone push", settings.push_tick_seconds):
+                    await PushDispatcher(db, runtime.clock, sender).run_once()
         except Exception:  # noqa: BLE001 - a failed round must not stop the loop
             log.exception("push_round_failed")
 
@@ -319,6 +342,8 @@ def create_app(
             and resolved.escrow_tick_seconds > 0
         ):
             tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
+        if resolved.database_url and resolved.metrics_flush_seconds > 0:
+            tasks.append(asyncio.create_task(_metrics_loop(resolved)))
         if resolved.demo_autopilot and resolved.database_url:
             tasks.append(asyncio.create_task(_demo_autopilot_loop(resolved, runtime)))
         if (

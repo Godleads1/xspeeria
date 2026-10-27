@@ -20,6 +20,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Protocol, TextIO
 
+from app.core.api_metrics import track_outside
+
 __all__ = [
     "ALERT_TEXT",
     "DevConsoleEmailSender",
@@ -88,12 +90,14 @@ class DevConsoleEmailSender:
         self._stream = stream
 
     async def send_code(self, email: str, code: str) -> None:
-        out = self._stream or sys.stderr
-        out.write(f"\n[DEV EMAIL — local only] code for {mask_email(email)}: {code}\n\n")
-        out.flush()
+        async with track_outside("Email (developer window)", "send code"):  # ADR-072
+            out = self._stream or sys.stderr
+            out.write(f"\n[DEV EMAIL — local only] code for {mask_email(email)}: {code}\n\n")
+            out.flush()
 
     async def send_alert(self, email: str, kind: str, device: str | None) -> None:
-        out = self._stream or sys.stderr
-        subject = ALERT_TEXT.get(kind, kind)
-        out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {subject}\n\n")
-        out.flush()
+        async with track_outside("Email (developer window)", "send alert"):  # ADR-072
+            out = self._stream or sys.stderr
+            subject = ALERT_TEXT.get(kind, kind)
+            out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {subject}\n\n")
+            out.flush()

@@ -17,6 +17,8 @@ from typing import Any, Protocol
 
 import httpx
 
+from app.core.api_metrics import tracked_transport
+
 __all__ = ["ExpoPushSender", "PushMessage", "PushResult", "PushSender", "RecordingPushSender"]
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
@@ -55,7 +57,9 @@ class ExpoPushSender:
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        client = self._client or httpx.AsyncClient(timeout=10)
+        client = self._client or httpx.AsyncClient(
+            timeout=10, transport=tracked_transport("Expo phone push")
+        )
         try:
             for start in range(0, len(messages), BATCH):
                 chunk = messages[start : start + BATCH]

@@ -43,6 +43,7 @@ MODULES = (
     "fraud_alerts",
     "outages",
     "adverts",
+    "monitoring",
     "staff",
     "roles",
     "audit",

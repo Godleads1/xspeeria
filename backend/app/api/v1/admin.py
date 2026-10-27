@@ -38,6 +38,7 @@ from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 from app.services.staff_work import StaffWorkService
+from app.services.system_health import SystemHealthService
 
 __all__ = ["COOKIE", "router"]
 
@@ -1221,3 +1222,22 @@ async def reject_kyc(
 ) -> Response:
     await service.reject(staff, info, case_id, " ".join(body.reason.split()))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- System Health (ADR-072; owner 2026-10-27: Super Admin) -----------------------------------
+
+
+async def get_system_health(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> SystemHealthService:
+    return SystemHealthService(db, settings)
+
+
+@router.get("/system-health", summary="API, job and queue health (monitoring.read)")
+async def system_health(
+    staff: Staff,
+    service: Annotated[SystemHealthService, Depends(get_system_health)],
+    window: Annotated[Literal["1h", "24h", "7d"], Query()] = "1h",
+) -> Any:
+    return await service.view(staff, window)

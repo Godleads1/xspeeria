@@ -386,6 +386,66 @@ export interface FraudStats {
   high_open: number;
 }
 
+/** System Health (ADR-072): counts and timings only, Super Admin. */
+export type HealthWindow = '1h' | '24h' | '7d';
+export type HealthStatus = 'ok' | 'warning' | 'problem';
+export interface HealthApi {
+  name: string;
+  method: string;
+  calls: number;
+  client_errors: number;
+  server_errors: number;
+  network_errors: number;
+  error_rate: number;
+  avg_ms: number;
+  max_ms: number;
+  slow_calls: number;
+  last_call_at: string | null;
+}
+export interface HealthJob {
+  name: string;
+  every_seconds: number;
+  runs: number;
+  failures: number;
+  last_started_at: string | null;
+  last_ok_at: string | null;
+  last_failed_at: string | null;
+  last_error: string | null;
+  last_duration_ms: number | null;
+  state: 'ok' | 'late' | 'failing';
+}
+export type HealthWarningCode =
+  | 'outside_failing'
+  | 'server_errors'
+  | 'some_errors'
+  | 'slow'
+  | 'job_failed'
+  | 'job_late'
+  | 'escrow_messages_failed'
+  | 'reconciliation_open'
+  | 'database_slow';
+export interface HealthWarning {
+  level: 'red' | 'amber';
+  code: HealthWarningCode;
+  name: string | null;
+  value: number | string | null;
+}
+export interface SystemHealth {
+  now: string;
+  window: HealthWindow;
+  status: HealthStatus;
+  environment: string;
+  api_version: string;
+  server_started_at: string;
+  database: { ok: boolean; ping_ms: number };
+  totals: { calls: number; errors: number; error_rate: number; avg_ms: number };
+  series: { at: string; calls: number; errors: number; avg_ms: number }[];
+  apis: { own: HealthApi[]; webhook: HealthApi[]; outside: HealthApi[] };
+  jobs: HealthJob[];
+  queues: { escrow_messages_waiting: number; escrow_messages_failed: number; bank_events_waiting: number; reconciliation_open: number };
+  warnings: HealthWarning[];
+}
+
 /** Staff bell (ADR-070): work waiting for the signed-in person, read live from the queues. */
 export type StaffWorkKind = 'kyc_confirm' | 'kyc_recommend' | 'reversal' | 'fraud' | 'dispute';
 export interface StaffWorkItem {
@@ -601,6 +661,7 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     declineKyc: (id: string, note: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/decline`, { note }),
     rejectKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/reject`, { reason }),
     staffWork: () => call<StaffWorkFeed>('GET', '/notifications'),
+    systemHealth: (window: HealthWindow) => call<SystemHealth>('GET', `/system-health?window=${window}`),
     staffWorkSeen: () => call<void>('POST', '/notifications/seen'),
     listFraudAlerts: (q: { search?: string; status?: FraudStatus; rule?: FraudRule; offset?: number; limit?: number }) => {
       const p = new URLSearchParams();

@@ -503,4 +503,5 @@ class TestPackageRegistration:
             "0030_fraud_alerts.py",  # fraud alerts (ADR-068)
             "0031_kyc_reviews.py",  # identity-check review (ADR-069)
             "0032_staff_notifications_seen.py",  # staff bell (ADR-070)
+            "0033_api_monitoring.py",  # API monitoring (ADR-072)
         ]

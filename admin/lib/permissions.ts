@@ -16,6 +16,7 @@ export const MODULES = [
   { id: 'fraud_alerts', label: 'Fraud alerts' },
   { id: 'outages', label: 'Service outages' },
   { id: 'adverts', label: 'Adverts' },
+  { id: 'monitoring', label: 'System health' },
   { id: 'staff', label: 'Staff' },
   { id: 'roles', label: 'Roles' },
   { id: 'audit', label: 'Audit log' },

@@ -47,7 +47,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-011 | IMPLEMENTED (partial) | Sign-in routes: 10 requests a minute per address (ADR-025). Offer routes deliberately not on that shared counter (ADR-030 §2, `test_browsing_offers_does_not_use_up_the_sign_in_limit`); offer, marketplace and match routes: 60 a minute per user (ADR-031, `test_market_requests_are_limited_per_user`). | Body-size limits, timeouts; Redis before more than one server. |
 | SEC-012 | NOT STARTED | No cookie auth, no outbound requests, no redirects yet. | Decide token vs cookie; CSRF if cookies; SSRF allow-list for partner calls. |
 | SEC-013 | IMPLEMENTED (partial) | Admin security headers (`admin/next.config.ts`, checked as served locally 2026-10-17); backend CORS empty by default (`backend/app/core/config.py`); docs/OpenAPI off in production. | CSP script-src with nonces; TLS config UNKNOWN (no deployment). |
-| SEC-014 | NOT STARTED | `/health` returns the environment name (review SEC-14). | API inventory document; trim health output. |
+| SEC-014 | IMPLEMENTED (partial, ADR-072) | Live API inventory: System Health lists every route and outside service actually used, with counts. `/health` still returns the environment name. | A written API inventory; trim `/health` output. |
 
 ## D. Mobile application security
 
@@ -96,7 +96,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
 | SEC-036 | IMPLEMENTED (partial) | JSON logs; request ID (sanitised) and one access line per request with route template, status, duration and user ID only; logging rule F-16 decided (ADR-025 §1.8); test that PINs, codes, tokens and full phone/email never reach logs (`test_logs_never_carry_pins_codes_tokens_or_full_numbers`). | Alerting (SEC-037); log sink and retention. |
-| SEC-037 | NOT STARTED | — | Alerting on auth failures, privilege changes, transaction and webhook anomalies. |
+| SEC-037 | IMPLEMENTED (partial, ADR-072) | Every API (own routes, webhooks, outside systems) counted and timed per minute, background jobs and escrow queues on a System Health page with red/amber warnings, Super Admin only (`test_system_health.py`). | Alerts that reach a person without the page open (needs an email/SMS provider and an on-call person); auth-failure and privilege-change alert rules. |
 | SEC-038 | NOT STARTED | — | Incident response runbook. |
 | SEC-039 | NOT STARTED | — | DR test; "kill switch" to disable transaction flows. |
 | SEC-040 | NOT STARTED | The 2026-10-17 review (`docs/07-security/reviews/2026-10-17-independent-review.md`) is AI-run and does not count. | Engage an independent tester before launch and after material changes. |

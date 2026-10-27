@@ -25,6 +25,11 @@ from typing import Any, Literal, Protocol
 
 import httpx
 
+from app.core.api_metrics import tracked_transport
+
+#: How this service is named on the System Health page (ADR-072).
+_MONITOR_NAME = "Didit face check"
+
 __all__ = [
     "DevFaceCheck",
     "DiditFaceCheck",
@@ -110,7 +115,9 @@ class DiditFaceCheck:
         if self._callback:
             body["callback"] = self._callback
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT, transport=self._transport) as c:
+            async with httpx.AsyncClient(
+                timeout=_TIMEOUT, transport=tracked_transport(_MONITOR_NAME, self._transport)
+            ) as c:
                 r = await c.post(
                     f"{self._base}/v3/session/", json=body, headers={"x-api-key": self._key}
                 )
@@ -131,7 +138,9 @@ class DiditFaceCheck:
 
     async def outcome(self, session_id: str, vendor_data: str) -> FaceOutcome:
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT, transport=self._transport) as c:
+            async with httpx.AsyncClient(
+                timeout=_TIMEOUT, transport=tracked_transport(_MONITOR_NAME, self._transport)
+            ) as c:
                 r = await c.get(
                     f"{self._base}/v3/session/{session_id}/decision/",
                     headers={"x-api-key": self._key},

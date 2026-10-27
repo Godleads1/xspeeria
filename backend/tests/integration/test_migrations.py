@@ -78,6 +78,8 @@ APPROVED_TABLES = {
     "adverts",
     "fraud_alerts",
     "kyc_reviews",
+    "api_metrics",
+    "job_status",
     "offer_queue_entries",
     "offer_groups",
     "tier_checks",
@@ -102,8 +104,8 @@ APPROVED_TABLES = {
 # dispute categories and staff work on disputes (ADR-063) -> "0026"; reversals (ADR-065) -> "0027";
 # service outage notices (ADR-066) -> "0028"; adverts (ADR-067) -> "0029";
 # fraud alerts (ADR-068) -> "0030"; identity-check review (ADR-069) -> "0031";
-# staff bell (ADR-070) -> "0032".
-EXPECTED_HEAD = "0032"
+# staff bell (ADR-070) -> "0032"; API monitoring (ADR-072) -> "0033".
+EXPECTED_HEAD = "0033"
 
 
 def _config(database_url: str) -> Config:

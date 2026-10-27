@@ -14,7 +14,7 @@ export interface NavItem {
   readonly permission?: string;
   /** Figma admin menu: work areas on top, then the "ADMIN" section. */
   readonly section?: 'work' | 'admin';
-  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile';
+  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile' | 'health';
 }
 
 /**
@@ -34,6 +34,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'audit', label: 'Audit Logs', href: '/audit', permission: 'audit.read', section: 'admin', icon: 'audit' },
   { id: 'settings', label: 'Setups', href: '/settings', section: 'admin', icon: 'setups' },
   { id: 'outages', label: 'Service Outage Mgt', href: '/outages', permission: 'outages.read', section: 'admin', icon: 'outages' },
+  { id: 'health', label: 'System Health', href: '/system-health', permission: 'monitoring.read', section: 'admin', icon: 'health' },
   { id: 'profile', label: 'My profile', href: '/profile', section: 'admin', icon: 'profile' },
 ];
 
