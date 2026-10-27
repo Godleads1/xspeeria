@@ -2,7 +2,7 @@
 
 /** The Figma list-page tools: a round search box and a "Filter By" bar with Reset Filter. */
 
-import { useId, type ReactElement, type ReactNode } from 'react';
+import { useId, useRef, type ReactElement, type ReactNode } from 'react';
 
 import { color } from '../theme';
 import { tr } from '../lib/i18n';
@@ -52,9 +52,26 @@ export function SearchBox({
   );
 }
 
-/** "Filter By | <your controls> | Reset Filter". Reset appears only when something is set. */
+/**
+ * "Filter By | <your controls> | Reset Filter". Reset appears only when something is set.
+ * The funnel and "Filter By" open the first dropdown (owner, 2026-10-27: clicking them did
+ * nothing, so the filters looked broken).
+ */
 export function FilterBar({ children, onReset }: { children: ReactNode; onReset?: () => void }): ReactElement {
+  const controls = useRef<HTMLSpanElement>(null);
   const cell = { display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', borderLeft: `1px solid ${color.border.subtle}` } as const;
+  const openFirst = (): void => {
+    const select = controls.current?.querySelector('select');
+    if (!select) return;
+    select.focus();
+    try {
+      // Opens the list where the browser allows it; otherwise the focus above lets the
+      // keyboard arrows choose.
+      select.showPicker();
+    } catch {
+      /* not supported or not allowed: focus is enough */
+    }
+  };
   return (
     <div
       role="group"
@@ -70,11 +87,20 @@ export function FilterBar({ children, onReset }: { children: ReactNode; onReset?
         fontWeight: 600,
       }}
     >
-      <span style={{ ...cell, borderLeft: 'none' }}>
-        <Icon name="filter" size={18} />
+      <button
+        type="button"
+        data-testid="filter-by"
+        onClick={openFirst}
+        style={{ display: 'flex', alignItems: 'stretch', padding: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: color.text.primary }}
+      >
+        <span style={{ ...cell, borderLeft: 'none' }}>
+          <Icon name="filter" size={18} />
+        </span>
+        <span style={cell}>{tr('Filter By')}</span>
+      </button>
+      <span ref={controls} style={cell}>
+        {children}
       </span>
-      <span style={cell}>{tr('Filter By')}</span>
-      <span style={cell}>{children}</span>
       {onReset ? (
         <button
           type="button"
