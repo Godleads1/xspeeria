@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -40,12 +41,19 @@ from app.services.offers import OfferService
 from app.services.payouts import PayoutAccountService
 from app.services.staff import RequestInfo, StaffService
 
-__all__ = ["DEMO_PIN", "DEMO_STAFF_PASSWORD", "CUSTOMERS", "STAFF", "seed"]
+__all__ = ["DEMO_PIN", "CUSTOMERS", "STAFF", "new_staff_password", "seed"]
 
 #: The same for every demo customer. Never use it for a real account.
 DEMO_PIN = "482613"
-#: The same for every demo staff member (at least 12 characters, ADR-060).
-DEMO_STAFF_PASSWORD = "Xspeeria demo 2026!"
+
+
+def new_staff_password() -> str:
+    """A fresh random password for the demo staff, printed once when they are created.
+
+    Not written in the code (no shared password to leak or reuse); lost it? Use "Forgot
+    password" in the console, the code prints in the server window.
+    """
+    return "demo-" + secrets.token_urlsafe(12)
 
 
 @dataclass(frozen=True)
@@ -252,6 +260,8 @@ async def seed() -> list[str]:
                     report.append(f"  offer: {amount} {source} for {target} at {rate}")
 
             staff_service = StaffService(db, runtime)
+            password = new_staff_password()
+            created_staff = False
             for email, name, role_name in STAFF:
                 if await db.scalar(select(StaffAccount.id).where(StaffAccount.email == email)):
                     report.append(f"staff {email}: already there")
@@ -266,7 +276,7 @@ async def seed() -> list[str]:
                     name=name,
                     role_id=role.id,
                     status="active",
-                    password_hash=runtime.hasher.hash(DEMO_STAFF_PASSWORD),
+                    password_hash=runtime.hasher.hash(password),
                     password_changed_at=now,
                     created_at=now,
                     updated_at=now,
@@ -283,7 +293,12 @@ async def seed() -> list[str]:
                 )
                 await db.commit()
                 report.append(f"staff {email} ({role_name}): created")
+                created_staff = True
 
+            if created_staff:
+                report.append("")
+                report.append(f"NEW demo staff password (all of them, shown once): {password}")
+                report.append("Write it down. Lost it? Use 'Forgot password' in the console.")
             offers = await db.scalar(
                 select(func.count(Offer.id)).where(Offer.status.in_(("open", "partially_matched")))
             )
@@ -299,7 +314,7 @@ def _main() -> None:
         print(line)
     print()
     print(f"Demo customers sign in with their phone number and PIN {DEMO_PIN}.")
-    print(f"Demo staff sign in at the console with password: {DEMO_STAFF_PASSWORD}")
+    print("Demo staff use the password shown above when they were created.")
     print("Codes print in the server window (DEV_SMS / DEV_EMAIL). Nothing here is real.")
 
 

@@ -26,7 +26,9 @@ def test_demo_values_pass_the_real_rules_and_look_fake() -> None:
     assert pin_problem(seed_demo.DEMO_PIN) is None
     for email, _, _ in seed_demo.STAFF:
         assert email.endswith("@example.com")
-        assert password_problem(seed_demo.DEMO_STAFF_PASSWORD, email=email) is None
+        assert password_problem(seed_demo.new_staff_password(), email=email) is None
+    # Random each time, never written in the code.
+    assert seed_demo.new_staff_password() != seed_demo.new_staff_password()
     for c in seed_demo.CUSTOMERS:
         assert c.email.endswith("@example.com") and normalise_phone(c.phone) == c.phone
         # Every verified demo customer can receive naira and at least one foreign currency,

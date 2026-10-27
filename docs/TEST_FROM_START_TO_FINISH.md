@@ -28,7 +28,7 @@ The server refuses every demo switch anywhere else.
 
 You only do your own side. You'll see each step arrive on your screen and in your notifications. The robots follow the same rules as people; the one shortcut is that they don't do a face check, since nobody holds a robot's phone.
 
-**Demo staff** for the admin console. The password for all of them is **`Xspeeria demo 2026!`**.
+**Demo staff** for the admin console. When the demo command creates them, it shows **one new random password for all of them**, once, in the window. Write it down. If you lose it, use **Forgot password** on the console's sign-in page; the code appears in the server window.
 
 | Email | Role |
 |---|---|
@@ -98,7 +98,7 @@ uv run python -m app.cli.seed_demo
 cd ..
 ```
 
-The last command lists what it created and ends with the demo PIN and password. It's safe to run again: anything already there is left alone.
+The last command lists what it created, the customers' PIN, and the **new demo staff password**. Write the password down: it's shown only once. It's safe to run again: anything already there is left alone.
 
 ## Part 2 — start everything (every time)
 
@@ -176,7 +176,7 @@ If you don't pay within 5 minutes, the deal is cancelled. A side that already pa
 
 ### D. The admin console
 
-Sign in at **http://localhost:3000**. Use a staff email and `Xspeeria demo 2026!`, then the code from **Window 1**.
+Sign in at **http://localhost:3000**. Use a staff email and the demo staff password the demo command showed you, then the code from **Window 1**.
 
 | Try this | As |
 |---|---|
