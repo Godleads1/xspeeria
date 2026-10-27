@@ -39,7 +39,7 @@
 
 - Sending staff decisions to Didit.
 - Senior-officer sign-off for PEP/sanctions cases (COM §14.1). Didit's AML hits are not approved automatically today (ADR-039), and staff would need that tier to exist.
-- Notifying staff when a check needs them (the bell).
+- ~~Notifying staff when a check needs them (the bell).~~ Built 2026-10-27 (ADR-070).
 
 ## Evidence
 

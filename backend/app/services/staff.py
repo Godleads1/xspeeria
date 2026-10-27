@@ -341,8 +341,10 @@ class StaffService:
         _logger.info("staff_login", extra={"staff_id": str(staff_id)})
         return token, await self._profile(staff_id)
 
-    async def authenticate(self, token: str | None) -> StaffPrincipal:
-        """The caller behind a session cookie, or 401. Also keeps the session alive."""
+    async def authenticate(self, token: str | None, *, touch: bool = True) -> StaffPrincipal:
+        """The caller behind a session cookie, or 401. Also keeps the session alive, except
+        for ``touch=False``: background checks (the bell, ADR-070) must not stop an idle
+        session from ending after 15 minutes."""
         if not token or len(token) > 128:
             raise unauthorized()
         now = self._now()
@@ -374,8 +376,11 @@ class StaffService:
             role_name=role.name,
             permissions=frozenset(role.permissions),
         )
-        session.last_seen_at = now
-        await self._db.commit()
+        if touch:
+            session.last_seen_at = now
+            await self._db.commit()
+        else:
+            await self._db.rollback()
         return principal
 
     async def logout(self, principal: StaffPrincipal, info: RequestInfo) -> None:

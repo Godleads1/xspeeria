@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** (owner) — 2026-10-20; **limits and Tier 2–3 checks built 2026-10-26**; staff review of checks not built |
+| **Status** | **APPROVED** (owner) — 2026-10-20; **limits and Tier 2–3 checks built 2026-10-26**; staff review of checks built 2026-10-27 (ADR-069) |
 | **Decision ID** | DEC-065 |
 | **Authority** | Product owner, 2026-10-20: shared OPay's tier model ("understand this and … suggest what should be for xspeeria"); then confirmed the proposed table and limits ("… is confirmed"). On forecasting: "AI Rate Forecasting based on the economy system of countries and policies". |
 

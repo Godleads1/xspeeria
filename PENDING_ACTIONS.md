@@ -75,7 +75,7 @@ Last updated: 19 Oct 2026.
 - [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
 - [ ] **ID checks (KYC) and anti-money-laundering** — provider chosen: **Didit** (ADR-039, server built). Still needed: a Didit account and workflow (ID + liveness + face match + AML), its data processing agreement, NIN/BVN support (ask Didit), and a compliance officer to own the rules.
 - [ ] **SMS and email provider accounts.**
-- [ ] **Hosting** — cloud account (database, Redis, servers; separate test and live), domain name, secret manager.
+- [ ] **Hosting** — cloud account (database, Redis, servers; separate test and live), domain name, secret manager. Then move staff and advert photos from the local folder (`LOCAL_PHOTO_DIR`) to the private Cloudflare R2 bucket (ADR-049).
 - [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).
 - [ ] **Admin panel inputs** — staff roles and permissions; who reviews disputes, ID checks and frozen accounts.
 - [ ] **Monitoring** — alerting tool and an on-call person (runbooks can be written by *Build*).
@@ -102,5 +102,5 @@ Last updated: 19 Oct 2026.
 
 ## 5. Housekeeping
 
-- [ ] Merge PR #19 (2FA on the server).
-- [ ] Delete old merged branches on GitHub: `fix/security-review-findings`, `feat/backend-auth-slice`, `feat/auth-1-server` (and `feat/auth-2-two-factor` after #19 merges).
+- [ ] Close PR #19 without merging: its 2FA server work already reached `main` through later PRs (ADR-026). (Checked 2026-10-27.)
+- [ ] Delete old branches on GitHub: `fix/security-review-findings`, `feat/backend-auth-slice`, `feat/auth-1-server`, `feat/auth-2-two-factor`.

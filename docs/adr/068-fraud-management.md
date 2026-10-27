@@ -29,7 +29,7 @@
 
 ## Not built
 
-- Staff notifications (the bell) for new alerts.
+- ~~Staff notifications (the bell) for new alerts.~~ Built 2026-10-27 (ADR-070).
 - Any AI, device or behaviour scoring, or outside fraud vendor.
 - Automatic blocking.
 - Editing the thresholds from the console.

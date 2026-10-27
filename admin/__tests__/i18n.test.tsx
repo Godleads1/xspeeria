@@ -25,6 +25,7 @@ import { RESOLUTION } from '../components/screens/FraudCaseScreen';
 import { COUNTRY_NAME, QUEUE_LABEL, REVIEW_REASON } from '../components/screens/KycScreen';
 import { ID_TYPE, STATE_WORD } from '../components/screens/KycCaseScreen';
 import { ADVERT_STATE } from '../components/screens/AdvertsScreen';
+import { WORK_DETAIL, WORK_LABEL } from '../components/Notifications';
 import ar from '../lib/locales/ar.json';
 import es from '../lib/locales/es.json';
 import fr from '../lib/locales/fr.json';
@@ -55,7 +56,7 @@ function shownSentences(): Set<string> {
     for (const m of text.matchAll(/\btr\(\s*'((?:[^'\\]|\\.)*)'/g)) found.add(m[1].replace(/\\'/g, "'"));
   }
   for (const l of [...MODULES, ...ACTIONS, ...NAV_ITEMS, ...PLANNED_DESTINATIONS]) found.add(l.label);
-  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL), ...Object.values(QUESTION), ...Object.values(CONFIRM), ...Object.values(DONE), ...Object.values(EVENTS), ...Object.values(OUTCOMES), ...Object.values(PRIORITY), ...Object.values(STATUS_LABEL), ...Object.values(THEME_LABEL), ...Object.values(REVERSAL_STATUS), ...Object.values(PHASE_LABEL), ...Object.values(SEVERITY), ...Object.values(OUTAGE_STATUS), ...Object.values(ADVERT_STATE), ...Object.values(FRAUD_RULE), ...Object.values(FRAUD_SEVERITY), ...Object.values(FRAUD_STATUS), ...Object.values(RESOLUTION), ...Object.values(QUEUE_LABEL), ...Object.values(REVIEW_REASON), ...Object.values(COUNTRY_NAME), ...Object.values(ID_TYPE), ...Object.values(STATE_WORD)]) found.add(l);
+  for (const l of [...Object.values(ROLE_LABELS), ...Object.values(ACTION_LABELS), ...Object.values(TAB_LABEL), ...Object.values(QUESTION), ...Object.values(CONFIRM), ...Object.values(DONE), ...Object.values(EVENTS), ...Object.values(OUTCOMES), ...Object.values(PRIORITY), ...Object.values(STATUS_LABEL), ...Object.values(THEME_LABEL), ...Object.values(REVERSAL_STATUS), ...Object.values(PHASE_LABEL), ...Object.values(SEVERITY), ...Object.values(OUTAGE_STATUS), ...Object.values(ADVERT_STATE), ...Object.values(FRAUD_RULE), ...Object.values(FRAUD_SEVERITY), ...Object.values(FRAUD_STATUS), ...Object.values(RESOLUTION), ...Object.values(QUEUE_LABEL), ...Object.values(REVIEW_REASON), ...Object.values(COUNTRY_NAME), ...Object.values(ID_TYPE), ...Object.values(STATE_WORD), ...Object.values(WORK_LABEL), ...Object.values(WORK_DETAIL)]) found.add(l);
   return found;
 }
 

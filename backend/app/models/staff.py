@@ -78,6 +78,8 @@ class StaffAccount(Base):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: When they last opened the bell's panel (ADR-070); the badge counts newer work.
+    notifications_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("staff_accounts.id", ondelete="RESTRICT")
     )

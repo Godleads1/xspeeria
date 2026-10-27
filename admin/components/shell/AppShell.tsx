@@ -20,7 +20,7 @@ import { Avatar } from '../Avatar';
 import { Icon } from '../icons';
 import { LanguagePicker } from '../LanguagePicker';
 import { LogoutDialog } from '../LogoutDialog';
-import { NotificationBell } from '../Notifications';
+import { NotificationBell, type BellSource } from '../Notifications';
 import { ThemeSwitch } from '../ThemeSwitch';
 import { tr } from '../../lib/i18n';
 import { Wordmark } from '../Wordmark';
@@ -63,6 +63,7 @@ export function AppShell({
   who,
   current,
   onLogout,
+  bell,
 }: {
   children: ReactNode;
   /** The signed-in person's permissions; without it, only the open entries show. */
@@ -71,6 +72,8 @@ export function AppShell({
   /** The href of the page being shown. */
   current?: string;
   onLogout?: () => void;
+  /** Where the bell reads waiting work from (ADR-070); without it the panel stays empty. */
+  bell?: BellSource;
 }): ReactElement {
   const [askLogout, setAskLogout] = useState(false);
   const held = new Set(permissions ?? []);
@@ -115,7 +118,7 @@ export function AppShell({
           borderBottom: `1px solid ${color.border.subtle}`,
         }}
       >
-        {who ? <NotificationBell /> : null}
+        {who ? <NotificationBell source={bell} /> : null}
         <ThemeSwitch compact />
         <LanguagePicker />
         {who ? (
