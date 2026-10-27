@@ -367,6 +367,7 @@ class TestPackageRegistration:
             "service_outages",
             "adverts",
             "fraud_alerts",
+            "kyc_reviews",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -418,7 +419,7 @@ class TestPackageRegistration:
             "'currency_definitions', 'dispute_categories', 'dispute_messages', 'disputes', "
             "'fraud_alerts', "
             "'idempotency_records', "
-            "'kyc_cases', 'kyc_webhook_events', "
+            "'kyc_cases', 'kyc_reviews', 'kyc_webhook_events', "
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "
             "'offer_groups', 'offer_queue_entries', "
@@ -500,4 +501,5 @@ class TestPackageRegistration:
             "0028_service_outages.py",  # service outage notices (ADR-066)
             "0029_adverts.py",  # adverts in the app slot (ADR-067)
             "0030_fraud_alerts.py",  # fraud alerts (ADR-068)
+            "0031_kyc_reviews.py",  # identity-check review (ADR-069)
         ]

@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 
@@ -264,9 +264,15 @@ class KycService:
         self, case: KycCase, outcome: Outcome, decision: dict[str, Any] | None
     ) -> tuple[Outcome, str | None]:
         """ADR-041: hold an approval that matches a person verified on another account."""
+        # ADR-069: a held approval keeps the identity facts it was approved with, so a reviewer
+        # can see them and, if two people agree, approve it without the provider.
         if self._identity_secret is None or outcome.document_ref is None:
-            held = Outcome(
-                "under_review", note="identity key unavailable", review_reason=CHECKS_INCOMPLETE
+            held = replace(
+                outcome,
+                status="under_review",
+                reason=None,
+                note="identity key unavailable",
+                review_reason=CHECKS_INCOMPLETE,
             )
             return held, None
         key = identity_key(self._identity_secret, outcome.document_ref)
@@ -287,8 +293,10 @@ class KycService:
         if other is not None or other_account_matches(decision, str(case.user_id)):
             source = "document" if other is not None else "provider match"
             return (
-                Outcome(
-                    "under_review",
+                replace(
+                    outcome,
+                    status="under_review",
+                    reason=None,
                     note=f"duplicate identity ({source})",
                     review_reason=DUPLICATE_IDENTITY,
                 ),
@@ -312,8 +320,10 @@ class KycService:
             if other.date_of_birth != outcome.date_of_birth or not names_match(
                 str(other.legal_name), str(outcome.legal_name)
             ):
-                return Outcome(
-                    "under_review",
+                return replace(
+                    outcome,
+                    status="under_review",
+                    reason=None,
                     note="identity differs from the account's",
                     review_reason=IDENTITY_MISMATCH,
                 )
@@ -392,6 +402,13 @@ class KycService:
                 case.updated_at = now
                 if outcome.review_reason is not None:
                     case.review_reason = outcome.review_reason
+                if outcome.status == "under_review" and outcome.legal_name is not None:
+                    # ADR-069: Didit's review ended in an approval that Xspeeria holds.
+                    case.legal_name = outcome.legal_name
+                    case.date_of_birth = outcome.date_of_birth
+                    case.gender = outcome.gender
+                    case.id_type = outcome.id_type
+                    case.issuing_country = outcome.issuing_country
             elif (case.status, outcome.status) not in KYC_TRANSITIONS:
                 verdict = "IGNORED_STALE"
             else:
@@ -403,7 +420,10 @@ class KycService:
                 if outcome.status in ("approved", "rejected"):
                     case.decided_at = now
                     case.decision_reason = outcome.reason
-                if outcome.status == "approved":
+                if outcome.status == "approved" or (
+                    outcome.status == "under_review" and outcome.legal_name is not None
+                ):
+                    # ADR-069: also kept on a case Xspeeria holds, for the staff reviewers.
                     case.legal_name = outcome.legal_name
                     case.date_of_birth = outcome.date_of_birth
                     case.gender = outcome.gender

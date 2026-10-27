@@ -33,6 +33,7 @@ from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.dispute_admin import DisputeAdminService
 from app.services.fraud import FraudService
+from app.services.kyc_review import KycReviewService
 from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
@@ -1082,4 +1083,95 @@ async def resolve_fraud_alert(
     await service.resolve(
         staff, info, alert_id, resolution=body.resolution, note=" ".join(body.note.split())
     )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- identity-check review (ADR-069) -----------------------------------------------------------
+
+
+async def get_kyc_review(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> KycReviewService:
+    return KycReviewService(db, runtime.clock)
+
+
+KycReviews = Annotated[KycReviewService, Depends(get_kyc_review)]
+
+
+class KycReasonBody(_Strict):
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class KycNoteBody(_Strict):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class KycDeclineBody(_Strict):
+    note: str = Field(min_length=3, max_length=1000)
+
+
+@router.get("/kyc/cases", summary="Identity checks waiting for a person (kyc.read)")
+async def list_kyc_cases(
+    staff: Staff,
+    service: KycReviews,
+    queue: Literal["held", "in_didit", "decided"] = "held",
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.list(staff, queue=queue, search=q or None, offset=offset, limit=limit)
+
+
+@router.get("/kyc/cases/{case_id}", summary="One identity check (kyc.read)")
+async def get_kyc_case(case_id: uuid.UUID, staff: Staff, service: KycReviews) -> Any:
+    return await service.get(staff, case_id)
+
+
+@router.post(
+    "/kyc/cases/{case_id}/recommend",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Recommend approving a held check; a second person confirms (kyc.update)",
+)
+async def recommend_kyc(
+    case_id: uuid.UUID, body: KycReasonBody, staff: Staff, service: KycReviews, info: Info
+) -> Response:
+    await service.recommend(staff, info, case_id, " ".join(body.reason.split()))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/kyc/cases/{case_id}/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Confirm someone else's recommendation: the customer is verified (kyc.approve)",
+)
+async def confirm_kyc(
+    case_id: uuid.UUID, body: KycNoteBody, staff: Staff, service: KycReviews, info: Info
+) -> Response:
+    note = " ".join(body.note.split()) if body.note else None
+    await service.confirm(staff, info, case_id, note or None)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/kyc/cases/{case_id}/decline",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Don't confirm someone else's recommendation (kyc.approve)",
+)
+async def decline_kyc(
+    case_id: uuid.UUID, body: KycDeclineBody, staff: Staff, service: KycReviews, info: Info
+) -> Response:
+    await service.decline(staff, info, case_id, " ".join(body.note.split()))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/kyc/cases/{case_id}/reject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reject a held check; the customer reads the reason (kyc.update)",
+)
+async def reject_kyc(
+    case_id: uuid.UUID, body: KycReasonBody, staff: Staff, service: KycReviews, info: Info
+) -> Response:
+    await service.reject(staff, info, case_id, " ".join(body.reason.split()))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

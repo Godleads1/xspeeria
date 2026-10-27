@@ -38,6 +38,6 @@ Migration 0011 adds to `kyc_cases`: `identity_key CHAR(64)` (set once, guard tri
 
 ## Open (not decided here)
 
-- **Who clears a held case, and how.** Staff review tools are paused waiting for the Figma file. Until then a held case stays `under_review`.
+- ~~**Who clears a held case, and how.**~~ Decided 2026-10-27: two staff members in the admin console (ADR-069).
 - Whether a duplicate should later be **refused** automatically, and what happens to the first account.
 - Retention of `identity_key` after an account closes (with SEC-028 retention periods).

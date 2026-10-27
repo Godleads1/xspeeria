@@ -386,6 +386,58 @@ export interface FraudStats {
   high_open: number;
 }
 
+export type KycQueue = 'held' | 'in_didit' | 'decided';
+export type KycReviewReason = 'DUPLICATE_IDENTITY' | 'IDENTITY_MISMATCH' | 'CHECKS_INCOMPLETE';
+export interface KycRow {
+  id: string;
+  ref: string;
+  customer: string;
+  customer_email: string;
+  country: 'NG' | 'GB' | 'US';
+  status: 'under_review' | 'approved' | 'rejected';
+  review_reason: KycReviewReason | null;
+  awaiting_second: boolean;
+  waiting_since: string;
+  decided_at: string | null;
+}
+export interface KycPage {
+  total: number;
+  items: KycRow[];
+  held: number;
+  in_didit: number;
+}
+export interface KycCaseReview {
+  id: string;
+  status: 'pending' | 'confirmed' | 'declined';
+  reason: string;
+  recommended_by: string | null;
+  recommended_by_id: string;
+  recommended_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+}
+export interface KycCaseDetail {
+  id: string;
+  ref: string;
+  status: KycRow['status'] | 'pending_documents' | 'expired';
+  review_reason: KycReviewReason | null;
+  in_didit: boolean;
+  country: string;
+  country_name: string;
+  provider_status: string;
+  identity: { legal_name: string | null; date_of_birth: string | null; id_type: string | null; issuing_country: string | null };
+  can_approve: boolean;
+  customer: { user_id: string; email: string | null; phone: string | null; account_status: string | null };
+  same_document_elsewhere: { user_id: string; email: string; account_status: string; check_status: string; name: string | null }[];
+  account_identity: { country: string; legal_name: string | null; date_of_birth: string | null }[];
+  decision_reason: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+  reviews: KycCaseReview[];
+}
+
 export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
@@ -517,6 +569,18 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
       const blob = await response.blob();
       return /^image\/(jpeg|png|webp)$/.test(blob.type) ? URL.createObjectURL(blob) : null;
     },
+    listKycCases: (q: { queue: KycQueue; search?: string; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams({ queue: q.queue });
+      if (q.search) p.set('q', q.search);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<KycPage>('GET', `/kyc/cases?${p.toString()}`);
+    },
+    kycCase: (id: string) => call<KycCaseDetail>('GET', `/kyc/cases/${encodeURIComponent(id)}`),
+    recommendKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/recommend`, { reason }),
+    confirmKyc: (id: string, note?: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/confirm`, note ? { note } : {}),
+    declineKyc: (id: string, note: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/decline`, { note }),
+    rejectKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/reject`, { reason }),
     listFraudAlerts: (q: { search?: string; status?: FraudStatus; rule?: FraudRule; offset?: number; limit?: number }) => {
       const p = new URLSearchParams();
       if (q.search) p.set('q', q.search);

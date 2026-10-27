@@ -63,7 +63,7 @@ Last updated: 19 Oct 2026.
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).
 - [ ] **Languages** — *You*: share the Figma link with the language screens; Yoruba, Igbo, Hausa, French, Arabic and Swahili texts need native-speaker review before launch.
 - [ ] **Ghana and Kenya deals** — *You*: decide which deals (cedi/shilling ⇄ naira, or ⇄ UK/US). Canada and UAE fit today's model; all four are after the MVP.
-- [ ] **Decide who clears held identity checks** — *You + Compliance*: a second account for an already-verified person is held for review (ADR-041); the staff review tools wait for the Figma file.
+- [x] **Decide who clears held identity checks** — done 27 Oct 2026: two staff members approve, one can reject (ADR-069).
 - [x] **App screens for the identity check** — *Build* — done 19 Oct 2026 for development builds (ADR-040).
 - [x] **Test Didit end to end** — *You + Build*: done 2026-10-19 (web build + tunnel); results signed, received (200) and applied; found one person verified on two accounts → ADR-041.
 - [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.

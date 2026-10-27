@@ -60,7 +60,7 @@
 | `GET /v1/kyc/cases/{id}` | `GET /v1/kyc/cases/current` | The app needs only "my latest check" |
 | Statuses pending_documents, under_review, approved, rejected | + `expired` | Abandoned/expired sessions and expired approvals |
 | `legal_name`, `date_of_birth`, `id_type` NOT NULL | Nullable until approved (CHECK enforces them when approved) | Known only after Didit's decision |
-| `POST /v1/admin/kyc/cases/{id}/decision` | Not built | Manual review happens in Didit's console for now; staff tools come later |
+| `POST /v1/admin/kyc/cases/{id}/decision` | Built differently (ADR-069) | Held checks: two-person approval in the console; Didit's own reviews stay in Didit's console |
 
 ## 5. Not built / open
 
