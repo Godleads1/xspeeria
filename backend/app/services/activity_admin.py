@@ -61,6 +61,88 @@ _STEP_ORDER = {
 }
 
 
+# --- fixed queries (bandit B608: no SQL is built from strings; filters are bound parameters) ---
+
+_CUSTOMER_COUNT = (
+    "SELECT count(*) FROM ("
+    "SELECT * FROM ("
+    "SELECT 'customer' AS source, a.at, a.category FROM customer_activity a WHERE a.user_id = :u "
+    "UNION ALL "
+    "SELECT 'staff', s.at, 'staff' FROM staff_audit_log s "
+    "WHERE (s.target_type = 'customer' AND s.target_id = CAST(:u AS text)) OR "
+    "(s.target_type = 'kyc_case' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM kyc_cases WHERE user_id = :u)) OR "
+    "(s.target_type = 'fraud_alert' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM fraud_alerts WHERE user_id = :u)) OR "
+    "(s.target_type = 'dispute' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM disputes WHERE initiator_user_id = :u))"
+    ") m WHERE (NOT CAST(:only_staff AS boolean) OR m.source = 'staff') "
+    "AND (CAST(:category AS text) IS NULL OR m.category = CAST(:category AS text)) "
+    "AND (CAST(:since AS timestamptz) IS NULL OR m.at >= CAST(:since AS timestamptz)) "
+    "AND (CAST(:until AS timestamptz) IS NULL OR m.at < CAST(:until AS timestamptz))"
+    ") c"
+)
+_CUSTOMER_PAGE = (
+    "SELECT * FROM ("
+    "SELECT 'customer' AS source, a.at, a.action, a.category, a.outcome, a.route, "
+    "a.method, a.status, a.match_id, a.offer_id, a.ref_id, a.detail, a.device, a.country, "
+    "NULL AS staff_name, NULL AS target_type "
+    "FROM customer_activity a WHERE a.user_id = :u "
+    "UNION ALL "
+    "SELECT 'staff', s.at, s.action, 'staff', 'done', NULL, NULL, NULL, NULL, NULL, NULL, "
+    "s.detail, NULL, NULL, st.name, s.target_type "
+    "FROM staff_audit_log s LEFT JOIN staff_accounts st ON st.id = s.staff_id "
+    "WHERE (s.target_type = 'customer' AND s.target_id = CAST(:u AS text)) OR "
+    "(s.target_type = 'kyc_case' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM kyc_cases WHERE user_id = :u)) OR "
+    "(s.target_type = 'fraud_alert' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM fraud_alerts WHERE user_id = :u)) OR "
+    "(s.target_type = 'dispute' AND s.target_id IN "
+    "(SELECT CAST(id AS text) FROM disputes WHERE initiator_user_id = :u))"
+    ") m WHERE (NOT CAST(:only_staff AS boolean) OR m.source = 'staff') "
+    "AND (CAST(:category AS text) IS NULL OR m.category = CAST(:category AS text)) "
+    "AND (CAST(:since AS timestamptz) IS NULL OR m.at >= CAST(:since AS timestamptz)) "
+    "AND (CAST(:until AS timestamptz) IS NULL OR m.at < CAST(:until AS timestamptz)) "
+    "ORDER BY m.at DESC LIMIT :limit OFFSET :offset"
+)
+_DEAL_ONE = (
+    "SELECT m.id AS match_id, t.id AS transaction_id, m.accepted_at, m.agreed_rate, "
+    "m.allocated_amount_minor, o.source_currency, o.target_currency, m.scale, "
+    "o.user_id AS owner_id, m.counterparty_user_id AS taker_id, ou.email AS owner_email, "
+    "tu.email AS taker_email, s.phase, s.closure_reason, s.id AS settlement_id "
+    "FROM matches m JOIN offers o ON o.id = m.offer_id "
+    "JOIN users ou ON ou.id = o.user_id JOIN users tu ON tu.id = m.counterparty_user_id "
+    "LEFT JOIN transactions t ON t.match_id = m.id "
+    "LEFT JOIN settlements s ON s.transaction_id = t.id "
+    "WHERE m.id = :m"
+)
+_DEALS_PAGE = (
+    "SELECT m.id AS match_id, t.id AS transaction_id, m.accepted_at, m.agreed_rate, "
+    "m.allocated_amount_minor, o.source_currency, o.target_currency, m.scale, "
+    "o.user_id AS owner_id, m.counterparty_user_id AS taker_id, ou.email AS owner_email, "
+    "tu.email AS taker_email, s.phase, s.closure_reason, s.id AS settlement_id "
+    "FROM matches m JOIN offers o ON o.id = m.offer_id "
+    "JOIN users ou ON ou.id = o.user_id JOIN users tu ON tu.id = m.counterparty_user_id "
+    "LEFT JOIN transactions t ON t.match_id = m.id "
+    "LEFT JOIN settlements s ON s.transaction_id = t.id "
+    # The reference the app shows is the start of the deal ID; emails match anywhere.
+    "WHERE CAST(:q AS text) IS NULL "
+    "OR lower(CAST(m.id AS text)) LIKE CAST(:q AS text) || '%' "
+    "OR lower(CAST(t.id AS text)) LIKE CAST(:q AS text) || '%' "
+    "OR lower(ou.email) LIKE CAST(:like AS text) OR lower(tu.email) LIKE CAST(:like AS text) "
+    "ORDER BY m.accepted_at DESC LIMIT :limit OFFSET :offset"
+)
+_DEALS_COUNT = (
+    "SELECT count(*) FROM matches m JOIN offers o ON o.id = m.offer_id "
+    "JOIN users ou ON ou.id = o.user_id JOIN users tu ON tu.id = m.counterparty_user_id "
+    "LEFT JOIN transactions t ON t.match_id = m.id "
+    "WHERE CAST(:q AS text) IS NULL "
+    "OR lower(CAST(m.id AS text)) LIKE CAST(:q AS text) || '%' "
+    "OR lower(CAST(t.id AS text)) LIKE CAST(:q AS text) || '%' "
+    "OR lower(ou.email) LIKE CAST(:like AS text) OR lower(tu.email) LIKE CAST(:like AS text)"
+)
+
+
 def _not_found() -> AppError:
     return AppError("RES_404_NOT_FOUND", "Not found.", status_code=status.HTTP_404_NOT_FOUND)
 
@@ -111,47 +193,18 @@ class ActivityAdminService:
         if not who:
             await self._db.rollback()
             raise _not_found()
-        # Staff actions about this customer: their account, identity checks, fraud alerts and
-        # the disputes they opened.
-        staff_targets = (
-            "(s.target_type = 'customer' AND s.target_id = CAST(:u AS text)) OR "
-            "(s.target_type = 'kyc_case' AND s.target_id IN "
-            "(SELECT CAST(id AS text) FROM kyc_cases WHERE user_id = :u)) OR "
-            "(s.target_type = 'fraud_alert' AND s.target_id IN "
-            "(SELECT CAST(id AS text) FROM fraud_alerts WHERE user_id = :u)) OR "
-            "(s.target_type = 'dispute' AND s.target_id IN "
-            "(SELECT CAST(id AS text) FROM disputes WHERE initiator_user_id = :u))"
-        )
-        merged = (
-            "SELECT 'customer' AS source, a.at, a.action, a.category, a.outcome, a.route, "
-            "a.method, a.status, a.match_id, a.offer_id, a.ref_id, a.detail, a.device, a.country, "
-            "NULL AS staff_name, NULL AS target_type "
-            "FROM customer_activity a WHERE a.user_id = :u "
-            "UNION ALL "
-            "SELECT 'staff', s.at, s.action, 'staff', 'done', NULL, NULL, NULL, NULL, NULL, NULL, "
-            "s.detail, NULL, NULL, st.name, s.target_type "
-            "FROM staff_audit_log s LEFT JOIN staff_accounts st ON st.id = s.staff_id "
-            f"WHERE {staff_targets}"
-        )
-        where = []
-        params: dict[str, Any] = {"u": user_id, "offset": offset, "limit": limit}
-        if category == "staff":
-            where.append("source = 'staff'")
-        elif category in CATEGORIES:
-            where.append("category = :category")
-            params["category"] = category
-        if since is not None:
-            where.append("at >= :since")
-            params["since"] = since
-        if until is not None:
-            where.append("at < :until")
-            params["until"] = until
-        cond = f"WHERE {' AND '.join(where)}" if where else ""
-        total = await self._db.scalar(text(f"SELECT count(*) FROM ({merged}) m {cond}"), params)
-        items = await self._rows(
-            f"SELECT * FROM ({merged}) m {cond} ORDER BY at DESC LIMIT :limit OFFSET :offset",
-            **params,
-        )
+        # Every filter is a bound parameter in one fixed query: no SQL is built from text.
+        params: dict[str, Any] = {
+            "u": user_id,
+            "only_staff": category == "staff",
+            "category": category if category in CATEGORIES else None,
+            "since": since,
+            "until": until,
+            "offset": offset,
+            "limit": limit,
+        }
+        total = await self._db.scalar(text(_CUSTOMER_COUNT), params)
+        items = await self._rows(_CUSTOMER_PAGE, **params)
         await self._db.rollback()
         w = who[0]
         return {
@@ -175,17 +228,6 @@ class ActivityAdminService:
 
     # --- deals -----------------------------------------------------------------------------
 
-    _DEALS = (
-        "SELECT m.id AS match_id, t.id AS transaction_id, m.accepted_at, m.agreed_rate, "
-        "m.allocated_amount_minor, o.source_currency, o.target_currency, m.scale, "
-        "o.user_id AS owner_id, m.counterparty_user_id AS taker_id, ou.email AS owner_email, "
-        "tu.email AS taker_email, s.phase, s.closure_reason, s.id AS settlement_id "
-        "FROM matches m JOIN offers o ON o.id = m.offer_id "
-        "JOIN users ou ON ou.id = o.user_id JOIN users tu ON tu.id = m.counterparty_user_id "
-        "LEFT JOIN transactions t ON t.match_id = m.id "
-        "LEFT JOIN settlements s ON s.transaction_id = t.id "
-    )
-
     def _deal(self, r: Any) -> dict[str, Any]:
         return {
             "match_id": r["match_id"],
@@ -206,30 +248,21 @@ class ActivityAdminService:
         self, p: StaffPrincipal, *, search: str | None, offset: int, limit: int
     ) -> dict[str, Any]:
         self._need(p)
-        params: dict[str, Any] = {"offset": offset, "limit": limit}
-        cond = ""
-        q = (search or "").strip()
-        if q:
-            params["q"] = q.lower()
-            params["like"] = f"%{q.lower()}%"
-            cond = (
-                "WHERE lower(CAST(m.id AS text)) LIKE :q || '%' "
-                "OR lower(CAST(t.id AS text)) LIKE :q || '%' "
-                "OR lower(ou.email) LIKE :like OR lower(tu.email) LIKE :like"
-            )
-        total = await self._db.scalar(
-            text(f"SELECT count(*) FROM ({self._DEALS} {cond}) d"), params
-        )
-        rows = await self._rows(
-            f"{self._DEALS} {cond} ORDER BY m.accepted_at DESC LIMIT :limit OFFSET :offset",
-            **params,
-        )
+        q = (search or "").strip().lower()
+        params: dict[str, Any] = {
+            "q": q or None,
+            "like": f"%{q}%" if q else None,
+            "offset": offset,
+            "limit": limit,
+        }
+        total = await self._db.scalar(text(_DEALS_COUNT), params)
+        rows = await self._rows(_DEALS_PAGE, **params)
         await self._db.rollback()
         return {"total": int(total or 0), "items": [self._deal(r) for r in rows]}
 
     async def timeline(self, p: StaffPrincipal, match_id: uuid.UUID) -> dict[str, Any]:
         self._need(p)
-        rows = await self._rows(f"{self._DEALS} WHERE m.id = :m", m=match_id)
+        rows = await self._rows(_DEAL_ONE, m=match_id)
         if not rows:
             await self._db.rollback()
             raise _not_found()
