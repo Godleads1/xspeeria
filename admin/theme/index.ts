@@ -160,6 +160,10 @@ export function themeCss(): string {
   return (
     `:root{${block(lightVars)}color-scheme:light;}` +
     `:root[data-theme="dark"]{${block(darkVars)}color-scheme:dark;}` +
+    // Open dropdown lists: Windows draws them on white when the box is see-through, while the
+    // text follows the theme, so in dark mode the options were white on white until hovered
+    // (owner, 2026-10-27). Give every option the theme's own surface and text colours.
+    `select option,select optgroup{background-color:${color.bg.canvas};color:${color.text.primary};}` +
     // The logo has a light-mode and a dark-mode file; show the one for the current theme.
     `:root[data-theme="dark"] .xs-on-light{display:none!important}` +
     `:root:not([data-theme="dark"]) .xs-on-dark{display:none!important}` +
