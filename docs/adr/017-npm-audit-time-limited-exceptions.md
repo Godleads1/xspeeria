@@ -45,7 +45,7 @@ approved SDK 57 stack.
 - `expo-updates` (over-the-air updates, the user of Expo code signing) is not installed, so
   the node-forge signature-verification path is not used by Xspeeria.
 - CI runners have read-only repository permissions and no deployment credentials.
-- Every new high/critical advisory still fails CI; these two expire on 2026-11-16.
+- Every new high/critical advisory still fails CI; the remaining node-forge exception expires on 2026-11-27 (renewed 2026-10-27).
 
 ## 3. Moderates (non-blocking, unchanged policy)
 
@@ -62,10 +62,11 @@ approved SDK 57 stack.
 | 2026-10-17 | Created; braces and node-forge accepted until 2026-11-16 | Product owner (option 1) |
 | 2026-10-17 | Gate hardened after review (ADR-018): future-dated approvals, unknown severities and npm count mismatches now fail | Independent review |
 | 2026-10-26 | braces exception removed (the advisory no longer matches any installed version). zod GHSA-mrhx-c7xc-m3w5 (high, <4.6.6) accepted until 2026-11-25: reached only via @expo/cli (zod 3), not in the app bundle; the fix is zod 4, which Expo has not adopted | Product owner ("yes") |
+| 2026-10-27 | zod fixed instead of excepted: root `package.json` override pins zod to 4.6.7 (only consumer is @expo/cli, which uses the zod 3/4-compatible core API: object, string, enum, array, union, literal, strict, describe). Checked: Expo CLI schemas parse/reject correctly, `expo config`, `expo export --platform android`, `expo start`, mobile tsc and jest (691) pass. zod exception deleted. node-forge renewed to 2026-11-27: still no patched release (latest 1.4.0; Expo SDK 57 and 58 CLIs both depend on it) | Product owner ("Renew to 27 Nov") |
 
 ## 5. Consequences
 
-- CI is green while these advisories are open; it turns red automatically on 2026-11-17
+- CI is green while these advisories are open; it turns red automatically on 2026-11-28
   unless they are fixed upstream (and the entries removed) or re-approved.
 - When Expo ships patched dependencies, update and delete the matching entries; the gate
   enforces the deletion.

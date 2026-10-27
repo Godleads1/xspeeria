@@ -85,7 +85,7 @@ Last updated: 19 Oct 2026.
 ## 3. Waiting on something else
 
 - [ ] **Sharper Figma artwork** when the Figma daily limit resets (or you export them): Home card texture (51:1720), avatar photo (39:2968), card backgrounds (1036:4840 / 4864 / 4888) at 3×. (ADR-023)
-- [ ] **npm audit exceptions expire 16 Nov 2026** — review before then or CI will fail. (`.github/npm-audit-exceptions.json`, ADR-017)
+- [ ] **node-forge npm audit exception expires 27 Nov 2026** — review before then or CI will fail; zod was fixed on 27 Oct (override to 4.6.7), so only node-forge is left. (`.github/npm-audit-exceptions.json`, ADR-017)
 
 ## 4. Before going live (production)
 
