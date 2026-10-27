@@ -622,6 +622,12 @@ Do not delete or silently ignore it.
 
 Report material conflicts.
 
+## Production Readiness Review (2026-10-27)
+
+`docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md`
+
+Release gate result: **DO NOT LAUNCH**. It lists the critical blockers (partner bank, licence, hosting, backups, SMS/email, monitoring, independent test) and the order to fix them. It is an AI-run review, so it does not replace SEC-040. Repeat the review before any pilot.
+
 ---
 
 # 15. REFERENCE MATERIAL
