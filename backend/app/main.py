@@ -117,6 +117,8 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
     relaxed = settings.test_limits_dev
     if relaxed and settings.app_env != "local":
         raise ValueError("TEST_LIMITS_DEV is allowed only with APP_ENV=local")
+    if settings.demo_autopilot and settings.app_env != "local":
+        raise ValueError("DEMO_AUTOPILOT is allowed only with APP_ENV=local")
     return AuthRuntime(
         keys=keys,
         secret_box=box,
@@ -264,6 +266,21 @@ async def _escrow_loop(settings: Settings, runtime: AuthRuntime) -> None:
             log.exception("escrow_tick_failed")
 
 
+async def _demo_autopilot_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """Local demo testing only (owner 2026-10-27): the robot demo customers trade back."""
+    from app.db.session import get_sessionmaker
+    from app.services.demo_autopilot import DemoAutopilot
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(settings.escrow_tick_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                await DemoAutopilot(db, runtime.clock, runtime.pretend_bank, settings).run_once()
+        except Exception:  # noqa: BLE001 - a failed round must not stop the loop
+            log.exception("demo_autopilot_failed")
+
+
 async def _push_loop(settings: Settings, runtime: AuthRuntime) -> None:
     """Send new notifications to phones (ADR-052). Runs until cancelled."""
     from app.db.session import get_sessionmaker
@@ -302,6 +319,8 @@ def create_app(
             and resolved.escrow_tick_seconds > 0
         ):
             tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
+        if resolved.demo_autopilot and resolved.database_url:
+            tasks.append(asyncio.create_task(_demo_autopilot_loop(resolved, runtime)))
         if (
             resolved.database_url
             and runtime.push_sender is not None

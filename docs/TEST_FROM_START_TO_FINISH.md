@@ -15,10 +15,18 @@ The server refuses every demo switch anywhere else.
 
 | Who | Sign in with | Verified in | Bank accounts | Has a live offer |
 |---|---|---|---|---|
-| Ada Obi | `ada.demo@example.com` or +234 803 000 0001 | Nigeria | NGN, USD, GBP | Sells ₦500,000 for dollars at 1,300 |
-| Ben Carter | `ben.demo@example.com` or +44 7700 900001 | UK and Nigeria | GBP, NGN | Sells £200 for naira at 1,750 |
-| Chloe Adams | `chloe.demo@example.com` or +1 202 555 0101 | United States | USD, NGN | Sells $300 for naira at 1,320 |
-| Dan | `dan.demo@example.com` or +234 803 000 0004 | Not yet | None | — |
+| **Ada Obi — you** | `ada.demo@example.com` or +234 803 000 0001 | Nigeria | NGN, USD, GBP | None (make your own) |
+| Ben Carter — **robot** | `ben.demo@example.com` or +44 7700 900001 | UK and Nigeria | GBP, NGN | Sells £200 for naira at 1,750 |
+| Chloe Adams — **robot** | `chloe.demo@example.com` or +1 202 555 0101 | United States | USD, NGN | Sells $300 for naira at 1,320 |
+| Dan — you | `dan.demo@example.com` or +234 803 000 0004 | Not yet | None | — |
+
+**You play Ada (or Dan). The server plays Ben and Chloe**, like playing FIFA against the computer. With `DEMO_AUTOPILOT=true`, every few seconds the robots:
+- **take your offers** they can pay for, after a short pause (Chloe pays dollars, Ben pays pounds);
+- **choose their bank account** on any deal with you;
+- **pay their side into the pretend escrow** by themselves;
+- **post their offer again** once you've taken it all, so the Market never runs dry.
+
+You only do your own side. You'll see each step arrive on your screen and in your notifications. The robots follow the same rules as people; the one shortcut is that they don't do a face check, since nobody holds a robot's phone.
 
 **Demo staff** for the admin console. The password for all of them is **`Xspeeria demo 2026!`**.
 
@@ -57,6 +65,7 @@ FACE_CHECK_DEV=true
 BANK_CHECK_DEV=true
 PRETEND_BANK=true
 TEST_LIMITS_DEV=true
+DEMO_AUTOPILOT=true
 LOCAL_PHOTO_DIR=.local-photos
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081
 KYC_DEV_BYPASS=false
@@ -75,6 +84,7 @@ What these switches do:
 - `FACE_CHECK_DEV`: the selfie check passes by itself, without a camera.
 - `BANK_CHECK_DEV`: new bank accounts are accepted, under the name "DEV ACCOUNT HOLDER".
 - `PRETEND_BANK`: the pretend escrow bank.
+- `DEMO_AUTOPILOT`: Ben and Chloe trade back by themselves (the robots).
 - `TEST_LIMITS_DEV`: lets you sign in and approve many times without hitting the safety limits (they're 20 times higher).
 - `CORS_ALLOWED_ORIGINS`: lets the app's browser version talk to the server.
 - `KYC_DEV_BYPASS=false`: Dan really is unverified, so you can see that experience.
@@ -131,9 +141,7 @@ Use **your** address in place of `192.168.1.20`. Then choose:
   - In the browser, set `$env:EXPO_PUBLIC_API_URL="http://localhost:8000"` instead before `npx expo start -c`.
   - Reloading the browser page signs you out. That's normal for the browser version: just sign in again.
 
-To use **two customers at once** (you need two for a deal):
-- use your phone for one and the browser for the other; or
-- use two browser windows, one normal and one private/incognito.
+You only need **one** sign-in (Ada); the robots are the other side. To watch a robot's side too, sign in as Ben or Chloe in a second browser window, but don't press their buttons.
 
 ## Part 3 — a full test, step by step
 
@@ -143,15 +151,21 @@ To use **two customers at once** (you need two for a deal):
 2. **Confirm it's you with a selfie** appears, because this is a new phone for the account. Tap **Start face check**; it passes by itself.
 3. Home shows **Ada Obi** and today's best rates from the demo offers.
 
-### B. A complete deal with escrow (Ada buys dollars from Chloe)
+### B. A complete deal with a robot (you are Ada)
 
-1. **Ada:** Market › Buy › choose **USD**. Chloe's offer is listed. Tap **Buy**, enter an amount (for example 50), approve with the face check, and **Take offer**.
-2. **Chloe** (second phone or browser window): sign in with `chloe.demo@example.com` / `482613`.
-3. **Both:** Market › **⋮ › My Deals** › **Choose payout account**. Pick the account (Ada: USD, Chloe: NGN) and approve.
-4. **Both:** **My Deals › Escrow steps**. Each side sees the amount + 1% fee and the pretend bank's details. Each taps **Simulate my transfer** within **5 minutes**.
-5. When both have "paid", the pretend bank pays out at once and the deal shows **Completed**. If only one side pays in time, that side gets everything back, fee included.
+**Taking a robot's offer:**
+1. Market › Buy › choose **USD**. Chloe's offer is listed. Tap **Buy**, enter an amount (for example 50), approve with the face check, and **Take offer**.
+2. Within about 15 seconds Chloe chooses her bank account by herself.
+3. Market › **⋮ › My Deals** › **Choose payout account**: pick your **USD** account and approve.
+4. **My Deals › Escrow steps** shows your amount + 1% fee and the pretend bank's details. Tap **Simulate my transfer** within **5 minutes**.
+5. Chloe pays her side by herself. The pretend bank pays out and the deal shows **Completed**.
 
-Try the same with Ben's pound offer.
+**Letting a robot take your offer:**
+1. Market › **Sell**: offer naira for **USD** (Chloe will take it) or for **GBP** (Ben will take it), at a rate no higher than the official rate.
+2. Within about 15 seconds a robot takes all of it. You get a notification and it appears in **My Deals**.
+3. Choose your payout account, then **Simulate my transfer**, as above. The robot does its side.
+
+If you don't pay within 5 minutes, the deal is cancelled. A side that already paid gets everything back, fee included; you can test that too.
 
 ### C. Things to try in the app
 

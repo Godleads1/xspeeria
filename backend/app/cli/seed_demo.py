@@ -34,6 +34,7 @@ from app.models.kyc import KycCase
 from app.models.marketplace import Offer
 from app.models.payouts import Beneficiary
 from app.models.staff import StaffAccount, StaffRole
+from app.models.tiers import TierCheck
 from app.services.auth import Principal
 from app.services.offers import OfferService
 from app.services.payouts import PayoutAccountService
@@ -59,6 +60,8 @@ class DemoCustomer:
     accounts: tuple[tuple[str, str, str, str | None], ...]
     #: (source currency, target currency, amount, rate) live offers.
     offers: tuple[tuple[str, str, str, str], ...]
+    #: Played by the server when DEMO_AUTOPILOT=true (app.services.demo_autopilot).
+    robot: bool = False
 
 
 # Phone numbers come from ranges reserved for fiction/drama where they exist (UK 07700 900xxx,
@@ -74,7 +77,8 @@ CUSTOMERS: tuple[DemoCustomer, ...] = (
             ("USD", "Chase", "223456781", "021000021"),
             ("GBP", "Barclays", "22345671", "200000"),
         ),
-        offers=(("NGN", "USD", "500000", "1300"),),
+        # You play Ada: she starts with no offer of her own.
+        offers=(),
     ),
     DemoCustomer(
         key="ben",
@@ -86,6 +90,7 @@ CUSTOMERS: tuple[DemoCustomer, ...] = (
         ),
         accounts=(("GBP", "Barclays", "12345678", "200000"), ("NGN", "GTBank", "0123456782", None)),
         offers=(("GBP", "NGN", "200", "1750"),),
+        robot=True,
     ),
     DemoCustomer(
         key="chloe",
@@ -97,6 +102,7 @@ CUSTOMERS: tuple[DemoCustomer, ...] = (
             ("NGN", "Zenith Bank", "0123456783", None),
         ),
         offers=(("USD", "NGN", "300", "1320"),),
+        robot=True,
     ),
     # Not verified yet: to try sign-in, the Market's "verify first" and the country choice.
     DemoCustomer(
@@ -181,9 +187,26 @@ async def seed() -> list[str]:
                             updated_at=now,
                         )
                     )
+                if c.robot:
+                    # Robots get Tier 3 (ADR-058) so daily limits don't stop them taking
+                    # your offers while you test.
+                    for kind in ("bvn", "address", "proof_of_address", "source_of_funds"):
+                        db.add(
+                            TierCheck(
+                                id=uuid.uuid4(),
+                                user_id=user.id,
+                                kind=kind,
+                                status="approved",
+                                reason="demo data",
+                                created_at=now,
+                            )
+                        )
                 await db.commit()
                 where = ", ".join(x[0] for x in c.checks) or "no country yet"
-                report.append(f"customer {c.email} ({c.phone}): created, verified in {where}")
+                robot = " — played by the server (DEMO_AUTOPILOT)" if c.robot else ""
+                report.append(
+                    f"customer {c.email} ({c.phone}): created, verified in {where}{robot}"
+                )
 
                 principal = Principal(user_id=user.id, session_id=uuid.uuid4())
                 if c.accounts and runtime.beneficiary_box is None:
