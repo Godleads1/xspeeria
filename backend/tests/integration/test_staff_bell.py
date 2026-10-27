@@ -9,6 +9,7 @@ alive.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -25,10 +26,11 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 BELL = "/api/v1/admin/notifications"
 
 
-async def _bell(c: AsyncClient) -> dict:
+async def _bell(c: AsyncClient) -> dict[str, Any]:
     r = await c.get(BELL, headers=H)
     assert r.status_code == 200, r.text
-    return r.json()
+    body: dict[str, Any] = r.json()
+    return body
 
 
 async def test_two_person_check_moves_through_the_bells(
