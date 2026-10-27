@@ -89,13 +89,20 @@ Last updated: 19 Oct 2026.
 
 ## 4. Before going live (production)
 
-- [ ] **Passkeys** (Face ID / fingerprint as the second factor) — needs a native app build and a website domain. (ADR-008 §3)
+Full review with the release classification: `docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md` (**DO NOT LAUNCH** — partner bank, licence, hosting, backups, SMS/email, monitoring and an independent test are still missing).
+
+- [x] ~~**Passkeys**~~ — replaced by fingerprint on a trusted phone + face check (ADR-054, owner 2026-10-20). (Checked 2026-10-27.)
 - [ ] **Shared rate limiter (Redis)** before running more than one server; trusted-proxy setting for client addresses. (ADR-025 §4)
 - [ ] **Secret manager and key rotation** for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [ ] **Database row-level security** as a second layer of permission checks. (ADR-025 §1.4)
-- [ ] **PIN reset flow** (requires 2FA) and Support's identity re-verification procedure. (ADR-008, ADR-025 §1.3)
-- [ ] **Email address verification.** (ADR-025 §3)
-- [ ] **Payout endpoints must refuse during the 24-hour payout hold**, and every sensitive endpoint must require a step-up approval. (ADR-026)
+- [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
+- [ ] **Support's procedure** for a customer who can't pass the face check (lost phone, changed appearance) — *Build drafts, You approve*. (ADR-054)
+- [x] **Email address verification** — built: sign-up needs the email code before any session (ADR-054). A real email provider is still needed (§2). (Checked 2026-10-27.)
+- [x] **Step-up on sensitive actions** — built: payout accounts, choosing payouts, taking offers, PIN and contact changes (`STEP_UP_ACTIONS`). The 24-hour hold was removed by the owner (DEC-044). (Checked 2026-10-27.)
+- [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
+- [ ] **Connect a real SMS and email provider** once chosen — *Build* (only developer senders exist).
+- [ ] **Super Admin hardware security key** before live money — *Build* (ADR-051 Decision 2).
+- [ ] **Backups with a recorded restore, and a "pause all deals" switch** — *Build*, after hosting. (SEC-030, SEC-039)
 - [ ] **Deployment basics:** separate environments, deploy pipeline, SBOM, alerting, incident and disaster-recovery runbooks. (SEC-033 to SEC-039)
 - [ ] **Independent penetration test** before launch. (SEC-040)
 - [ ] **Rule to keep:** screenshots of the development build show demo balances — never use them in marketing, investor, partner or regulator material. (ADR-023 §3)
