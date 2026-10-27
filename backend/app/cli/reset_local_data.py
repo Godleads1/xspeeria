@@ -26,6 +26,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 #: (append-only reference data), `partners` (the pretend banks), staff tables, or
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
+    "customer_activity",
     "tier_checks",
     "offer_queue_entries",
     "fraud_alerts",

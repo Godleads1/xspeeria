@@ -17,6 +17,7 @@ export const MODULES = [
   { id: 'outages', label: 'Service outages' },
   { id: 'adverts', label: 'Adverts' },
   { id: 'monitoring', label: 'System health' },
+  { id: 'activity', label: 'Activity and transactions' },
   { id: 'staff', label: 'Staff' },
   { id: 'roles', label: 'Roles' },
   { id: 'audit', label: 'Audit log' },

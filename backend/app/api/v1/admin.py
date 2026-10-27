@@ -27,6 +27,7 @@ from app.api.auth_deps import client_address, get_auth_runtime, get_db_session, 
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.services.activity_admin import ActivityAdminService
 from app.services.adverts import AdvertService
 from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
@@ -1241,3 +1242,61 @@ async def system_health(
     window: Annotated[Literal["1h", "24h", "7d"], Query()] = "1h",
 ) -> Any:
     return await service.view(staff, window)
+
+
+# --- Customer activity and deal timelines (ADR-073; Super Admin, 5 years) ---------------------
+
+
+async def get_activity_admin(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ActivityAdminService:
+    return ActivityAdminService(db)
+
+
+ActivityAdmin = Annotated[ActivityAdminService, Depends(get_activity_admin)]
+
+
+@router.get("/users/{user_id}/activity", summary="Everything one customer did (activity.read)")
+async def customer_activity(
+    user_id: uuid.UUID,
+    staff: Staff,
+    service: ActivityAdmin,
+    category: Annotated[
+        Literal[
+            "account",
+            "security",
+            "identity",
+            "market",
+            "deal",
+            "payout",
+            "dispute",
+            "other",
+            "staff",
+        ]
+        | None,
+        Query(),
+    ] = None,
+    since: Annotated[datetime | None, Query()] = None,
+    until: Annotated[datetime | None, Query()] = None,
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 50,
+) -> Any:
+    return await service.customer(
+        staff, user_id, category=category, since=since, until=until, offset=offset, limit=limit
+    )
+
+
+@router.get("/deals", summary="Deals by the reference customers see (activity.read)")
+async def list_deals(
+    staff: Staff,
+    service: ActivityAdmin,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> Any:
+    return await service.deals(staff, search=q, offset=offset, limit=limit)
+
+
+@router.get("/deals/{match_id}", summary="One deal's full timeline (activity.read)")
+async def deal_timeline(match_id: uuid.UUID, staff: Staff, service: ActivityAdmin) -> Any:
+    return await service.timeline(staff, match_id)

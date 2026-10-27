@@ -44,6 +44,7 @@ MODULES = (
     "outages",
     "adverts",
     "monitoring",
+    "activity",
     "staff",
     "roles",
     "audit",
