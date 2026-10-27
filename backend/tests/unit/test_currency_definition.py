@@ -368,6 +368,8 @@ class TestPackageRegistration:
             "adverts",
             "fraud_alerts",
             "kyc_reviews",
+            "api_metrics",
+            "job_status",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -415,10 +417,10 @@ class TestPackageRegistration:
         assert result.returncode == 0, result.stderr
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
-            "['adverts', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
+            "['adverts', 'api_metrics', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
             "'currency_definitions', 'dispute_categories', 'dispute_messages', 'disputes', "
             "'fraud_alerts', "
-            "'idempotency_records', "
+            "'idempotency_records', 'job_status', "
             "'kyc_cases', 'kyc_reviews', 'kyc_webhook_events', "
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "

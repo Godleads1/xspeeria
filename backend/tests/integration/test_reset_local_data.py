@@ -18,13 +18,15 @@ def test_every_account_table_is_listed() -> None:
 
     # Staff accounts are not customer data: a local reset keeps the admin console log-ins, and
     # the dispute category list staff manage (ADR-063), the outage history (ADR-066) and adverts
-    # (ADR-067).
+    # (ADR-067), and the API monitoring figures (ADR-072).
     kept = {
         "currency_definitions",
         "partners",
         "dispute_categories",
         "service_outages",
         "adverts",
+        "api_metrics",
+        "job_status",
     } | {t for t in Base.metadata.tables if t.startswith("staff_")}
     assert set(USER_TABLES) == set(Base.metadata.tables) - kept
 

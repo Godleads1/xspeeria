@@ -45,6 +45,7 @@ from app.models.identity import (
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.models.kyc_reviews import KycReview
 from app.models.marketplace import IdempotencyRecord, Match, Offer
+from app.models.monitoring import ApiMetric, JobStatus
 from app.models.notifications import Notification, PushDelivery, PushToken
 from app.models.outages import ServiceOutage
 from app.models.payouts import Beneficiary, MatchPayoutSelection
@@ -70,6 +71,8 @@ __all__ = [
     "FraudAlert",
     "KycCase",
     "KycReview",
+    "ApiMetric",
+    "JobStatus",
     "KycWebhookEvent",
     "Notification",
     "PushDelivery",
