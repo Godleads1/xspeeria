@@ -56,7 +56,7 @@ Last updated: 19 Oct 2026.
 - [x] **Set up Didit** — *You*: workflow "Compliance workflow" published; keys in your own `.env` (2026-10-19).
 - [ ] **Add `KYC_IDENTITY_KEY`** — *You*: one more line in your own `.env` (ADR-041); the server will not start with Didit on without it.
 - [x] **Confirm the Nigerian ID rule** — *You*: confirmed 2026-10-19: the Nigerian check needs a **Nigerian-issued ID**; a foreign passport does not count (ADR-042).
-- [ ] **App: country choice and region screens** — *Build*: the app still starts only the Nigerian check; UK/US users need the Figma "Trade in Your New Location" and "KYC approved regions" screens connected (ADR-042).
+- [x] **App: country choice and region screens** — done: region screens connected (ADR-045); "Verify your identity" now asks which country you pay from (ADR-071, 2026-10-27).
 - [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
 - [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
 - [ ] **SMS provider** — *You*: later (ADR-044 N-4).
