@@ -95,7 +95,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Evidence | Gap / next action |
 |---|---|---|---|
-| SEC-036 | IMPLEMENTED (partial) | JSON logs; request ID (sanitised) and one access line per request with route template, status, duration and user ID only; logging rule F-16 decided (ADR-025 §1.8); test that PINs, codes, tokens and full phone/email never reach logs (`test_logs_never_carry_pins_codes_tokens_or_full_numbers`). | Alerting (SEC-037); log sink and retention. |
+| SEC-036 | IMPLEMENTED (partial) | JSON logs; request ID (sanitised) and one access line per request with route template, status, duration and user ID only; logging rule F-16 decided (ADR-025 §1.8); test that PINs, codes, tokens and full phone/email never reach logs (`test_logs_never_carry_pins_codes_tokens_or_full_numbers`). Customer activity log (ADR-073): every customer change and sign-in step by route template, no body or secrets, append-only (DB trigger), kept 5 years, Super Admin only (`test_activity_log.py`). | Alerting (SEC-037); log sink and retention. |
 | SEC-037 | IMPLEMENTED (partial, ADR-072) | Every API (own routes, webhooks, outside systems) counted and timed per minute, background jobs and escrow queues on a System Health page with red/amber warnings, Super Admin only (`test_system_health.py`). | Alerts that reach a person without the page open (needs an email/SMS provider and an on-call person); auth-failure and privilege-change alert rules. |
 | SEC-038 | NOT STARTED | — | Incident response runbook. |
 | SEC-039 | NOT STARTED | — | DR test; "kill switch" to disable transaction flows. |
@@ -108,5 +108,5 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | FX-01 | DOCUMENTED | Server-owned values (Standing Standards §7); trades API. |
 | FX-02 | DOCUMENTED | Banking Integration Spec; webhook verification not built. |
 | FX-03 | **OPEN — GAP ACCEPTED FOR SIMULATION** | The 24-hour payout hold (ADR-008) was removed by the product owner on 2026-10-19 (DEC-044): payouts are immediate, protected by authenticator codes on adding and choosing accounts. Release can be stopped by a blocking hold (ADR-037), but no risk check for "new account + immediate payout" and no freeze/escalation process exist. **Must be met before go-live.** |
-| FX-04 | DOCUMENTED | `docs/adr/002-financial-event-ledger-architecture.md`. |
+| FX-04 | IMPLEMENTED (partial, ADR-073) | `docs/adr/002-financial-event-ledger-architecture.md`. Per-deal timeline: offer, take, payout choices, every escrow event with side, amount and fee, holds, disputes, refunds and the customers' own steps, read-only for the Super Admin; customer activity append-only and kept 5 years (`test_activity_log.py`). |
 | FX-05 | IMPLEMENTED | No balance/wallet wording guard test in the app (`no-balance.test.ts`); custody truth in Standing Standards §2. Approved exception: Figma demo figures in development builds only, marked "Demo", tested empty when `DEMO_MODE` is false (`docs/adr/023-figma-exact-home-cards-demo.md`). |

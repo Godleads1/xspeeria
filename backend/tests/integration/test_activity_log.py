@@ -66,6 +66,8 @@ async def test_a_deal_timeline_from_offer_to_payout(
     assert d["ref"] == ref and d["phase"] == "COMPLETED"
     assert d["amount"] == "200.00" and d["currency"] == "USD" and d["rate"] == "1320.500000"
     kinds = [e["kind"] for e in d["events"]]
+    taken = next(e for e in d["events"] if e["kind"] == "offer_taken")
+    assert taken["amount"] == "200.00" and taken["currency"] == "USD"
     for expected in (
         "offer_posted",
         "offer_taken",

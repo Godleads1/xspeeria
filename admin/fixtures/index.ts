@@ -14,7 +14,7 @@ export interface NavItem {
   readonly permission?: string;
   /** Figma admin menu: work areas on top, then the "ADMIN" section. */
   readonly section?: 'work' | 'admin';
-  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile' | 'health';
+  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile' | 'health' | 'deals';
 }
 
 /**
@@ -29,6 +29,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'reversals', label: 'Reversal', href: '/reversals', permission: 'reversals.read', section: 'work', icon: 'reversals' },
   { id: 'fraud', label: 'Fraud Management', href: '/fraud', permission: 'fraud_alerts.read', section: 'work', icon: 'fraud' },
   { id: 'kyc', label: 'Identity checks', href: '/kyc', permission: 'kyc.read', section: 'work', icon: 'kyc' },
+  { id: 'deals', label: 'Transactions', href: '/deals', permission: 'activity.read', section: 'work', icon: 'deals' },
   { id: 'staff', label: 'Staff', href: '/staff', permission: 'staff.read', section: 'admin', icon: 'staff' },
   { id: 'users', label: 'Users', href: '/users', permission: 'users.read', section: 'admin', icon: 'staff' },
   { id: 'audit', label: 'Audit Logs', href: '/audit', permission: 'audit.read', section: 'admin', icon: 'audit' },

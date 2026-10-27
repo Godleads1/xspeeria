@@ -47,6 +47,20 @@ describe('users', () => {
     expect(screen.queryByTestId('menu-u-1')).toBeNull();
   });
 
+  it('offers "View activity" to the Super Admin (activity.read) only', async () => {
+    const go = vi.fn();
+    const real = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...real, assign: go } });
+    try {
+      await show(me('super_admin', ['users.read', 'activity.read']));
+      fireEvent.click(screen.getByTestId('menu-u-1'));
+      fireEvent.click(screen.getByTestId('activity-u-1'));
+      expect(go).toHaveBeenCalledWith('/users/activity?id=u-1');
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: real });
+    }
+  });
+
   it('asks the server with the search and status', async () => {
     const api = await show(me('support_agent', ['users.read']));
     fireEvent.change(screen.getByTestId('users-search'), { target: { value: 'ada' } });

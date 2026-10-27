@@ -255,6 +255,7 @@ class ActivityAdminService:
             "offer_posted",
             "offer_owner",
             amount=_money(offer["source_amount_minor"], offer["scale"]),
+            currency=deal["source_currency"],
             rate=str(offer["desired_rate"]),
         )
         add(
@@ -262,6 +263,7 @@ class ActivityAdminService:
             "offer_taken",
             "taker",
             amount=_money(deal["allocated_amount_minor"], deal["scale"]),
+            currency=deal["source_currency"],
             rate=str(deal["agreed_rate"]),
         )
         for c in await self._rows(

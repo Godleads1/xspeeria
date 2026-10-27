@@ -386,6 +386,68 @@ export interface FraudStats {
   high_open: number;
 }
 
+/** Customer activity log and deal timelines (ADR-073): Super Admin, kept 5 years. */
+export type ActivityCategory = 'account' | 'security' | 'identity' | 'market' | 'deal' | 'payout' | 'dispute' | 'other' | 'staff';
+export interface ActivityItem {
+  source: 'customer' | 'staff';
+  at: string;
+  action: string;
+  category: ActivityCategory;
+  outcome: 'done' | 'refused' | 'failed';
+  route: string | null;
+  method: string | null;
+  status: number | null;
+  match_id: string | null;
+  offer_id: string | null;
+  ref_id: string | null;
+  detail: Record<string, unknown> | null;
+  device: string | null;
+  country: string | null;
+  staff_name: string | null;
+  target_type: string | null;
+  deal_ref: string | null;
+}
+export interface CustomerActivityPage {
+  customer: { id: string; name: string | null; email: string; phone: string; status: string; joined_at: string };
+  total: number;
+  items: ActivityItem[];
+}
+export interface DealParty {
+  id: string;
+  email: string;
+}
+export interface DealRow {
+  match_id: string;
+  ref: string;
+  transaction_id: string | null;
+  taken_at: string;
+  currency: string;
+  counter_currency: string;
+  amount: string;
+  rate: string;
+  offer_owner: DealParty;
+  taker: DealParty;
+  phase: string | null;
+  closure_reason: string | null;
+}
+export interface DealEvent {
+  at: string;
+  kind: string;
+  by: string;
+  amount?: string | null;
+  fee?: string | null;
+  currency?: string | null;
+  rate?: string;
+  accounts?: number;
+  hold?: string;
+  outcome?: string | null;
+  reason?: string;
+  dispute_id?: string;
+}
+export interface DealTimeline extends DealRow {
+  events: DealEvent[];
+}
+
 /** System Health (ADR-072): counts and timings only, Super Admin. */
 export type HealthWindow = '1h' | '24h' | '7d';
 export type HealthStatus = 'ok' | 'warning' | 'problem';
@@ -662,6 +724,23 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     rejectKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/reject`, { reason }),
     staffWork: () => call<StaffWorkFeed>('GET', '/notifications'),
     systemHealth: (window: HealthWindow) => call<SystemHealth>('GET', `/system-health?window=${window}`),
+    customerActivity: (id: string, q: { category?: ActivityCategory; since?: string; until?: string; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.category) p.set('category', q.category);
+      if (q.since) p.set('since', q.since);
+      if (q.until) p.set('until', q.until);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<CustomerActivityPage>('GET', `/users/${encodeURIComponent(id)}/activity?${p.toString()}`);
+    },
+    listDeals: (q: { search?: string; offset?: number; limit?: number }) => {
+      const p = new URLSearchParams();
+      if (q.search) p.set('q', q.search);
+      p.set('offset', String(q.offset ?? 0));
+      p.set('limit', String(q.limit ?? 50));
+      return call<{ total: number; items: DealRow[] }>('GET', `/deals?${p.toString()}`);
+    },
+    deal: (id: string) => call<DealTimeline>('GET', `/deals/${encodeURIComponent(id)}`),
     staffWorkSeen: () => call<void>('POST', '/notifications/seen'),
     listFraudAlerts: (q: { search?: string; status?: FraudStatus; rule?: FraudRule; offset?: number; limit?: number }) => {
       const p = new URLSearchParams();
