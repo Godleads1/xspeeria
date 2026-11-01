@@ -625,6 +625,14 @@ class DisputeAdminService:
         """A staff member opens a case for a customer (ADR-051 decision 6), through the same
         rules as the app: a dispute pauses the deal's escrow; the customer must be a party."""
         self._need(principal, "disputes.create")
+        # F-002: check every value before anything is written. Blank text is refused (the
+        # description) or treated as not given (the desired resolution).
+        description = description.strip()
+        desired_resolution = (desired_resolution or "").strip() or None
+        if not description:
+            raise _err(
+                "VAL_422_MISSING_FIELD", "Describe the problem.", 422, {"field": "description"}
+            )
         if priority not in DISPUTE_PRIORITIES:
             raise _err("VAL_422_MISSING_FIELD", "Choose the priority.", 422, {"field": "priority"})
         cat = await self._db.get(DisputeCategory, category)
@@ -640,18 +648,23 @@ class DisputeAdminService:
         from app.services.auth import Principal
         from app.services.disputes import DisputeService
 
+        # F-002: the case, any escrow hold, the staff attribution and the audit entry are
+        # committed together, or not at all.
         view = await DisputeService(self._db, self._clock).open(
             Principal(user_id=user_id, session_id=uuid.uuid4()),
             transaction_id=transaction_id,
             reason=category,
             description=description,
+            staff_fields={
+                "opened_by_staff_id": principal.staff_id,
+                "priority": priority,
+                "desired_resolution": desired_resolution,
+            },
+            commit=False,
         )
-        d = await self._db.get(Dispute, uuid.UUID(view["dispute_id"]), with_for_update=True)
+        d = await self._db.get(Dispute, uuid.UUID(view["dispute_id"]))
         if d is None:  # pragma: no cover - just created
             raise _not_found()
-        d.opened_by_staff_id = principal.staff_id
-        d.priority = priority
-        d.desired_resolution = desired_resolution
         self._audit(
             principal, info, "dispute_opened_for_customer", "dispute", d.id, {"category": category}
         )

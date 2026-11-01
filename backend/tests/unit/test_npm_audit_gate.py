@@ -206,3 +206,10 @@ def test_cli_fails_on_unlisted_high(tmp_path: Path) -> None:
     )
     assert result.returncode == 1
     assert "GHSA-new" in result.stderr
+
+
+def test_a_stale_exception_id_with_line_breaks_prints_on_one_line(tmp_path: Path) -> None:
+    """F-017: a crafted exception field can't forge extra output lines."""
+    assert gate.inert("a\nb\r\x1b[0m c\\") == "a\\x0ab\\x0d\\x1b[0m\\u2028c\\\\"
+    errors = gate.check(_report(), [_exc(adv_id="GHSA-x\n::error::forged")], TODAY)
+    assert errors and all("\n" not in gate.inert(e) for e in errors)

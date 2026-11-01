@@ -232,3 +232,14 @@ class TestTheGuardFailsClosed:
         result = _run(_config(tmp_path, "this is not = = toml\n"))
         assert result.returncode == 2
         assert "not valid TOML" in result.stderr
+
+
+class TestOutputIsInert:
+    """F-017: a decoded TOML key can't forge extra output lines or workflow commands."""
+
+    def test_a_key_with_line_breaks_stays_on_one_line(self, tmp_path: Path) -> None:
+        body = APPROVED + '\n["x\\n::error::forged"]\nallowlist = 1\n'
+        result = _run(_config(tmp_path, body))
+        assert result.returncode == 1
+        assert not any(line.startswith("::") for line in result.stderr.splitlines())
+        assert "\\x0a::error::forged" in result.stderr

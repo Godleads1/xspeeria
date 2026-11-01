@@ -16,7 +16,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import CHAR, CheckConstraint, Date, DateTime, ForeignKey, Index, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -98,6 +98,10 @@ class KycCase(Base):
     identity_key: Mapped[str | None] = mapped_column(CHAR(64))
     #: ADR-041: why a person must look at this case (internal; never shown to the user).
     review_reason: Mapped[str | None] = mapped_column(String(32))
+    #: F-008: other accounts the provider matched to this person. The nil UUID stands for a
+    #: match whose account the provider didn't name. Confirmation is refused while any of them
+    #: holds an approved check.
+    matched_user_ids: Mapped[list[uuid.UUID] | None] = mapped_column(ARRAY(UUID(as_uuid=True)))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

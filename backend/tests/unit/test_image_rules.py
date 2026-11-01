@@ -91,3 +91,38 @@ def test_anything_else_is_refused(data: bytes) -> None:
 def test_size_limit() -> None:
     with pytest.raises(PhotoError, match="5 MB"):
         clean_photo(b"\x89PNG\r\n\x1a\n" + b"\x00" * MAX_PHOTO_BYTES)
+
+
+def test_jpeg_details_between_progressive_scans_are_removed() -> None:
+    """F-005: a progressive JPEG has several scans; EXIF between them is removed too."""
+    sos = b"\xff\xda" + struct.pack(">H", 8) + b"\x01\x01\x00\x00\x3f\x00"
+    scan1 = b"\x12\xff\x00\x34\xff\xd0\x56"  # a stuffed byte and a restart marker inside
+    scan2 = b"\x78\x9a"
+    gps = jpeg_segment(0xE1, b"Exif\x00\x00" + SECRET)
+    dht = jpeg_segment(0xC4, b"\x00" + b"\x00" * 16)
+    dirty = (
+        b"\xff\xd8"
+        + jpeg_segment(0xC2, b"\x08\x00\x01\x00\x01\x01\x01\x11\x00")
+        + sos
+        + scan1
+        + gps
+        + jpeg_segment(0xFE, SECRET)
+        + dht
+        + sos
+        + scan2
+        + b"\xff\xd9"
+        + b"trailing "
+        + SECRET
+    )
+    clean, kind = clean_photo(dirty)
+    assert kind == "image/jpeg" and SECRET not in clean
+    assert scan1 in clean and scan2 in clean and dht in clean
+    assert clean.endswith(b"\xff\xd9") and clean.count(b"\xff\xda") == 2
+    # Cleaning again changes nothing.
+    assert clean_photo(clean)[0] == clean
+
+
+def test_jpeg_without_an_end_marker_is_refused() -> None:
+    sos = b"\xff\xda" + struct.pack(">H", 8) + b"\x01\x01\x00\x00\x3f\x00"
+    with pytest.raises(PhotoError):
+        clean_photo(b"\xff\xd8" + sos + b"\x12\x34")

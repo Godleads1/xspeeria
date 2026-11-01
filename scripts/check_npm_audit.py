@@ -41,6 +41,25 @@ MAX_DAYS = 31
 REQUIRED = ("id", "package", "severity", "reason", "approved_by", "approved", "expires")
 
 
+def inert(value: object) -> str:
+    """Render repository-derived text as one inert line (F-017).
+
+    Control characters (newline, carriage return, escape, the C1 range and Unicode line
+    separators) are shown as escapes, so a crafted filename, key or field can't start a new
+    output line, forge a check's verdict, or issue a GitHub Actions ``::`` workflow command.
+    """
+    out = []
+    for ch in str(value):
+        code = ord(ch)
+        if ch == "\\":
+            out.append("\\\\")
+        elif code < 0x20 or 0x7F <= code <= 0x9F or ch in "\u2028\u2029":
+            out.append(f"\\x{code:02x}" if code <= 0xFF else f"\\u{code:04x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def _advisories(vulns: dict[str, Any]) -> dict[tuple[str, str], str]:
     """(advisory id, package) -> severity, from the leaf advisory objects in `via`."""
     found: dict[tuple[str, str], str] = {}
@@ -147,7 +166,7 @@ def main(argv: list[str]) -> int:
         report = json.loads(Path(args[0]).read_text(encoding="utf-8"))
         exceptions = json.loads(EXCEPTIONS.read_text(encoding="utf-8")).get("exceptions", [])
     except (OSError, ValueError) as exc:
-        print(f"npm audit gate: cannot read input: {exc}", file=sys.stderr)
+        print(f"npm audit gate: cannot read input: {inert(exc)}", file=sys.stderr)
         return 1
     if not isinstance(report, dict) or not isinstance(exceptions, list):
         print("npm audit gate: unexpected input shape", file=sys.stderr)
@@ -155,7 +174,7 @@ def main(argv: list[str]) -> int:
 
     errors = check(report, exceptions, today)
     for err in errors:
-        print(f"FAIL: {err}", file=sys.stderr)
+        print(f"FAIL: {inert(err)}", file=sys.stderr)
     if errors:
         return 1
     print("npm audit gate: passed")

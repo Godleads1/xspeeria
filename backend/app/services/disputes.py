@@ -107,7 +107,11 @@ class DisputeService:
         transaction_id: uuid.UUID | None,
         reason: str,
         description: str,
+        staff_fields: dict[str, Any] | None = None,
+        commit: bool = True,
     ) -> dict[str, Any]:
+        """Open a case. ``staff_fields`` and ``commit=False`` let a staff member open it for a
+        customer in one transaction with the staff attribution and audit entry (F-002)."""
         now = self._clock()
         category = await self._db.get(DisputeCategory, reason)
         if category is None or not category.active:
@@ -130,6 +134,7 @@ class DisputeService:
             status="open",
             created_at=now,
             updated_at=now,
+            **(staff_fields or {}),
         )
         other: uuid.UUID | None = None
         match_id: uuid.UUID | None = None
@@ -187,6 +192,8 @@ class DisputeService:
                 dispute_id=str(dispute.id),
                 match_id=str(match_id),
             )
+        if not commit:
+            return dispute_view(dispute, [], principal.user_id)
         await self._db.commit()
         _logger.info(
             "dispute_opened",

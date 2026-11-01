@@ -300,3 +300,45 @@ async def test_validation_and_access(
     assert (await boss.get("/api/v1/admin/disputes")).status_code == 403
     async with staff.client() as stranger:
         assert (await stranger.get("/api/v1/admin/disputes", headers=H)).status_code == 401
+
+
+async def test_a_blank_desired_resolution_never_leaves_a_half_made_case(
+    db_settings: Settings,
+    esc: Escrow,
+    staff: Admin,
+    boss: AsyncClient,
+    owner: Party,
+    taker: Party,
+    deal: dict[str, Any],
+) -> None:
+    """F-002: the case, its escrow hold, the staff attribution and the audit entry are saved
+    together; blank text is checked before anything is written."""
+    v = await _open(esc, deal, owner)
+    uid = await _sql(
+        db_settings, "SELECT id FROM users WHERE id = (SELECT user_id FROM offers LIMIT 1)"
+    )
+    body = {
+        "user_id": str(uid),
+        "transaction_id": v["transaction_id"],
+        "category": "wrong_amount",
+        "description": "   ",
+        "priority": "high",
+    }
+    r = await boss.post("/api/v1/admin/disputes", json=body, headers=H)
+    assert r.status_code == 422, r.text
+    assert await _sql(db_settings, "SELECT count(*) FROM disputes") == 0
+    assert await _sql(db_settings, "SELECT count(*) FROM settlement_holds") == 0
+    # A blank desired resolution is treated as not given, and the case is staff-attributed.
+    body |= {"description": "Customer called: amount was short", "desired_resolution": "   "}
+    r = await boss.post("/api/v1/admin/disputes", json=body, headers=H)
+    assert r.status_code == 201, r.text
+    case = (await boss.get(f"/api/v1/admin/disputes/{r.json()['id']}", headers=H)).json()
+    assert case["opened_by_staff"] and case["desired_resolution"] is None
+    assert case["priority"] == "high" and case["deal"]["escrow_paused"]
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT count(*) FROM staff_audit_log WHERE action = 'dispute_opened_for_customer'",
+        )
+        == 1
+    )

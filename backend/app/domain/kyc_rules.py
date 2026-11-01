@@ -35,6 +35,7 @@ __all__ = [
     "identity_key",
     "names_match",
     "other_account_matches",
+    "other_account_refs",
 ]
 
 #: Data dictionary KYCCases.status, plus ``expired`` (PROPOSED, ADR-039): an abandoned or
@@ -246,6 +247,16 @@ def other_account_matches(decision: dict[str, Any] | None, user_id: str) -> bool
     Uses ``matches`` under ``id_verifications`` and ``liveness_checks`` only; device and IP
     matches are ignored (families and offices share phones and networks).
     """
+    return bool(other_account_refs(decision, user_id))
+
+
+def other_account_refs(decision: dict[str, Any] | None, user_id: str) -> list[str | None]:
+    """The other accounts Didit matched (their ``vendor_data``, ``None`` when it gave none).
+
+    F-008: kept on the case so a reviewer's confirmation can check whether any of them is
+    still verified, including old approvals that predate the document key.
+    """
+    found: list[str | None] = []
     for key in ("id_verifications", "liveness_checks"):
         items = (decision or {}).get(key)
         if not isinstance(items, list):
@@ -260,5 +271,6 @@ def other_account_matches(decision: dict[str, Any] | None, user_id: str) -> bool
                     and m.get("status") == "Approved"
                     and m.get("vendor_data") != user_id
                 ):
-                    return True
-    return False
+                    ref = m.get("vendor_data")
+                    found.append(ref if isinstance(ref, str) else None)
+    return found

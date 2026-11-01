@@ -45,7 +45,7 @@ from app.domain.kyc_rules import (
     evaluate,
     identity_key,
     names_match,
-    other_account_matches,
+    other_account_refs,
 )
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.providers.didit import KycProviderError, KycSessionProvider, verify_signature
@@ -55,6 +55,17 @@ from app.services.notifications import notify
 __all__ = ["KycService", "WebhookResult", "case_view"]
 
 _logger = get_logger(__name__)
+
+
+#: F-008: stands for a provider match whose account wasn't named.
+UNKNOWN_ACCOUNT = uuid.UUID(int=0)
+
+
+def _account_ref(ref: str | None) -> uuid.UUID:
+    try:
+        return uuid.UUID(ref) if ref else UNKNOWN_ACCOUNT
+    except ValueError:
+        return UNKNOWN_ACCOUNT
 
 
 def _unavailable() -> AppError:
@@ -290,7 +301,10 @@ class KycService:
             )
             .limit(1)
         )
-        if other is not None or other_account_matches(decision, str(case.user_id)):
+        refs = other_account_refs(decision, str(case.user_id))
+        if refs:
+            case.matched_user_ids = sorted({_account_ref(r) for r in refs})
+        if other is not None or refs:
             source = "document" if other is not None else "provider match"
             return (
                 replace(

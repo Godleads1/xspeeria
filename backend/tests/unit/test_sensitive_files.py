@@ -177,3 +177,16 @@ class TestGuardMatching:
             "docs/references/m",
             "z.key",
         ]
+
+
+class TestOutputIsInert:
+    """F-017: a crafted filename can't forge extra output lines or workflow commands."""
+
+    def test_a_filename_with_line_breaks_stays_on_one_line(self, tmp_path: Path) -> None:
+        name = "evil\n::notice::check_sensitive_files: OK/.env"
+        result = _run(_repo(tmp_path, name))
+        assert result.returncode == 1
+        lines = result.stderr.splitlines()
+        assert not any(line.startswith("::") for line in lines)
+        assert not any("check_sensitive_files: OK" == line.strip() for line in lines)
+        assert "evil\\x0a::notice::check_sensitive_files: OK/.env" in result.stderr

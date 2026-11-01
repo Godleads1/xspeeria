@@ -257,9 +257,10 @@ class StaffService:
             raise _bad_login()
 
         if staff.locked_until is not None and now < staff.locked_until:
-            wait = (staff.locked_until - now).total_seconds()
+            # F-013: answer with the same full lock period an unknown email gets, so the
+            # remaining time can't reveal that this is a real, locked staff account.
             await self._db.rollback()
-            raise _locked(wait)
+            raise _locked(PASSWORD_LOCK.total_seconds())
 
         if not self._rt.hasher.verify(staff.password_hash, password):
             staff.failed_logins += 1
@@ -312,13 +313,28 @@ class StaffService:
         row.used_at = now
         return row
 
+    @staticmethod
+    def _issued_before_password_change(row: StaffCode, staff: StaffAccount) -> bool:
+        """F-003: codes belong to the password they were issued under.
+
+        Checked after the account row is locked, so a code redeemed while the password is being
+        replaced waits for that change and then sees it. A code issued before the change can
+        neither sign in nor set the password again.
+        """
+        changed = staff.password_changed_at
+        return changed is not None and row.created_at < changed
+
     async def verify(
         self, code_id: uuid.UUID, code: str, info: RequestInfo
     ) -> tuple[str, dict[str, Any]]:
         """Step 2: the email code. Opens a session; answers with the cookie value."""
         row = await self._use_code(code_id, code, "login")
         staff = await self._db.get(StaffAccount, row.staff_id, with_for_update=True)
-        if staff is None or staff.status != "active":
+        if (
+            staff is None
+            or staff.status != "active"
+            or self._issued_before_password_change(row, staff)
+        ):
             await self._db.rollback()
             raise _code_gone()
         now = self._now()
@@ -433,7 +449,11 @@ class StaffService:
         """Set a new password with an emailed code (also how invited staff set their first)."""
         row = await self._use_code(code_id, code, "password")
         staff = await self._db.get(StaffAccount, row.staff_id, with_for_update=True)
-        if staff is None or staff.status != "active":
+        if (
+            staff is None
+            or staff.status != "active"
+            or self._issued_before_password_change(row, staff)
+        ):
             await self._db.rollback()
             raise _code_gone()
         problem = password_problem(new_password, email=staff.email)
@@ -976,6 +996,15 @@ class StaffService:
             await self._db.rollback()
             raise _err(
                 "AUTH_403_FORBIDDEN", "Built-in roles can't be deleted.", status.HTTP_403_FORBIDDEN
+            )
+        # F-014: the same authority rule as changing a role - you can't remove a role that
+        # holds powers you don't have yourself, or your own role.
+        if role.id == principal.role_id or not set(role.permissions) <= principal.permissions:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_403_FORBIDDEN",
+                "This role can't be deleted here.",
+                status.HTTP_403_FORBIDDEN,
             )
         used = await self._db.scalar(
             select(func.count(StaffAccount.id)).where(StaffAccount.role_id == role.id)

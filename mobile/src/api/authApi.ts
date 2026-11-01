@@ -93,11 +93,15 @@ export const authApi = {
     }),
   refresh: (refreshToken: string, x: Extra = {}) =>
     apiRequest<Tokens>('POST', '/api/v1/auth/refresh', { token: refreshToken, ...x }),
-  /** ADR-048: a new unlock key for this session; trusted devices only. */
-  biometricEnable: (accessToken: string, deviceToken: string, x: Extra = {}) =>
+  /**
+   * ADR-048: a new unlock key for this session; trusted devices only. Past the first minutes
+   * after sign-in the server also wants a `biometric.enable` approval (F-007).
+   */
+  biometricEnable: (accessToken: string, deviceToken: string, x: Extra = {}, stepUpToken: string | null = null) =>
     apiRequest<{ unlock_key: string }>('POST', '/api/v1/auth/biometric', {
       token: accessToken,
       body: { device_token: deviceToken },
+      ...(stepUpToken ? { headers: { 'X-Step-Up-Token': stepUpToken } } : {}),
       ...x,
     }),
   biometricDisable: (accessToken: string, x: Extra = {}) =>

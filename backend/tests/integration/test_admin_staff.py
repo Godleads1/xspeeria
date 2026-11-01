@@ -688,3 +688,97 @@ async def test_photos_off_without_a_store(admin: Admin, boss: AsyncClient) -> No
         headers=H,
     )
     assert r.status_code == 503
+
+
+# --- security review findings (2026-10-28) ---------------------------------------------------
+
+
+async def test_codes_issued_before_a_password_change_stop_working(admin: Admin) -> None:
+    """F-003: an older sign-in or reset code can't be used once the password has changed."""
+    async with admin.client() as c:
+        r = await c.post(
+            "/api/v1/admin/auth/login", json={"email": BOSS, "password": BOSS_PW}, headers=H
+        )
+        login_id, login_code = r.json()["challenge_id"], admin.mail.last_code_for(BOSS)
+        r = await c.post("/api/v1/admin/auth/forgot-password", json={"email": BOSS}, headers=H)
+        old_id, old_code = r.json()["reset_id"], admin.mail.last_code_for(BOSS)
+        admin.clock.advance(minutes=2)
+        r = await c.post("/api/v1/admin/auth/forgot-password", json={"email": BOSS}, headers=H)
+        new_id, new_code = r.json()["reset_id"], admin.mail.last_code_for(BOSS)
+        assert old_id != new_id
+        r = await c.post(
+            "/api/v1/admin/auth/reset-password",
+            json={"reset_id": new_id, "code": new_code, "new_password": NEW_PW},
+            headers=H,
+        )
+        assert r.status_code == 204, r.text
+        admin.clock.advance(seconds=1)
+        # The older reset code can't set the password again ...
+        r = await c.post(
+            "/api/v1/admin/auth/reset-password",
+            json={
+                "reset_id": old_id,
+                "code": old_code,
+                "new_password": "a third long passphrase 7",
+            },
+            headers=H,
+        )
+        assert r.status_code == 410 and _code(r) == "AUTH_410_CHALLENGE_EXPIRED", r.text
+        # ... and the sign-in started under the old password can't finish.
+        r = await c.post(
+            "/api/v1/admin/auth/verify",
+            json={"challenge_id": login_id, "code": login_code},
+            headers=H,
+        )
+        assert r.status_code == 410 and _code(r) == "AUTH_410_CHALLENGE_EXPIRED", r.text
+    async with admin.client() as c:
+        assert (await admin.login(c, BOSS, NEW_PW)).status_code == 200
+
+
+async def test_a_locked_account_and_an_unknown_email_give_the_same_wait(admin: Admin) -> None:
+    """F-013: the retry time doesn't reveal that an email is a real, locked staff account."""
+
+    async def wait_for(c: AsyncClient, email: str) -> int:
+        for _ in range(5):
+            r = await admin.login(c, email, "wrong password here")
+        assert r.status_code == 429
+        admin.clock.advance(minutes=5)
+        r = await admin.login(c, email, "wrong password here")
+        assert r.status_code == 429, r.text
+        return int(r.json()["error"]["details"]["retry_after_seconds"])
+
+    async with admin.client() as c:
+        known = await wait_for(c, BOSS)
+        unknown = await wait_for(c, "nobody@xspeeria.test")
+    assert known == unknown
+
+
+async def test_a_role_with_powers_i_lack_cannot_be_deleted(admin: Admin, boss: AsyncClient) -> None:
+    """F-014: deleting a role needs authority over every permission it holds."""
+    perms = sorted(
+        {f"staff.{a}" for a in ("read", "create", "update")}
+        | {f"roles.{a}" for a in ("read", "create", "update", "delete")}
+        | {"users.read", "dashboard.read"}
+    )
+    r = await boss.post(
+        "/api/v1/admin/roles", json={"name": "staff_manager", "permissions": perms}, headers=H
+    )
+    assert r.status_code == 201, r.text
+    manager = await admin.invite(boss, "manager@xspeeria.test", "staff_manager")
+    r = await boss.post(
+        "/api/v1/admin/roles", json={"name": "auditor", "permissions": ["audit.read"]}, headers=H
+    )
+    auditor = r.json()["id"]
+    r = await boss.post(
+        "/api/v1/admin/roles", json={"name": "viewer", "permissions": ["users.read"]}, headers=H
+    )
+    viewer = r.json()["id"]
+    r = await manager.delete(f"/api/v1/admin/roles/{auditor}", headers=H)
+    assert r.status_code == 403 and _code(r) == "AUTH_403_FORBIDDEN"
+    assert (
+        await _sql(admin.db_settings, "SELECT count(*) FROM staff_roles WHERE name = 'auditor'")
+        == 1
+    )
+    # A role within the manager's own powers can still be deleted.
+    assert (await manager.delete(f"/api/v1/admin/roles/{viewer}", headers=H)).status_code == 204
+    assert (await boss.delete(f"/api/v1/admin/roles/{auditor}", headers=H)).status_code == 204
