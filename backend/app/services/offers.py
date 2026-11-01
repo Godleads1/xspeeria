@@ -675,17 +675,6 @@ class OfferService:
         if problem is not None:
             await self._db.rollback()
             raise _input_error(problem)
-        if rate != offer.desired_rate:
-            # Product rule: the rate is fixed when the offer is posted, so a taker always sees
-            # the rate they accept. Only the amount may still be edited.
-            await self._db.rollback()
-            raise _input_error(
-                OfferInputError(
-                    FORMAT_ERROR,
-                    "The rate is fixed once the offer is posted. You can change the amount, "
-                    "or withdraw the offer and post a new one.",
-                )
-            )
         changed = [
             name
             for name, differs in (

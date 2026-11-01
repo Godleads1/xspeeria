@@ -376,14 +376,11 @@ async def test_unknown_offer_is_404(david: User) -> None:
 # --- change --------------------------------------------------------------------------------
 
 
-async def test_rate_is_fixed_once_posted(db_settings: Settings, david: User) -> None:
-    """Product rule: a taker must see the rate they accept, so the owner can't change it."""
+async def test_owner_can_change_rate(david: User) -> None:
     offer = (await david.publish()).json()
     r = await david.patch(offer["offer_id"], {"desired_rate": "1325.125"})
-    assert r.status_code == 422 and _code(r) == "VALIDATION_ERROR", r.text
-    assert "fixed once the offer is posted" in r.json()["error"]["message"]
-    assert (await david.get(f"/{offer['offer_id']}")).json()["desired_rate"] == "1320.50"
-    assert await _sql(db_settings, "SELECT version FROM offers") == 1
+    assert r.status_code == 200, r.text
+    assert r.json()["desired_rate"] == "1325.125" and r.json()["version"] == 2
 
 
 async def test_rate_change_checks_the_ceiling(david: User) -> None:
@@ -394,26 +391,26 @@ async def test_rate_change_checks_the_ceiling(david: User) -> None:
 
 async def test_each_change_bumps_the_version(david: User) -> None:
     offer = (await david.publish()).json()
-    await david.patch(offer["offer_id"], {"source_amount": "600.00"})
-    r = await david.patch(offer["offer_id"], {"source_amount": "700.00"})
+    await david.patch(offer["offer_id"], {"desired_rate": "1321"})
+    r = await david.patch(offer["offer_id"], {"desired_rate": "1322"})
     assert r.json()["version"] == 3
 
 
-async def test_owner_can_change_amount_and_the_rate_stays(david: User, ada: User) -> None:
-    """The amount may change before anyone takes any of it; the rate stays as posted."""
+async def test_owner_can_change_amount_and_rate_together(david: User, ada: User) -> None:
+    """ADR-059 Decision 3: rate and amount, before anyone takes any of it."""
     offer = (await david.publish()).json()
-    r = await david.patch(offer["offer_id"], {"source_amount": "750.50"})
+    r = await david.patch(offer["offer_id"], {"desired_rate": "1321", "source_amount": "750.50"})
     assert r.status_code == 200, r.text
     body = r.json()
     assert (body["source_amount"], body["remaining_amount"], body["desired_rate"]) == (
         "750.50",
         "750.50",
-        "1320.50",
+        "1321.00",
     )
     assert body["version"] == 2
-    # The market shows the new amount straight away, at the same rate.
+    # The market shows the new amount and rate straight away.
     [row] = (await ada.listings()).json()["items"]
-    assert (row["remaining_amount"], row["desired_rate"]) == ("750.50", "1320.50")
+    assert (row["remaining_amount"], row["desired_rate"]) == ("750.50", "1321.00")
 
 
 async def test_amount_only_change_keeps_the_rate(db_settings: Settings, david: User) -> None:
@@ -433,7 +430,7 @@ async def test_buy_request_amount_is_naira(david: User) -> None:
             desired_rate="1320",
         )
     ).json()
-    r = await david.patch(req["offer_id"], {"source_amount": "1330000.00"})
+    r = await david.patch(req["offer_id"], {"source_amount": "1330000.00", "desired_rate": "1330"})
     assert r.status_code == 200 and r.json()["source_amount"] == "1330000.00"
 
 
@@ -447,8 +444,6 @@ async def test_buy_request_amount_is_naira(david: User) -> None:
         ({"source_amount": "1e5"}, "VALIDATION_ERROR"),
         ({"desired_rate": "0"}, "VAL_422_RATE_NOT_POSITIVE"),
         ({"desired_rate": "1400", "source_amount": "100.00"}, "VAL_422_RATE_ABOVE_CEILING"),
-        ({"desired_rate": "1321"}, "VALIDATION_ERROR"),
-        ({"desired_rate": "1321", "source_amount": "750.50"}, "VALIDATION_ERROR"),
     ],
 )
 async def test_edit_runs_every_publish_check(
