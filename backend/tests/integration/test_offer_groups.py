@@ -214,10 +214,10 @@ async def test_a_completed_deal_removes_the_others(
 # --- owner changes -------------------------------------------------------------------------
 
 
-async def test_rate_can_change_but_not_the_amount(owner: Party) -> None:
+async def test_rate_is_fixed_and_the_group_amount_cannot_change(owner: Party) -> None:
     usd = _by_currency((await _group(owner)).json())["USD"]
     r = await owner.patch(usd["offer_id"], {"desired_rate": "1321"})
-    assert r.status_code == 200
+    assert r.status_code == 422 and "fixed once the offer is posted" in r.json()["error"]["message"]
     r = await owner.patch(usd["offer_id"], {"source_amount": "1000000.00"})
     assert r.status_code == 422 and "several currencies" in r.json()["error"]["message"]
 

@@ -54,37 +54,24 @@ async def test_an_owner_cannot_change_the_rate_under_a_taker(
 ) -> None:
     offer = (await owner.publish(source_amount="500.00", desired_rate="1320.50")).json()
     oid = offer["offer_id"]
-    # The taker is shown 1320.50; the owner changes it before the taker confirms.
+    # Product rule: the rate is fixed once posted, so the owner's change is refused.
     edit = await owner.env.client.patch(
         f"/api/v1/offers/{oid}",
-        json={"desired_rate": "1330.00", "source_amount": "500.00"},
+        json={"desired_rate": "1330.00"},
         headers=owner._h(),
     )
-    assert edit.status_code == 200, edit.text
-    stale = await taker.accept(
+    assert edit.status_code == 422, edit.text
+    assert _code(edit) == "VALIDATION_ERROR"
+    # The taker takes the rate they were shown, and it is the rate agreed.
+    fresh = await taker.accept(
         oid,
         "200.00",
         token=await taker.approve(),
         body={"accepted_amount": "200.00", "expected_rate": "1320.50"},
     )
-    assert stale.status_code == 409, stale.text
-    assert _code(stale) == "RES_409_RATE_CHANGED"
-    assert await _sql(db_settings, "SELECT count(*) FROM matches") == 0
-    # A take that doesn't say which rate it agreed to is refused too.
-    silent = await taker.accept(
-        oid, "200.00", token=await taker.approve(), body={"accepted_amount": "200.00"}
-    )
-    assert silent.status_code == 422 and _code(silent) == "VAL_422_MISSING_FIELD"
-    # Taking at the rate shown now goes through, at that rate.
-    fresh = await taker.accept(
-        oid,
-        "200.00",
-        token=await taker.approve(),
-        body={"accepted_amount": "200.00", "expected_rate": "1330.00"},
-    )
     assert fresh.status_code == 201, fresh.text
     agreed = await _sql(db_settings, "SELECT agreed_rate FROM matches")
-    assert Decimal(str(agreed)) == Decimal("1330.00")
+    assert Decimal(str(agreed)) == Decimal("1320.50")
 
 
 # --- F-012: a disputed deal's payment window can't be extended -------------------------------
