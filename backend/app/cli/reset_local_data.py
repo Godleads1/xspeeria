@@ -27,6 +27,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
     "customer_activity",
+    "ops_alerts",  # ADR-074: about the deals and staff changes being cleared
     "tier_checks",
     "offer_queue_entries",
     "fraud_alerts",
