@@ -106,8 +106,9 @@ APPROVED_TABLES = {
 # service outage notices (ADR-066) -> "0028"; adverts (ADR-067) -> "0029";
 # fraud alerts (ADR-068) -> "0030"; identity-check review (ADR-069) -> "0031";
 # staff bell (ADR-070) -> "0032"; API monitoring (ADR-072) -> "0033";
-# customer activity log (ADR-073) -> "0034".
-EXPECTED_HEAD = "0034"
+# customer activity log (ADR-073) -> "0034";
+# security review hardening (findings F-001, F-007, F-008, 2026-10-28) -> "0035".
+EXPECTED_HEAD = "0035"
 
 
 def _config(database_url: str) -> Config:

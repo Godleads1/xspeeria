@@ -54,6 +54,7 @@ class TestDecidedValues:
             "pin.change",
             "trade.accept",
             "payout.confirm",
+            "biometric.enable",  # security finding F-007 (2026-10-28)
         }  # ADR-054: mfa.change and recovery_codes.regenerate went with the authenticator
         assert (CHECK_CODE_TTL, FACE_CHECK_TTL) == (timedelta(minutes=10), timedelta(minutes=15))
         assert (CHECKS_PER_HOUR, CHECKS_PER_DAY) == (5, 10)
