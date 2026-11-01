@@ -47,9 +47,17 @@ class Person(User):
         headers = self._h(key or uuid.uuid4())
         if token:
             headers["X-Step-Up-Token"] = token
-        payload = (
-            body if body is not None else ({} if amount is None else {"accepted_amount": amount})
-        )
+        if body is not None:
+            payload = body
+        elif amount is None:
+            payload = {}
+        else:
+            # The rate the taker was shown (F-010): the rate on the offer as it is now.
+            # An offer that can't be read (unknown, taken out, withdrawn) gets a placeholder: the
+            # server answers its own availability error before it compares rates.
+            read = await self.env.client.get(f"/api/v1/offers/{offer_id}", headers=self._h())
+            shown = read.json().get("desired_rate", "0.00") if read.status_code == 200 else "0.00"
+            payload = {"accepted_amount": amount, "expected_rate": shown}
         return await self.env.client.post(
             f"/api/v1/offers/{offer_id}/accept", json=payload, headers=headers
         )

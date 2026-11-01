@@ -967,6 +967,14 @@ class SettlementService:
                 "The time to pay for this deal has already ended.",
                 status_code=status.HTTP_409_CONFLICT,
             )
+        if await self._open_dispute_hold(settlement_id):
+            # F-012: a disputed deal waits for staff; its clock must not be changed by a party.
+            await self._db.rollback()
+            raise AppError(
+                "RES_409_DISPUTE_OPEN",
+                "This deal is in a dispute, so the time to pay can't be extended.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
         if settlement.funding_extended_at is not None:
             await self._db.rollback()
             raise AppError(

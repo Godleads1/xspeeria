@@ -49,6 +49,7 @@ from app.domain.offer_rules import (
     OfferInputError,
     below_minimum,
     parse_amount_minor,
+    parse_rate,
 )
 from app.domain.payout_rules import (
     MAX_PAYOUT_ACCOUNTS_PER_DEAL,
@@ -65,7 +66,12 @@ from app.services.groups import lock_group_for_take
 from app.services.limits import check_new_deal
 from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
-from app.services.queue import active_turn, mark_taken, on_capacity_returned
+from app.services.queue import (
+    active_turn,
+    mark_taken,
+    on_capacity_returned,
+    pass_overdue_turns,
+)
 from app.services.settlement import SettlementService
 
 __all__ = ["ACCEPT_OPERATION", "EXPIRY_CAUSE", "MatchService", "PayoutChoice", "match_view"]
@@ -212,6 +218,7 @@ class MatchService:
         idempotency_key: uuid.UUID,
         accepted_amount: str | None,
         confirm_step_up: Callable[[], Awaitable[None]],
+        expected_rate: str | None = None,
     ) -> Created:
         if accepted_amount is None:
             raise _err(
@@ -263,6 +270,8 @@ class MatchService:
 
         # Deals on this offer whose 30 minutes ran out give their amount back first.
         await self._expire_on_locked_offer(offer, now)
+        # F-009: a queue turn whose time ran out passes on before anyone else may take.
+        handed_on = await pass_overdue_turns(self._db, offer, now)
 
         # 4. Still listed? Lifecycle status and today's official-rate ceiling (contract §3.5).
         ceiling = OFFICIAL_RATE.get(_foreign(offer))
@@ -274,10 +283,40 @@ class MatchService:
                 status.HTTP_409_CONFLICT,
             )
 
+        # F-010: the taker agrees to the rate they were shown. If the owner changed it since
+        # (an edit is allowed while the offer is listed), the take is refused, not re-priced.
+        if expected_rate is None:
+            await self._db.rollback()
+            raise _err(
+                "VAL_422_MISSING_FIELD",
+                "Confirm the rate you are taking.",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        try:
+            shown_rate = parse_rate(expected_rate)
+        except OfferInputError as e:
+            await self._db.rollback()
+            raise _err(e.code, e.message, status.HTTP_422_UNPROCESSABLE_CONTENT) from None
+        if shown_rate != offer.desired_rate:
+            # A turn that just ran out passed on: keep that handoff (F-009).
+            if handed_on:
+                await self._db.commit()
+            else:
+                await self._db.rollback()
+            raise _err(
+                "RES_409_RATE_CHANGED",
+                "The owner changed the rate. Review the new rate, then take the offer again.",
+                status.HTTP_409_CONFLICT,
+            )
+
         # ADR-059 Decision 4: while someone's 5-minute turn runs, only they may take it.
         turn = await active_turn(self._db, offer.id, now)
         if turn is not None and turn.user_id != principal.user_id:
-            await self._db.rollback()
+            # A turn that just ran out passed to this person: keep that handoff (F-009).
+            if handed_on:
+                await self._db.commit()
+            else:
+                await self._db.rollback()
             raise _err(
                 "RES_409_OFFER_RESERVED",
                 "This offer is held for the next person in its queue for a few minutes.",
@@ -548,6 +587,10 @@ class MatchService:
             and match.preparation_deadline <= now
         ):
             _release(offer, match, now)
+            # F-011: the amount is back, so the next person waiting gets their turn in this
+            # same transaction, before anyone else can take it.
+            await self._db.flush()
+            await on_capacity_returned(self._db, offer, now)
             await self._db.commit()
             raise _err(
                 "RES_409_INVALID_SETTLEMENT_STATE",

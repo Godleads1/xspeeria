@@ -110,3 +110,18 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | FX-03 | **OPEN — GAP ACCEPTED FOR SIMULATION** | The 24-hour payout hold (ADR-008) was removed by the product owner on 2026-10-19 (DEC-044): payouts are immediate, protected by authenticator codes on adding and choosing accounts. Release can be stopped by a blocking hold (ADR-037), but no risk check for "new account + immediate payout" and no freeze/escalation process exist. **Must be met before go-live.** |
 | FX-04 | IMPLEMENTED (partial, ADR-073) | `docs/adr/002-financial-event-ledger-architecture.md`. Per-deal timeline: offer, take, payout choices, every escrow event with side, amount and fee, holds, disputes, refunds and the customers' own steps, read-only for the Super Admin; customer activity append-only and kept 5 years (`test_activity_log.py`). |
 | FX-05 | IMPLEMENTED | No balance/wallet wording guard test in the app (`no-balance.test.ts`); custody truth in Standing Standards §2. Approved exception: Figma demo figures in development builds only, marked "Demo", tested empty when `DEMO_MODE` is false (`docs/adr/023-figma-exact-home-cards-demo.md`). |
+
+## Security review findings (scan of 2026-10-28)
+
+Each finding was first checked against the code at `d2e5a65` (CONFIRMED, PARTLY, or NOT REPRODUCED), then fixed with a regression test that failed on the old logic. States are IMPLEMENTED for the fix and its test, not VERIFIED: no production or independent evidence yet.
+
+| Finding | State | Evidence | Gap / next action |
+|---|---|---|---|
+| F-006 timeline shows a stranger's refused request as the taker's | IMPLEMENTED | `activity_admin.py` timeline now includes only the owner's and taker's rows; `test_security_findings.py::test_a_stranger_refused_request_is_not_shown_as_the_takers` (fails on the old query). | None. |
+| F-009 a queue turn that ran out lets a newcomer take | IMPLEMENTED | `queue.pass_overdue_turns`, called in `MatchService.accept` under the offer lock; the handoff is kept when the take is refused. `test_offer_queue.py::test_a_turn_that_ran_out_passes_before_anyone_else_can_take`. | Concurrency not tested with parallel requests. |
+| F-010 owner changes the rate under a taker | IMPLEMENTED, **pending a decision** | `accept` refuses with `RES_409_RATE_CHANGED` unless the taker sends `expected_rate` equal to the offer's current rate; the app sends the rate shown (`offersApi.accept`, `TakeOfferScreen`). `test_security_findings.py::test_an_owner_cannot_change_the_rate_under_a_taker`. | **The human-approved accept contract (`05_API_Contract_Data_Dictionary.md`) says the request carries only `accepted_amount`. Needs ratification of `expected_rate` before launch.** |
+| F-011 capacity freed on a late payout choice without a handoff | IMPLEMENTED | `choose_payout_accounts` now calls `on_capacity_returned` in the same transaction. `test_offer_queue.py::test_a_late_payout_choice_hands_the_amount_on_at_once`. | None. |
+| F-012 a disputed deal's payment window extended | IMPLEMENTED | `SettlementService.extend` refuses with `RES_409_DISPUTE_OPEN` while a dispute hold is open. `test_security_findings.py::test_a_disputed_deal_cannot_have_its_time_extended` (fails on the old code). | None. |
+| F-015 address changed during proof-of-address check | IMPLEMENTED | Proof approval saved only if the address (locked) is still the one checked; an address change after proof is approved is refused under the same lock. `test_security_findings.py::test_an_address_changed_during_the_proof_check_is_not_approved`. | Provider call is faked in tests; live Didit not tested. |
+
+Not yet reviewed in this pass: F-001 to F-005, F-007, F-008, F-013, F-014, F-016, F-017 (open).

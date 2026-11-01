@@ -48,7 +48,7 @@ function source(): jest.Mocked<TakeSource> {
   return {
     offer: jest.fn(async (_id: string) => OFFER),
     approve: jest.fn(async (_reason: string): Promise<string | null> => `approval-${++n}`),
-    accept: jest.fn(async (_o: string, _a: string, _k: string, _t: string | null) => MATCH),
+    accept: jest.fn(async (_o: string, _a: string, _r: string, _k: string, _t: string | null) => MATCH),
     newKey: jest.fn(() => `key-${++n}`),
   };
 }
@@ -82,7 +82,7 @@ describe('Take offer screen (ADR-032)', () => {
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     expect(src.approve).toHaveBeenCalledWith('Take 200.00 USD at NGN 1,320.50');
-    expect(src.accept).toHaveBeenCalledWith('o-1', '200.00', expect.stringMatching(/^key-/), expect.stringMatching(/^approval-/));
+    expect(src.accept).toHaveBeenCalledWith('o-1', '200.00', '1320.50', expect.stringMatching(/^key-/), expect.stringMatching(/^approval-/));
     expect(screen.getByTestId('take-match')).toHaveTextContent(/200\.00 USD/);
     expect(screen.getByTestId('take-done-screen')).toHaveTextContent(/never holds your money/);
     await fireEvent.press(screen.getByTestId('take-done'));
@@ -111,8 +111,8 @@ describe('Take offer screen (ADR-032)', () => {
     await flush();
     expect(src.approve).toHaveBeenCalledTimes(1);
     const [first, second] = src.accept.mock.calls;
-    expect(second[2]).toBe(first[2]);
     expect(second[3]).toBe(first[3]);
+    expect(second[4]).toBe(first[4]);
     expect(screen.getByTestId('take-match')).toBeTruthy();
   });
 
@@ -154,7 +154,7 @@ describe('Take offer screen (ADR-032)', () => {
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     const [first, second] = src.accept.mock.calls;
-    expect(second[2]).not.toBe(first[2]);
+    expect(second[3]).not.toBe(first[3]);
   });
 
   it('shows a load error with retry', async () => {
@@ -201,7 +201,7 @@ describe('Selling to a buy request (ADR-056)', () => {
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
     expect(src.approve).toHaveBeenCalledWith('Sell 400.00 USD at NGN 1,330.00');
-    expect(src.accept).toHaveBeenCalledWith('r-1', '532000.00', expect.any(String), expect.any(String));
+    expect(src.accept).toHaveBeenCalledWith('r-1', '532000.00', '1330.00', expect.any(String), expect.any(String));
     expect(screen.getByTestId('take-match')).toHaveTextContent(/400\.00 USD/);
   });
 
@@ -213,6 +213,6 @@ describe('Selling to a buy request (ADR-056)', () => {
     await fireEvent.press(screen.getByTestId('take-all'));
     await fireEvent.press(screen.getByTestId('take-submit'));
     await flush();
-    expect(src.accept).toHaveBeenCalledWith('r-1', '1330000.00', expect.any(String), expect.any(String));
+    expect(src.accept).toHaveBeenCalledWith('r-1', '1330000.00', '1330.00', expect.any(String), expect.any(String));
   });
 });
