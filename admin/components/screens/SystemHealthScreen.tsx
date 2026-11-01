@@ -9,7 +9,8 @@
  * - every route of Xspeeria's own API and the webhooks we receive;
  * - every outside system Xspeeria calls (Didit, phone push, SMS, email, the bank);
  * - every background job (escrow, deal expiry, waiting queues, fraud scan, push, demo robots);
- * - the escrow work queues and the database.
+ * - the escrow work queues and the database;
+ * - the operations alerts raised for Super Admins (ADR-074), at the top.
  *
  * Counts and timings only: nothing here names a customer. Refreshes every 30 seconds.
  */
@@ -27,11 +28,12 @@ import { Button, FormError, PageTitle } from '../forms';
 import { Panel, StatusChip } from '../primitives';
 import { DataTable, type Column } from '../table/DataTable';
 import { when } from './common';
+import { OpsAlertsPanel } from './OpsAlertsPanel';
 
 export const REFRESH_MS = 30_000;
 
 /** The server's job names (app.main), translated for display. */
-export const JOB_NAMES = ['Escrow processing', 'Deal expiry', 'Waiting queues', 'Fraud scan', 'Phone push', 'Demo robots'] as const;
+export const JOB_NAMES = ['Escrow processing', 'Deal expiry', 'Waiting queues', 'Fraud scan', 'Phone push', 'Demo robots', 'Alert rules'] as const;
 
 export const WINDOW_LABEL: Record<HealthWindow, string> = {
   '1h': 'Last hour',
@@ -218,6 +220,7 @@ export function SystemHealthScreen(): ReactElement {
         </span>
       </div>
       <FormError message={error} />
+      <OpsAlertsPanel />
 
       {data && tone ? (
         <>

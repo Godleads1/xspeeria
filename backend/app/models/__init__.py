@@ -48,6 +48,7 @@ from app.models.kyc_reviews import KycReview
 from app.models.marketplace import IdempotencyRecord, Match, Offer
 from app.models.monitoring import ApiMetric, JobStatus
 from app.models.notifications import Notification, PushDelivery, PushToken
+from app.models.ops_alerts import OpsAlert
 from app.models.outages import ServiceOutage
 from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.reversals import Reversal
@@ -77,6 +78,7 @@ __all__ = [
     "JobStatus",
     "KycWebhookEvent",
     "Notification",
+    "OpsAlert",
     "PushDelivery",
     "PushToken",
     "Reversal",

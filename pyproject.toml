@@ -23,6 +23,8 @@ dependencies = [
     # ADR-058: Lagos calendar days and months need the time-zone database. Linux and macOS
     # have one built in; Windows does not, so the server would not start there.
     "tzdata>=2025.2",
+    # ADR-074: error tracking (Sentry, an approved vendor), off unless SENTRY_DSN is set.
+    "sentry-sdk>=2.18",
 ]
 
 [dependency-groups]

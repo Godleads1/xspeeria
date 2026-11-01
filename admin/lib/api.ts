@@ -509,7 +509,47 @@ export interface SystemHealth {
 }
 
 /** Staff bell (ADR-070): work waiting for the signed-in person, read live from the queues. */
-export type StaffWorkKind = 'kyc_confirm' | 'kyc_recommend' | 'reversal' | 'fraud' | 'dispute';
+export type StaffWorkKind = 'kyc_confirm' | 'kyc_recommend' | 'reversal' | 'fraud' | 'dispute' | 'ops_alert';
+
+/** ADR-074: an operations alert for Super Admins. Counts and references only. */
+export type OpsAlertRule =
+  | 'customer_sign_in_attack'
+  | 'staff_sign_in_attack'
+  | 'staff_access_changed'
+  | 'unusual_deal_volume'
+  | 'money_at_risk'
+  | 'high_fraud_alert'
+  | 'webhook_rejected'
+  | 'webhook_failing'
+  | 'api_failing'
+  | 'outside_failing'
+  | 'job_failing'
+  | 'escrow_stalled';
+export type OpsAlertSeverity = 'P1' | 'P2' | 'P3' | 'P4';
+export type OpsAlertStatus = 'open' | 'acknowledged' | 'resolved';
+export interface OpsAlert {
+  id: string;
+  ref: string;
+  rule: OpsAlertRule;
+  severity: OpsAlertSeverity;
+  status: OpsAlertStatus;
+  subject: string;
+  details: Record<string, string | number | string[] | null>;
+  occurrences: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  notified_at: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_note: string | null;
+}
+export interface OpsAlertsPage {
+  items: OpsAlert[];
+  /** Live (not resolved) alerts by severity. */
+  live: Record<OpsAlertSeverity, number>;
+}
 export interface StaffWorkItem {
   kind: StaffWorkKind;
   id: string;
@@ -724,6 +764,9 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     rejectKyc: (id: string, reason: string) => call<void>('POST', `/kyc/cases/${encodeURIComponent(id)}/reject`, { reason }),
     staffWork: () => call<StaffWorkFeed>('GET', '/notifications'),
     systemHealth: (window: HealthWindow) => call<SystemHealth>('GET', `/system-health?window=${window}`),
+    opsAlerts: (which: 'live' | 'all' = 'live') => call<OpsAlertsPage>('GET', `/alerts?which=${which}`),
+    acknowledgeAlert: (id: string) => call<OpsAlert>('POST', `/alerts/${encodeURIComponent(id)}/acknowledge`),
+    resolveAlert: (id: string, note: string) => call<OpsAlert>('POST', `/alerts/${encodeURIComponent(id)}/resolve`, { note }),
     customerActivity: (id: string, q: { category?: ActivityCategory; since?: string; until?: string; offset?: number; limit?: number }) => {
       const p = new URLSearchParams();
       if (q.category) p.set('category', q.category);

@@ -52,6 +52,64 @@ class SystemHealthService:
         now = datetime.now(UTC)
         since = now - span
 
+        apis, jobs, queues, db_ms = await self._collect(now, since)
+
+        step = int(bucket.total_seconds())
+        series_rows = (
+            await self._db.execute(
+                text(
+                    "SELECT to_timestamp(floor(extract(epoch FROM minute) / :step) * :step) AS b, "
+                    "sum(calls), sum(server_errors + network_errors), sum(total_ms) "
+                    "FROM api_metrics WHERE minute >= :since AND kind <> 'outside' "
+                    "GROUP BY b ORDER BY b"
+                ),
+                {"since": since, "step": step},
+            )
+        ).all()
+        series = [
+            {
+                "at": b,
+                "calls": int(c),
+                "errors": int(e),
+                "avg_ms": round(int(t) / int(c)) if c else 0,
+            }
+            for b, c, e, t in series_rows
+        ]
+
+        await self._db.rollback()
+
+        warnings = self._warnings(apis, jobs, queues, db_ms)
+        own = apis["own"] + apis["webhook"]
+        total_calls = sum(a["calls"] for a in own)
+        total_errors = sum(a["server_errors"] + a["network_errors"] for a in own)
+        total_ms = sum(a["avg_ms"] * a["calls"] for a in own)
+        return {
+            "now": now,
+            "window": window if window in WINDOWS else "1h",
+            "status": "problem"
+            if any(w["level"] == "red" for w in warnings)
+            else ("warning" if warnings else "ok"),
+            "environment": self._settings.app_env,
+            "api_version": self._settings.api_v,
+            "server_started_at": recorder.started_at,
+            "database": {"ok": True, "ping_ms": db_ms},
+            "totals": {
+                "calls": total_calls,
+                "errors": total_errors,
+                "error_rate": _rate(total_errors, total_calls),
+                "avg_ms": round(total_ms / total_calls) if total_calls else 0,
+            },
+            "series": series,
+            "apis": apis,
+            "jobs": jobs,
+            "queues": queues,
+            "warnings": warnings,
+        }
+
+    async def _collect(
+        self, now: datetime, since: datetime
+    ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]], dict[str, int], float]:
+        """The API figures since ``since``, the jobs, the escrow queues and the database ping."""
         # This server's last minute isn't in the database yet: add it first.
         await recorder.flush(self._db, now)
 
@@ -88,28 +146,6 @@ class SystemHealthService:
                     "last_call_at": last,
                 }
             )
-
-        step = int(bucket.total_seconds())
-        series_rows = (
-            await self._db.execute(
-                text(
-                    "SELECT to_timestamp(floor(extract(epoch FROM minute) / :step) * :step) AS b, "
-                    "sum(calls), sum(server_errors + network_errors), sum(total_ms) "
-                    "FROM api_metrics WHERE minute >= :since AND kind <> 'outside' "
-                    "GROUP BY b ORDER BY b"
-                ),
-                {"since": since, "step": step},
-            )
-        ).all()
-        series = [
-            {
-                "at": b,
-                "calls": int(c),
-                "errors": int(e),
-                "avg_ms": round(int(t) / int(c)) if c else 0,
-            }
-            for b, c, e, t in series_rows
-        ]
 
         jobs = []
         for name, interval, runs, failures, last_start, last_ok, last_failed, error, ms in (
@@ -152,35 +188,20 @@ class SystemHealthService:
                 "SELECT count(*) FROM reconciliation_exceptions WHERE status <> 'RESOLVED'"
             ),
         }
-        await self._db.rollback()
+        return apis, jobs, queues, db_ms
 
-        warnings = self._warnings(apis, jobs, queues, db_ms)
-        own = apis["own"] + apis["webhook"]
-        total_calls = sum(a["calls"] for a in own)
-        total_errors = sum(a["server_errors"] + a["network_errors"] for a in own)
-        total_ms = sum(a["avg_ms"] * a["calls"] for a in own)
-        return {
-            "now": now,
-            "window": window if window in WINDOWS else "1h",
-            "status": "problem"
-            if any(w["level"] == "red" for w in warnings)
-            else ("warning" if warnings else "ok"),
-            "environment": self._settings.app_env,
-            "api_version": self._settings.api_v,
-            "server_started_at": recorder.started_at,
-            "database": {"ok": True, "ping_ms": db_ms},
-            "totals": {
-                "calls": total_calls,
-                "errors": total_errors,
-                "error_rate": _rate(total_errors, total_calls),
-                "avg_ms": round(total_ms / total_calls) if total_calls else 0,
-            },
-            "series": series,
-            "apis": apis,
-            "jobs": jobs,
-            "queues": queues,
-            "warnings": warnings,
-        }
+    async def current_warnings(
+        self, span: timedelta, *, webhooks: bool = True
+    ) -> list[dict[str, Any]]:
+        """ADR-074: the warnings for the last ``span``, for the alert rules (no principal:
+        called by the background sweep, never by a request). ``webhooks=False`` leaves the
+        webhooks out (the alert rules judge them on their own)."""
+        now = datetime.now(UTC)
+        apis, jobs, queues, db_ms = await self._collect(now, now - span)
+        await self._db.rollback()
+        if not webhooks:
+            apis = {**apis, "webhook": []}
+        return self._warnings(apis, jobs, queues, db_ms)
 
     async def _count(self, sql: str) -> int:
         return int(await self._db.scalar(text(sql)) or 0)

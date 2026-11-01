@@ -35,6 +35,7 @@ from app.services.dashboard import DashboardService, Period
 from app.services.dispute_admin import DisputeAdminService
 from app.services.fraud import FraudService
 from app.services.kyc_review import KycReviewService
+from app.services.ops_alerts import OpsAlertService
 from app.services.outages import OutageService
 from app.services.reversals import ReversalService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
@@ -1242,6 +1243,46 @@ async def system_health(
     window: Annotated[Literal["1h", "24h", "7d"], Query()] = "1h",
 ) -> Any:
     return await service.view(staff, window)
+
+
+# --- Operations alerts (ADR-074; owner 2026-11-01: Super Admins) -------------------------------
+
+
+async def get_ops_alerts(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> OpsAlertService:
+    return OpsAlertService(db, runtime.clock)
+
+
+OpsAlerts = Annotated[OpsAlertService, Depends(get_ops_alerts)]
+
+
+class ResolveAlertBody(_Strict):
+    note: str = Field(min_length=5, max_length=1000)
+
+
+@router.get("/alerts", summary="Operations alerts (monitoring.read)")
+async def list_ops_alerts(
+    staff: Staff,
+    service: OpsAlerts,
+    which: Annotated[Literal["live", "all"], Query()] = "live",
+) -> Any:
+    return await service.alerts(staff, which)
+
+
+@router.post("/alerts/{alert_id}/acknowledge", summary="I'm on it (monitoring.update)")
+async def acknowledge_ops_alert(
+    alert_id: uuid.UUID, staff: Staff, service: OpsAlerts, info: Info
+) -> Any:
+    return await service.acknowledge(staff, info, alert_id)
+
+
+@router.post("/alerts/{alert_id}/resolve", summary="Resolve with a note (monitoring.update)")
+async def resolve_ops_alert(
+    alert_id: uuid.UUID, body: ResolveAlertBody, staff: Staff, service: OpsAlerts, info: Info
+) -> Any:
+    return await service.resolve(staff, info, alert_id, body.note)
 
 
 # --- Customer activity and deal timelines (ADR-073; Super Admin, 5 years) ---------------------
