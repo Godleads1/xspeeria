@@ -184,20 +184,6 @@ def _limiter(settings: Settings, name: str, *, limit: int, window: timedelta) ->
     )
 
 
-def _limiter(settings: Settings, name: str, *, limit: int, window: timedelta) -> RateLimiter:
-    """ADR-080: with a database, limits are shared by every server and survive restarts.
-
-    Without one (``/health`` only, unit tests) the in-memory limiter is used: one server only.
-    """
-    if not settings.database_url:
-        return SlidingWindowLimiter(limit=limit, window=window)
-    from app.db.session import get_sessionmaker
-
-    return DatabaseRateLimiter(
-        name=name, limit=limit, window=window, sessions=get_sessionmaker(settings)
-    )
-
-
 def _object_store(settings: Settings) -> ObjectStore | None:
     """ADR-049/060: the Cloudflare R2 client comes with the bucket; locally, a folder."""
     if not settings.local_photo_dir:
