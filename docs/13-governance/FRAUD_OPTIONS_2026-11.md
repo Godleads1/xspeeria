@@ -24,7 +24,7 @@
 | # | Check | What it stops | Cost to honest users | Effort |
 |---|---|---|---|---|
 | 1 | **New payout account waits.** A payout account added in the last *N* hours (e.g. 24) can't receive a payout yet; older accounts pay at once. | Takeover → new account → instant payout | Only the first deal to a new account waits | Small |
-| 2 | **Block, not just alert, when the payout name doesn't match** the verified name (the rule exists today as an alert). | Paying out to someone else's account | People whose bank name differs from their ID (initials, maiden names) need staff review | Small |
+| 2 | ~~Block when the payout name doesn't match the verified name~~. **Ruled out by the owner, 2 Nov 2026 (DEC-007):** payouts to other people's accounts are allowed (e.g. a school's account for fees). | — | — | — |
 | 3 | **New-user caps.** Lower limits for the first 7–30 days after verification, on top of the tiers. | Fresh fake or mule accounts moving large sums | New users trade smaller amounts at first | Small |
 | 4 | **Recent-security-change pause.** After a PIN reset, phone or email change, or sign-in on a new phone, payouts wait *N* hours. | Takeover via reset or SIM swap | Rarely felt | Medium |
 | 5 | **Staff "hold this deal" button.** Compliance can hold one deal's payout from a fraud alert while they look (holds exist today; there's no button for this case). | Lets alerts act fast without suspending the person | None | Small |
@@ -33,10 +33,17 @@
 
 ## Suggested starting set
 
-- **1** (new payout account waits 24 hours);
-- **2** (block on name mismatch, with staff review);
+- **1** (new payout account waits 24 hours). This matters more now that payouts may go to anyone's account (DEC-007): it's the main brake on a takeover that adds the fraudster's account.
 - **5** (hold-this-deal button).
 
-Together they cover the takeover path closely, and honest users rarely notice them. Add **3** if the bank or the lawyer asks for new-user limits. The numbers above are starting points for you to set.
+Together they cover the takeover path, and honest users rarely notice them. Add **3** if the bank or the lawyer asks for new-user limits. The numbers above are starting points for you to set.
+
+**Third-party payouts (owner, 2 Nov 2026, DEC-007): allowed.** So the `payout_name_mismatch` alert (ADR-068) will fire for every payout to someone else, such as a school. Choose one of these:
+
+- keep it as is;
+- lower it to *low*;
+- alert only when the account is new and used straight away.
+
+Also confirm with the lawyer and the partner bank that third-party payouts are acceptable under their AML rules. Some banks require extra checks for them.
 
 **What I need from you:** which numbers to use for options 1, 3, 4 and 7, if chosen, and who reviews held payouts (Compliance Officer?). The partner bank may also have rules of its own: ask them (C-1).
