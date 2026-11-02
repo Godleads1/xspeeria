@@ -18,11 +18,7 @@ class TestHealth:
         """No database, Redis, Celery, secret or partner credential is configured."""
         response = _client().get("/health")
         assert response.status_code == 200
-        body = response.json()
-        assert body["status"] == "ok"
-        assert body["app"] == "Xspeeria"
-        assert body["environment"] == "local"
-        assert body["api_version"] == "v1"
+        assert response.json() == {"status": "ok"}
 
     def test_leaks_no_secret_or_infrastructure_detail(self) -> None:
         response = _client(
@@ -35,11 +31,13 @@ class TestHealth:
         assert "super-secret" not in text
         assert "postgresql" not in text
         assert "whsec" not in text
-        assert set(response.json()) == {"status", "app", "environment", "api_version"}
+        assert response.json() == {"status": "ok"}
 
-    def test_reports_the_configured_environment(self) -> None:
+    def test_does_not_name_the_deployment(self) -> None:
+        """SEC-014: an unauthenticated caller learns nothing about which server it reached."""
         response = _client(app_env="staging").get("/health")
-        assert response.json()["environment"] == "staging"
+        assert response.json() == {"status": "ok"}
+        assert "staging" not in response.text and "v1" not in response.text
 
 
 class TestErrorEnvelope:
