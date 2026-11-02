@@ -5,8 +5,12 @@ Rules over data Xspeeria already has, checked by the background sweep (every 30 
 * ``pin_lockout`` (low) — the app locked the account after 5 wrong PINs.
 * ``code_lockout`` (low) — the account was locked after 5 wrong sign-in codes.
 * ``disputes_against`` (high) — 3 or more disputes raised **against** the same person in 30 days.
-* ``payout_name_mismatch`` (medium) — a payout account whose bank-checked holder name shares no
-  name with the person's verified identity name.
+* ``payout_name_mismatch`` (medium) — a payout account in **someone else's name** (its
+  bank-checked holder name shares no word with the person's verified name) that was **chosen
+  for a deal within 24 hours of being added**. Owner, 2026-11-02 (DEC-007, ADR-083): paying
+  into other people's accounts is allowed (e.g. a school's account for fees), so an account in
+  another name alone is normal; a brand-new one used straight away is the pattern of a stolen
+  account.
 
 Staff can also raise one by hand (``staff_report``). The thresholds are starting values, set in
 this file; changing them is an owner decision.
@@ -41,7 +45,7 @@ from app.models.fraud import FraudAlert
 from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import Match, Offer
-from app.models.payouts import Beneficiary
+from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import Transaction
 from app.models.staff import StaffAccount, StaffAuditEntry
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
@@ -58,6 +62,12 @@ SEVERITY = {
     "disputes_against": "high",
     "payout_name_mismatch": "medium",
 }
+
+#: ADR-083 (owner, 2026-11-02): "brand new and used straight away" -- chosen for a deal within
+#: this long after the account was added. A starting value; changing it is an owner decision.
+NEW_ACCOUNT_WINDOW = timedelta(hours=24)
+#: Only deal choices this recent are scanned (older ones were scanned when they happened).
+NEW_ACCOUNT_LOOKBACK = timedelta(days=7)
 
 
 def ref(alert_id: uuid.UUID) -> str:
@@ -167,6 +177,7 @@ class FraudService:
                     {"disputes": len(ids), "days": DISPUTES_WINDOW.days},
                 )
 
+        # ADR-083: an account in another name, chosen for a deal soon after it was added.
         names = (
             await self._db.execute(
                 select(
@@ -185,7 +196,16 @@ class FraudService:
                     Beneficiary.account_name.isnot(None),
                     Beneficiary.removed_at.is_(None),
                     KycCase.legal_name.isnot(None),
+                    select(MatchPayoutSelection.id)
+                    .where(
+                        MatchPayoutSelection.beneficiary_id == Beneficiary.id,
+                        MatchPayoutSelection.created_at >= now - NEW_ACCOUNT_LOOKBACK,
+                        MatchPayoutSelection.created_at
+                        < Beneficiary.created_at + NEW_ACCOUNT_WINDOW,
+                    )
+                    .exists(),
                 )
+                .distinct()
             )
         ).all()
         for ben_id, user_id, account_name, last4, bank, legal in names:

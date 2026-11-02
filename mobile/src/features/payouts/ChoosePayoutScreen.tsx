@@ -4,6 +4,10 @@
  * receive, and how much each gets; the amounts must add up exactly (ADR-021 §3, ADR-035).
  * "Confirm it's you" (ADR-054) confirms it. When both sides have chosen, the deal is ready for the
  * partner bank's escrow. Amounts are integer minor units throughout.
+ *
+ * ADR-083 (owner, 2026-11-02): accounts may be anyone's (a school's, say), so each shows the
+ * holder's name the bank confirmed, and before "Confirm it's you" the person checks exactly who
+ * will be paid and how much.
  */
 
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
@@ -58,6 +62,8 @@ export function ChoosePayoutScreen({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  /** ADR-083: checking who will be paid, before "Confirm it's you". */
+  const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -136,12 +142,48 @@ export function ChoosePayoutScreen({
       );
       setDeal(m);
       setSaved(true);
+      setReviewing(false);
     } catch (e) {
       setError(messageFor(e));
     } finally {
       setBusy(false);
     }
   };
+
+  if (reviewing) {
+    const chosen = parsed
+      .filter(([, minor]) => (minor ?? 0) > 0)
+      .map(([id, minor]) => ({ account: accounts.find((a) => a.payout_account_id === id), minor: minor ?? 0 }));
+    return (
+      <Screen testID="choose-review">
+        {header}
+        <Text style={styles.big}>{tr("Check who will be paid")}</Text>
+        <Text style={styles.line}>
+          {tr("When both sides have paid in, the partner bank pays these accounts straight away. A payment to a wrong account may not come back.")}
+        </Text>
+        <View style={styles.list}>
+          {chosen.map(({ account, minor }) =>
+            account ? (
+              <View key={account.payout_account_id} testID={`choose-review-${account.payout_account_id}`} style={styles.row}>
+                <Text style={styles.strong}>{account.account_name ?? tr("Name not confirmed yet")}</Text>
+                <Text style={styles.line}>{`${account.bank_name} •••• ${account.account_last4}`}</Text>
+                <Text style={styles.strong}>{`${formatHundredths(minor)} ${currency}`}</Text>
+              </View>
+            ) : null,
+          )}
+        </View>
+        {error ? (
+          <Text testID="choose-error" accessibilityRole="alert" style={styles.warn}>
+            {error}
+          </Text>
+        ) : null}
+        <PrimaryButton testID="choose-review-ok" label={busy ? tr("Saving…") : tr("Yes, pay these accounts")} onPress={() => void submit()} disabled={busy} />
+        <Pressable testID="choose-review-change" accessibilityRole="button" onPress={() => setReviewing(false)} hitSlop={8} disabled={busy}>
+          <Text style={styles.link}>{tr("Change")}</Text>
+        </Pressable>
+      </Screen>
+    );
+  }
 
   return (
     <Screen testID="choose-payout-screen">
@@ -166,6 +208,7 @@ export function ChoosePayoutScreen({
           {accounts.map((a) => (
             <View key={a.payout_account_id} style={styles.row}>
               <Text style={styles.strong}>{`${a.bank_name} •••• ${a.account_last4}`}</Text>
+              {a.account_name ? <Text testID={`choose-holder-${a.payout_account_id}`} style={styles.line}>{a.account_name}</Text> : null}
               <OutlinedField label={tr("Amount in {{currency}}", { currency })}>
                 <FieldInput
                   testID={`choose-amount-${a.payout_account_id}`}
@@ -200,7 +243,7 @@ export function ChoosePayoutScreen({
           {error}
         </Text>
       ) : null}
-      <PrimaryButton testID="choose-confirm" label={busy ? tr("Saving…") : tr("Confirm payout accounts")} onPress={() => void submit()} disabled={!ready} />
+      <PrimaryButton testID="choose-confirm" label={tr("Confirm payout accounts")} onPress={() => setReviewing(true)} disabled={!ready} />
     </Screen>
   );
 }
