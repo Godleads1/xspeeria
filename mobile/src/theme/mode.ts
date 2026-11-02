@@ -8,7 +8,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { Appearance, StyleSheet } from 'react-native';
+import { Appearance, StyleSheet, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   color as lightColor,
@@ -18,6 +18,9 @@ import {
   type ColorScheme,
   type InteractionScheme,
 } from '@xspeeria/tokens';
+
+/** A map of named styles (React Native 0.88 no longer exports `StyleSheet.NamedStyles`). */
+type NamedStyles<T> = { [P in keyof T]: ViewStyle | TextStyle | ImageStyle };
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -84,7 +87,7 @@ export const interaction: InteractionScheme = live<InteractionScheme>(lightInter
  * `StyleSheet.create` for both modes: the factory runs once per mode (lazily) with the live
  * `color`, and `styles.x` returns the current mode's style. Use it for every screen.
  */
-export function themed<T extends StyleSheet.NamedStyles<T>>(factory: () => T & StyleSheet.NamedStyles<T>): T {
+export function themed<T extends NamedStyles<T>>(factory: () => T & NamedStyles<T>): T {
   const cache: Partial<Record<ThemeMode, T>> = {};
   const current = (): T => {
     const hit = cache[mode];
