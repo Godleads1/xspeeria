@@ -25,7 +25,7 @@ describe('Terms and Conditions screen', () => {
   });
 
   it('opens the contact email in the mail app', async () => {
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await render(<TermsScreen onBack={jest.fn()} />);
     await fireEvent.press(screen.getByTestId('terms-email'));
     expect(open).toHaveBeenCalledWith('mailto:Xspeeria@intelyticslimited.com');
