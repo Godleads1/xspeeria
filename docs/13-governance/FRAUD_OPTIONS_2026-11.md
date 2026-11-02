@@ -40,6 +40,13 @@ Together they cover the takeover path, and honest users rarely notice them. Add 
 
 **Third-party payouts (owner, 2 Nov 2026, DEC-007): allowed.** The owner then chose: the `payout_name_mismatch` alert fires **only when the account is new and used straight away** (within 24 hours of being added), and adding an account or choosing a deal's payout accounts asks the customer to confirm exactly who will be paid (ADR-083).
 
+**New payout accounts: no wait (owner, 3 Nov 2026, DEC-092). Option 1 is not chosen.** The owner keeps instant payouts and relies on what is built:
+- double confirmation when an account is added (ADR-083);
+- a fraud alert when a new account is used within 24 hours (ADR-083);
+- a "payout account added" email with a "this wasn't me" link that freezes the account (ADR-084).
+
+Accepted risk: an account takeover that adds a new account and takes a deal at once can be paid out before the alert is seen or the owner reads the email. If the partner bank or the lawyer requires a cooling-off period on new payees, this decision is reopened.
+
 Also confirm with the lawyer and the partner bank that third-party payouts are acceptable under their AML rules. Some banks require extra checks for them.
 
 **What I need from you:** which numbers to use for options 1, 3, 4 and 7, if chosen, and who reviews held payouts (Compliance Officer?). The partner bank may also have rules of its own: ask them (C-1).

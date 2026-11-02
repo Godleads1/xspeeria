@@ -12,6 +12,9 @@ Rules over data Xspeeria already has, checked by the background sweep (every 30 
   another name alone is normal; a brand-new one used straight away is the pattern of a stolen
   account.
 
+* ``customer_reported_not_me`` (high) — the customer pressed "this wasn't me" in a security
+  email (ADR-084). Unlike the others, the account was frozen at that moment.
+
 Staff can also raise one by hand (``staff_report``). The thresholds are starting values, set in
 this file; changing them is an owner decision.
 
@@ -61,6 +64,8 @@ SEVERITY = {
     "code_lockout": "low",
     "disputes_against": "high",
     "payout_name_mismatch": "medium",
+    # ADR-084: the customer pressed "this wasn't me"; the account is already frozen.
+    "customer_reported_not_me": "high",
 }
 
 #: ADR-083 (owner, 2026-11-02): "brand new and used straight away" -- chosen for a deal within
@@ -119,6 +124,12 @@ class FraudService:
             .returning(FraudAlert.id)
         )
         return result.scalar() is not None
+
+    async def customer_reported_not_me(
+        self, user_id: uuid.UUID, notice_id: uuid.UUID, details: dict[str, Any]
+    ) -> bool:
+        """ADR-084: raised with the freeze, in the same transaction. One per notice."""
+        return await self._raise(user_id, "customer_reported_not_me", str(notice_id), details)
 
     async def scan(self) -> int:
         """Apply every rule once; returns how many new alerts were raised. Idempotent."""

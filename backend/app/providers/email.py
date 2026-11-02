@@ -39,12 +39,27 @@ __all__ = [
 ]
 
 #: Alert subjects. Never the code, a full number, an amount or an account number.
+#: ADR-084: one per log-in or change the customer is told about (``app.services.
+#: security_notices.NOTICE_KINDS``), plus the lock-out warning and the freeze confirmation.
 ALERT_TEXT = {
     "new_device_sign_in": "New log-in to your Xspeeria account",
+    "signed_in": "New log-in to your Xspeeria account",
     "pin_changed": "Your Xspeeria PIN was changed",
     "pin_reset": "Your Xspeeria PIN was reset",
     "phone_changed": "Your Xspeeria phone number was changed",
     "checks_locked": "Too many failed checks on your Xspeeria account",
+    "fingerprint_turned_on": "Fingerprint or Face ID log-in was turned on",
+    "fingerprint_turned_off": "Fingerprint or Face ID log-in was turned off",
+    "trusted_phone_removed": "A trusted phone was removed from your Xspeeria account",
+    "payout_account_added": "A payout account was added to your Xspeeria account",
+    "payout_account_removed": "A payout account was removed from your Xspeeria account",
+    "payout_accounts_chosen": "A payout account was chosen for your Xspeeria deal",
+    "offer_posted": "An offer was posted from your Xspeeria account",
+    "request_posted": "A request was posted from your Xspeeria account",
+    "offer_edited": "An offer on your Xspeeria account was changed",
+    "offer_withdrawn": "An offer on your Xspeeria account was withdrawn",
+    "offer_taken": "An offer was taken from your Xspeeria account",
+    "account_frozen": "Your Xspeeria account is frozen",
 }
 
 
@@ -58,8 +73,11 @@ class EmailSender(Protocol):
         """Deliver a verification code. Must not log the code or the full address."""
         ...
 
-    async def send_alert(self, email: str, kind: str, device: str | None) -> None:
-        """A "was this you?" message. ``kind`` is a key of ``ALERT_TEXT``."""
+    async def send_alert(
+        self, email: str, kind: str, device: str | None, report_url: str | None = None
+    ) -> None:
+        """A "was this you?" message. ``kind`` is a key of ``ALERT_TEXT``. ``report_url``
+        (ADR-084) is the one-time "this wasn't me" link, when there is one."""
         ...
 
     async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
@@ -75,6 +93,8 @@ class SentEmail:
     alert: str | None = None
     #: ADR-074: "P1 #REF Title" for an operations alert.
     ops_alert: str | None = None
+    #: ADR-084: the "this wasn't me" link in an alert.
+    link: str | None = None
 
 
 @dataclass
@@ -84,8 +104,10 @@ class RecordingEmailSender:
     async def send_code(self, email: str, code: str) -> None:
         self.sent.append(SentEmail(email=email, code=code))
 
-    async def send_alert(self, email: str, kind: str, device: str | None) -> None:
-        self.sent.append(SentEmail(email=email, alert=kind))
+    async def send_alert(
+        self, email: str, kind: str, device: str | None, report_url: str | None = None
+    ) -> None:
+        self.sent.append(SentEmail(email=email, alert=kind, link=report_url))
 
     async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
         self.sent.append(SentEmail(email=email, ops_alert=f"{severity} {ref} {title}"))
@@ -98,6 +120,9 @@ class RecordingEmailSender:
 
     def alerts_for(self, email: str) -> list[str]:
         return [i.alert for i in self.sent if i.email == email and i.alert is not None]
+
+    def links_for(self, email: str) -> list[str]:
+        return [i.link for i in self.sent if i.email == email and i.link is not None]
 
 
 class DevConsoleEmailSender:
@@ -112,11 +137,14 @@ class DevConsoleEmailSender:
             out.write(f"\n[DEV EMAIL — local only] code for {mask_email(email)}: {code}\n\n")
             out.flush()
 
-    async def send_alert(self, email: str, kind: str, device: str | None) -> None:
+    async def send_alert(
+        self, email: str, kind: str, device: str | None, report_url: str | None = None
+    ) -> None:
         async with track_outside("Email (developer window)", "send alert"):  # ADR-072
             out = self._stream or sys.stderr
             subject = ALERT_TEXT.get(kind, kind)
-            out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {subject}\n\n")
+            link = f"\n  Not you? {report_url}" if report_url else ""
+            out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {subject}{link}\n\n")
             out.flush()
 
     async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
@@ -144,9 +172,31 @@ def _code_text(code: str) -> str:
     )
 
 
-def _alert_text(kind: str, device: str | None) -> str:
+def _alert_text(kind: str, device: str | None, report_url: str | None = None) -> str:
     what = ALERT_TEXT.get(kind, "A change to your Xspeeria account")
     on = f"\nDevice: {device[:120]}\n" if device else ""
+    if kind == "account_frozen":
+        return (
+            "You told us someone else is using your Xspeeria account, so we froze it.\n\n"
+            "Every device is logged out. No one can log in, post or take offers, or receive "
+            "payouts from deals that haven't been paid out yet, until Xspeeria staff check the "
+            "account with you and switch it back on.\n\n"
+            "Please contact Xspeeria support. Never share your PIN or codes with anyone, "
+            "including Xspeeria staff."
+        )
+    if report_url:
+        # ADR-084 (owner 2026-11-02): one link, to Xspeeria's own address, which only asks
+        # for a confirmation. It never asks for a PIN, a code or any other detail.
+        return (
+            f"{what}.\n{on}\n"
+            "If this was you, there is nothing to do.\n\n"
+            "If it wasn't you, freeze your account now:\n"
+            f"{report_url}\n\n"
+            "That page asks you to confirm, then logs every device out and stops all deals "
+            "and payouts until Xspeeria staff check the account with you. It never asks for "
+            "your PIN or a code. The link works once, for 7 days.\n\n"
+            "Never share your PIN or codes with anyone, including Xspeeria staff."
+        )
     return (
         f"{what}.\n{on}\n"
         "If this was you, there is nothing to do.\n\n"
@@ -158,7 +208,8 @@ def _alert_text(kind: str, device: str | None) -> str:
 class ResendEmailSender:
     """Sends through Resend's API (``POST https://api.resend.com/emails``).
 
-    * Plain-text messages only; no links, so a message can't be imitated by a phishing link.
+    * Plain-text messages only. The one link is the "this wasn't me" link in a security
+      notice (ADR-084), to Xspeeria's own address; codes and other alerts carry none.
     * Each message carries an ``Idempotency-Key`` (kept 24 hours by Resend), so the one retry
       after a network error or a 5xx can't send it twice.
     * Nothing about the message is logged: not the address, not the code. A failure raises
@@ -207,9 +258,13 @@ class ResendEmailSender:
     async def send_code(self, email: str, code: str) -> None:
         await self._send(email, "Your Xspeeria code", _code_text(code))
 
-    async def send_alert(self, email: str, kind: str, device: str | None) -> None:
+    async def send_alert(
+        self, email: str, kind: str, device: str | None, report_url: str | None = None
+    ) -> None:
         await self._send(
-            email, ALERT_TEXT.get(kind, "Xspeeria account alert"), _alert_text(kind, device)
+            email,
+            ALERT_TEXT.get(kind, "Xspeeria account alert"),
+            _alert_text(kind, device, report_url),
         )
 
     async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:

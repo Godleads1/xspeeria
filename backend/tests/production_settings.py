@@ -8,4 +8,6 @@ PRODUCTION_KEYS: dict[str, object] = {
     "super_admin_key_required": True,
     "staff_key_rp_id": "admin.xspeeria.test",
     "staff_key_origin": "https://admin.xspeeria.test",
+    # ADR-084: the "this wasn't me" link in security emails.
+    "public_api_url": "https://api.xspeeria.test",
 }

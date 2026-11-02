@@ -49,6 +49,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
 - [ ] **Confirm ADR-037 §4 details** — *You*: fee stored per leg; 5 retries before a person is alerted; late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
 - [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
+- [x] **Wait before a new payout account can be paid** — decided 3 Nov 2026: **no wait**. Protection is the double confirmation, the new-account alert (ADR-083) and the "this wasn't me" email (ADR-084); the risk of a fast takeover payout is accepted. Reopen if the bank or lawyer asks for a cooling-off period (DEC-092).
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
 - [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
@@ -112,6 +113,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
 - [x] **Super Admin hardware security key** (ADR-051 Decision 2). Done (ADR-081).
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
+- [x] **"This wasn't me" security emails** — built (ADR-084, 2 Nov 2026): an email for every log-in, account change, payout account change and deal step; the link freezes the account; a Super Admin reactivates it. *You:* set `PUBLIC_API_URL` to the live API's https address (needed in production).
 - [x] **Resend email sender** — built (ADR-082). *You:* create the Resend account, verify the sending domain, then set `RESEND_API_KEY` and `EMAIL_FROM` (steps in ADR-082).
 - [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
 

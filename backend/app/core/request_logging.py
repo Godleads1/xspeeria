@@ -60,8 +60,11 @@ async def _record_activity(request: Request, route: str, status_code: int) -> No
             status_code,
             dict(request.scope.get("path_params") or {}),
         )
+        notice = activity.notice_for(row)  # ADR-084: "was this you?" email, same transaction
         async with get_sessionmaker(settings)() as db:
             db.add(row)
+            if notice is not None:
+                db.add(notice)
             await db.commit()
     except Exception:  # noqa: BLE001 - never fail the answer because the log failed
         _logger.exception("activity_record_failed", extra={"route": route})

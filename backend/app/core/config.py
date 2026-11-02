@@ -225,6 +225,11 @@ class Settings(BaseSettings):
     #: Required in production (live money). A Super Admin with no key yet can sign in only to
     #: register one.
     super_admin_key_required: bool = False
+    #: ADR-084: the address customers' phones and browsers reach this API at. The "this
+    #: wasn't me" link in security emails points here. Must be https in production.
+    public_api_url: str = "http://localhost:8000"
+    #: ADR-084: how often security notice emails are sent (seconds; 0 = off).
+    security_notice_seconds: int = 10
 
     @field_validator("database_url")
     @classmethod

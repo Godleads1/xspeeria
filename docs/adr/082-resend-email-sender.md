@@ -23,6 +23,7 @@
    - Sources: [Resend: idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys.md), [Resend: send email](https://www.resend.com/docs/api-reference/emails/send-email-with-topic).
 4. **One retry, never a duplicate.** After a network error or a 5xx, the message is sent once more with the **same** idempotency key, so Resend can't deliver it twice. Each message gets a new random key, so a genuine second alert is never mistaken for a repeat. A 4xx is not retried.
 5. **Plain text only, with no links,** so a phishing email can't copy a "click here" from ours. The messages say staff never ask for codes.
+   - **Amended by ADR-084 (owner, 2026-11-02):** security notices now carry one "this wasn't me" link to Xspeeria's own address. Codes and operations alerts still carry none.
 6. **Nothing about a message is logged:** not the address, not the code, not the key. A failure raises `EmailDeliveryError` with the HTTP status only. Calls appear on System Health as "Resend email" (ADR-072).
 
 ## To switch it on (owner)

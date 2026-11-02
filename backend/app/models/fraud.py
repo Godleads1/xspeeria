@@ -26,6 +26,8 @@ FRAUD_RULES = (
     "disputes_against",
     "payout_name_mismatch",
     "staff_report",
+    # ADR-084: the customer pressed "this wasn't me" in a security email.
+    "customer_reported_not_me",
 )
 
 
@@ -34,7 +36,7 @@ class FraudAlert(Base):
     __table_args__ = (
         CheckConstraint(
             "rule IN ('pin_lockout', 'code_lockout', 'disputes_against', "
-            "'payout_name_mismatch', 'staff_report')",
+            "'payout_name_mismatch', 'staff_report', 'customer_reported_not_me')",
             name="rule_allowed",
         ),
         CheckConstraint("severity IN ('low', 'medium', 'high')", name="severity_allowed"),

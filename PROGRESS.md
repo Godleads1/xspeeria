@@ -45,6 +45,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Resend email sender, off until the account exists | **Built 2 Nov 2026** | ADR-082 |
 | Shared rate limits in the database (readiness H-1) | **Built 2 Nov 2026** | ADR-080 |
 | Super Admin hardware security keys (readiness H-5) | **Built 2 Nov 2026** | ADR-081 |
+| "Was this you?" email for every log-in and change, with a "this wasn't me" link that freezes the account | **Built 2 Nov 2026** | ADR-084 |
 
 ### Not built yet (code)
 

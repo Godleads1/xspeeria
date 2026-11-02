@@ -66,6 +66,7 @@ from app.domain.auth_rules import (
 )
 from app.domain.disposable_email import is_disposable_email
 from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
+from app.models.activity import CustomerActivity
 from app.models.identity import (
     AuthRefreshToken,
     AuthSession,
@@ -76,6 +77,7 @@ from app.models.identity import (
     VerificationCheck,
 )
 from app.models.kyc import KycCase
+from app.models.security_notices import SecurityNotice
 from app.providers.bank_check import NameCheck
 from app.providers.didit import KycSessionProvider
 from app.providers.email import EmailSender, mask_email
@@ -283,6 +285,8 @@ class AuthRuntime:
     staff_key_rp_id: str = "localhost"
     staff_key_origin: str = "http://localhost:3000"
     super_admin_key_required: bool = False
+    #: ADR-084: where the "this wasn't me" link in security emails points.
+    public_api_url: str = "http://localhost:8000"
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: RateLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(
@@ -539,7 +543,7 @@ class AuthService:
         if trusted is not None:
             trusted.last_used_at = now
             pair = await self._open_session(user, device, now)
-            self._db.add(
+            self._record(
                 activity.entry(
                     user.id, "signed_in", "account", detail={"how": "trusted_phone"}, at=now
                 )
@@ -736,9 +740,20 @@ class AuthService:
         if locked:
             user.mfa_failed_attempts = 0
             user.mfa_locked_until = now + MFA_LOCK
+            # ADR-084: emailed with a "this wasn't me" link, like every other notice.
+            _logger.warning("security_alert", extra={"user_id": str(user.id), "alert": "locked"})
+            self._db.add(
+                SecurityNotice(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    kind="checks_locked",
+                    device=activity.email_device(activity.current_device.get()),
+                    created_at=now,
+                    attempts=0,
+                )
+            )
         await self._db.commit()
         if locked:
-            await self._alert(user, "checks_locked")
             return _rate_limited(MFA_LOCK)
         return wrong or _invalid_code()
 
@@ -746,19 +761,12 @@ class AuthService:
         user.mfa_failed_attempts = 0
         user.mfa_locked_until = None
 
-    async def _alert(self, user: User, kind: str, device: DeviceInfo | None = None) -> None:
-        """ADR-054: a "was this you?" email, sent after the change is committed. A failed
-        send is logged, never undoes the change."""
-        _logger.warning("security_alert", extra={"user_id": str(user.id), "alert": kind})
-        if self._rt.email is None:
-            return
-        try:
-            await self._rt.email.send_alert(user.email, kind, device.user_agent if device else None)
-        except Exception as exc:  # noqa: BLE001 - an alert must never break the request
-            _logger.error(
-                "security_alert_not_sent",
-                extra={"user_id": str(user.id), "alert": kind, "error": type(exc).__name__},
-            )
+    def _record(self, row: CustomerActivity) -> None:
+        """An activity-log row, plus its "was this you?" email when it is one (ADR-084)."""
+        self._db.add(row)
+        notice = activity.notice_for(row)
+        if notice is not None:
+            self._db.add(notice)
 
     def _trust_device(
         self, user: User, device_id: str | None, agent: str | None, now: datetime
@@ -1027,7 +1035,7 @@ class AuthService:
         row.consumed_at = now
         device_token = self._trust_device(user, device.device_id, device.user_agent, now)
         pair = await self._open_session(user, device, now, pin_verified_at=row.created_at)
-        self._db.add(
+        self._record(
             activity.entry(
                 user.id,
                 "signed_up" if row.purpose == "signup" else "signed_in",
@@ -1038,8 +1046,6 @@ class AuthService:
         )
         await self._db.commit()
         _logger.info("signed_in", extra={"user_id": str(user.id), "check": row.method})
-        if row.purpose == "login":
-            await self._alert(user, "new_device_sign_in", device)
         return SignedIn(pair, device_token)
 
     async def check_codes(
@@ -1257,7 +1263,7 @@ class AuthService:
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_change", keep=principal.session_id)
         await self._db.commit()
-        await self._alert(user, "pin_changed")
+        # ADR-084: the "was this you?" email comes with the activity-log row for this route.
 
     async def pin_reset_start(self, phone_raw: str) -> None:
         """Send a reset code by SMS. Same answer whether or not the number has an account."""
@@ -1342,11 +1348,10 @@ class AuthService:
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_reset")
         await self._repo.revoke_trusted_devices(user.id, now)
-        self._db.add(
+        self._record(
             activity.entry(user.id, "pin_reset", "security", detail={"how": row.method}, at=now)
         )
         await self._db.commit()
-        await self._alert(user, "pin_reset")
 
     # --- phone number change (ADR-047) ------------------------------------------------------
 
@@ -1434,7 +1439,7 @@ class AuthService:
                 "This number is already used by another account.",
                 status.HTTP_409_CONFLICT,
             ) from None
-        await self._alert(user, "phone_changed")
+        # ADR-084: the "was this you?" email comes with the activity-log row for this route.
         _logger.info(
             "phone_changed", extra={"user_id": str(principal.user_id), "old": mask_phone(old)}
         )

@@ -34,7 +34,7 @@ import { OpsAlertsPanel } from './OpsAlertsPanel';
 export const REFRESH_MS = 30_000;
 
 /** The server's job names (app.main), translated for display. */
-export const JOB_NAMES = ['Escrow processing', 'Deal expiry', 'Waiting queues', 'Fraud scan', 'Phone push', 'Demo robots', 'Alert rules'] as const;
+export const JOB_NAMES = ['Escrow processing', 'Deal expiry', 'Waiting queues', 'Fraud scan', 'Phone push', 'Security emails', 'Demo robots', 'Alert rules'] as const;
 
 export const WINDOW_LABEL: Record<HealthWindow, string> = {
   '1h': 'Last hour',

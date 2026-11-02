@@ -22,6 +22,8 @@ from app.core.exceptions import AppError
 from app.models.identity import AuthSession, User
 from app.models.kyc import KycCase
 from app.models.staff import StaffAuditEntry
+from app.services.security_notices import not_me_hold_reason
+from app.services.settlement import SettlementService
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
 __all__ = ["CustomerAdminService", "CustomerAction"]
@@ -202,6 +204,16 @@ class CustomerAdminService:
                 .where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
                 .values(revoked_at=now, revoke_reason=revoke)
             )
+        released = 0
+        if action == "reactivate":
+            # ADR-084: a freeze from a "this wasn't me" report held the customer's deals; staff
+            # switching the account back on lets them go on (or still expire unpaid).
+            released = await SettlementService(self._db, self._clock, None).release_customer_holds(
+                user_id, not_me_hold_reason(user_id)
+            )
+        detail: dict[str, Any] = {"from": before, "to": to, "reason": reason}
+        if released:
+            detail["deals_released"] = released
         self._db.add(
             StaffAuditEntry(
                 at=now,
@@ -209,7 +221,7 @@ class CustomerAdminService:
                 action=audit_action,
                 target_type="customer",
                 target_id=str(user_id),
-                detail={"from": before, "to": to, "reason": reason},
+                detail=detail,
                 ip_address=info.ip_address,
                 user_agent=info.user_agent,
             )
