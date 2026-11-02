@@ -50,6 +50,9 @@ def _as_app_role(engine: Any) -> Any:
         cursor = dbapi_conn.cursor()
         cursor.execute("SET ROLE xspeeria_app")
         cursor.close()
+        # The driver runs that inside a transaction; without this commit the first rollback
+        # in a test would undo it and put the connection back on CI's superuser.
+        dbapi_conn.commit()
 
     return engine
 
