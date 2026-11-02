@@ -101,7 +101,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [x] **Step-up on sensitive actions** — built: payout accounts, choosing payouts, taking offers, PIN and contact changes (`STEP_UP_ACTIONS`). The 24-hour hold was removed by the owner (DEC-044). (Checked 2026-10-27.)
 - [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
 - [ ] **Connect a real SMS and email provider** once chosen — *Build* (only developer senders exist).
-- [ ] **Super Admin hardware security key** before live money — *Build* (ADR-051 Decision 2).
+- [x] **Super Admin hardware security key** — built (ADR-081, 2 Nov 2026). *You:* buy two keys (e.g. YubiKey) per Super Admin; register them on the live console; then `SUPER_ADMIN_KEY_REQUIRED=true`.
 - [ ] **Backups with a recorded restore** — *Build*, after hosting. (SEC-030) The "pause all deals" switch and "sign everyone out" are built (ADR-075, PR #94).
 - [ ] **Deployment basics:** separate environments, deploy pipeline and a disaster-recovery runbook. (SEC-033 to SEC-039) Done already: SBOM in CI (ADR-077), operations alerts and the incident plan (ADR-074).
 - [ ] **Independent penetration test** before launch. (SEC-040)
@@ -110,7 +110,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 ## 4b. Buildable now, no outside party needed (added 2 Nov 2026)
 
 - [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
-- [ ] **Super Admin hardware security key** (ADR-051 Decision 2).
+- [x] **Super Admin hardware security key** (ADR-051 Decision 2). Done (ADR-081).
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
 - [ ] **Resend email sender** behind the existing interface — ready to switch on when the account and domain exist.
 - [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.

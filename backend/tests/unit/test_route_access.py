@@ -13,9 +13,15 @@ from fastapi.routing import APIRoute
 
 from app.core.config import Settings
 from app.main import create_app
+from tests.production_settings import PRODUCTION_KEYS
 
 #: Customer sign-in, staff sign-in and session dependencies (``app/api``).
-_SIGNED_IN = {"current_principal", "current_staff", "current_staff_passive"}
+_SIGNED_IN = {
+    "current_principal",
+    "current_staff",
+    "current_staff_passive",
+    "current_staff_key_setup",
+}
 
 #: Reachable without a login, and why that's safe.
 PUBLIC_ROUTES = {
@@ -39,6 +45,7 @@ PUBLIC_ROUTES = {
     ): "needs the unlock key that Face ID/fingerprint releases on the phone",
     ("POST", "/api/v1/admin/auth/login"): "staff password; locks after 5 wrong tries",
     ("POST", "/api/v1/admin/auth/verify"): "needs the staff email code",
+    ("POST", "/api/v1/admin/auth/key"): "needs a Super Admin's security key signature (ADR-081)",
     ("POST", "/api/v1/admin/auth/forgot-password"): "same answer whether the email exists",
     ("POST", "/api/v1/admin/auth/reset-password"): "needs the reset code",
     ("POST", "/api/v1/webhooks/didit"): "signed by the identity-check provider (HMAC)",
@@ -54,7 +61,7 @@ def _names(dependant: Any, acc: set[str]) -> set[str]:
 
 
 def _routes() -> list[Any]:
-    app = create_app(Settings(_env_file=None, app_env="production"))  # type: ignore[call-arg]
+    app = create_app(Settings(_env_file=None, app_env="production", **PRODUCTION_KEYS))  # type: ignore[call-arg,arg-type]
     found: list[Any] = []
     for r in app.routes:
         if isinstance(r, APIRoute):

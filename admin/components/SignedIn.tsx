@@ -8,6 +8,7 @@ import { useCallback, useMemo, type ReactElement, type ReactNode } from 'react';
 import { useStaffPhoto } from '../lib/photos';
 import { SessionProvider, useSession } from '../lib/session';
 import { AppShell } from './shell/AppShell';
+import { KeySetupScreen } from './screens/KeySetupScreen';
 
 function Shell({ current, children }: { current: string; children: ReactNode }): ReactElement {
   const { me, api, version, logout, refresh } = useSession();
@@ -17,6 +18,8 @@ function Shell({ current, children }: { current: string; children: ReactNode }):
     () => ({ load: api.staffWork, seen: api.staffWorkSeen, onSignedOut: () => void refresh() }),
     [api, refresh],
   );
+  // ADR-081: a Super Admin who must use a key but has none yet sees only the key set-up.
+  if (me.key_setup_only) return <KeySetupScreen />;
   return (
     <AppShell
       permissions={me.permissions}

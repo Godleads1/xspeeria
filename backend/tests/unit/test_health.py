@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
+from tests.production_settings import PRODUCTION_KEYS
 
 
 def _client(**overrides: object) -> TestClient:
@@ -112,13 +113,22 @@ class TestDocsExposure:
         assert _client(app_env="local", enable_docs=True).get("/openapi.json").status_code == 200
 
     def test_docs_are_not_served_in_production(self) -> None:
-        assert _client(app_env="production", enable_docs=True).get("/docs").status_code == 404
+        assert (
+            _client(**PRODUCTION_KEYS, app_env="production", enable_docs=True)
+            .get("/docs")
+            .status_code
+            == 404
+        )
 
     def test_redoc_is_not_served_in_production(self) -> None:
-        client = _client(app_env="production", enable_docs=True, enable_redoc=True)
+        client = _client(
+            **PRODUCTION_KEYS, app_env="production", enable_docs=True, enable_redoc=True
+        )
         assert client.get("/redoc").status_code == 404
 
     def test_schema_is_not_served_in_production(self) -> None:
         """The schema outlived the UIs that render it. It must not."""
-        client = _client(app_env="production", enable_docs=True, enable_redoc=True)
+        client = _client(
+            **PRODUCTION_KEYS, app_env="production", enable_docs=True, enable_redoc=True
+        )
         assert client.get("/openapi.json").status_code == 404

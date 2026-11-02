@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     text,
@@ -33,7 +34,9 @@ __all__ = [
     "StaffAccount",
     "StaffAuditEntry",
     "StaffCode",
+    "StaffKeyChallenge",
     "StaffRole",
+    "StaffSecurityKey",
     "StaffSession",
 ]
 
@@ -125,6 +128,56 @@ class StaffSession(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ip_address: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(String(256))
+    #: ADR-081: a Super Admin who must use a security key but has none yet gets a session
+    #: that can only register one (and see who they are, or log out).
+    key_setup_only: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false"), default=False
+    )
+
+
+class StaffSecurityKey(Base):
+    """A hardware security key (WebAuthn / FIDO2) registered by a staff member (ADR-081).
+
+    Only the public key is stored; the private key never leaves the physical key.
+    """
+
+    __tablename__ = "staff_security_keys"
+    __table_args__ = (
+        Index("ix_staff_security_keys_staff", "staff_id"),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 60", name="name_length"),
+        CheckConstraint("sign_count >= 0", name="sign_count_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    staff_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staff_accounts.id", ondelete="CASCADE"), nullable=False
+    )
+    credential_id: Mapped[bytes] = mapped_column(LargeBinary, nullable=False, unique=True)
+    public_key: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    sign_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StaffKeyChallenge(Base):
+    """A one-time WebAuthn challenge: registering a key, or the key step of a log-in."""
+
+    __tablename__ = "staff_key_challenges"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('register', 'login')", name="purpose_allowed"),
+        Index("ix_staff_key_challenges_staff", "staff_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    staff_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staff_accounts.id", ondelete="CASCADE"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(10), nullable=False)
+    challenge: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class StaffAuditEntry(Base):

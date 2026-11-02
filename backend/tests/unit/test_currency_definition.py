@@ -374,6 +374,8 @@ class TestPackageRegistration:
             "ops_alerts",
             "deal_pauses",
             "rate_limit_hits",
+            "staff_security_keys",
+            "staff_key_challenges",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -437,7 +439,8 @@ class TestPackageRegistration:
             "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'service_outages', "
             "'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', "
-            "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_roles', 'staff_sessions', "
+            "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_key_challenges', "
+            "'staff_roles', 'staff_security_keys', 'staff_sessions', "
             "'step_up_grants', "
             "'tier_checks', 'transactions', 'trusted_devices', 'users', 'verification_checks', "
             "'webhook_receipts']"
@@ -517,4 +520,5 @@ class TestPackageRegistration:
             "0037_deal_pauses.py",  # emergency controls (ADR-075)
             "0038_row_level_security.py",  # row-level security (ADR-078)
             "0039_rate_limit_hits.py",  # shared rate limits (ADR-080)
+            "0040_staff_security_keys.py",  # Super Admin security keys (ADR-081)
         ]

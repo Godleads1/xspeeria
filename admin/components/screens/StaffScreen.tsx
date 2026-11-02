@@ -22,6 +22,7 @@ import { Avatar, PhotoPicker } from '../Avatar';
 import { BarSelect, FilterBar, SearchBox } from '../FilterBar';
 import { Button, Form, FormError, Notice, PageTitle, Select, TextInput } from '../forms';
 import { Panel } from '../primitives';
+import { ReasonDialog } from '../ReasonDialog';
 import { RowMenu, type RowAction } from '../RowMenu';
 import { DataTable, type Column } from '../table/DataTable';
 import { StaffStatus, when, withinMine } from './common';
@@ -66,6 +67,10 @@ export function StaffScreen({
   const [adding, setAdding] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [editing, setEditing] = useState<StaffView | null>(null);
+  /** ADR-081: removing a colleague's security keys (a lost key). */
+  const [keysOf, setKeysOf] = useState<StaffView | null>(null);
+  const [keysBusy, setKeysBusy] = useState(false);
+  const [keysError, setKeysError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('');
 
@@ -130,8 +135,33 @@ export function StaffScreen({
         ? { label: tr('Disable'), danger: true, testId: `disable-${s.id}`, onSelect: () => void update(s, { status: 'disabled' }) }
         : { label: tr('Enable'), testId: `enable-${s.id}`, onSelect: () => void update(s, { status: 'active' }) },
     );
+    if (isSuper && s.role === 'super_admin') {
+      out.push({
+        label: tr('Remove security keys'),
+        danger: true,
+        testId: `remove-keys-${s.id}`,
+        onSelect: () => {
+          setKeysError(null);
+          setKeysOf(s);
+        },
+      });
+    }
     return out;
   };
+
+  async function removeKeys(s: StaffView, reason: string): Promise<void> {
+    setKeysBusy(true);
+    setKeysError(null);
+    try {
+      const r = await api.removeStaffKeys(s.id, reason);
+      setKeysOf(null);
+      setNotice(tr('Removed {{count}} security key(s) for {{name}}. They were logged out.', { count: r.removed, name: s.name }));
+    } catch (e) {
+      setKeysError(messageFor(e));
+    } finally {
+      setKeysBusy(false);
+    }
+  }
 
   const columns: readonly Column<StaffView>[] = [
     { key: 'name', header: tr('NAME'), render: (s) => <StaffName api={api} staff={s} you={s.id === me.id} /> },
@@ -191,6 +221,18 @@ export function StaffScreen({
             {inviteLink}
           </code>
         </div>
+      ) : null}
+      {keysOf ? (
+        <ReasonDialog
+          title={tr('Remove security keys for {{name}}', { name: keysOf.name })}
+          description={tr('For a lost or broken key. They are logged out and sign in with password and email code until they add a new key.')}
+          confirm={tr('Remove security keys')}
+          danger
+          busy={keysBusy}
+          error={keysError}
+          onCancel={() => setKeysOf(null)}
+          onConfirm={(reason) => void removeKeys(keysOf, reason)}
+        />
       ) : null}
       {editing ? (
         <EditStaff
