@@ -278,6 +278,11 @@ class AuthRuntime:
     tier_checks: TierCheckProvider | None = None
     #: ADR-049/060: where photos are kept. None: photo uploads are off.
     object_store: ObjectStore | None = None
+    #: ADR-081: staff security keys (WebAuthn): the console's host name and address, and
+    #: whether every Super Admin must use one.
+    staff_key_rp_id: str = "localhost"
+    staff_key_origin: str = "http://localhost:3000"
+    super_admin_key_required: bool = False
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
     user_limiter: RateLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(

@@ -84,6 +84,24 @@ async def current_staff(
     service: Service,
     session: Annotated[str | None, Cookie(alias=COOKIE)] = None,
 ) -> StaffPrincipal:
+    principal = await current_staff_key_setup(request, service, session)
+    if principal.key_setup_only:
+        # ADR-081: this session may only register a security key.
+        raise AppError(
+            "ADMIN_403_KEY_SETUP_REQUIRED",
+            "Add your security key before using the console.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    return principal
+
+
+async def current_staff_key_setup(
+    request: Request,
+    service: Service,
+    session: Annotated[str | None, Cookie(alias=COOKIE)] = None,
+) -> StaffPrincipal:
+    """Any signed-in staff session, including one that may only register a security key
+    (ADR-081). Used by: who am I, log out, and the security-key routes."""
     if session is None:
         raise unauthorized()
     principal = await service.authenticate(session)
@@ -92,6 +110,7 @@ async def current_staff(
 
 
 Staff = Annotated[StaffPrincipal, Depends(current_staff)]
+KeySetupStaff = Annotated[StaffPrincipal, Depends(current_staff_key_setup)]
 
 
 async def current_staff_passive(
@@ -105,6 +124,12 @@ async def current_staff_passive(
         raise unauthorized()
     principal = await service.authenticate(session, touch=False)
     request.state.user_id = f"staff:{principal.staff_id}"
+    if principal.key_setup_only:
+        raise AppError(
+            "ADMIN_403_KEY_SETUP_REQUIRED",
+            "Add your security key before using the console.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
     return principal
 
 
@@ -172,6 +197,8 @@ class StaffView(BaseModel):
 
 class MeView(StaffView):
     permissions: list[str]
+    #: ADR-081: signed in only to add a security key.
+    key_setup_only: bool = False
 
 
 @router.post(
@@ -184,11 +211,23 @@ async def login(body: LoginRequest, service: Service, info: Info) -> Any:
     return await service.login(body.email, body.password, info)
 
 
+class KeyStepView(BaseModel):
+    """ADR-081: a Super Admin with a security key touches it next (no cookie yet)."""
+
+    key_required: bool
+    key_challenge_id: uuid.UUID
+    #: WebAuthn ``PublicKeyCredentialRequestOptions`` (base64url fields), for the browser.
+    options: dict[str, Any]
+
+
 @router.post(
     "/auth/verify",
-    response_model=MeView,
+    response_model=MeView | KeyStepView,
     dependencies=[Depends(limit_by_address)],
-    summary="Staff log-in, step 2: the email code (sets the session cookie)",
+    summary=(
+        "Staff log-in, step 2: the email code (sets the session cookie, or asks a Super Admin "
+        "for their security key)"
+    ),
 )
 async def verify(
     body: CodeRequest,
@@ -198,13 +237,38 @@ async def verify(
     settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> Any:
     token, me = await service.verify(body.challenge_id, body.code, info)
+    if token is not None:
+        _set_cookie(response, token, settings)
+    return me
+
+
+class KeyAnswer(_Strict):
+    key_challenge_id: uuid.UUID
+    #: The browser's ``PublicKeyCredential`` as JSON (base64url fields). Checked by py_webauthn.
+    credential: dict[str, Any]
+
+
+@router.post(
+    "/auth/key",
+    response_model=MeView,
+    dependencies=[Depends(limit_by_address)],
+    summary="Staff log-in, step 3 for a Super Admin: the security key (sets the session cookie)",
+)
+async def verify_key(
+    body: KeyAnswer,
+    response: Response,
+    service: Service,
+    info: Info,
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> Any:
+    token, me = await service.finish_key_login(body.key_challenge_id, body.credential, info)
     _set_cookie(response, token, settings)
     return me
 
 
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Log out")
 async def logout(
-    staff: Staff,
+    staff: KeySetupStaff,
     response: Response,
     service: Service,
     info: Info,
@@ -255,8 +319,88 @@ async def reset(body: ResetRequest, service: Service, info: Info) -> Response:
 
 
 @router.get("/me", response_model=MeView, summary="Who I am and what I may do")
-async def me(staff: Staff, service: Service) -> Any:
-    return await service.me(staff)
+async def me(staff: KeySetupStaff, service: Service) -> Any:
+    return {**await service.me(staff), "key_setup_only": staff.key_setup_only}
+
+
+# --- security keys (ADR-081) -------------------------------------------------------------------
+
+
+class KeyView(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: Any
+    last_used_at: Any
+
+
+class KeyList(BaseModel):
+    keys: list[KeyView]
+    #: Every Super Admin must use a key (SUPER_ADMIN_KEY_REQUIRED).
+    required: bool
+    #: Only Super Admins add keys.
+    can_add: bool
+
+
+class KeyOptions(BaseModel):
+    key_challenge_id: uuid.UUID
+    #: WebAuthn ``PublicKeyCredentialCreationOptions`` (base64url fields), for the browser.
+    options: dict[str, Any]
+
+
+class AddKey(_Strict):
+    key_challenge_id: uuid.UUID
+    name: str = Field(min_length=1, max_length=60)
+    credential: dict[str, Any]
+
+
+class RemoveStaffKeys(_Strict):
+    reason: str = Field(min_length=5, max_length=500)
+
+
+@router.get("/me/security-keys", response_model=KeyList, summary="My security keys")
+async def my_keys(staff: KeySetupStaff, service: Service) -> Any:
+    return await service.list_keys(staff)
+
+
+@router.post(
+    "/me/security-keys/options",
+    response_model=KeyOptions,
+    summary="Start adding a security key (Super Admin)",
+)
+async def add_key_options(staff: KeySetupStaff, service: Service) -> Any:
+    return await service.begin_add_key(staff)
+
+
+@router.post(
+    "/me/security-keys",
+    response_model=KeyView,
+    status_code=status.HTTP_201_CREATED,
+    summary="Finish adding a security key (Super Admin)",
+)
+async def add_key(body: AddKey, staff: KeySetupStaff, service: Service, info: Info) -> Any:
+    return await service.finish_add_key(
+        staff, body.key_challenge_id, body.name, body.credential, info
+    )
+
+
+@router.delete(
+    "/me/security-keys/{key_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove one of my security keys",
+)
+async def remove_key(key_id: uuid.UUID, staff: Staff, service: Service, info: Info) -> Response:
+    await service.remove_my_key(staff, key_id, info)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/staff/{staff_id}/security-keys/remove",
+    summary="Remove another staff member's security keys, e.g. a lost key (Super Admin)",
+)
+async def remove_staff_keys(
+    staff_id: uuid.UUID, body: RemoveStaffKeys, staff: Staff, service: Service, info: Info
+) -> Any:
+    return await service.remove_staff_keys(staff, staff_id, body.reason, info)
 
 
 class PasswordChange(_Strict):

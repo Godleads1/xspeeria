@@ -43,6 +43,28 @@ export interface StaffView {
 
 export interface Me extends StaffView {
   permissions: string[];
+  /** ADR-081: signed in only to add a security key. */
+  key_setup_only?: boolean;
+}
+
+/** ADR-081: after the email code, a Super Admin with a key touches it. */
+export interface KeyStep {
+  key_required: true;
+  key_challenge_id: string;
+  options: Record<string, unknown>;
+}
+
+export interface SecurityKey {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface SecurityKeyList {
+  keys: SecurityKey[];
+  required: boolean;
+  can_add: boolean;
 }
 
 export interface RoleView {
@@ -677,7 +699,17 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     login: (email: string, password: string) =>
       call<{ challenge_id: string; email: string }>('POST', '/auth/login', { email, password }),
     verify: (challengeId: string, code: string) =>
-      call<Me>('POST', '/auth/verify', { challenge_id: challengeId, code }),
+      call<Me | KeyStep>('POST', '/auth/verify', { challenge_id: challengeId, code }),
+    verifyKey: (keyChallengeId: string, credential: Record<string, unknown>) =>
+      call<Me>('POST', '/auth/key', { key_challenge_id: keyChallengeId, credential }),
+    securityKeys: () => call<SecurityKeyList>('GET', '/me/security-keys'),
+    addKeyOptions: () =>
+      call<{ key_challenge_id: string; options: Record<string, unknown> }>('POST', '/me/security-keys/options'),
+    addKey: (keyChallengeId: string, name: string, credential: Record<string, unknown>) =>
+      call<SecurityKey>('POST', '/me/security-keys', { key_challenge_id: keyChallengeId, name, credential }),
+    removeKey: (id: string) => call<void>('DELETE', `/me/security-keys/${encodeURIComponent(id)}`),
+    removeStaffKeys: (staffId: string, reason: string) =>
+      call<{ removed: number }>('POST', `/staff/${encodeURIComponent(staffId)}/security-keys/remove`, { reason }),
     logout: () => call<void>('POST', '/auth/logout'),
     forgot: (email: string) => call<{ reset_id: string }>('POST', '/auth/forgot-password', { email }),
     reset: (resetId: string, code: string, newPassword: string) =>

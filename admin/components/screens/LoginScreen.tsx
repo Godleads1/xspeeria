@@ -3,13 +3,15 @@
 /**
  * Staff log-in (ADR-051 Decision 1, ADR-060), after the Figma "Xspeeria Login" frames:
  * email and password, then "Two-Factor Authentication" with the code sent to the staff
- * email. The code step can't be skipped.
+ * email. The code step can't be skipped. ADR-081: a Super Admin with a security key then
+ * touches the key.
  */
 
 import { useState, type ReactElement } from 'react';
 
-import { adminApi, messageFor, type AdminApi } from '../../lib/api';
+import { adminApi, messageFor, type AdminApi, type KeyStep } from '../../lib/api';
 import { tr } from '../../lib/i18n';
+import { KeyError, signWithKey } from '../../lib/webauthn';
 import { color } from '../../theme';
 import { CodeBoxes } from '../CodeBoxes';
 import { Button, Form, FormError, TextInput } from '../forms';
@@ -30,6 +32,7 @@ export function LoginScreen({
   const [password, setPassword] = useState('');
   const [challenge, setChallenge] = useState<{ id: string; email: string } | null>(null);
   const [code, setCode] = useState('');
+  const [keyStep, setKeyStep] = useState<KeyStep | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,12 +63,65 @@ export function LoginScreen({
     setBusy(true);
     setError(null);
     try {
-      await api.verify(challenge.id, code);
+      const r = await api.verify(challenge.id, code);
+      if ('key_required' in r && r.key_required) {
+        setKeyStep(r);
+        setBusy(false);
+        return;
+      }
       onSignedIn();
     } catch (e) {
       setError(messageFor(e));
       setBusy(false);
     }
+  }
+
+  async function touchKey(): Promise<void> {
+    if (!keyStep) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const answer = await signWithKey(keyStep.options);
+      await api.verifyKey(keyStep.key_challenge_id, answer);
+      onSignedIn();
+    } catch (e) {
+      setBusy(false);
+      if (e instanceof KeyError) {
+        // Cancelled or timed out in the browser: the same challenge can be tried again.
+        setError(e.message);
+        return;
+      }
+      // Refused by the server: this log-in is over (the email code is spent). Start again.
+      startAgain();
+      setError(messageFor(e));
+    }
+  }
+
+  function startAgain(): void {
+    setChallenge(null);
+    setKeyStep(null);
+    setCode('');
+    setError(null);
+  }
+
+  if (keyStep !== null) {
+    return (
+      <AuthLayout title={tr('Security key')}>
+        <Form label={tr('Security key')} onSubmit={() => void touchKey()}>
+          <p style={{ margin: 0, color: color.text.secondary }}>
+            {tr('Insert your security key and press the button below, then touch the key when it blinks.')}
+          </p>
+          <FormError message={error} />
+          <div style={{ height: 24 }} />
+          <Button type="submit" busy={busy} block testId="login-key">
+            {tr('Use my security key')}
+          </Button>
+          <button type="button" onClick={startAgain} style={{ ...linkGreen, alignSelf: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            {tr('START AGAIN')}
+          </button>
+        </Form>
+      </AuthLayout>
+    );
   }
 
   if (challenge === null) {
@@ -126,11 +182,7 @@ export function LoginScreen({
         </Button>
         <button
           type="button"
-          onClick={() => {
-            setChallenge(null);
-            setCode('');
-            setError(null);
-          }}
+          onClick={startAgain}
           style={{ ...linkGreen, alignSelf: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
         >
           {tr('START AGAIN')}
