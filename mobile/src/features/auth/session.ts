@@ -34,6 +34,16 @@ const REMEMBER_KEY = 'xspeeria.rememberedLogin';
 const BIOMETRIC_KEY = 'xspeeria.biometricLogin';
 /** Time of the last PIN log-in (not a secret), so the 7-day limit survives an app restart. */
 const PIN_LOGIN_AT_KEY = 'xspeeria.pinLoginAt';
+/**
+ * F-016 (security review of 2026-10-28): the idle lock survives an app restart. The last
+ * touch time and whether the idle lock fired are kept (not secrets), so reopening the app
+ * after it was locked, or after 5 minutes without a touch, needs Face ID/fingerprint or the
+ * PIN instead of silently resuming the session.
+ */
+const ACTIVE_AT_KEY = 'xspeeria.lastActiveAt';
+const IDLE_LOCKED_KEY = 'xspeeria.idleLocked';
+/** The touch time is written at most this often; a slightly older time only locks sooner. */
+const ACTIVE_SAVE_EVERY_MS = 30 * 1000;
 
 function storePinLoginAt(at: number): void {
   (at > 0 ? AsyncStorage.setItem(PIN_LOGIN_AT_KEY, String(at)) : AsyncStorage.removeItem(PIN_LOGIN_AT_KEY)).catch(
@@ -80,6 +90,25 @@ const INITIAL: State = {
 
 /** Last user activity. Kept outside `state` so touches do not re-render subscribers. */
 let lastActiveAt = 0;
+/** When the touch time was last written to storage. */
+let activeSavedAt = 0;
+/** What the previous run left in storage (read by `restore`). Unknown means locked. */
+let restoredActiveAt = 0;
+let restoredLocked = true;
+
+function storeActive(at: number): void {
+  activeSavedAt = at;
+  Promise.all([AsyncStorage.setItem(ACTIVE_AT_KEY, String(at)), AsyncStorage.removeItem(IDLE_LOCKED_KEY)]).catch(
+    () => undefined,
+  );
+}
+
+function storeLocked(): void {
+  activeSavedAt = 0;
+  Promise.all([AsyncStorage.setItem(IDLE_LOCKED_KEY, '1'), AsyncStorage.removeItem(ACTIVE_AT_KEY)]).catch(
+    () => undefined,
+  );
+}
 
 let state: State = INITIAL;
 const signOutHandlers = new Set<() => void>();
@@ -147,6 +176,7 @@ export const session = {
     const pinOk = sameSecret(pin, state.account.pin);
     if (who && pinOk) {
       lastActiveAt = now;
+      storeActive(now);
       set({ signedIn: true, failed: 0, lockedUntil: 0, signedInAt: now, endedBy: null });
       storePinLoginAt(now);
       const keep = remember ? (asPhone ?? asEmail) : null;
@@ -171,6 +201,7 @@ export const session = {
     // log-out, or once the 7-day maximum has passed, only the PIN does.
     if (state.signedInAt === 0 || now - state.signedInAt >= SESSION_MAX_MS) return false;
     lastActiveAt = now;
+    storeActive(now);
     set({ signedIn: true, failed: 0, endedBy: null });
     return true;
   },
@@ -184,6 +215,7 @@ export const session = {
     clearUserData();
     const biometricFor = options.biometric ? account.phone : null;
     lastActiveAt = now;
+    storeActive(now);
     set({ account, signedIn: true, failed: 0, lockedUntil: 0, biometricFor, newRegion: null, signedInAt: now, endedBy: null });
     storePinLoginAt(now);
     storeBiometric(biometricFor);
@@ -207,7 +239,9 @@ export const session = {
 
   /** Records user activity (a touch). Cheap: no re-render. */
   touch(now: number): void {
-    if (state.signedIn) lastActiveAt = now;
+    if (!state.signedIn) return;
+    lastActiveAt = now;
+    if (now - activeSavedAt >= ACTIVE_SAVE_EVERY_MS) storeActive(now);
   },
 
   /**
@@ -220,12 +254,14 @@ export const session = {
       // A full log-out: the user's data is cleared, as on "Log out".
       set({ signedIn: false, newRegion: null, signedInAt: 0, endedBy: 'expired' });
       storePinLoginAt(0);
+      storeLocked();
       clearUserData();
       for (const h of signOutHandlers) h();
       return 'expired';
     }
     if (now - lastActiveAt >= IDLE_LOCK_MS) {
       set({ signedIn: false, endedBy: 'idle' });
+      storeLocked();
       // Server builds decide what the idle lock keeps (ADR-048): with biometric unlock on,
       // the session stays for Face ID/fingerprint; otherwise it ends as on log-out.
       if (idleHandlers.size > 0) for (const h of idleHandlers) h();
@@ -251,6 +287,7 @@ export const session = {
   serverSignIn(account: { phone: string; email: string }, now: number, options: { newAccount?: boolean } = {}): void {
     if (options.newAccount || account.phone !== state.account.phone) clearUserData();
     lastActiveAt = now;
+    storeActive(now);
     set({
       account: { phone: account.phone, email: account.email, pin: '' },
       signedIn: true,
@@ -269,6 +306,7 @@ export const session = {
   serverUnlocked(now: number, account: { phone: string; email: string }): void {
     if (account.phone !== state.account.phone) clearUserData();
     lastActiveAt = now;
+    storeActive(now);
     // After an app restart the device has no PIN log-in time; the server still enforces the
     // 7-day limit and ends the session through `serverEnded`.
     set({
@@ -290,6 +328,7 @@ export const session = {
   serverEnded(): void {
     if (!state.signedIn) return;
     set({ signedIn: false, signedInAt: 0, endedBy: 'expired' });
+    storeLocked();
     for (const h of signOutHandlers) h();
   },
 
@@ -309,19 +348,24 @@ export const session = {
   logOut(): void {
     set({ signedIn: false, newRegion: null, signedInAt: 0, endedBy: null });
     storePinLoginAt(0);
+    storeLocked();
     clearUserData();
     for (const h of signOutHandlers) h();
   },
 
   async restore(): Promise<void> {
     try {
-      const [remembered, bio, pinAt] = await Promise.all([
+      const [remembered, bio, pinAt, activeAt, idleLocked] = await Promise.all([
         AsyncStorage.getItem(REMEMBER_KEY),
         AsyncStorage.getItem(BIOMETRIC_KEY),
         AsyncStorage.getItem(PIN_LOGIN_AT_KEY),
+        AsyncStorage.getItem(ACTIVE_AT_KEY),
+        AsyncStorage.getItem(IDLE_LOCKED_KEY),
       ]);
       // Only a plain positive whole number is accepted; anything else means "log in with PIN".
       const parsed = pinAt && /^\d{1,15}$/.test(pinAt) ? Number(pinAt) : 0;
+      restoredActiveAt = activeAt && /^\d{1,15}$/.test(activeAt) ? Number(activeAt) : 0;
+      restoredLocked = idleLocked !== null || restoredActiveAt === 0;
       // Older builds stored '1'; that is not bound to an account, so it is dropped.
       const biometricFor = bio && bio !== '1' ? bio : null;
       if (bio === '1') AsyncStorage.removeItem(BIOMETRIC_KEY).catch(() => undefined);
@@ -331,10 +375,28 @@ export const session = {
     }
   },
 
+  /**
+   * App start (F-016): may the saved session resume without Face ID/fingerprint or the PIN?
+   * Only when the previous run was touched less than 5 minutes ago and was not idle-locked.
+   * Anything unknown, or a clock that moved backwards, means no.
+   */
+  mayResumeWithoutUnlock(now: number): boolean {
+    if (restoredLocked || restoredActiveAt <= 0 || now < restoredActiveAt) return false;
+    return now - restoredActiveAt < IDLE_LOCK_MS;
+  },
+
+  /** App start found the session idle-locked (F-016): show the log-in screen's idle message. */
+  markLockedOnRestore(): void {
+    set({ signedIn: false, endedBy: 'idle' });
+  },
+
   /** Tests only. Registered user-change handlers stay registered. */
   reset(): void {
     state = INITIAL;
     lastActiveAt = 0;
+    activeSavedAt = 0;
+    restoredActiveAt = 0;
+    restoredLocked = true;
     for (const l of listeners) l();
   },
 };

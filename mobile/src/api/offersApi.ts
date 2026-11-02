@@ -174,10 +174,11 @@ export const offersApi = {
   get: (token: string, offerId: string, x: Extra = {}) =>
     apiRequest<ServerOffer>('GET', `/api/v1/offers/${encodeURIComponent(offerId)}`, { token, ...x }),
   /** Take some or all of an offer. Needs a `trade.accept` step-up token (ADR-026/031). */
-  accept: (token: string, offerId: string, amount: string, idempotencyKey: string, stepUpToken: string | null, x: Extra = {}) =>
+  /** `expectedRate` is the rate the taker was shown; the server refuses the take if it changed (F-010). */
+  accept: (token: string, offerId: string, amount: string, expectedRate: string, idempotencyKey: string, stepUpToken: string | null, x: Extra = {}) =>
     apiRequest<ServerMatch>('POST', `/api/v1/offers/${encodeURIComponent(offerId)}/accept`, {
       token,
-      body: { accepted_amount: amount },
+      body: { accepted_amount: amount, expected_rate: expectedRate },
       headers: {
         'Idempotency-Key': idempotencyKey,
         ...(stepUpToken ? { 'X-Step-Up-Token': stepUpToken } : {}),

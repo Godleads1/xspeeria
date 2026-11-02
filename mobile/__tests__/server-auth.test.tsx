@@ -3,6 +3,7 @@
  * secure token storage, the sign-in orchestration and the server-mode screens.
  * The server is a scripted fake `fetch`; its rules are tested on the server itself.
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ApiError, apiRequest, messageFor } from '../src/api/client';
@@ -259,8 +260,17 @@ describe('sign-in orchestration', () => {
     expect(serverAuth.accessToken()).toBeNull();
   });
 
+  /** The previous run's idle-lock state, as `session.restore` reads it at app start. */
+  async function previousRun(state: { activeAt?: number; locked?: boolean }): Promise<void> {
+    await AsyncStorage.clear();
+    if (state.activeAt !== undefined) await AsyncStorage.setItem('xspeeria.lastActiveAt', String(state.activeAt));
+    if (state.locked) await AsyncStorage.setItem('xspeeria.idleLocked', '1');
+    await session.restore();
+  }
+
   it('restores a live session at app start, and forgets a dead one', async () => {
     await secureTokens.setRefreshToken('ref-1');
+    await previousRun({ activeAt: T0 - 60 * 1000 });
     useServer({ '/api/v1/auth/refresh': () => [200, { ...TOKENS, refresh_token: 'ref-2' }] });
     await serverAuth.restore(T0);
     expect(session.get().signedIn).toBe(true);
@@ -269,10 +279,53 @@ describe('sign-in orchestration', () => {
     session.reset();
     serverAuth.reset();
     await secureTokens.setRefreshToken('ref-dead');
+    await previousRun({ activeAt: T0 - 60 * 1000 });
     useServer({ '/api/v1/auth/refresh': () => err('AUTH_401_INVALID_REFRESH_TOKEN', 401) });
     await serverAuth.restore(T0);
     expect(session.get().signedIn).toBe(false);
     expect(await secureTokens.refreshToken()).toBeNull();
+  });
+
+  // F-016 (security review of 2026-10-28): reopening the app never skips the idle lock.
+  it.each([
+    ['the idle lock had fired', { activeAt: T0 - 60 * 1000, locked: true }],
+    ['nobody touched it for 5 minutes', { activeAt: T0 - 5 * 60 * 1000 }],
+    ['nothing was recorded', {}],
+    ['the clock went backwards', { activeAt: T0 + 60 * 1000 }],
+  ])('needs the PIN at app start when %s', async (_why, previous) => {
+    await secureTokens.setRefreshToken('ref-1');
+    await previousRun(previous);
+    const server = useServer({ '/api/v1/auth/refresh': () => [200, { ...TOKENS, refresh_token: 'ref-2' }] });
+    await serverAuth.restore(T0);
+    expect(server.calls).toEqual([]); // the refresh token is never spent
+    expect(session.get().signedIn).toBe(false);
+    expect(session.get().endedBy).toBe('idle');
+    expect(await secureTokens.refreshToken()).toBeNull();
+  });
+
+  it('keeps the session for Face ID at app start when it is on, without resuming it', async () => {
+    await secureTokens.setRefreshToken('ref-1');
+    await AsyncStorage.setItem('xspeeria.biometricLogin', ME.phone);
+    await AsyncStorage.setItem('xspeeria.idleLocked', '1');
+    await session.restore();
+    expect(session.biometricSaved()).toBe(true);
+    const server = useServer({ '/api/v1/auth/refresh': () => [200, { ...TOKENS, refresh_token: 'ref-2' }] });
+    await serverAuth.restore(T0);
+    expect(server.calls).toEqual([]);
+    expect(session.get().signedIn).toBe(false);
+    expect(await secureTokens.refreshToken()).toBe('ref-1');
+  });
+
+  it('remembers the idle lock and recent touches for the next app start', async () => {
+    useServer({ '/api/v1/auth/login': () => [200, TOKENS], '/api/v1/auth/logout': () => [204, null] });
+    await serverAuth.login(ME.phone, '482613', T0);
+    expect(await AsyncStorage.getItem('xspeeria.lastActiveAt')).toBe(String(T0));
+    session.touch(T0 + 10 * 1000); // within 30 s: not written again
+    session.touch(T0 + 40 * 1000);
+    expect(await AsyncStorage.getItem('xspeeria.lastActiveAt')).toBe(String(T0 + 40 * 1000));
+    session.enforceTimeouts(T0 + 40 * 1000 + 5 * 60 * 1000);
+    expect(await AsyncStorage.getItem('xspeeria.idleLocked')).toBe('1');
+    expect(await AsyncStorage.getItem('xspeeria.lastActiveAt')).toBeNull();
   });
 });
 

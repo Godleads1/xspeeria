@@ -425,10 +425,13 @@ async def phone_change_confirm(
     summary="Turn on Face ID/fingerprint unlock for this session (trusted devices only)",
 )
 async def biometric_enable(
-    body: BiometricEnableRequest, principal: CurrentPrincipal, service: Service
+    body: BiometricEnableRequest,
+    principal: CurrentPrincipal,
+    service: Service,
+    step_up_token: StepUpToken = None,
 ) -> BiometricEnableResponse:
     return BiometricEnableResponse(
-        unlock_key=await service.biometric_enable(principal, body.device_token)
+        unlock_key=await service.biometric_enable(principal, body.device_token, step_up_token)
     )
 
 

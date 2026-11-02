@@ -255,3 +255,60 @@ async def test_access(db_settings: Settings, k: K, staff: Admin, boss: AsyncClie
         "WHERE grantee = 'xspeeria_app' AND table_name = 'kyc_reviews'",
     )
     assert grants == "INSERT,SELECT,UPDATE"
+
+
+async def test_an_old_approval_without_a_document_key_still_blocks_confirmation(
+    db_settings: Settings, k: K, staff: Admin, boss: AsyncClient
+) -> None:
+    """F-008: an approval made before document keys existed is invisible to the key index, so
+    the account Didit matched is checked too."""
+    # The owner's approval is from before the document key: no identity_key on it.
+    _, owner_uid = await _user(k, OWNER)
+    await _sql(
+        db_settings,
+        "INSERT INTO kyc_cases (id, user_id, provider, country, provider_session_id, provider_status, "
+        "status, legal_name, date_of_birth, decided_at, created_at, updated_at) VALUES "
+        "(gen_random_uuid(), CAST(:u AS uuid), 'didit', 'NG', 'legacy-1', 'Approved', 'approved', "
+        "'Ada Obi', DATE '1990-05-17', now(), now(), now())",
+        u=owner_uid,
+    )
+    # Didit matches the taker's check to the owner's account: Xspeeria holds it.
+    token, uid, _ = await _verify(k, TAKER, seen_for=owner_uid)
+    assert await _status(k, token) == "under_review"
+    cid = await _case_id(db_settings, uid)
+    r = await boss.post(
+        f"/api/v1/admin/kyc/cases/{cid}/recommend",
+        json={"reason": "Customer says it's a new account"},
+        headers=H,
+    )
+    assert r.status_code == 204, r.text
+    officer = await staff.invite(boss, "officer@xspeeria.test", "compliance_officer")
+    r = await officer.post(f"/api/v1/admin/kyc/cases/{cid}/confirm", json={}, headers=H)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "RES_409_DOCUMENT_ALREADY_VERIFIED"
+    assert await _status(k, token) == "under_review"
+    # Once the other account's check is no longer active, the confirmation can go ahead.
+    await _sql(
+        db_settings,
+        "UPDATE kyc_cases SET status = 'expired' WHERE user_id = CAST(:u AS uuid)",
+        u=owner_uid,
+    )
+    r = await officer.post(f"/api/v1/admin/kyc/cases/{cid}/confirm", json={}, headers=H)
+    assert r.status_code == 204, r.text
+    assert await _status(k, token) == "approved"
+
+
+async def test_a_match_to_an_unnamed_account_cannot_be_confirmed(
+    db_settings: Settings, k: K, staff: Admin, boss: AsyncClient
+) -> None:
+    """F-008: when Didit doesn't say which account it matched, confirmation fails closed."""
+    token, uid, _ = await _verify(k, OWNER, seen_for="not-an-account-id")
+    assert await _status(k, token) == "under_review"
+    cid = await _case_id(db_settings, uid)
+    await boss.post(
+        f"/api/v1/admin/kyc/cases/{cid}/recommend",
+        json={"reason": "Looks like the same person"},
+        headers=H,
+    )
+    officer = await staff.invite(boss, "officer@xspeeria.test", "compliance_officer")
+    r = await officer.post(f"/api/v1/admin/kyc/cases/{cid}/confirm", json={}, headers=H)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "RES_409_DOCUMENT_ALREADY_VERIFIED"

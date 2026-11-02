@@ -219,15 +219,15 @@ export interface TakeSource {
   /** "Confirm it's you" → a one-use `trade.accept` approval; null when cancelled. */
   approve(reason: string): Promise<string | null>;
   /** Same key → same answer; a retry never makes a second Match. */
-  accept(offerId: string, amount: string, key: string, stepUpToken: string | null): Promise<ServerMatch>;
+  accept(offerId: string, amount: string, expectedRate: string, key: string, stepUpToken: string | null): Promise<ServerMatch>;
   newKey(): string;
 }
 
 export const takeServer: TakeSource = {
   offer: async (offerId) => offersApi.get(token(), offerId, serverAuth.apiOptions()),
   approve: async (reason) => confirmIdentity('trade.accept', reason),
-  accept: async (offerId, amount, key, stepUpToken) =>
-    offersApi.accept(token(), offerId, amount, key, stepUpToken, serverAuth.apiOptions()),
+  accept: async (offerId, amount, expectedRate, key, stepUpToken) =>
+    offersApi.accept(token(), offerId, amount, expectedRate, key, stepUpToken, serverAuth.apiOptions()),
   newKey: () => Crypto.randomUUID(),
 };
 

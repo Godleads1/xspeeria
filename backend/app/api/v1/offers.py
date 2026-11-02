@@ -398,7 +398,9 @@ async def accept_offer(
         # Shares this request's database session, so the approval is spent in the same commit.
         await auth.consume_step_up(principal, "trade.accept", step_up_token)
 
-    result = await matches.accept(principal, offer_id, key, body.accepted_amount, confirm)
+    result = await matches.accept(
+        principal, offer_id, key, body.accepted_amount, confirm, body.expected_rate
+    )
     return JSONResponse(status_code=result.status_code, content=result.body)
 
 

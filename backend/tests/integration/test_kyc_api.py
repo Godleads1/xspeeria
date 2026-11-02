@@ -731,9 +731,13 @@ async def test_taking_an_offer_needs_the_country_you_pay_in(market: K) -> None:
     url = f"/api/v1/offers/{offer['offer_id']}/accept"
     h = {"Authorization": f"Bearer {taker}", "Idempotency-Key": str(uuid.uuid4())}
     # The taker pays the offer's target currency (GBP): needs the UK check.
-    r = await k.env.client.post(url, json={"accepted_amount": "100.00"}, headers=h)
+    r = await k.env.client.post(
+        url, json={"accepted_amount": "100.00", "expected_rate": "1765.00"}, headers=h
+    )
     assert r.status_code == 403 and r.json()["error"]["details"] == {"country": "GB"}
     k.didit.finish(tuid)
     await _country_check(k, taker, tuid, "GB", issuer="GBR", document="UK7", name="Tunde Bello")
-    r = await k.env.client.post(url, json={"accepted_amount": "100.00"}, headers=h)
+    r = await k.env.client.post(
+        url, json={"accepted_amount": "100.00", "expected_rate": "1765.00"}, headers=h
+    )
     assert r.json().get("error", {}).get("code") != "AUTH_403_KYC_REQUIRED"

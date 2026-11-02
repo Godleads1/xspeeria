@@ -509,4 +509,5 @@ class TestPackageRegistration:
             "0032_staff_notifications_seen.py",  # staff bell (ADR-070)
             "0033_api_monitoring.py",  # API monitoring (ADR-072)
             "0034_customer_activity.py",  # customer activity log (ADR-073)
+            "0035_security_findings_hardening.py",  # security findings F-001, F-007, F-008
         ]

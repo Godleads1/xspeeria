@@ -666,8 +666,8 @@ async def staff_open_dispute(
         user_id=body.user_id,
         transaction_id=body.transaction_id,
         category=body.category,
-        description=body.description.strip(),
-        desired_resolution=body.desired_resolution.strip() if body.desired_resolution else None,
+        description=body.description,
+        desired_resolution=body.desired_resolution,
         priority=body.priority,
     )
 

@@ -40,6 +40,7 @@ from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.kyc_reviews import KycReview
 from app.models.staff import StaffAccount, StaffAuditEntry
+from app.services.kyc import UNKNOWN_ACCOUNT
 from app.services.notifications import notify
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
@@ -348,6 +349,36 @@ class KycReviewService:
             )
         return row
 
+    async def _refuse_if_matched_account_verified(self, c: KycCase) -> None:
+        """F-008: the document-key index can't see approvals made before the key existed, so
+        the accounts Didit matched to this person are checked too. While any of them still
+        holds an approved check, this one can't be approved; a match whose account Didit didn't
+        name can't be cleared here at all."""
+        ids = [i for i in (c.matched_user_ids or []) if i != c.user_id]
+        if not ids:
+            return
+        if UNKNOWN_ACCOUNT in ids:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_DOCUMENT_ALREADY_VERIFIED",
+                "Didit matched this person to another account it didn't name, so this check "
+                "can't be approved here. Reject it, or ask Didit which account it is.",
+                status.HTTP_409_CONFLICT,
+            )
+        verified = await self._db.scalar(
+            select(func.count(KycCase.id)).where(
+                KycCase.user_id.in_(ids), KycCase.status == "approved"
+            )
+        )
+        if verified:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_DOCUMENT_ALREADY_VERIFIED",
+                "This ID document is still verified on another account, so it can't be approved "
+                "here. Reject this check, or have that account's check expire first.",
+                status.HTTP_409_CONFLICT,
+            )
+
     async def confirm(
         self, principal: StaffPrincipal, info: RequestInfo, case_id: uuid.UUID, note: str | None
     ) -> None:
@@ -360,6 +391,7 @@ class KycReviewService:
         ):  # pragma: no cover - checked on recommend
             await self._db.rollback()
             raise _err("RES_409_IDENTITY_MISSING", "The name or date of birth is missing.", 409)
+        await self._refuse_if_matched_account_verified(c)
         now = self._clock()
         row.status, row.decided_by, row.decided_at = "confirmed", principal.staff_id, now
         row.decision_note = note

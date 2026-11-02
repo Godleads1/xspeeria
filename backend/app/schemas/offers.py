@@ -124,6 +124,8 @@ class AcceptRequest(_Strict):
     #: Exact decimal text in the offer's currency. Required: a missing value answers
     #: VAL_422_MISSING_FIELD and never means "take everything" (contract §3.5).
     accepted_amount: str | None = Field(default=None, min_length=1, max_length=24)
+    #: F-010: the rate the taker was shown, exact decimal text. Refused if the owner changed it.
+    expected_rate: str | None = Field(default=None, min_length=1, max_length=12)
 
 
 class MatchResponse(BaseModel):

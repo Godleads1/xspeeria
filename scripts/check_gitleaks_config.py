@@ -86,6 +86,25 @@ DENIED_KEYS: frozenset[str] = frozenset(
 ALLOWED_TOP_LEVEL: frozenset[str] = frozenset({"title", "extend"})
 
 
+def inert(value: object) -> str:
+    """Render repository-derived text as one inert line (F-017).
+
+    Control characters (newline, carriage return, escape, the C1 range and Unicode line
+    separators) are shown as escapes, so a crafted filename, key or field can't start a new
+    output line, forge a check's verdict, or issue a GitHub Actions ``::`` workflow command.
+    """
+    out = []
+    for ch in str(value):
+        code = ord(ch)
+        if ch == "\\":
+            out.append("\\\\")
+        elif code < 0x20 or 0x7F <= code <= 0x9F or ch in "\u2028\u2029":
+            out.append(f"\\x{code:02x}" if code <= 0xFF else f"\\u{code:04x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def _denied_key_paths(node: Any, trail: str = "") -> list[str]:
     """Return the dotted path of every denied key reachable from ``node``."""
     found: list[str] = []
@@ -132,20 +151,25 @@ def main(argv: list[str] | None = None) -> int:
         with path.open("rb") as handle:
             config = tomllib.load(handle)
     except OSError as exc:
-        print(f"check_gitleaks_config: cannot read {path}: {exc}", file=sys.stderr)
+        print(f"check_gitleaks_config: cannot read {inert(path)}: {inert(exc)}", file=sys.stderr)
         return 2
     except tomllib.TOMLDecodeError as exc:
-        print(f"check_gitleaks_config: {path} is not valid TOML: {exc}", file=sys.stderr)
+        print(
+            f"check_gitleaks_config: {inert(path)} is not valid TOML: {inert(exc)}",
+            file=sys.stderr,
+        )
         return 2
 
     found = violations(config)
     if not found:
-        print(f"check_gitleaks_config: OK - {path} extends the defaults and suppresses nothing")
+        print(
+            f"check_gitleaks_config: OK - {inert(path)} extends the defaults and suppresses nothing"
+        )
         return 0
 
-    print(f"check_gitleaks_config: FAIL - {path} could suppress a finding", file=sys.stderr)
+    print(f"check_gitleaks_config: FAIL - {inert(path)} could suppress a finding", file=sys.stderr)
     for message in found:
-        print(f"  {message}", file=sys.stderr)
+        print(f"  {inert(message)}", file=sys.stderr)
     print(
         "\nThis configuration exists to guarantee coverage. Anything that narrows "
         "coverage -- an allowlist, a baseline, a disabled default rule, a custom rule "

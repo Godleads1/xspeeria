@@ -40,6 +40,7 @@ from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
 from app.domain.auth_rules import (
+    BIOMETRIC_ENROL_WINDOW,
     CHECK_CODE_TTL,
     CHECKS_PER_DAY,
     CHECKS_PER_HOUR,
@@ -165,6 +166,18 @@ def _face_failed() -> AppError:
 
 #: Which checks each route may finish (ADR-054).
 SIGN_IN_PURPOSES = frozenset({"signup", "login"})
+
+
+def _started_before_pin_change(created_at: datetime, user: User) -> bool:
+    """F-001: a check or reset code belongs to the PIN it was started under.
+
+    Checked after the user row is locked, so completing a check while the PIN is being replaced
+    waits for that change and then sees it. Covers sign-in, sign-up, PIN reset and step-up.
+    """
+    changed = user.pin_changed_at
+    return changed is not None and created_at < changed
+
+
 FACE_START_PURPOSES = frozenset({"login", "pin_reset"})
 STEP_UP_PURPOSE = frozenset({"step_up"})
 PIN_RESET_PURPOSE = frozenset({"pin_reset"})
@@ -878,6 +891,13 @@ class AuthService:
         if user is None or user.status != "active":  # pragma: no cover - FK and activation
             await self._db.rollback()
             raise _invalid_code()
+        if _started_before_pin_change(row.created_at, user):
+            await self._db.rollback()
+            raise _err(
+                "AUTH_410_CHALLENGE_EXPIRED",
+                "This step has expired. Please start again.",
+                status.HTTP_410_GONE,
+            )
         await self._refuse_if_mfa_locked(user, now)
         if row.face_result == "declined":
             await self._db.rollback()
@@ -1218,6 +1238,7 @@ class AuthService:
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
         user.pin_hash = self._rt.hasher.hash(new_pin)
+        user.pin_changed_at = now
         user.failed_pin_attempts = 0
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_change", keep=principal.session_id)
@@ -1278,6 +1299,9 @@ class AuthService:
         if user is None or user.status != "active":  # pragma: no cover - code is unusable then
             await self._db.rollback()
             raise _invalid_code()
+        if _started_before_pin_change(row.created_at, user):
+            await self._db.rollback()
+            raise _invalid_code()
         row.consumed_at = now
         check, email_code, _ = await self._new_check(user, "pin_reset", None, now)
         started = self._started(check, user)
@@ -1299,6 +1323,7 @@ class AuthService:
             await self._match_codes(row, user, now, email_code, None)
         row.consumed_at = now
         user.pin_hash = self._rt.hasher.hash(new_pin)
+        user.pin_changed_at = now
         user.failed_pin_attempts = 0
         user.pin_locked_until = None
         await self._end_sessions(user.id, now, "pin_reset")
@@ -1414,16 +1439,23 @@ class AuthService:
 
     # --- biometric unlock after the idle lock (ADR-048) -------------------------------------
 
-    async def biometric_enable(self, principal: Principal, device_token: str | None) -> str:
+    async def biometric_enable(
+        self, principal: Principal, device_token: str | None, step_up_token: str | None = None
+    ) -> str:
         """A new unlock key for this session, shown once. Only on a trusted device (ADR-008).
 
         The phone stores it behind Face ID/fingerprint. Turning it on again replaces the key.
+        The key lets this session approve sensitive actions, so issuing it needs fresh proof
+        (F-007): either the PIN and two-factor sign-in that opened this session happened in the
+        last ``BIOMETRIC_ENROL_WINDOW``, or a one-use ``biometric.enable`` approval is spent.
         """
         now = self._now()
         session = await self._repo.session_by_id(principal.session_id, lock=True)
         if session is None or not self._session_usable(session, now):
             await self._db.rollback()
             raise _unauthorized()
+        if now - session.created_at > BIOMETRIC_ENROL_WINDOW:
+            await self.consume_step_up(principal, "biometric.enable", step_up_token)
         device = await self._trusted_device_for(principal.user_id, device_token, now)
         if device is None:
             await self._db.rollback()

@@ -46,10 +46,38 @@ def _bad() -> PhotoError:
 _STANDALONE = {0x01, *range(0xD0, 0xD8)}  # TEM, RST0–7: no length
 
 
+def _scan_end(data: bytes, i: int) -> int:
+    """Where the entropy-coded data that starts at ``i`` ends: at the next real marker.
+
+    Inside scan data a 0xFF byte is followed by 0x00 (a stuffed byte) or a restart marker
+    (RST0–7); anything else after 0xFF is the next segment's marker.
+    """
+    n = len(data)
+    while i < n:
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        if i + 1 >= n:
+            raise _bad()
+        nxt = data[i + 1]
+        if nxt == 0x00 or 0xD0 <= nxt <= 0xD7:
+            i += 2
+            continue
+        return i
+    raise _bad()  # no end-of-image marker
+
+
 def _jpeg(data: bytes) -> bytes:
+    """Rebuild the file from its markers, across every scan (F-005).
+
+    A progressive JPEG has several scans, and segments between them can carry EXIF, XMP or
+    comments too, so every segment up to the end-of-image marker is read; nothing after the
+    first scan is copied unexamined. Bytes after the end-of-image marker are dropped.
+    """
     out = bytearray(b"\xff\xd8")
     i = 2
     n = len(data)
+    scanned = False
     while i < n:
         if data[i] != 0xFF:
             raise _bad()
@@ -62,8 +90,11 @@ def _jpeg(data: bytes) -> bytes:
         if marker in _STANDALONE:
             out += bytes((0xFF, marker))
             continue
-        if marker == 0xD9:  # EOI before any image data
-            raise _bad()
+        if marker == 0xD9:  # end of image
+            if not scanned:
+                raise _bad()
+            out += b"\xff\xd9"
+            return bytes(out)
         if i + 2 > n:
             raise _bad()
         (length,) = struct.unpack(">H", data[i : i + 2])
@@ -74,12 +105,11 @@ def _jpeg(data: bytes) -> bytes:
         if 0xE1 <= marker <= 0xEF or marker == 0xFE:
             continue  # APP1–APP15 and comments: hidden details
         out += bytes((0xFF, marker)) + segment
-        if marker == 0xDA:  # start of scan: the rest is image data up to the end
-            rest = data[i:]
-            if not rest.endswith(b"\xff\xd9"):
-                raise _bad()
-            out += rest
-            return bytes(out)
+        if marker == 0xDA:  # start of scan: copy its image data, then read on
+            end = _scan_end(data, i)
+            out += data[i:end]
+            i = end
+            scanned = True
     raise _bad()
 
 

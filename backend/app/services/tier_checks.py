@@ -86,6 +86,18 @@ class TierCheckService:
 
     # --- reading ----------------------------------------------------------------------------
 
+    async def _proof_approved(self, user_id: uuid.UUID) -> bool:
+        return (
+            await self._db.scalar(
+                select(TierCheck.id).where(
+                    TierCheck.user_id == user_id,
+                    TierCheck.kind == "proof_of_address",
+                    TierCheck.status == "approved",
+                )
+            )
+            is not None
+        )
+
     async def _latest(self, user_id: uuid.UUID, kind: str) -> TierCheck | None:
         approved: TierCheck | None = await self._db.scalar(
             select(TierCheck).where(
@@ -263,6 +275,15 @@ class TierCheckService:
             )
             .with_for_update()
         )
+        # F-015: under the address row's lock, a proof approved for the old address must
+        # not be followed by a new address (the approval would then cover nothing).
+        if current is not None and await self._proof_approved(uid):
+            await self._db.rollback()
+            raise _err(
+                "RES_409_ALREADY_VERIFIED",
+                "Your address is already verified. Contact support to change it.",
+                status.HTTP_409_CONFLICT,
+            )
         clean = {k: v.strip() for k, v in address.items() if v and v.strip()}
         if current is not None:
             current.detail = clean  # a new address replaces the old (not yet proven) one
@@ -295,6 +316,7 @@ class TierCheckService:
         case = await self._identity(uid)
         first, last = _split_name(case.legal_name if case else "Local Tester")
         detail = address.detail if address and address.detail else {}
+        checked_detail = dict(detail)  # the address the provider is asked to match
         country = COUNTRIES.get(str(detail.get("country")), ("NGA", ""))[0]
         await self._db.rollback()  # no transaction is held across the provider call
         outcome = await provider.proof_of_address(
@@ -303,9 +325,28 @@ class TierCheckService:
             content_type=content_type,
             first_name=first,
             last_name=last,
-            expected_address=_address_text(detail),
+            expected_address=_address_text(checked_detail),
             expected_country=country,
         )
+        # F-015: the address may have been replaced while the provider checked the document.
+        # Lock the current address, and save the approval only if it is still the one checked.
+        current = await self._db.scalar(
+            select(TierCheck)
+            .where(
+                TierCheck.user_id == uid,
+                TierCheck.kind == "address",
+                TierCheck.status == "approved",
+            )
+            .with_for_update()
+        )
+        now_detail = (current.detail or {}) if current is not None else {}
+        if now_detail != checked_detail:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_ADDRESS_CHANGED",
+                "Your address changed while we checked this document. Upload it again.",
+                status.HTTP_409_CONFLICT,
+            )
         await self._save(
             uid,
             "proof_of_address",

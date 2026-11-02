@@ -90,6 +90,8 @@ class User(Base):
         SmallInteger, nullable=False, server_default=text("0")
     )
     pin_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: F-001: when the PIN last changed; checks started before it are refused.
+    pin_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     #: ADR-026: wrong 2FA codes across challenges and step-ups; 5 → 15-minute lock.
     mfa_failed_attempts: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, server_default=text("0")
@@ -320,7 +322,7 @@ class StepUpGrant(Base):
         CheckConstraint(
             "action IN ('beneficiary.add', 'beneficiary.remove', 'contact.change', "
             "'pin.change', 'mfa.change', 'recovery_codes.regenerate', 'trade.accept', "
-            "'payout.confirm')",
+            "'payout.confirm', 'biometric.enable')",
             name="action_allowed",
         ),
         Index("uq_step_up_grants_token_hash", "token_hash", unique=True),

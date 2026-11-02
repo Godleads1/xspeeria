@@ -286,12 +286,18 @@ jobs:
             echo "${DASHES}END ${KIND}${DASHES}"
           } > "$CANARY_DIR/canary.key"
 
+          # F-004: the canary is committed under a `-diff` attribute and then deleted, so
+          # it is detected only if the scan forces text patches over repository-controlled
+          # Git attributes and walks history - exactly what the real scan below relies on.
+          echo '*.key -diff' > "$CANARY_DIR/.gitattributes"
           git init -q "$CANARY_DIR"
           git -C "$CANARY_DIR" add -A
           git -C "$CANARY_DIR" -c user.email=canary@xspeeria.invalid -c user.name=canary commit -qm "gitleaks canary"
+          git -C "$CANARY_DIR" rm -q canary.key
+          git -C "$CANARY_DIR" -c user.email=canary@xspeeria.invalid -c user.name=canary commit -qm "remove canary"
 
           set +e
-          gitleaks git "$CANARY_DIR" --config "$GITHUB_WORKSPACE/.github/gitleaks.toml" --log-opts="--all" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
+          gitleaks git "$CANARY_DIR" --config "$GITHUB_WORKSPACE/.github/gitleaks.toml" --log-opts="--all --text --no-textconv" --ignore-gitleaks-allow --redact --exit-code 1 --report-format json --report-path "$CANARY_DIR/canary-report.json"
           RC=$?
           set -e
 
@@ -321,6 +327,10 @@ jobs:
       # without touching this workflow. `--ignore-gitleaks-allow` disables the inline
       # channel, and the tracked-file guard below rejects a committed `.gitleaksignore`.
       #
+      # `--text --no-textconv` (F-004): a contribution could otherwise mark a file `-diff`
+      # or give it a textconv driver in `.gitattributes`, and git would hide its content
+      # from the patches gitleaks reads. The canary above proves this is honoured.
+      #
       # `--log-opts=--all` is required for `fetch-depth: 0` to mean anything: without it
       # gitleaks walks only the checked-out ref, so a secret reachable solely from
       # another branch or a tag would be fetched and then not scanned.
@@ -328,7 +338,7 @@ jobs:
       # --redact keeps the matched value out of the public build log; the finding, its
       # file and its commit are still reported.
       - name: Secret scan (full history, all refs)
-        run: gitleaks git . --config .github/gitleaks.toml --log-opts="--all" --ignore-gitleaks-allow --redact --verbose --exit-code 1
+        run: gitleaks git . --config .github/gitleaks.toml --log-opts="--all --text --no-textconv" --ignore-gitleaks-allow --redact --verbose --exit-code 1
 
       # Complements the scan above: gitleaks looks for secret-shaped *content*, this
       # looks for sensitive *paths* that are tracked at all - including a file that was

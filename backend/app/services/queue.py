@@ -37,6 +37,7 @@ __all__ = [
     "QueueService",
     "active_turn",
     "on_capacity_returned",
+    "pass_overdue_turns",
     "pending_minor_expr",
     "queue_facts",
 ]
@@ -135,6 +136,35 @@ async def queue_facts(
             facts["your_turn"] = facts["your_turn"] or mine
             facts["held_for_other"] = facts["held_for_other"] or not mine
     return out
+
+
+async def pass_overdue_turns(db: AsyncSession, offer: Offer, now: datetime) -> bool:
+    """Inside a transaction holding the Offer lock: a turn whose time ran out passes on.
+
+    F-009: a take must not slip in during the gap between a turn's deadline and the background
+    sweep. The turns that ran out are marked passed, and the next waiting person gets theirs.
+    Returns whether any turn passed; the caller must commit that handoff even if it then refuses.
+    """
+    overdue = (
+        await db.scalars(
+            select(OfferQueueEntry)
+            .where(
+                OfferQueueEntry.offer_id == offer.id,
+                OfferQueueEntry.status == "notified",
+                OfferQueueEntry.turn_deadline.is_not(None),
+                OfferQueueEntry.turn_deadline <= now,
+            )
+            .with_for_update()
+        )
+    ).all()
+    if not overdue:
+        return False
+    for entry in overdue:
+        entry.status = "passed"
+        entry.ended_at = now
+    await db.flush()
+    await on_capacity_returned(db, offer, now)
+    return True
 
 
 async def on_capacity_returned(db: AsyncSession, offer: Offer, now: datetime) -> None:

@@ -216,8 +216,11 @@ export const serverAuth = {
   /** True when this phone can keep the unlock key behind Face ID/fingerprint. */
   biometricSupported: (): boolean => unlockKey.supported(),
 
-  /** Turn on for this session. Trusted devices only; the server says so if not. */
-  async enableBiometric(): Promise<void> {
+  /**
+   * Turn on for this session. Trusted devices only; the server says so if not. Right after
+   * sign-in no approval is needed; later the server refuses (403) until one is given (F-007).
+   */
+  async enableBiometric(approval: string | null = null): Promise<void> {
     if (!unlockKey.supported()) {
       throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, tr("Face ID or fingerprint isn’t set up on this phone."));
     }
@@ -231,7 +234,7 @@ export const serverAuth = {
         tr("Fingerprint or Face ID needs a trusted phone. Log out and log in again on this phone to trust it."),
       );
     }
-    const r = await authApi.biometricEnable(access, device, x());
+    const r = await authApi.biometricEnable(access, device, x(), approval);
     if (!(await unlockKey.save(r.unlock_key))) {
       authApi.biometricDisable(access, x()).catch(() => undefined);
       throw new ApiError('BIOMETRIC_UNAVAILABLE', 0, tr("Face ID or fingerprint isn’t set up on this phone."));
@@ -282,10 +285,20 @@ export const serverAuth = {
     profileStore.setServerIdentity(identityOf(await authApi.me(access, x())));
   },
 
-  /** App start: resume a session if the server still accepts the refresh token. */
+  /**
+   * App start: resume a session if the server still accepts the refresh token. F-016: only
+   * when the app was in use less than 5 minutes ago and wasn't idle-locked; otherwise the
+   * person must unlock with Face ID/fingerprint (if on) or log in with the PIN, even though
+   * background checks may have kept the server session alive.
+   */
   async restore(now: number): Promise<void> {
     const refresh = await secureTokens.refreshToken();
     if (!refresh) return;
+    if (!session.mayResumeWithoutUnlock(now)) {
+      if (!session.biometricSaved()) await secureTokens.setRefreshToken(null);
+      session.markLockedOnRestore();
+      return;
+    }
     try {
       const t = await authApi.refresh(refresh, x());
       await secureTokens.setRefreshToken(t.refresh_token);

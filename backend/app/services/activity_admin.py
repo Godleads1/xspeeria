@@ -369,12 +369,16 @@ class ActivityAdminService:
             if r["decided_at"] is not None:
                 add(r["decided_at"], f"refund_{r['status']}", r["decided_by"] or "staff")
         # The customers' own steps on this deal (approvals, payout choices, payments, extensions).
+        # Only the two people on this deal: a refused request by anyone else, linked to the same
+        # match ID in the URL, is not one of their steps (F-006).
         for a in await self._rows(
             "SELECT at, action, outcome, user_id FROM customer_activity "
-            "WHERE match_id = :m OR (offer_id = :o AND user_id = :taker "
+            "WHERE (match_id = :m AND user_id IN (:owner, :taker)) "
+            "OR (offer_id = :o AND user_id = :taker "
             "AND action = 'offer_taken' AND outcome <> 'done')",
             m=match_id,
             o=offer_id,
+            owner=deal["owner_id"],
             taker=deal["taker_id"],
         ):
             add(

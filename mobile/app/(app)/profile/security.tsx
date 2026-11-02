@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { SERVER_MODE } from '../../../src/api/config';
 import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { SecurityScreen } from '../../../src/features/profile/SecurityScreen';
+import { enableWithApproval } from '../../../src/features/security/enableBiometric';
 import { useThemeMode } from '../../../src/theme';
 
 export default function SecurityRoute(): ReactElement {
@@ -17,7 +18,7 @@ export default function SecurityRoute(): ReactElement {
         SERVER_MODE
           ? {
               supported: serverAuth.biometricSupported,
-              enable: () => serverAuth.enableBiometric(),
+              enable: () => enableWithApproval(),
               disable: () => serverAuth.disableBiometric(),
             }
           : null

@@ -17,6 +17,7 @@ __all__ = [
     "MFA_LOCK",
     "PAYOUT_HOLD",
     "STEP_UP_ACTIONS",
+    "BIOMETRIC_ENROL_WINDOW",
     "CHECK_CODE_TTL",
     "CHECKS_PER_DAY",
     "CHECKS_PER_HOUR",
@@ -83,8 +84,14 @@ STEP_UP_ACTIONS = frozenset(
         "pin.change",
         "trade.accept",
         "payout.confirm",
+        # F-007: turning Face ID/fingerprint on (or replacing its key) after the sign-in.
+        "biometric.enable",
     }
 )
+
+#: F-007: right after a PIN and two-factor sign-in, Face ID/fingerprint can be turned on
+#: without asking again. Later, it needs a fresh "Confirm it's you" (``biometric.enable``).
+BIOMETRIC_ENROL_WINDOW = timedelta(minutes=10)
 
 #: ASCII digits only: in Python, ``\d`` also matches other scripts' digits (e.g. "４").
 _PIN_RE = re.compile(rf"^[0-9]{{{PIN_LENGTH}}}$")

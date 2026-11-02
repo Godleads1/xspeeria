@@ -74,6 +74,25 @@ DENIED_SUPPRESSION_NAMES: tuple[str, ...] = (
 )
 
 
+def inert(value: object) -> str:
+    """Render repository-derived text as one inert line (F-017).
+
+    Control characters (newline, carriage return, escape, the C1 range and Unicode line
+    separators) are shown as escapes, so a crafted filename, key or field can't start a new
+    output line, forge a check's verdict, or issue a GitHub Actions ``::`` workflow command.
+    """
+    out = []
+    for ch in str(value):
+        code = ord(ch)
+        if ch == "\\":
+            out.append("\\\\")
+        elif code < 0x20 or 0x7F <= code <= 0x9F or ch in "\u2028\u2029":
+            out.append(f"\\x{code:02x}" if code <= 0xFF else f"\\u{code:04x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def tracked_files() -> list[str]:
     """Return every tracked path, repo-relative, with forward slashes."""
     result = subprocess.run(
@@ -114,7 +133,7 @@ def main() -> int:
         print("check_sensitive_files: git is not available", file=sys.stderr)
         return 2
     except subprocess.CalledProcessError as exc:
-        print(f"check_sensitive_files: git ls-files failed: {exc}", file=sys.stderr)
+        print(f"check_sensitive_files: git ls-files failed: {inert(exc)}", file=sys.stderr)
         return 2
 
     found = violations(paths)
@@ -124,7 +143,7 @@ def main() -> int:
 
     print("check_sensitive_files: FAIL - sensitive files are tracked by git", file=sys.stderr)
     for path, reason in found:
-        print(f"  {path}  ({reason})", file=sys.stderr)
+        print(f"  {inert(path)}  ({inert(reason)})", file=sys.stderr)
     print(
         "\nRemove each file from the index (`git rm --cached <path>`), confirm it is "
         "ignored, and rotate anything that was a real credential: removing it from the "

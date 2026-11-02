@@ -178,6 +178,7 @@ StepUpAction = Literal[
     "pin.change",
     "trade.accept",
     "payout.confirm",
+    "biometric.enable",
 ]
 
 

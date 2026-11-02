@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 from typing import Any
 
@@ -254,3 +255,62 @@ async def test_one_turn_per_offer_is_enforced_by_the_database(
             "UPDATE offer_queue_entries SET status = 'notified', notified_at = now(), "
             "turn_deadline = now()",
         )
+
+
+# --- security review findings F-009 and F-011 (verified against the code) -------------------
+
+
+async def test_a_late_payout_choice_hands_the_amount_on_at_once(
+    db_settings: Settings, env: Env, taker: Person, offer: dict[str, Any]
+) -> None:
+    """F-011: when the 30 minutes ran out, the next person waiting gets their turn at once."""
+    oid = str(offer["offer_id"])
+    r = await taker.take(oid, "500.00")
+    assert r.status_code == 201, r.text
+    mid = r.json()["match_id"]
+    third, fourth = await _person(env, THIRD), await _person(env, FOURTH)
+    await _join(third, oid)
+    env.clock.advance(seconds=1)
+    await _join(fourth, oid)
+    await _unpaid_deal_runs_out(env, db_settings, oid)
+    headers = taker._h()
+    headers["X-Step-Up-Token"] = await taker.approve("payout.confirm")
+    body = {"accounts": [{"payout_account_id": str(uuid.uuid4()), "amount": "500.00"}]}
+    late = await taker.env.client.put(
+        f"/api/v1/matches/{mid}/payout-accounts", json=body, headers=headers
+    )
+    assert late.status_code == 409, late.text
+    # No sweep has run: the handoff happened in the same transaction as the release.
+    assert (await _mine(third))["status"] == "notified"
+    assert await _mine(fourth) is not None
+
+
+async def test_a_turn_that_ran_out_passes_before_anyone_else_can_take(
+    db_settings: Settings, env: Env, taker: Person, offer: dict[str, Any]
+) -> None:
+    """F-009: a turn whose time ran out passes on before a newcomer may take the offer."""
+    oid = str(offer["offer_id"])
+    r = await taker.take(oid, "500.00")
+    assert r.status_code == 201, r.text
+    third, fourth, fifth = (
+        await _person(env, THIRD),
+        await _person(env, FOURTH),
+        await _person(env, FIFTH),
+    )
+    await _join(third, oid)
+    env.clock.advance(seconds=1)
+    await _join(fourth, oid)
+    await _unpaid_deal_runs_out(env, db_settings, oid)
+    await _sweep(env, db_settings)  # the deal runs out; third gets the turn
+    assert (await _mine(third))["status"] == "notified"
+    # Third's five minutes run out, but the sweep has not run yet.
+    await _sql(
+        db_settings,
+        "UPDATE offer_queue_entries SET turn_deadline = :t WHERE status = 'notified'",
+        t=env.clock() - timedelta(seconds=1),
+    )
+    refused = await fifth.take(oid, "500.00")
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "RES_409_OFFER_RESERVED"
+    # The turn passed to fourth, and that handoff was kept.
+    assert (await _mine(fourth))["status"] == "notified"

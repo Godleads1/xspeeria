@@ -123,7 +123,8 @@ export function TakeOfferScreen({
             : null
         : formatHundredths(amountMinor).replace(/,/g, "");
       if (sent === null) return;
-      const m = await source.accept(offer.offer_id, sent, key.current, approval.current);
+      // The rate on screen is the one the taker agrees to; the server refuses it if it changed.
+      const m = await source.accept(offer.offer_id, sent, offer.desired_rate, key.current, approval.current);
       setMatch(m);
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) approval.current = null; // spent or refused
