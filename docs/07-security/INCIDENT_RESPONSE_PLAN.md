@@ -175,7 +175,7 @@ What each alert usually means and where to start (rules: ADR-074).
 ## 5. Before launch (gaps)
 
 These must be in place before live money; most also before the pilot.
-- An **on-call rota**: who answers out of hours, and how they're reached. Owner to name people.
+- An **on-call rota**: **on call named 2026-11-02: Chinedu Egbuchulam** ([`ON_CALL_GUIDE.md`](ON_CALL_GUIDE.md)). Still needed: a **backup** person, and alerts that reach them by email or phone.
 - An **email provider**, so alerts reach Super Admins without the page open (C-5).
 - **Hosting** with central logs, backups and a rollback pipeline (C-3, C-4).
 - (Built already: the pause-all-deals switch and sign-everyone-out, ADR-075; key rotation for `BENEFICIARY_ENCRYPTION_KEY` and `KYC_IDENTITY_KEY`, ADR-076.)
