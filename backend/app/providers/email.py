@@ -55,12 +55,19 @@ class EmailSender(Protocol):
         """A "was this you?" message. ``kind`` is a key of ``ALERT_TEXT``."""
         ...
 
+    async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
+        """ADR-074: an operations alert to a Super Admin. Severity, a fixed title and the
+        alert's reference only; the details stay in the console."""
+        ...
+
 
 @dataclass(frozen=True)
 class SentEmail:
     email: str
     code: str | None = None
     alert: str | None = None
+    #: ADR-074: "P1 #REF Title" for an operations alert.
+    ops_alert: str | None = None
 
 
 @dataclass
@@ -72,6 +79,9 @@ class RecordingEmailSender:
 
     async def send_alert(self, email: str, kind: str, device: str | None) -> None:
         self.sent.append(SentEmail(email=email, alert=kind))
+
+    async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
+        self.sent.append(SentEmail(email=email, ops_alert=f"{severity} {ref} {title}"))
 
     def last_code_for(self, email: str) -> str | None:
         for item in reversed(self.sent):
@@ -100,4 +110,11 @@ class DevConsoleEmailSender:
             out = self._stream or sys.stderr
             subject = ALERT_TEXT.get(kind, kind)
             out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {subject}\n\n")
+            out.flush()
+
+    async def send_ops_alert(self, email: str, severity: str, title: str, ref: str) -> None:
+        async with track_outside("Email (developer window)", "send ops alert"):  # ADR-074
+            out = self._stream or sys.stderr
+            line = f"[{severity}] {title} ({ref})"
+            out.write(f"\n[DEV EMAIL — local only] to {mask_email(email)}: {line}\n\n")
             out.flush()

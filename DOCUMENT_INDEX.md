@@ -144,6 +144,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `071-app-choose-country-to-verify.md` | App: "Verify your identity" asks which country you will pay from (Nigeria, UK, US) with each one's status from the server, then opens that country's check; Account details offers "Verify another country" (DEC-078) | **IMPLEMENTED** — 2026-10-27 |
 | `072-api-monitoring-system-health.md` | API monitoring: every API counted and timed per minute (our own routes by template, webhooks, every outside system: Didit, push, SMS, email, bank), background jobs, escrow queues and the database on a System Health page; warnings in plain words; counts and timings only; Super Admin only; 30 days; migration 0033 (DEC-079) | **IMPLEMENTED** — 2026-10-27 |
 | `073-customer-activity-log-deal-timeline.md` | Customer activity log and deal timeline: every customer change and sign-in step recorded by route template (no body, no secrets), merged with staff actions about them; deals found by the reference customers see, with every step from offer to payout; append-only, kept 5 years; Super Admin only; migration 0034 (DEC-080) | **IMPLEMENTED** — 2026-10-27 |
+| `074-ops-alerts-incident-plan.md` | Operations alerts for Super Admins (sign-in attacks, staff access changes, unusual deals, money at risk, webhook, API, service, job and escrow failures; P1–P4; one live alert per condition; acknowledge and resolve with a note; P1/P2 emailed once an email provider exists); Sentry wired in but off, strictly scrubbed; incident response plan; migration 0036 (DEC-081) | **IMPLEMENTED** — 2026-11-01 (plan documented, not yet exercised) |
 
 ### Accounting policy is not architecture
 
@@ -382,7 +383,7 @@ Production integration details require evidence from actual provider documentati
 
 This document is mandatory for all security-sensitive implementation.
 
-**Extended by** `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` (product owner, 2026-10-17): 40 requirements (SEC-001–SEC-040) mapped to OWASP ASVS 5.0.0, MASVS v2, API Security Top 10 and NIST SSDF; Xspeeria financial requirements FX-01–FX-05; release gates. Where the two differ, the stricter applies until a human decides (open item C1). Current state per requirement: `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`. Review reports: `docs/07-security/reviews/`.
+**Extended by** `docs/07-security/XSPEERIA_ENTERPRISE_SECURITY_STANDARD.md` (product owner, 2026-10-17): 40 requirements (SEC-001–SEC-040) mapped to OWASP ASVS 5.0.0, MASVS v2, API Security Top 10 and NIST SSDF; Xspeeria financial requirements FX-01–FX-05; release gates. Where the two differ, the stricter applies until a human decides (open item C1). Current state per requirement: `docs/07-security/SECURITY_EVIDENCE_REGISTER.md`. Incident response plan (SEC-038): `docs/07-security/INCIDENT_RESPONSE_PLAN.md`. Review reports: `docs/07-security/reviews/`.
 
 Use for:
 

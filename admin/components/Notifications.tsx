@@ -29,14 +29,16 @@ export const WORK_LABEL: Record<StaffWorkKind, string> = {
   reversal: 'Refund waiting for your approval',
   fraud: 'New fraud alert',
   dispute: 'New dispute or support case',
+  ops_alert: 'New system alert',
 };
-export const WORK_DETAIL: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low' };
+export const WORK_DETAIL: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low', P1: 'Critical', P2: 'High', P3: 'Medium', P4: 'Low' };
 const WORK_ICON: Record<StaffWorkKind, IconName> = {
   kyc_confirm: 'kyc',
   kyc_recommend: 'kyc',
   reversal: 'reversals',
   fraud: 'fraud',
   dispute: 'disputes',
+  ops_alert: 'health',
 };
 const WORK_PAGE: Record<StaffWorkKind, string> = {
   kyc_confirm: '/kyc/case',
@@ -44,6 +46,7 @@ const WORK_PAGE: Record<StaffWorkKind, string> = {
   reversal: '/reversals/case',
   fraud: '/fraud/case',
   dispute: '/disputes/case',
+  ops_alert: '/system-health',
 };
 
 export interface BellSource {

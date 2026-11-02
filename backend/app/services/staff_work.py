@@ -9,6 +9,7 @@ lets them act on:
 - ``reversal`` (reversals.approve): a refund someone else asked for, waiting for a second person.
 - ``fraud`` (fraud_alerts.update): a new fraud alert nobody has started on.
 - ``dispute`` (disputes.update): a new dispute or support case, unassigned or assigned to you.
+- ``ops_alert`` (monitoring.read): an operations alert nobody has acknowledged (ADR-074).
 
 The badge counts items newer than the last time the person opened the panel. Display only —
 every action is checked again on its own page.
@@ -27,9 +28,10 @@ from app.models.disputes import Dispute
 from app.models.fraud import FraudAlert
 from app.models.kyc import KycCase
 from app.models.kyc_reviews import KycReview
+from app.models.ops_alerts import OpsAlert
 from app.models.reversals import Reversal
 from app.models.staff import StaffAccount
-from app.services import dispute_admin, fraud, kyc_review, reversals
+from app.services import dispute_admin, fraud, kyc_review, ops_alerts, reversals
 from app.services.staff import StaffPrincipal
 
 __all__ = ["FEED_LIMIT", "StaffWorkService"]
@@ -115,6 +117,17 @@ class StaffWorkService:
                     ),
                     Dispute.created_at,
                     dispute_admin.ref,
+                )
+            )
+        if p.can("monitoring.read"):
+            out.append(
+                (
+                    "ops_alert",
+                    select(OpsAlert.id, OpsAlert.first_seen_at, OpsAlert.severity).where(
+                        OpsAlert.status == "open"
+                    ),
+                    OpsAlert.first_seen_at,
+                    ops_alerts.ref,
                 )
             )
         return out

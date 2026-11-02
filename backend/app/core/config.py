@@ -189,6 +189,12 @@ class Settings(BaseSettings):
     escrow_tick_seconds: int = 5
     #: ADR-072: how often each server adds its API and job figures to the database.
     metrics_flush_seconds: int = 60
+    #: ADR-074: how often the operations alert rules run (0: off).
+    ops_alert_seconds: int = 60
+    #: ADR-074: Sentry error tracking. Empty: off. Only scrubbed error details are sent.
+    sentry_dsn: str | None = None
+    #: ADR-074: the release Sentry files errors under (e.g. the git commit). Optional.
+    sentry_release: str | None = None
 
     #: ADR-052: send phone push through Expo (FCM/APNs). Off: notifications stay in-app.
     push_enabled: bool = False

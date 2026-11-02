@@ -41,7 +41,13 @@ const HEALTH: SystemHealth = {
 };
 
 function mount(over: Partial<AdminApi> = {}): AdminApi {
-  const a: AdminApi = { ...makeAdminApi(vi.fn()), me: vi.fn(async () => ME), systemHealth: vi.fn(async () => HEALTH), ...over };
+  const a: AdminApi = {
+    ...makeAdminApi(vi.fn()),
+    me: vi.fn(async () => ME),
+    systemHealth: vi.fn(async () => HEALTH),
+    opsAlerts: vi.fn(async () => ({ items: [], live: { P1: 0, P2: 0, P3: 0, P4: 0 } })),
+    ...over,
+  };
   render(<SessionProvider api={a} onSignedOut={() => undefined}><SystemHealthScreen /></SessionProvider>);
   return a;
 }

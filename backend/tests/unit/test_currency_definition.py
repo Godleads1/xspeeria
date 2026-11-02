@@ -371,6 +371,7 @@ class TestPackageRegistration:
             "api_metrics",
             "job_status",
             "customer_activity",
+            "ops_alerts",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -427,7 +428,7 @@ class TestPackageRegistration:
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "
             "'offer_groups', 'offer_queue_entries', "
-            "'offers', "
+            "'offers', 'ops_alerts', "
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', "
@@ -510,4 +511,5 @@ class TestPackageRegistration:
             "0033_api_monitoring.py",  # API monitoring (ADR-072)
             "0034_customer_activity.py",  # customer activity log (ADR-073)
             "0035_security_findings_hardening.py",  # security findings F-001, F-007, F-008
+            "0036_ops_alerts.py",  # operations alerts for Super Admins (ADR-074)
         ]

@@ -46,7 +46,7 @@
 
 ## Not built
 
-- Alerts that reach a person when nobody has the page open (email/SMS/pager; SEC-037 needs a provider and an on-call person).
+- Alerts that reach a person when nobody has the page open (email/SMS/pager; SEC-037 needs a provider and an on-call person). **Update 2026-11-01:** alert rules, the Alerts panel, the bell and email to Super Admins through the email sender are built (ADR-074); a real email provider and an on-call rota are still needed.
 - An outside monitoring service watching from outside the servers (uptime check).
 - Per-customer activity and per-transaction timelines: next build (owner, 2026-10-27; keep 5 years; Super Admin).
 

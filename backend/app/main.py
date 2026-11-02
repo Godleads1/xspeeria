@@ -41,6 +41,7 @@ from app.api.v1 import (
 from app.core.api_metrics import recorder, track_job
 from app.core.auth_tokens import ALGORITHM, TokenKeys
 from app.core.config import Settings, get_settings
+from app.core.error_tracking import init_error_tracking
 from app.core.exceptions import install_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.mfa import SecretBox
@@ -256,6 +257,22 @@ async def _sweep_preparations(settings: Settings, runtime: AuthRuntime) -> None:
             log.exception("preparation_sweep_failed")
 
 
+async def _ops_alert_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """ADR-074: operations alert rules for Super Admins, once a minute (SEC-037)."""
+    from app.db.session import get_sessionmaker
+    from app.services.ops_alerts import OpsAlertService
+
+    log = get_logger(__name__)
+    while True:
+        await asyncio.sleep(settings.ops_alert_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                with track_job("Alert rules", settings.ops_alert_seconds):
+                    await OpsAlertService(db, runtime.clock, settings, runtime.email).scan()
+        except Exception:  # noqa: BLE001 - keep checking; the next pass retries
+            log.exception("ops_alert_scan_failed")
+
+
 async def _escrow_loop(settings: Settings, runtime: AuthRuntime) -> None:
     """Escrow background work (ADR-037): funding windows, partner commands, partner messages."""
     from app.db.session import get_sessionmaker
@@ -367,6 +384,8 @@ def create_app(
             tasks.append(asyncio.create_task(_activity_retention_loop(resolved)))
         if resolved.database_url and resolved.metrics_flush_seconds > 0:
             tasks.append(asyncio.create_task(_metrics_loop(resolved)))
+        if resolved.database_url and resolved.ops_alert_seconds > 0:
+            tasks.append(asyncio.create_task(_ops_alert_loop(resolved, runtime)))
         if resolved.demo_autopilot and resolved.database_url:
             tasks.append(asyncio.create_task(_demo_autopilot_loop(resolved, runtime)))
         if (
@@ -394,6 +413,7 @@ def create_app(
     application.state.auth = runtime
     install_exception_handlers(application)
     install_request_logging(application)
+    init_error_tracking(resolved)  # ADR-074: off unless SENTRY_DSN is set
     if resolved.cors_origins:
         # Only explicitly listed origins (none by default). Native apps do not need CORS;
         # this exists for a browser build of the app pointed at a local server.
