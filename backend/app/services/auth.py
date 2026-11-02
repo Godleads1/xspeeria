@@ -64,6 +64,7 @@ from app.domain.auth_rules import (
     normalise_phone,
     pin_problem,
 )
+from app.domain.disposable_email import is_disposable_email
 from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.models.identity import (
     AuthRefreshToken,
@@ -314,6 +315,12 @@ class AuthService:
         problem = pin_problem(pin)
         if problem is not None:
             raise _err("VAL_422_WEAK_PASSWORD", problem, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        if is_disposable_email(email):  # ADR-079
+            raise _err(
+                "VAL_422_DISPOSABLE_EMAIL",
+                "Please use a permanent email address. Temporary email services aren't accepted.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         if self._rt.sms is None or self._rt.email is None:
             raise sms_unavailable()
 

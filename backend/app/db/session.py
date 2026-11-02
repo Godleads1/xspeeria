@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import Settings, get_settings
+from app.db.row_scope import install_row_scope
 
 __all__ = [
     "DatabaseNotConfiguredError",
@@ -74,7 +75,10 @@ def build_engine(settings: Settings | None = None) -> AsyncEngine:
     lifetime they control rather than the process-wide cached one.
     """
     resolved = settings or get_settings()
-    return create_async_engine(_require_url(resolved), future=True, pool_pre_ping=True)
+    engine = create_async_engine(_require_url(resolved), future=True, pool_pre_ping=True)
+    # ADR-078: every transaction tells PostgreSQL whose rows it may touch.
+    install_row_scope(engine)
+    return engine
 
 
 def get_engine(settings: Settings | None = None) -> AsyncEngine:

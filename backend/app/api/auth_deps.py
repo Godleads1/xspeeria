@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.db.row_scope import scope_to_user
 from app.db.session import get_sessionmaker
 from app.services.auth import AuthRuntime, AuthService, DeviceInfo, Principal, sms_unavailable
 
@@ -103,8 +104,12 @@ async def current_principal(
     request: Request,
     token: BearerToken,
     service: Annotated[AuthService, Depends(get_auth_service)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> Principal:
     principal = await service.authenticate(token)
+    # ADR-078: from here on the database only shows this customer their own private rows.
+    # `db` is the same per-request session the service and the route use (FastAPI caches it).
+    await scope_to_user(db, principal.user_id)
     # For the request log only (ADR-025 §1.8 allows the user ID).
     request.state.user_id = str(principal.user_id)
     return principal

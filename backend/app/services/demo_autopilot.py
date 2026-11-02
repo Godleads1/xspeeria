@@ -40,6 +40,7 @@ from app.models.marketplace import Offer
 from app.models.payouts import Beneficiary
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
+from app.services.deal_pause import deals_paused
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
 from app.services.settlement import SettlementService
@@ -104,6 +105,9 @@ class DemoAutopilot:
         _log.info("demo_robot_skipped", extra={"item": key.split(":")[0], "reason": code})
 
     async def run_once(self) -> None:
+        if await deals_paused(self._db):  # ADR-075: the robots stop too
+            await self._db.rollback()
+            return
         robots = await self._robots()
         if not robots:
             return

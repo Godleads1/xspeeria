@@ -46,7 +46,7 @@ uv run alembic upgrade head
 (cd backend && uv run python -m app.cli.currency_definitions)   # adds NGN, USD, GBP, EUR once
 (cd backend && APP_ENV=local uv run python -m app.cli.pretend_bank)   # adds the pretend banks once
 cd backend
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run python -m app.serve --host 0.0.0.0 --port 8000
 ```
 
 `--host 0.0.0.0` lets your phone reach the server on your home network. Do not do this on

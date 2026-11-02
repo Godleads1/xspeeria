@@ -29,6 +29,7 @@ export const ALERT_TITLE: Record<OpsAlertRule, string> = {
   customer_sign_in_attack: '{{failures}} failed customer sign-ins in 15 minutes ({{accounts}} accounts)',
   staff_sign_in_attack: '{{failures}} failed staff sign-ins in 15 minutes',
   staff_access_changed: 'A staff account or role was changed ({{action}})',
+  emergency_control_used: 'An emergency control was used ({{action}})',
   unusual_deal_volume: '{{last_hour}} deals in the last hour, against {{hourly_average}} an hour usually',
   money_at_risk: 'A deal needs money recovered ({{phase}})',
   high_fraud_alert: 'A high-severity fraud alert opened',

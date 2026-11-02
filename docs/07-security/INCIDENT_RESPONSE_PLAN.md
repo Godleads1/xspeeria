@@ -78,14 +78,16 @@ Pick only what the situation needs, and write down every action and its time.
 | Customers need to know about a problem | Post an outage notice; every signed-in app user sees it on Home | Admin › Outages (ADR-066) |
 | A secret leaked | Rotate it (§3.4) | — |
 | Forged webhooks | They're already refused (signature, time window, duplicates). If the shared secret may be known, rotate it. | §3.4 |
+| **Deals must stop everywhere** (money at risk, bank problem, a bug in the deal flow) | **Pause all deals.** No new offers, takes or payout choices; every command to the bank is held; payment and payout windows stop counting. On resume, every open window gets the paused time back, recorded on each deal. Then post an outage notice. | Admin › System Health › Emergency controls (any Super Admin, reason required; ADR-075) |
+| **Sessions may be stolen** (leaked tokens, a compromised device fleet, a staff laptop lost) | **Sign everyone out**: all customers, all other staff, or both. Trusted phones stay trusted; the PIN is still needed to sign in again. Rotate `JWT_SECRET_KEY` as well if access tokens may be known. | Admin › System Health › Emergency controls (ADR-075) |
 
-**Not built yet.** Each of these is needed before live money, and has a manual workaround until then:
+Every use of an emergency control is in the audit log and raises a **P1 alert** for the other Super Admins.
+
+**Not built yet** (needs hosting, C-3):
 
 | Missing | What it would do | Workaround today |
 |---|---|---|
-| **"Pause all deals" switch** (SEC-039) | Stop new deals and escrow progress everywhere | Stop the server (§3.6), then post an outage notice |
-| **"End every session" action** | Sign out every customer and staff member | Stop the server and ask the developer to revoke all session rows, with the owner's approval, recorded in the incident |
-| **Blocking an IP address range** | Stop an attack from one place | Depends on hosting (C-3); add rules at the hosting firewall or CDN |
+| **Blocking an IP address range** | Stop an attack from one place | Add rules at the hosting firewall or CDN once hosting exists |
 
 ### 3.4 Rotate secrets
 
@@ -93,7 +95,7 @@ Rotate a secret whenever it may have been seen by anyone who shouldn't have it: 
 
 | Secret | What it protects | Effect of rotating | Ready? |
 |---|---|---|---|
-| `JWT_SECRET_KEY` | Signs 15-minute access tokens | Current access tokens stop working; the app refreshes them with its refresh token, so **sessions continue**. To end sessions too, see "End every session" above. | Yes: change the value and restart |
+| `JWT_SECRET_KEY` | Signs 15-minute access tokens | Current access tokens stop working; the app refreshes them with its refresh token, so **sessions continue**. To end sessions too, use **Sign everyone out** (§3.3). | Yes: change the value and restart |
 | `WEBHOOK_SHARED_SECRET` | Messages from the partner bank | Must change at the bank at the same moment, or bank messages are refused | Simulation only; the real procedure comes from the bank's agreement |
 | `DIDIT_API_KEY`, `DIDIT_WEBHOOK_SECRET` | Identity checks | New key from Didit's console; set both, restart | Yes |
 | `BENEFICIARY_ENCRYPTION_KEY` | Payout account numbers (sealed) | Every number is re-sealed with the new key | **Yes (ADR-076):** new key in `BENEFICIARY_ENCRYPTION_KEY`, old in `BENEFICIARY_ENCRYPTION_KEY_PREVIOUS`; `python -m app.cli.rotate_keys beneficiary` (dry run), then `--apply`; remove the old key when it reports none left. **Needs the owner's approval to run on a live database.** |
@@ -176,6 +178,6 @@ These must be in place before live money; most also before the pilot.
 - An **on-call rota**: who answers out of hours, and how they're reached. Owner to name people.
 - An **email provider**, so alerts reach Super Admins without the page open (C-5).
 - **Hosting** with central logs, backups and a rollback pipeline (C-3, C-4).
-- The **pause-all-deals switch** (SEC-039) and an **end-every-session** action. (Key rotation for `BENEFICIARY_ENCRYPTION_KEY` and `KYC_IDENTITY_KEY` is built: ADR-076.)
+- (Built already: the pause-all-deals switch and sign-everyone-out, ADR-075; key rotation for `BENEFICIARY_ENCRYPTION_KEY` and `KYC_IDENTITY_KEY`, ADR-076.)
 - **Legal duties** confirmed (C-2) and the partner bank's incident clauses (C-1) added to §3.7.
 - **One recorded exercise** of this plan (a table-top drill of a P1), with its review filed. SEC-038 asks for it to be *exercised*, not only written.

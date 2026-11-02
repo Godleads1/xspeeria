@@ -151,6 +151,21 @@ jobs:
       - name: Dependency audit (installed environment, incl. dev tooling)
         run: uv run --no-sync pip-audit --strict --progress-spinner off
 
+      # SEC-033: a CycloneDX software bill of materials for the Python packages that ship
+      # (runtime only, from uv.lock), kept with every build. The step fails if it is empty.
+      - name: SBOM (Python, CycloneDX)
+        run: |
+          uv export --format cyclonedx1.5 --preview-features sbom-export --frozen --no-dev \
+            --output-file "$RUNNER_TEMP/sbom-python.cdx.json"
+          python3 scripts/check_sbom.py "$RUNNER_TEMP/sbom-python.cdx.json"
+
+      - name: Keep the Python SBOM with this build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-python
+          path: ${{ runner.temp }}/sbom-python.cdx.json
+          retention-days: 90
+
   node-quality:
     name: Node & TypeScript Quality
     runs-on: ubuntu-latest
@@ -200,6 +215,23 @@ jobs:
         run: |
           npm audit --omit=dev --json > "$RUNNER_TEMP/npm-audit.json" || true
           python3 scripts/check_npm_audit.py "$RUNNER_TEMP/npm-audit.json"
+
+      # SEC-033: CycloneDX SBOM of the npm packages that ship (app, console, tokens), from the
+      # installed lockfile tree. The official CycloneDX tool at an exact version: `npm sbom`
+      # refuses the whole tree when one optional, platform-only package is absent
+      # (@img/sharp-wasm32's @emnapi/runtime). The step fails if the SBOM is empty.
+      - name: SBOM (npm, CycloneDX)
+        run: |
+          npx --yes @cyclonedx/cyclonedx-npm@6.0.1 --omit dev --ignore-npm-errors \
+            --output-format JSON --output-file "$RUNNER_TEMP/sbom-npm.cdx.json"
+          python3 scripts/check_sbom.py "$RUNNER_TEMP/sbom-npm.cdx.json"
+
+      - name: Keep the npm SBOM with this build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-npm
+          path: ${{ runner.temp }}/sbom-npm.cdx.json
+          retention-days: 90
 
   repo-hygiene:
     name: Secret Scanning & Tracked-File Guard

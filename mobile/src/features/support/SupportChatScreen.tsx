@@ -10,7 +10,7 @@
  */
 
 import { useRef, useState, type ReactElement } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance, type TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -67,8 +67,8 @@ export function SupportChatScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const nextId = useRef(1);
-  const scroll = useRef<ScrollView>(null);
-  const input = useRef<TextInput>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
+  const input = useRef<TextInputInstance>(null);
   const [messages, setMessages] = useState<readonly Message[]>(() => [
     { id: 0, from: 'assistant', text: greeting(firstName), at: now() },
   ]);

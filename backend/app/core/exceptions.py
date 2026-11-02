@@ -81,6 +81,16 @@ def error_body(code: str, message: str, details: dict[str, Any] | None = None) -
     return body
 
 
+_PROBLEMS = {"missing": "missing", "extra_forbidden": "not_allowed"}
+
+
+def _neutral_field_error(error: Any) -> dict[str, str]:
+    loc = [str(p) for p in error.get("loc", ())]
+    where = loc[0] if loc and loc[0] in {"body", "query", "path", "header", "cookie"} else "body"
+    field = ".".join(loc[1:] if loc and loc[0] == where else loc) or "(request)"
+    return {"field": field, "in": where, "problem": _PROBLEMS.get(error.get("type"), "invalid")}
+
+
 def install_exception_handlers(app: FastAPI) -> None:
     """Register handlers so every failure leaves through the same envelope."""
 
@@ -99,11 +109,12 @@ def install_exception_handlers(app: FastAPI) -> None:
         (which can hold a raw exception). Echoing ``input`` would reflect a PIN, code or
         token straight back into a response, a proxy log or a crash report (ADR-025 §1.8),
         and ``ctx`` is not even JSON-serialisable when it holds an exception.
+
+        ADR-079: the validator library's own error types and English messages ("Field
+        required", ``string_too_short``) are not passed on either; they name the framework.
+        Each entry is only the field, where it was, and ``missing``/``not_allowed``/``invalid``.
         """
-        safe = [
-            {"type": e.get("type"), "loc": list(e.get("loc", ())), "msg": e.get("msg")}
-            for e in exc.errors()
-        ]
+        safe = [_neutral_field_error(e) for e in exc.errors()]
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=error_body("VALIDATION_ERROR", "Request failed validation.", {"errors": safe}),

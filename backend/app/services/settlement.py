@@ -49,6 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
+from app.db.row_scope import acting_for_service
 from app.domain.payout_rules import counter_amount_minor
 from app.domain.settlement_rules import (
     DISPATCH_MAX_ATTEMPTS,
@@ -79,6 +80,7 @@ from app.models.settlement import (
 )
 from app.providers.pretend_bank import LegCommand, PartnerError, PayoutLine, PretendBank
 from app.services.auth import Principal
+from app.services.deal_pause import deals_paused, refuse_if_paused
 from app.services.groups import complete_group
 from app.services.notifications import notify, notify_settlement
 from app.services.offers import money_text
@@ -435,6 +437,9 @@ class SettlementService:
 
     async def dispatch_due(self, *, limit: int = 20) -> int:
         """Send due outbox commands. Claim (lease) → commit → call partner → record result."""
+        if await deals_paused(self._db):  # ADR-075: bank commands are held
+            await self._db.rollback()
+            return 0
         if self._bank is None:
             return 0
         done = 0
@@ -862,6 +867,9 @@ class SettlementService:
 
     async def expire_funding_windows(self, *, limit: int = 50) -> int:
         """ADR-001 transitions 5 and 6, after the 5-minute window (ADR-021 §2)."""
+        if await deals_paused(self._db):  # ADR-075: clocks frozen, nothing is expired
+            await self._db.rollback()
+            return 0
         now = self._clock()
         ids = (
             await self._db.scalars(
@@ -942,6 +950,7 @@ class SettlementService:
         Only while the funding window is still open and nobody has disputed the deal. Set once
         (a database guard refuses any later change); both sides are told the new time.
         """
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         found = await self._for_party(principal, match_id)
         settlement_id = found.id  # read now: the rollback below expires loaded rows
         taker = await self._db.scalar(
@@ -1039,9 +1048,12 @@ class SettlementService:
         leg_id, total = mine.leg_id, mine.amount_minor + mine.fee_minor
         await self._db.rollback()
         self._bank.simulate_pay_in(leg_id, total)
-        await self._bank.deliver(self.ingest)
-        await self.dispatch_due()
-        await self._bank.deliver(self.ingest)
+        # ADR-078: what follows is the bank's and the service's work (partner messages, bank
+        # commands for both legs), only triggered by this customer's pretend payment.
+        async with acting_for_service(self._db, "pretend bank: partner messages and commands"):
+            await self._bank.deliver(self.ingest)
+            await self.dispatch_due()
+            await self._bank.deliver(self.ingest)
         return await self.view(principal, match_id)
 
     # --- 6. staff decisions (admin console) --------------------------------------------------

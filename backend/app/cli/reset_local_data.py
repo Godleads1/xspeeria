@@ -23,7 +23,8 @@ from app.db.session import build_engine
 __all__ = ["USER_TABLES", "reset_user_data"]
 
 #: Everything that belongs to accounts, children before parents. Not `currency_definitions`
-#: (append-only reference data), `partners` (the pretend banks), staff tables, or
+#: (append-only reference data), `partners` (the pretend banks), staff tables, the deal
+#: pause history (`deal_pauses`, ADR-075), or
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
     "customer_activity",

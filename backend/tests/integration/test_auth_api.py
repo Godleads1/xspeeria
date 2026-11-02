@@ -50,7 +50,7 @@ PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
-    "ops_alerts, staff_audit_log, staff_sessions, staff_codes, staff_accounts, "
+    "deal_pauses, ops_alerts, staff_audit_log, staff_sessions, staff_codes, staff_accounts, "
     "api_metrics, job_status, customer_activity, "
     "tier_checks, offer_queue_entries, kyc_reviews, fraud_alerts, adverts, service_outages, "
     "reversals, dispute_messages, disputes, "
@@ -284,6 +284,13 @@ async def test_register_response_carries_nothing_identifying(env: Env) -> None:
         ({"phone": PHONE, "email": EMAIL, "pin": "123456"}, 422, "VAL_422_WEAK_PASSWORD"),
         ({"phone": PHONE, "email": EMAIL, "pin": "4826"}, 422, "VAL_422_WEAK_PASSWORD"),
         ({"phone": PHONE, "email": "nope", "pin": PIN}, 422, "VALIDATION_ERROR"),
+        # ADR-079: throwaway email services, including their subdomains and any letter case.
+        (
+            {"phone": PHONE, "email": "a@mailinator.com", "pin": PIN},
+            422,
+            "VAL_422_DISPOSABLE_EMAIL",
+        ),
+        ({"phone": PHONE, "email": "a@X.YopMail.com", "pin": PIN}, 422, "VAL_422_DISPOSABLE_EMAIL"),
         # Unknown fields are refused, never silently ignored (no mass assignment).
         ({"phone": PHONE, "email": EMAIL, "pin": PIN, "status": "active"}, 422, "VALIDATION_ERROR"),
     ],

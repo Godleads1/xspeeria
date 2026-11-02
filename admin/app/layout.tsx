@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import type { ReactElement, ReactNode } from 'react';
 
 import { LanguageRoot } from '../lib/i18n';
@@ -15,15 +16,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }): ReactElement {
+export default async function RootLayout({ children }: { children: ReactNode }): Promise<ReactElement> {
+  // ADR-077: this request's script nonce, set by proxy.ts. Reading it renders every page per
+  // request (a nonce can't be baked into a static page).
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     // Browser extensions (themes, dark mode, translators) add attributes to <html> before
     // React loads; this ignores attribute differences on this one element only.
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Applies the saved Light / Dark / System choice before the page paints (ADR-064).
-            A future script-src policy must allow this script by its hash. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+            Allowed by the page's script nonce (ADR-077). */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <style>{themeCss()}</style>
         {/* Outlined inputs draw their border on the fieldset; show focus there. */}
         <style>{`fieldset:focus-within{border-color:${color.border.focus}!important;box-shadow:0 0 0 2px color-mix(in srgb, ${color.border.focus} 20%, transparent)}a:focus-visible,button:focus-visible,select:focus-visible,input[type=search]:focus-visible{outline:2px solid ${color.border.focus};outline-offset:2px}`}</style>

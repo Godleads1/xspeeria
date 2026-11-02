@@ -32,6 +32,7 @@ from app.services.adverts import AdvertService
 from app.services.auth import AuthRuntime
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
+from app.services.deal_pause import DealPauseService
 from app.services.dispute_admin import DisputeAdminService
 from app.services.fraud import FraudService
 from app.services.kyc_review import KycReviewService
@@ -1283,6 +1284,54 @@ async def resolve_ops_alert(
     alert_id: uuid.UUID, body: ResolveAlertBody, staff: Staff, service: OpsAlerts, info: Info
 ) -> Any:
     return await service.resolve(staff, info, alert_id, body.note)
+
+
+# --- Emergency controls (ADR-075; SEC-039; any Super Admin, reason required) -------------------
+
+
+async def get_deal_pause(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> DealPauseService:
+    return DealPauseService(db, runtime.clock)
+
+
+DealPauses = Annotated[DealPauseService, Depends(get_deal_pause)]
+
+
+class EmergencyReasonBody(_Strict):
+    reason: str = Field(min_length=5, max_length=500)
+
+
+class EndSessionsBody(_Strict):
+    who: Literal["customers", "staff", "everyone"]
+    reason: str = Field(min_length=5, max_length=500)
+
+
+@router.get("/emergency/deals", summary="Are deals paused? (Super Admin)")
+async def deal_pause_status(staff: Staff, service: DealPauses) -> Any:
+    return await service.status(staff)
+
+
+@router.post("/emergency/deals/pause", summary="Pause all deals (Super Admin, reason)")
+async def pause_deals(
+    body: EmergencyReasonBody, staff: Staff, service: DealPauses, info: Info
+) -> Any:
+    return await service.pause(staff, info, body.reason)
+
+
+@router.post("/emergency/deals/resume", summary="Resume deals; open windows get the time back")
+async def resume_deals(
+    body: EmergencyReasonBody, staff: Staff, service: DealPauses, info: Info
+) -> Any:
+    return await service.resume(staff, info, body.reason)
+
+
+@router.post("/emergency/sessions/end", summary="Sign everyone out (Super Admin, reason)")
+async def end_all_sessions(
+    body: EndSessionsBody, staff: Staff, service: DealPauses, info: Info
+) -> Any:
+    return await service.end_sessions(staff, info, body.who, body.reason)
 
 
 # --- Customer activity and deal timelines (ADR-073; Super Admin, 5 years) ---------------------
