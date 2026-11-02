@@ -52,6 +52,7 @@ from app.models.staff import StaffAccount, StaffAuditEntry, StaffCode, StaffRole
 from app.providers.email import mask_email
 from app.providers.object_store import new_key
 from app.services.auth import AuthRuntime
+from app.services.staff_keys import StaffKeys
 
 __all__ = ["RequestInfo", "StaffPrincipal", "StaffService"]
 
@@ -73,6 +74,8 @@ class StaffPrincipal:
     role_id: uuid.UUID
     role_name: str
     permissions: frozenset[str]
+    #: ADR-081: signed in only to register a security key (nothing else is allowed).
+    key_setup_only: bool = False
 
     @property
     def is_super_admin(self) -> bool:
@@ -329,8 +332,9 @@ class StaffService:
 
     async def verify(
         self, code_id: uuid.UUID, code: str, info: RequestInfo
-    ) -> tuple[str, dict[str, Any]]:
-        """Step 2: the email code. Opens a session; answers with the cookie value."""
+    ) -> tuple[str | None, dict[str, Any]]:
+        """Step 2: the email code. Opens a session and answers with the cookie value -- or, for
+        a Super Admin with a security key, answers ``(None, the key step)`` (ADR-081)."""
         row = await self._use_code(code_id, code, "login")
         staff = await self._db.get(StaffAccount, row.staff_id, with_for_update=True)
         if (
@@ -341,6 +345,33 @@ class StaffService:
             await self._db.rollback()
             raise _code_gone()
         now = self._now()
+        role = await self._db.get(StaffRole, staff.role_id)
+        if role is not None and role.name == SUPER_ADMIN:
+            keys = StaffKeys(self._db, self._rt)
+            if await keys.keys_of(staff.id):
+                # ADR-081: a Super Admin with a key touches it as the third step.
+                step = await keys.login_step(staff.id, now)
+                self._audit(info, staff.id, "login_key_requested")
+                await self._db.commit()
+                return None, {
+                    "key_required": True,
+                    "key_challenge_id": step.challenge_id,
+                    "options": step.options,
+                }
+            if self._rt.super_admin_key_required:
+                # No key yet, but one is required: a session that can only register one.
+                return await self._open_session(staff, info, now, key_setup_only=True)
+        return await self._open_session(staff, info, now)
+
+    async def _open_session(
+        self,
+        staff: StaffAccount,
+        info: RequestInfo,
+        now: datetime,
+        *,
+        key_setup_only: bool = False,
+        key_id: uuid.UUID | None = None,
+    ) -> tuple[str, dict[str, Any]]:
         token = generate_refresh_token()
         session = StaffSession(
             id=uuid.uuid4(),
@@ -351,14 +382,134 @@ class StaffService:
             expires_at=now + SESSION_ABSOLUTE,
             ip_address=info.ip_address,
             user_agent=info.user_agent,
+            key_setup_only=key_setup_only,
         )
         self._db.add(session)
         staff.last_login_at = now
-        self._audit(info, staff.id, "login", detail={"session_id": str(session.id)})
+        detail: dict[str, Any] = {"session_id": str(session.id)}
+        if key_setup_only:
+            detail["key_setup_only"] = True
+        if key_id is not None:
+            detail["security_key_id"] = str(key_id)
+        self._audit(info, staff.id, "login", detail=detail)
         staff_id = staff.id
         await self._db.commit()
         _logger.info("staff_login", extra={"staff_id": str(staff_id)})
-        return token, await self._profile(staff_id)
+        return token, {**await self._profile(staff_id), "key_setup_only": key_setup_only}
+
+    async def finish_key_login(
+        self, challenge_id: uuid.UUID, credential: dict[str, Any], info: RequestInfo
+    ) -> tuple[str, dict[str, Any]]:
+        """Step 3 for a Super Admin with a key (ADR-081): the key's signed answer."""
+        now = self._now()
+        try:
+            staff_id, key = await StaffKeys(self._db, self._rt).finish_login(
+                challenge_id, credential, now
+            )
+        except AppError:
+            # Spend the challenge and record the failure, then refuse.
+            await self._db.commit()
+            raise
+        staff = await self._db.get(StaffAccount, staff_id, with_for_update=True)
+        role = await self._db.get(StaffRole, staff.role_id) if staff is not None else None
+        if staff is None or staff.status != "active" or role is None or role.name != SUPER_ADMIN:
+            await self._db.commit()
+            raise _code_gone()
+        return await self._open_session(staff, info, now, key_id=key.id)
+
+    # --- security keys (ADR-081) ---------------------------------------------------------
+
+    async def list_keys(self, principal: StaffPrincipal) -> dict[str, Any]:
+        keys = [
+            StaffKeys.view(k)
+            for k in await StaffKeys(self._db, self._rt).keys_of(principal.staff_id)
+        ]
+        await self._db.rollback()
+        return {
+            "keys": keys,
+            "required": self._rt.super_admin_key_required and principal.is_super_admin,
+            "can_add": principal.is_super_admin,
+        }
+
+    async def begin_add_key(self, principal: StaffPrincipal) -> dict[str, Any]:
+        step = await StaffKeys(self._db, self._rt).begin_register(
+            principal.staff_id, principal.email, principal.is_super_admin, self._now()
+        )
+        await self._db.commit()
+        return {"key_challenge_id": step.challenge_id, "options": step.options}
+
+    async def finish_add_key(
+        self,
+        principal: StaffPrincipal,
+        challenge_id: uuid.UUID,
+        name: str,
+        credential: dict[str, Any],
+        info: RequestInfo,
+    ) -> dict[str, Any]:
+        try:
+            key = await StaffKeys(self._db, self._rt).finish_register(
+                principal.staff_id,
+                principal.is_super_admin,
+                challenge_id,
+                name,
+                credential,
+                self._now(),
+            )
+        except AppError:
+            await self._db.commit()  # the challenge is spent
+            raise
+        self._audit(
+            info,
+            principal.staff_id,
+            "security_key_added",
+            target_type="staff",
+            target_id=principal.staff_id,
+            detail={"key_id": str(key.id), "name": key.name},
+        )
+        await self._db.commit()
+        return StaffKeys.view(key)
+
+    async def remove_my_key(
+        self, principal: StaffPrincipal, key_id: uuid.UUID, info: RequestInfo
+    ) -> None:
+        key = await StaffKeys(self._db, self._rt).remove_own(principal.staff_id, key_id)
+        self._audit(
+            info,
+            principal.staff_id,
+            "security_key_removed",
+            target_type="staff",
+            target_id=principal.staff_id,
+            detail={"key_id": str(key.id), "name": key.name},
+        )
+        await self._db.commit()
+
+    async def remove_staff_keys(
+        self, principal: StaffPrincipal, staff_id: uuid.UUID, reason: str, info: RequestInfo
+    ) -> dict[str, int]:
+        """A Super Admin removes another staff member's keys (a lost key). Their sessions end."""
+        if not principal.is_super_admin:
+            raise _not_super_admin_error()
+        if staff_id == principal.staff_id:
+            raise AppError(
+                "ADMIN_409_NOT_YOUR_OWN",
+                "Remove your own keys from My Profile.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        target = await self._db.get(StaffAccount, staff_id, with_for_update=True)
+        if target is None:
+            raise _not_found()
+        removed = await StaffKeys(self._db, self._rt).remove_all_of(staff_id)
+        await self._revoke_sessions(staff_id)
+        self._audit(
+            info,
+            principal.staff_id,
+            "security_key_removed",
+            target_type="staff",
+            target_id=staff_id,
+            detail={"removed": removed, "reason": reason.strip()[:500], "lost_key": True},
+        )
+        await self._db.commit()
+        return {"removed": removed}
 
     async def authenticate(self, token: str | None, *, touch: bool = True) -> StaffPrincipal:
         """The caller behind a session cookie, or 401. Also keeps the session alive, except
@@ -394,6 +545,7 @@ class StaffService:
             role_id=role.id,
             role_name=role.name,
             permissions=frozenset(role.permissions),
+            key_setup_only=session.key_setup_only,
         )
         if touch:
             session.last_seen_at = now
@@ -1130,6 +1282,14 @@ class StaffService:
         )
         await self._db.commit()
         return staff.id
+
+
+def _not_super_admin_error() -> AppError:
+    return AppError(
+        "ADMIN_403_SUPER_ADMIN_ONLY",
+        "Only a Super Admin can do this.",
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
 
 
 def _staff_view(staff: StaffAccount, role: StaffRole) -> dict[str, Any]:

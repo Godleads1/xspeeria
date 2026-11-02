@@ -56,7 +56,7 @@ None of these can be fixed by writing more code alone. They need accounts, partn
 | H-2 | Keys come from environment variables; no rotation (SEC-026/027) | High | `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY`, `BENEFICIARY_ENCRYPTION_KEY`, `KYC_IDENTITY_KEY`. Move to the secret manager with C-3. |
 | H-3 | No database row-level security (ADR-025 §1.4) | High (defence in depth) | Every query is scoped in code and tested; RLS would be a second lock. **Addressed 2026-11-02 (ADR-078):** forced policies on customers' private tables; deployment must confirm the app's login user has no `BYPASSRLS`. |
 | H-4 | `main` can't require reviews or passing checks (SEC-031) | High | Needs GitHub Pro/Team. Today anyone with write access could push straight to `main`. |
-| H-5 | No hardware security key for the Super Admin (ADR-051 Decision 2) | High before live money | Staff sign in with password + email code; the owner decided a hardware key is required before live money. |
+| H-5 | No hardware security key for the Super Admin (ADR-051 Decision 2) | High before live money | Staff sign in with password + email code; the owner decided a hardware key is required before live money. **Addressed 2026-11-02 (ADR-081):** keys built and required in production; buy two keys per Super Admin and register them on the live console. |
 | H-6 | FX-03: the 24-hour payout hold was removed (DEC-044); compensating fraud checks are simple rules (ADR-068) | High before live money | Accepted for the simulation only. Needs the owner's fraud plan before real payouts. |
 | M-1 | `/health` returns the environment name (SEC-014) | Medium | Trim it, or keep it internal; add an API inventory. |
 | M-2 | No SBOM in CI (SEC-033) | Medium | Lockfiles exist; add CycloneDX output. |

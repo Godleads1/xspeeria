@@ -13,6 +13,7 @@ from app.core.config import Settings
 from app.core.exceptions import install_exception_handlers
 from app.main import create_app
 from app.serve import server_options
+from tests.production_settings import PRODUCTION_KEYS
 
 pytestmark = pytest.mark.asyncio
 
@@ -35,7 +36,8 @@ def test_the_server_never_sends_its_name() -> None:
 
 
 async def _answers(app_env: Literal["development", "production"]) -> list[httpx.Response]:
-    app = create_app(Settings(_env_file=None, app_env=app_env))  # type: ignore[call-arg]
+    extra = PRODUCTION_KEYS if app_env == "production" else {}
+    app = create_app(Settings(_env_file=None, app_env=app_env, **extra))  # type: ignore[call-arg,arg-type]
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
         return [
