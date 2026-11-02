@@ -136,6 +136,7 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
         kyc_provider=_didit(settings),
         kyc_identity_key=_kyc_identity_key(settings),
+        kyc_identity_key_previous=_kyc_identity_key_previous(settings),
         push_sender=ExpoPushSender(settings.expo_access_token) if settings.push_enabled else None,
         email=email,
         face=_face_check(settings),
@@ -221,14 +222,29 @@ def _kyc_identity_key(settings: Settings) -> bytes | None:
         if settings.didit_api_key:
             raise ValueError("KYC_IDENTITY_KEY is required when Didit is configured (ADR-041)")
         return None
+    return _identity_key_bytes(raw, "KYC_IDENTITY_KEY")
+
+
+def _kyc_identity_key_previous(settings: Settings) -> bytes | None:
+    """ADR-076: the document key before the last rotation, if any."""
+    raw = settings.kyc_identity_key_previous
+    if not raw:
+        return None
+    key = _identity_key_bytes(raw, "KYC_IDENTITY_KEY_PREVIOUS")
+    if raw == settings.kyc_identity_key:
+        raise ValueError("KYC_IDENTITY_KEY_PREVIOUS is the same as KYC_IDENTITY_KEY")
+    return key
+
+
+def _identity_key_bytes(raw: str, name: str) -> bytes:
     if "CHANGE_ME" in raw:
-        raise ValueError("KYC_IDENTITY_KEY is still the .env.example placeholder")
+        raise ValueError(f"{name} is still the .env.example placeholder")
     try:
         key = base64.b64decode(raw, validate=True)
     except ValueError as exc:
-        raise ValueError("KYC_IDENTITY_KEY must be base64") from exc
+        raise ValueError(f"{name} must be base64") from exc
     if len(key) != 32:
-        raise ValueError("KYC_IDENTITY_KEY must decode to 32 bytes")
+        raise ValueError(f"{name} must decode to 32 bytes")
     return key
 
 

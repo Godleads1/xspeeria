@@ -161,6 +161,8 @@ class Settings(BaseSettings):
     #: ADR-035: AES-256-GCM key for payout account numbers at rest (base64 of 32 bytes).
     #: Without it, payout accounts cannot be added. A KMS-managed key replaces it before go-live.
     beneficiary_encryption_key: str | None = None
+    #: ADR-076: the old key while `app.cli.rotate_keys beneficiary` re-seals; then removed.
+    beneficiary_encryption_key_previous: str | None = None
     #: ADR-035: a pretend bank name check that approves every account. No partner bank exists
     #: yet. Refused unless app_env is "local".
     bank_check_dev: bool = False
@@ -179,6 +181,8 @@ class Settings(BaseSettings):
     #: ADR-041: base64 of 32 random bytes; keys the ID-document hash (one person, one
     #: verified account). Required whenever Didit is configured. Set once per environment.
     kyc_identity_key: str | None = None
+    #: ADR-076: the old document key after a rotation; new checks are matched against both.
+    kyc_identity_key_previous: str | None = None
     #: ADR-042: request header carrying the client's country from a trusted proxy (e.g.
     #: ``CF-IPCountry``). Only used to suggest a new country's check; grants nothing.
     client_country_header: str | None = None
