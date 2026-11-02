@@ -143,6 +143,10 @@ class Settings(BaseSettings):
     #: ADR-054: print email codes and alerts to the server terminal (no email provider yet).
     #: Refused unless app_env is "local".
     dev_email: bool = False
+    #: ADR-082: real email through Resend. Both are needed; the sender's domain must be verified
+    #: in Resend (DNS records). E.g. ``Xspeeria <no-reply@mail.example.com>``. Never logged.
+    resend_api_key: str | None = None
+    email_from: str | None = None
     #: ADR-054: pass every face check without a camera (no cost). Refused unless app_env is
     #: "local".
     face_check_dev: bool = False
