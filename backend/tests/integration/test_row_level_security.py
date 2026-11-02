@@ -33,9 +33,9 @@ from tests.integration.test_notifications_api import _inbox, _seed
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[3] / "migrations" / "versions" / "0038_row_level_security.py"
-)
+_VERSIONS = Path(__file__).resolve().parents[3] / "migrations" / "versions"
+#: Migrations that put tables under the owner-rows policy (each has an ``OWNED_TABLES``).
+_POLICY_MIGRATIONS = ("0038_row_level_security.py", "0041_security_notices.py")
 
 
 def _as_app_role(engine: Any) -> Any:
@@ -58,11 +58,14 @@ def _as_app_role(engine: Any) -> Any:
 
 
 def _owned_tables() -> dict[str, str]:
-    spec = importlib.util.spec_from_file_location("m0038", _MIGRATION)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return dict(module.OWNED_TABLES)
+    owned: dict[str, str] = {}
+    for name in _POLICY_MIGRATIONS:
+        spec = importlib.util.spec_from_file_location(name.removesuffix(".py"), _VERSIONS / name)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        owned.update(module.OWNED_TABLES)
+    return owned
 
 
 #: Tables with a customer column that are deliberately NOT under a row policy, and why.
@@ -97,7 +100,8 @@ def test_every_customer_table_is_either_locked_or_explained() -> None:
         if not _USER_COLUMNS & set(table.c.keys()):
             continue
         assert table.name in owned or table.name in SHARED_TABLES, (
-            f"{table.name} holds customer rows: add it to 0038's OWNED_TABLES (a row policy) "
+            f"{table.name} holds customer rows: add it to a migration's OWNED_TABLES (a row "
+            "policy, listed in _POLICY_MIGRATIONS) "
             "or to SHARED_TABLES here with the reason both sides need it"
         )
         assert not (table.name in owned and table.name in SHARED_TABLES), table.name

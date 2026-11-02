@@ -30,13 +30,14 @@ from app.core.config import Settings
 from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
 from app.core.rate_limit import SlidingWindowLimiter
-from app.db.session import build_engine, dispose_engine
+from app.db.session import build_engine, dispose_engine, get_sessionmaker
 from app.domain.auth_rules import MAX_PIN_TRIES, PIN_LOCK
 from app.main import create_app
 from app.providers.email import RecordingEmailSender
 from app.providers.face import RecordingFaceCheck
 from app.providers.sms import RecordingSmsSender
 from app.services.auth import AuthRuntime
+from app.services.security_notices import SecurityNoticeSender
 from tests.integration.test_migrations import ALEMBIC_INI, MIGRATIONS_DIR
 
 pytestmark = pytest.mark.integration
@@ -53,7 +54,7 @@ TABLES = (
     "rate_limit_hits, deal_pauses, ops_alerts, "
     "staff_audit_log, staff_sessions, staff_codes, staff_key_challenges, "
     "staff_security_keys, staff_accounts, "
-    "api_metrics, job_status, customer_activity, "
+    "api_metrics, job_status, customer_activity, security_notices, "
     "tier_checks, offer_queue_entries, kyc_reviews, fraud_alerts, adverts, service_outages, "
     "reversals, dispute_messages, disputes, "
     "verification_checks, "
@@ -143,6 +144,14 @@ class Env:
         provider = self.runtime.face
         assert isinstance(provider, RecordingFaceCheck)
         return provider
+
+    async def send_notices(self) -> int:
+        """ADR-084: one round of the security email job (the server runs it every 10 s)."""
+        app = self.client._transport.app  # type: ignore[attr-defined]
+        async with get_sessionmaker(app.state.settings)() as db:
+            return await SecurityNoticeSender(
+                db, self.clock, self.email, self.runtime.public_api_url
+            ).run_once()
 
     def email_code(self, email: str = EMAIL) -> str:
         code = self.email.last_code_for(email)

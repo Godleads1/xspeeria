@@ -36,6 +36,7 @@ from app.api.v1 import (
     notifications,
     offers,
     push,
+    security_report,
     settlement,
 )
 from app.core.api_metrics import recorder, track_job
@@ -140,6 +141,9 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
             "STAFF_KEY_RP_ID and STAFF_KEY_ORIGIN must name the console's https address in "
             "production (ADR-081)"
         )
+    if settings.is_production and not settings.public_api_url.startswith("https://"):
+        # ADR-084: the "this wasn't me" link in every security email points here.
+        raise ValueError("PUBLIC_API_URL must be the API's https address in production (ADR-084)")
     return AuthRuntime(
         keys=keys,
         secret_box=box,
@@ -174,6 +178,7 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         staff_key_rp_id=settings.staff_key_rp_id,
         staff_key_origin=settings.staff_key_origin,
         super_admin_key_required=settings.super_admin_key_required,
+        public_api_url=settings.public_api_url,
     )
 
 
@@ -425,6 +430,27 @@ async def _push_loop(settings: Settings, runtime: AuthRuntime) -> None:
             log.exception("push_round_failed")
 
 
+async def _security_notice_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """ADR-084: email "was this you?" notices with their "this wasn't me" link."""
+    from app.db.session import get_sessionmaker
+    from app.services.security_notices import SecurityNoticeSender
+
+    log = get_logger(__name__)
+    email = runtime.email
+    if email is None:  # pragma: no cover - only started when a sender exists
+        return
+    while True:
+        await asyncio.sleep(settings.security_notice_seconds)
+        try:
+            async with get_sessionmaker(settings)() as db:
+                with track_job("Security emails", settings.security_notice_seconds):
+                    await SecurityNoticeSender(
+                        db, runtime.clock, email, runtime.public_api_url
+                    ).run_once()
+        except Exception:  # noqa: BLE001 - a failed round must not stop the loop
+            log.exception("security_notice_round_failed")
+
+
 def create_app(
     settings: Settings | None = None, auth_runtime: AuthRuntime | None = None
 ) -> FastAPI:
@@ -459,6 +485,12 @@ def create_app(
             and resolved.push_tick_seconds > 0
         ):
             tasks.append(asyncio.create_task(_push_loop(resolved, runtime)))
+        if (
+            resolved.database_url
+            and runtime.email is not None
+            and resolved.security_notice_seconds > 0
+        ):
+            tasks.append(asyncio.create_task(_security_notice_loop(resolved, runtime)))
         try:
             yield
         finally:
@@ -510,6 +542,7 @@ def create_app(
     application.include_router(notices.router)
     application.include_router(adverts.router)
     application.include_router(push.router)
+    application.include_router(security_report.router)
     application.include_router(settlement.router)
     application.include_router(settlement.webhooks_router)
     if resolved.app_env == "local" and runtime.pretend_bank is not None:

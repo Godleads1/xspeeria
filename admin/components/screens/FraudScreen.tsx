@@ -32,6 +32,7 @@ export const FRAUD_RULE: Record<FraudRule, string> = {
   disputes_against: 'Many disputes against this person',
   payout_name_mismatch: 'Payout account in another name',
   staff_report: 'Reported by staff',
+  customer_reported_not_me: 'Customer said “this wasn’t me”',
 };
 export const FRAUD_STATUS: Record<FraudStatus, string> = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved' };
 export const FRAUD_SEVERITY: Record<FraudSeverity, string> = { low: 'Low', medium: 'Medium', high: 'High' };

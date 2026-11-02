@@ -85,6 +85,7 @@ APPROVED_TABLES = {
     "deal_pauses",
     "rate_limit_hits",
     "staff_security_keys",
+    "security_notices",
     "staff_key_challenges",
     "offer_queue_entries",
     "offer_groups",
@@ -117,8 +118,9 @@ APPROVED_TABLES = {
 # emergency controls: pause all deals, end every session (ADR-075) -> "0037";
 # row-level security on customers' private tables (ADR-078) -> "0038";
 # shared rate limits (ADR-080) -> "0039";
-# Super Admin hardware security keys (ADR-081) -> "0040".
-EXPECTED_HEAD = "0040"
+# Super Admin hardware security keys (ADR-081) -> "0040";
+# security notice emails with a "this wasn't me" link (ADR-084) -> "0041".
+EXPECTED_HEAD = "0041"
 
 
 def _config(database_url: str) -> Config:

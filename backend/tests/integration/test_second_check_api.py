@@ -120,7 +120,8 @@ async def test_new_phone_before_kyc_needs_sms_and_email_codes(env: Env) -> None:
     r = await _codes(env, check, email_code=env.email_code(), sms_code=sms)
     assert r.status_code == 200
     token = r.json()["device_token"]
-    assert "new_device_sign_in" in env.email.alerts_for(EMAIL)
+    await env.send_notices()
+    assert "signed_in" in env.email.alerts_for(EMAIL)
     r = await env.post("/auth/login", {"identifier": PHONE, "pin": PIN, "device_token": token})
     assert "access_token" in r.json()  # PIN only on the now-trusted phone
 
@@ -241,6 +242,7 @@ async def test_five_failures_lock_checks_for_fifteen_minutes(env: Env) -> None:
         )
     r = await _codes(env, check, email_code="000000", sms_code="000000")
     assert (r.status_code, _code(r)) == (429, "AUTH_429_RATE_LIMITED")
+    await env.send_notices()
     assert "checks_locked" in env.email.alerts_for(EMAIL)
     # While locked, no new check is started (no SMS or email is sent).
     sent = len(env.email.sent)
@@ -306,6 +308,7 @@ async def test_fingerprint_step_up_is_single_use_and_bound_to_its_action(env: En
     assert (
         await _pin_change(env, access, await env.approve(access, "pin.change"))
     ).status_code == (204)
+    await env.send_notices()
     assert "pin_changed" in env.email.alerts_for(EMAIL)
 
 
@@ -428,6 +431,7 @@ async def test_forgot_pin_before_kyc_sms_then_email(env: Env, db_settings: Setti
     assert r.status_code == 204
     assert (await env.get("/users/me", body["access_token"])).status_code == 401
     assert (await env.login(pin=NEW_PIN)).json()["check_required"] is True  # trust forgotten
+    await env.send_notices()
     assert "pin_reset" in env.email.alerts_for(EMAIL)
 
 

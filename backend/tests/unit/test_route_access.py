@@ -48,6 +48,14 @@ PUBLIC_ROUTES = {
     ("POST", "/api/v1/admin/auth/key"): "needs a Super Admin's security key signature (ADR-081)",
     ("POST", "/api/v1/admin/auth/forgot-password"): "same answer whether the email exists",
     ("POST", "/api/v1/admin/auth/reset-password"): "needs the reset code",
+    (
+        "GET",
+        "/api/v1/security/not-me/{token}",
+    ): "changes nothing; needs the one-time link from a security email (ADR-084)",
+    (
+        "POST",
+        "/api/v1/security/not-me/{token}",
+    ): "needs that one-time link; can only freeze the account it was sent to (ADR-084)",
     ("POST", "/api/v1/webhooks/didit"): "signed by the identity-check provider (HMAC)",
     ("POST", "/api/v1/webhooks/partners/{partner_code}"): "signed by the partner bank (HMAC)",
 }

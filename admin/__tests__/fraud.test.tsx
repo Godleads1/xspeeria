@@ -50,6 +50,10 @@ describe('what raised an alert', () => {
   it('says it in plain words, with the last 4 digits at most', () => {
     expect(finding(ALERT)).toBe('3 disputes were raised against this person in the last 30 days.');
     expect(finding({ ...ALERT, rule: 'payout_name_mismatch', details: { bank: 'GTBank', last4: '1234' } })).toContain('ending 1234');
+    // ADR-084: the customer froze their own account from a security email.
+    const notMe = finding({ ...ALERT, rule: 'customer_reported_not_me', details: { kind: 'signed_in', deals_held: 1 } });
+    expect(notMe).toContain('this wasn’t me');
+    expect(notMe).toContain('1 unpaid deals were held');
   });
 });
 

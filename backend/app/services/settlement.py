@@ -1064,6 +1064,74 @@ class SettlementService:
         settlement, legs = await self._lock(settlement_id)
         await self._advance(settlement, legs)
 
+    async def hold_for_customer(self, user_id: uuid.UUID, reason: str) -> int:
+        """ADR-084: a frozen account's deals pay nothing out until staff switch it back on.
+
+        A RISK hold on every deal of theirs whose release hasn't been decided yet (a hold
+        blocks that decision, ADR-001 §6a). A deal already releasing has instructed the bank
+        and can't be stopped here. The funding window still runs: an unpaid deal is cancelled
+        and paid-in money goes back where it came from, never to a payout account. No commit.
+        """
+        open_deals = (
+            await self._db.scalars(
+                select(Settlement.id)
+                .join(SettlementLeg, SettlementLeg.settlement_id == Settlement.id)
+                .where(
+                    SettlementLeg.funder_user_id == user_id,
+                    Settlement.phase.in_(("INITIALIZING", "AWAITING_FUNDING")),
+                    Settlement.release_authorized_at.is_(None),
+                )
+                .distinct()
+            )
+        ).all()
+        held = 0
+        for sid in open_deals:
+            settlement, _legs = await self._lock(sid)  # checked again under the lock
+            if (
+                settlement.phase not in ("INITIALIZING", "AWAITING_FUNDING")
+                or settlement.release_authorized_at is not None
+            ):
+                continue
+            self._hold(sid, "RISK", reason)
+            held += 1
+        return held
+
+    async def release_customer_holds(self, user_id: uuid.UUID, reason: str) -> int:
+        """ADR-084: staff switched the account back on. Close exactly the holds that
+        :meth:`hold_for_customer` opened with ``reason``, then let each deal move on. No commit.
+        """
+        now = self._clock()
+        held = (
+            await self._db.scalars(
+                select(SettlementHold.settlement_id)
+                .where(
+                    SettlementHold.type == "RISK",
+                    SettlementHold.reason == reason[:200],
+                    SettlementHold.closed_at.is_(None),
+                )
+                .distinct()
+            )
+        ).all()
+        for sid in held:
+            await self._lock(sid)
+            holds = (
+                await self._db.scalars(
+                    select(SettlementHold)
+                    .where(
+                        SettlementHold.settlement_id == sid,
+                        SettlementHold.type == "RISK",
+                        SettlementHold.reason == reason[:200],
+                        SettlementHold.closed_at.is_(None),
+                    )
+                    .with_for_update()
+                )
+            ).all()
+            for hold in holds:
+                hold.closed_at = now
+            self._event(sid, None, "HoldClosed", {"type": "RISK", "reason": "account switched on"})
+            await self.recheck(sid)
+        return len(held)
+
     async def reverse(
         self, settlement_id: uuid.UUID, *, reversal_id: uuid.UUID, decided_by: uuid.UUID
     ) -> list[dict[str, Any]]:

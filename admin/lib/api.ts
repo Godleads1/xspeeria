@@ -369,7 +369,7 @@ export interface AdvertInput {
   link_url?: string | null;
 }
 
-export type FraudRule = 'pin_lockout' | 'code_lockout' | 'disputes_against' | 'payout_name_mismatch' | 'staff_report';
+export type FraudRule = 'pin_lockout' | 'code_lockout' | 'disputes_against' | 'payout_name_mismatch' | 'staff_report' | 'customer_reported_not_me';
 export type FraudStatus = 'open' | 'in_progress' | 'resolved';
 export type FraudSeverity = 'low' | 'medium' | 'high';
 export interface FraudAlertRow {

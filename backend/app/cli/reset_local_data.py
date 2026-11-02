@@ -29,6 +29,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 USER_TABLES = (
     "rate_limit_hits",  # ADR-080: attempt counts (sign-in limits) go with the accounts
     "customer_activity",
+    "security_notices",  # ADR-084: emails about the accounts being cleared
     "ops_alerts",  # ADR-074: about the deals and staff changes being cleared
     "tier_checks",
     "offer_queue_entries",

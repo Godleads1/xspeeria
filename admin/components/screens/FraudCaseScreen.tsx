@@ -36,6 +36,8 @@ export function finding(a: FraudAlert): string {
       return tr('{{n}} disputes were raised against this person in the last {{days}} days.', { n: count(Number(d.disputes ?? 0)), days: count(Number(d.days ?? 30)) });
     case 'payout_name_mismatch':
       return tr('A payout account at {{bank}} ending {{last4}} is in a name that shares no word with the verified name.', { bank: String(d.bank ?? '—'), last4: String(d.last4 ?? '----') });
+    case 'customer_reported_not_me':
+      return tr('The customer pressed “this wasn’t me” in a security email, so the account was frozen and {{n}} unpaid deals were held. Check with the customer, then switch the account back on from Customers.', { n: count(Number(d.deals_held ?? 0)) });
     default:
       return tr('Raised by a staff member.');
   }

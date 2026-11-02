@@ -21,8 +21,19 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.models.activity import CustomerActivity
+from app.models.security_notices import SecurityNotice
+from app.providers.email import ALERT_TEXT
 
-__all__ = ["ROUTE_ACTIONS", "current_country", "current_device", "current_request", "entry"]
+__all__ = [
+    "NOTICE_KINDS",
+    "ROUTE_ACTIONS",
+    "email_device",
+    "notice_for",
+    "current_country",
+    "current_device",
+    "current_request",
+    "entry",
+]
 
 current_device: ContextVar[str | None] = ContextVar("activity_device", default=None)
 current_country: ContextVar[str | None] = ContextVar("activity_country", default=None)
@@ -84,6 +95,35 @@ ROUTE_ACTIONS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/disputes"): ("dispute_opened", "dispute"),
     ("POST", "/api/v1/disputes/{dispute_id}/evidence"): ("dispute_message_sent", "dispute"),
 }
+
+#: Activity-log actions (ADR-073) the customer is emailed about. Owner 2026-11-02: every
+#: log-in; account changes; payout accounts; deals. Fingerprint *unlock* of an app already
+#: signed in on a trusted phone is not a log-in and is not emailed.
+NOTICE_KINDS = frozenset(
+    {
+        # log-ins
+        "signed_in",
+        # account changes
+        "pin_changed",
+        "pin_reset",
+        "phone_changed",
+        "fingerprint_turned_on",
+        "fingerprint_turned_off",
+        "trusted_phone_removed",
+        # payout accounts
+        "payout_account_added",
+        "payout_account_removed",
+        "payout_accounts_chosen",
+        # deals
+        "offer_posted",
+        "request_posted",
+        "offer_edited",
+        "offer_withdrawn",
+        "offer_taken",
+    }
+)
+if not NOTICE_KINDS <= set(ALERT_TEXT):  # pragma: no cover - a programming error
+    raise RuntimeError("every security notice kind needs an email subject (ADR-084)")
 
 #: Path parameters kept as links (all others are ignored).
 _REF_PARAMS = (
@@ -161,15 +201,43 @@ def short_device(user_agent: str | None) -> str | None:
     if not user_agent:
         return None
     ua = user_agent.strip()
-    for marker, name in (
-        ("Expo", "Xspeeria app"),
-        ("okhttp", "Xspeeria app (Android)"),
-        ("CFNetwork", "Xspeeria app (iPhone)"),
-        ("Edg/", "Edge browser"),
-        ("Chrome/", "Chrome browser"),
-        ("Firefox/", "Firefox browser"),
-        ("Safari/", "Safari browser"),
-    ):
+    for marker, name in _DEVICE_NAMES:
         if marker in ua:
             return name
     return ua[:60]
+
+
+_DEVICE_NAMES = (
+    ("Expo", "Xspeeria app"),
+    ("okhttp", "Xspeeria app (Android)"),
+    ("CFNetwork", "Xspeeria app (iPhone)"),
+    ("Edg/", "Edge browser"),
+    ("Chrome/", "Chrome browser"),
+    ("Firefox/", "Firefox browser"),
+    ("Safari/", "Safari browser"),
+)
+_KNOWN_DEVICES = frozenset(name for _marker, name in _DEVICE_NAMES)
+
+
+def email_device(name: str | None) -> str | None:
+    """ADR-084: the device line in a security email. Only our own fixed names: the rest of a
+    user agent is chosen by whoever sent the request, and must not put their words (a phone
+    number, "call support") into the customer's email."""
+    if not name:
+        return None
+    return name if name in _KNOWN_DEVICES else "Another app or browser"
+
+
+def notice_for(row: CustomerActivity) -> SecurityNotice | None:
+    """The email to send for one activity-log row, or None. The caller adds it to the same
+    transaction, so a notice exists exactly when the activity does."""
+    if row.outcome != "done" or row.action not in NOTICE_KINDS:
+        return None
+    return SecurityNotice(
+        id=uuid.uuid4(),
+        user_id=row.user_id,
+        kind=row.action,
+        device=email_device(row.device),
+        created_at=row.at,
+        attempts=0,
+    )

@@ -375,6 +375,7 @@ class TestPackageRegistration:
             "deal_pauses",
             "rate_limit_hits",
             "staff_security_keys",
+            "security_notices",
             "staff_key_challenges",
             "offer_queue_entries",
             "offer_groups",
@@ -436,7 +437,8 @@ class TestPackageRegistration:
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', 'rate_limit_hits', "
-            "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'service_outages', "
+            "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'security_notices', "
+            "'service_outages', "
             "'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', "
             "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_key_challenges', "
@@ -521,4 +523,5 @@ class TestPackageRegistration:
             "0038_row_level_security.py",  # row-level security (ADR-078)
             "0039_rate_limit_hits.py",  # shared rate limits (ADR-080)
             "0040_staff_security_keys.py",  # Super Admin security keys (ADR-081)
+            "0041_security_notices.py",  # "this wasn't me" emails (ADR-084)
         ]

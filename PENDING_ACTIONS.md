@@ -112,6 +112,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
 - [x] **Super Admin hardware security key** (ADR-051 Decision 2). Done (ADR-081).
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
+- [x] **"This wasn't me" security emails** — built (ADR-084, 2 Nov 2026): an email for every log-in, account change, payout account change and deal step; the link freezes the account; a Super Admin reactivates it. *You:* set `PUBLIC_API_URL` to the live API's https address (needed in production).
 - [x] **Resend email sender** — built (ADR-082). *You:* create the Resend account, verify the sending domain, then set `RESEND_API_KEY` and `EMAIL_FROM` (steps in ADR-082).
 - [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
 

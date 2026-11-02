@@ -104,12 +104,32 @@ async def test_failure_raises_without_naming_the_address_or_the_code(
         assert len(fake.requests) == 1
 
 
-async def test_alert_wording_never_carries_a_link() -> None:
+async def test_an_alert_without_a_link_carries_none() -> None:
     fake = FakeResend(200)
     await _sender(fake).send_alert("ada@example.com", "pin_reset", None)
     body = fake.body()
     assert body["subject"] == "Your Xspeeria PIN was reset"
     assert "http" not in body["text"] and "reset your PIN" in body["text"]
+
+
+async def test_a_security_notice_carries_only_its_not_me_link() -> None:
+    """ADR-084: one link, to Xspeeria's own address; plain text, nothing else to click."""
+    link = "https://api.xspeeria.test/api/v1/security/not-me/" + "A" * 43
+    fake = FakeResend(200)
+    await _sender(fake).send_alert("ada@example.com", "payout_account_added", "Pixel 9", link)
+    body = fake.body()
+    assert body["subject"] == "A payout account was added to your Xspeeria account"
+    assert "html" not in body
+    assert body["text"].count("http") == 1 and link in body["text"]
+    assert "never asks for your PIN" in body["text"] and "Device: Pixel 9" in body["text"]
+
+
+async def test_the_freeze_confirmation_has_no_link() -> None:
+    fake = FakeResend(200)
+    await _sender(fake).send_alert("ada@example.com", "account_frozen", None)
+    body = fake.body()
+    assert body["subject"] == "Your Xspeeria account is frozen"
+    assert "http" not in body["text"] and "logged out" in body["text"]
 
 
 async def test_the_server_chooses_the_sender_from_the_settings() -> None:
