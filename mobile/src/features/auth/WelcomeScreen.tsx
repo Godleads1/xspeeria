@@ -11,7 +11,7 @@
  */
 
 import { useRef, useState, type ReactElement } from 'react';
-import { Image, Pressable, ScrollView, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '../../components/primitives';
@@ -38,7 +38,7 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [index, setIndex] = useState(0);
-  const pager = useRef<ScrollView>(null);
+  const pager = useRef<ScrollViewInstance>(null);
 
   const pageAt = (x: number): number => Math.max(0, Math.min(SLIDES.length - 1, Math.round(x / width)));
   // Bars follow the finger while swiping, and settle when the swipe ends.

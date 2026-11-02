@@ -47,7 +47,7 @@ describe('market advert slot', () => {
   });
 
   it('shows the placed advert and opens its link when tapped', async () => {
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await render(
       <MarketScreen
         onCreate={jest.fn()}
@@ -60,7 +60,7 @@ describe('market advert slot', () => {
   });
 
   it('does nothing when tapped if the link is not https', async () => {
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await render(
       <MarketScreen
         onCreate={jest.fn()}
