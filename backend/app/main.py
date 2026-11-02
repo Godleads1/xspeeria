@@ -58,7 +58,7 @@ from app.domain.auth_rules import (
 from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
-from app.providers.email import DevConsoleEmailSender, EmailSender
+from app.providers.email import DevConsoleEmailSender, EmailSender, ResendEmailSender
 from app.providers.face import DevFaceCheck, DiditFaceCheck, FaceCheckProvider
 from app.providers.object_store import LocalFolderStore, ObjectStore
 from app.providers.pretend_bank import PretendBank
@@ -115,7 +115,14 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
     if settings.dev_email:
         if settings.app_env != "local":
             raise ValueError("DEV_EMAIL is allowed only with APP_ENV=local (ADR-054)")
+        if settings.resend_api_key:
+            raise ValueError("Set DEV_EMAIL or RESEND_API_KEY, not both (ADR-082)")
         email = DevConsoleEmailSender()
+    elif settings.resend_api_key or settings.email_from:
+        # ADR-082: Resend, once the owner has an account and a verified sending domain.
+        if not (settings.resend_api_key and settings.email_from):
+            raise ValueError("Resend needs both RESEND_API_KEY and EMAIL_FROM (ADR-082)")
+        email = ResendEmailSender(settings.resend_api_key, settings.email_from)
     # Local demo testing only (owner 2026-10-27): one person signs in and approves many times.
     relaxed = settings.test_limits_dev
     if relaxed and settings.app_env != "local":

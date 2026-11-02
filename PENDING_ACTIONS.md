@@ -112,7 +112,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
 - [x] **Super Admin hardware security key** (ADR-051 Decision 2). Done (ADR-081).
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
-- [ ] **Resend email sender** behind the existing interface — ready to switch on when the account and domain exist.
+- [x] **Resend email sender** — built (ADR-082). *You:* create the Resend account, verify the sending domain, then set `RESEND_API_KEY` and `EMAIL_FROM` (steps in ADR-082).
 - [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
 
 ## 5. Housekeeping

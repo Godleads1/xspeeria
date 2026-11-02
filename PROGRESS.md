@@ -42,6 +42,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Key rotation tools (payout-account and identity keys) | **Merged** | #95; ADR-076 |
 | Row-level security, the database's second lock (readiness H-3) | **Merged** | #96; ADR-078 |
 | No private data without a login; less fingerprinting; no throwaway emails | **Merged** | #97; ADR-079 |
+| Resend email sender, off until the account exists | **Built 2 Nov 2026** | ADR-082 |
 | Shared rate limits in the database (readiness H-1) | **Built 2 Nov 2026** | ADR-080 |
 | Super Admin hardware security keys (readiness H-5) | **Built 2 Nov 2026** | ADR-081 |
 
@@ -50,7 +51,7 @@ development and testing only. Money moves only against the **pretend partner ban
 - **Delete account** (the app screen says it isn't built; nothing is deleted).
 - **Real wallet / ledger**: Home and Cards show Figma demo figures in development builds only
   (ADR-023). No ledger exists (P-1/P-2 open).
-- **Real SMS and email senders** (only developer senders exist; Resend is chosen for email).
+- **Real SMS sender** (no provider chosen). The Resend email sender is built and waits for the account (ADR-082).
 - **Fraud checks replacing the 24-hour payout hold** (FX-03) before real payouts.
 
 ### Waiting on outside parties or owner decisions
