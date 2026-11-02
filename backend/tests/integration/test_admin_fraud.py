@@ -228,3 +228,59 @@ async def test_validation_and_access(
         "WHERE grantee = 'xspeeria_app' AND table_name = 'fraud_alerts'",
     )
     assert grants == "INSERT,SELECT,UPDATE"
+
+
+async def test_an_account_in_another_name_alerts_only_when_new_and_used_straight_away(
+    db_settings: Settings,
+    esc: Escrow,
+    staff: Admin,
+    owner: Party,
+    taker: Party,
+    deal: dict[str, Any],
+) -> None:
+    """ADR-083 (owner, 2026-11-02): paying into someone else's account is allowed (a school's
+    account for fees). Only an account in another name chosen for a deal within 24 hours of
+    being added raises ``payout_name_mismatch``."""
+    clock = esc.env.clock
+    taker_id = await _uid(db_settings, TAKER[1])
+    # The customer's verified identity: "Ada Obi".
+    await _sql(
+        db_settings,
+        "INSERT INTO kyc_cases (id, user_id, provider, provider_session_id, provider_status, status, "
+        "legal_name, date_of_birth, decided_at, created_at, updated_at, country) VALUES "
+        f"(gen_random_uuid(), '{taker_id}', 'didit', 'school-fees', 'Approved', 'approved', "
+        "'Ada Obi', '1990-01-01', now(), now(), now(), 'NG')",
+    )
+    await _sql(
+        db_settings,
+        f"UPDATE beneficiaries SET account_name = 'GREENFIELD SCHOOLS LTD' WHERE user_id = '{taker_id}'",
+    )
+    # Added two days before the deal used it: a known account (the school), no alert.
+    await _sql(
+        db_settings,
+        "UPDATE beneficiaries SET created_at = s.created_at - interval '2 days' "
+        "FROM match_payout_selections s WHERE s.beneficiary_id = beneficiaries.id "
+        f"AND beneficiaries.user_id = '{taker_id}'",
+    )
+    await _scan(db_settings, clock)
+    assert (
+        await _sql(
+            db_settings, "SELECT count(*) FROM fraud_alerts WHERE rule = 'payout_name_mismatch'"
+        )
+        == 0
+    )
+    # Added one hour before the deal used it: brand new and used straight away, an alert.
+    await _sql(
+        db_settings,
+        "UPDATE beneficiaries SET created_at = s.created_at - interval '1 hour' "
+        "FROM match_payout_selections s WHERE s.beneficiary_id = beneficiaries.id "
+        f"AND beneficiaries.user_id = '{taker_id}'",
+    )
+    assert await _scan(db_settings, clock) == 1
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT user_id::text FROM fraud_alerts WHERE rule = 'payout_name_mismatch'",
+        )
+        == taker_id
+    )

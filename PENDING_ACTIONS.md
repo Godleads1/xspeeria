@@ -31,7 +31,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Advert banner:** send a 3× version (1026 × 339) so it is fully sharp on phones. (ADR-005)
 - [ ] **Figma file:** update the PIN screens from 4 to 6 boxes. (ADR-024)
 - [ ] **GitHub plan upgrade** (Pro/Team) so `main` can require reviews and passing checks. (SEC-031, ADR-019 §4)
-- [ ] **Third-party payouts (DEC-007):** decide whether users may pay out to accounts not in their own name.
+- [x] **Third-party payouts (DEC-007):** decided 2 Nov 2026: **allowed.** A customer may be paid into any account, not only one in their own name (owner's example: a school's account for a child's fees). Still to confirm with the lawyer and the partner bank that this is acceptable for AML.
 - [x] **Authorise Milestone 4.1C** — approved 18 Oct 2026; CD3 lock built (ADR-028); offers built (ADR-029).
 - [ ] **Confirm the offer interface details the contract leaves open** — *You* (ADR-029 §4): `filter[currency_pair]` written `USD/NGN`; page shape `items` + `next_offset`; the extra `GET /offers/mine` and `GET /offers/{id}`; amount filters and other sort orders not built yet.
 - [x] **Connect the app's Market screen to the server offers** — *Build* — done 18 Oct 2026 for development builds (ADR-030).

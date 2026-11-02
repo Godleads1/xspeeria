@@ -16,7 +16,7 @@
    | `pin_lockout` | low | The app locked the account after 5 wrong PINs (the existing SEC-003 lock). |
    | `code_lockout` | low | The account was locked after 5 wrong sign-in codes. |
    | `disputes_against` | high | 3 or more disputes were raised **against** the same person in 30 days. |
-   | `payout_name_mismatch` | medium | A payout account's bank-checked holder name shares no word with the person's verified identity name. Accents, letter case and word order are ignored. |
+   | `payout_name_mismatch` | medium | A payout account's bank-checked holder name shares no word with the person's verified identity name. Accents, letter case and word order are ignored. **Since 2026-11-02 (ADR-083): only when that account was chosen for a deal within 24 hours of being added**, because payouts to other people's accounts are allowed (DEC-007). |
 
    The numbers (5, 3, 30 days) are starting values; changing them is an owner decision.
 2. **Each thing raises one alert.** Every alert records what it is about: the lock-out time, the newest dispute, or the payout account. Something already raised, even if resolved, is not raised again; something new raises a new alert.

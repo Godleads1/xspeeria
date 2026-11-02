@@ -8,8 +8,8 @@
  * Enterprise-standard deviations from Figma, on purpose:
  * - No "Available Balance" wording (Standing Standards §2: no balance or wallet). The amount
  *   still to place is "Left to assign".
- * - Accounts must be in the user's own name (Banking spec §3.3); payouts to other people
- *   wait for DEC-007. The account name is never typed: the bank confirms it.
+ * - Accounts may be the user's own or someone else's (owner, 2026-11-02, DEC-007, ADR-083).
+ *   The account name is never typed: the bank confirms it.
  * - Account numbers are shown and kept as the last 4 digits only.
  * - A new account is paid as soon as both sides have paid in (DEC-044), and is saved as a
  *   beneficiary only if the user asks, after the 2FA check on Continue.
@@ -103,7 +103,7 @@ export function PayoutDestinationScreen({
   const remove = (key: string): void => setRecipients((list) => list.filter((r) => r.key !== key));
 
   const requestCard = (): void =>
-    Alert.alert(tr("Cards aren’t available yet"), tr("A prepaid {{currency}} card is coming later. For now, choose a bank account in your name.", { currency }));
+    Alert.alert(tr("Cards aren’t available yet"), tr("A prepaid {{currency}} card is coming later. For now, choose a bank account.", { currency }));
 
   const editingRecipient = recipients.find((r) => r.key === editing) ?? null;
 
@@ -134,7 +134,7 @@ export function PayoutDestinationScreen({
 
         <Text accessibilityRole="header" style={styles.section}>{tr("Fund Account")}</Text>
         <Text style={styles.text}>
-          {tr("You can add several accounts to be paid in a single transaction. All accounts must be in {{currency}} and in your own name ({{ownerName}}).", { currency, ownerName })}
+          {tr("You can add several accounts to be paid in a single transaction. All accounts must be in {{currency}}. They can be yours or someone else’s.", { currency })}
         </Text>
         <Pressable testID="payout-new" accessibilityRole="button" onPress={() => setAdding(true)} style={styles.newLink} hitSlop={6}>
           <Text style={styles.link}>{tr("Send to a new recipient →")}</Text>
@@ -372,7 +372,7 @@ export function NewRecipientSheet({
                   <Text style={styles.readonlyText}>{tr("Confirmed by your bank")}</Text>
                 </View>
               </OutlinedField>
-              <Text style={styles.help}>{tr("The account must be in your own name ({{ownerName}}). Adding it needs your authenticator code.", { ownerName })}</Text>
+              <Text style={styles.help}>{tr("It can be your account or someone else’s, for example a school’s. Adding it needs your authenticator code.")}</Text>
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>{tr("Save to beneficiary")}</Text>
                 <Switch testID="payout-new-save" accessibilityLabel={tr("Save to beneficiary")} value={save} onValueChange={setSave} />

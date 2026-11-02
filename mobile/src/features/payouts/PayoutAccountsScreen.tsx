@@ -53,7 +53,7 @@ export function PayoutAccountsScreen({
         <Text accessibilityRole="header" style={styles.title}>{tr("Payout accounts")}</Text>
         <View style={styles.spacer} />
       </View>
-      <Text style={styles.intro}>{tr("Your own accounts. When a deal completes, the partner bank pays you from escrow into the account(s) you choose. Adding or removing an account needs you to confirm it’s you.")}</Text>
+      <Text style={styles.intro}>{tr("Your own accounts or other people’s, for example a school’s. When a deal completes, the partner bank pays from escrow into the account(s) you choose. Adding or removing an account needs you to confirm it’s you.")}</Text>
       {notice ? (
         <Text testID="payout-accounts-notice" accessibilityRole="alert" style={styles.notice}>
           {notice}
