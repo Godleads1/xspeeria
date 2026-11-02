@@ -38,11 +38,7 @@
 
 Together they cover the takeover path, and honest users rarely notice them. Add **3** if the bank or the lawyer asks for new-user limits. The numbers above are starting points for you to set.
 
-**Third-party payouts (owner, 2 Nov 2026, DEC-007): allowed.** So the `payout_name_mismatch` alert (ADR-068) will fire for every payout to someone else, such as a school. Choose one of these:
-
-- keep it as is;
-- lower it to *low*;
-- alert only when the account is new and used straight away.
+**Third-party payouts (owner, 2 Nov 2026, DEC-007): allowed.** The owner then chose: the `payout_name_mismatch` alert fires **only when the account is new and used straight away** (within 24 hours of being added), and adding an account or choosing a deal's payout accounts asks the customer to confirm exactly who will be paid (ADR-083).
 
 Also confirm with the lawyer and the partner bank that third-party payouts are acceptable under their AML rules. Some banks require extra checks for them.
 
