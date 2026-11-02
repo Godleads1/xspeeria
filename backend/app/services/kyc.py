@@ -134,12 +134,16 @@ class KycService:
         clock: Callable[[], datetime],
         provider: KycSessionProvider | None,
         identity_secret: bytes | None = None,
+        identity_secret_previous: bytes | None = None,
     ) -> None:
         self._db = db
         self._clock = clock
         self._provider = provider
         #: ADR-041: key for the ID-document hash. Without it no approval goes through.
         self._identity_secret = identity_secret
+        #: ADR-076: the key before the last rotation. Old approvals carry hashes made with it,
+        #: so a new document is matched against both; new hashes always use the current key.
+        self._identity_secret_previous = identity_secret_previous
 
     async def _latest(self, user_id: uuid.UUID, country: str) -> KycCase | None:
         case: KycCase | None = await self._db.scalar(
@@ -287,23 +291,35 @@ class KycService:
             )
             return held, None
         key = identity_key(self._identity_secret, outcome.document_ref)
-        # Two approvals of the same document at once must see each other: serialise on the key.
-        await self._db.execute(
-            text("SELECT pg_advisory_xact_lock(:k)"),
-            {"k": int.from_bytes(bytes.fromhex(key[:16]), "big", signed=True)},
-        )
-        other = await self._db.scalar(
-            select(KycCase.id)
-            .where(
-                KycCase.identity_key == key,
-                KycCase.user_id != case.user_id,
-                KycCase.status.in_(("approved", "expired")),
+        keys = [key]
+        if self._identity_secret_previous is not None:
+            keys.append(identity_key(self._identity_secret_previous, outcome.document_ref))
+        # Two approvals of the same document at once must see each other: serialise on the key
+        # (every key in use, in a fixed order, so two checks never wait on each other).
+        for k in sorted(keys):
+            await self._db.execute(
+                text("SELECT pg_advisory_xact_lock(:k)"),
+                {"k": int.from_bytes(bytes.fromhex(k[:16]), "big", signed=True)},
             )
-            .limit(1)
-        )
+        found = (
+            await self._db.execute(
+                select(KycCase.id, KycCase.user_id, KycCase.identity_key)
+                .where(
+                    KycCase.identity_key.in_(keys),
+                    KycCase.user_id != case.user_id,
+                    KycCase.status.in_(("approved", "expired")),
+                )
+                .limit(10)
+            )
+        ).all()
+        other = found[0][0] if found else None
         refs = other_account_refs(decision, str(case.user_id))
-        if refs:
-            case.matched_user_ids = sorted({_account_ref(r) for r in refs})
+        matched = {_account_ref(r) for r in refs}
+        # ADR-076: a match under the previous key isn't covered by the unique index on the
+        # current key, so its account is kept for the reviewers' confirmation check (F-008).
+        matched |= {user_id for _, user_id, k in found if k != key}
+        if matched:
+            case.matched_user_ids = sorted(matched)
         if other is not None or refs:
             source = "document" if other is not None else "provider match"
             return (

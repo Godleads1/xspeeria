@@ -96,8 +96,8 @@ Rotate a secret whenever it may have been seen by anyone who shouldn't have it: 
 | `JWT_SECRET_KEY` | Signs 15-minute access tokens | Current access tokens stop working; the app refreshes them with its refresh token, so **sessions continue**. To end sessions too, see "End every session" above. | Yes: change the value and restart |
 | `WEBHOOK_SHARED_SECRET` | Messages from the partner bank | Must change at the bank at the same moment, or bank messages are refused | Simulation only; the real procedure comes from the bank's agreement |
 | `DIDIT_API_KEY`, `DIDIT_WEBHOOK_SECRET` | Identity checks | New key from Didit's console; set both, restart | Yes |
-| `BENEFICIARY_ENCRYPTION_KEY` | Payout account numbers (sealed) | **Data sealed with the old key can't be read with a new one** | **No: needs a re-encryption tool.** Gap, before live money |
-| `KYC_IDENTITY_KEY` | The one-person-one-account document key | Old document keys stop matching new ones | **No: needs a re-keying tool.** Gap, before live money |
+| `BENEFICIARY_ENCRYPTION_KEY` | Payout account numbers (sealed) | Every number is re-sealed with the new key | **Yes (ADR-076):** new key in `BENEFICIARY_ENCRYPTION_KEY`, old in `BENEFICIARY_ENCRYPTION_KEY_PREVIOUS`; `python -m app.cli.rotate_keys beneficiary` (dry run), then `--apply`; remove the old key when it reports none left. **Needs the owner's approval to run on a live database.** |
+| `KYC_IDENTITY_KEY` | The one-person-one-account document key | New checks get hashes made with the new key | **Yes, partly (ADR-076):** move the old value to `KYC_IDENTITY_KEY_PREVIOUS`, put a new one in `KYC_IDENTITY_KEY`; new checks are matched against both, so duplicates are still caught. Stored hashes can't be re-keyed (document numbers aren't kept), so the old key stays needed while old approvals matter. |
 | `MFA_ENCRYPTION_KEY` | Sealed second-factor data | As above | Check whether still in use; rotation tool needed if so |
 | `SENTRY_DSN` | Where error reports go | Errors go to the new project | Yes |
 | Staff passwords | Console sign-in | Sessions end; codes issued earlier stop working (F-003) | Yes: each person changes theirs |
@@ -176,6 +176,6 @@ These must be in place before live money; most also before the pilot.
 - An **on-call rota**: who answers out of hours, and how they're reached. Owner to name people.
 - An **email provider**, so alerts reach Super Admins without the page open (C-5).
 - **Hosting** with central logs, backups and a rollback pipeline (C-3, C-4).
-- The **pause-all-deals switch** (SEC-039), an **end-every-session** action, and **key rotation tools** for `BENEFICIARY_ENCRYPTION_KEY` and `KYC_IDENTITY_KEY`.
+- The **pause-all-deals switch** (SEC-039) and an **end-every-session** action. (Key rotation for `BENEFICIARY_ENCRYPTION_KEY` and `KYC_IDENTITY_KEY` is built: ADR-076.)
 - **Legal duties** confirmed (C-2) and the partner bank's incident clauses (C-1) added to §3.7.
 - **One recorded exercise** of this plan (a table-top drill of a P1), with its review filed. SEC-038 asks for it to be *exercised*, not only written.

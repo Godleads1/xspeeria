@@ -260,6 +260,8 @@ class AuthRuntime:
     kyc_provider: KycSessionProvider | None = None
     #: ADR-041: key for the ID-document hash (one person, one verified account).
     kyc_identity_key: bytes | None = None
+    #: ADR-076: the document key before the last rotation, matched as well.
+    kyc_identity_key_previous: bytes | None = None
     #: ADR-037: the pretend partner bank. None: no escrow is opened (no real partner yet).
     pretend_bank: PretendBank | None = None
     #: ADR-052: phone push. None: notifications stay in-app only.
