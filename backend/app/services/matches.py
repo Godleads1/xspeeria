@@ -62,6 +62,7 @@ from app.models.payouts import Beneficiary, MatchPayoutSelection
 from app.models.settlement import Settlement, Transaction
 from app.providers.pretend_bank import PretendBank
 from app.services.auth import Principal
+from app.services.deal_pause import deals_paused, refuse_if_paused
 from app.services.groups import lock_group_for_take
 from app.services.limits import check_new_deal
 from app.services.notifications import notify
@@ -220,6 +221,7 @@ class MatchService:
         confirm_step_up: Callable[[], Awaitable[None]],
         expected_rate: str | None = None,
     ) -> Created:
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         if accepted_amount is None:
             raise _err(
                 "VAL_422_MISSING_FIELD",
@@ -491,6 +493,8 @@ class MatchService:
 
     async def _expire_on_locked_offer(self, offer: Offer, now: datetime) -> None:
         """Inside a transaction that already holds the Offer lock."""
+        if await deals_paused(self._db):  # ADR-075: clocks frozen
+            return
         due = (
             await self._db.scalars(
                 select(Match)
@@ -515,6 +519,9 @@ class MatchService:
         Lock order is Offer, then Match — the same as acceptance — so they never deadlock.
         Safe to run from several servers at once: each Match is re-checked under its lock.
         """
+        if await deals_paused(self._db):  # ADR-075: clocks frozen, nothing is expired
+            await self._db.rollback()
+            return 0
         now = self._clock()
         ids = (
             await self._db.execute(
@@ -562,6 +569,7 @@ class MatchService:
         My own, bank-confirmed accounts in the currency I receive; amounts add up exactly to
         what I receive. When both sides have chosen, the deal is ``funding_ready``.
         """
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         now = self._clock()
         offer_id = await self._db.scalar(select(Match.offer_id).where(Match.id == match_id))
         if offer_id is None:

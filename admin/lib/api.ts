@@ -516,6 +516,7 @@ export type OpsAlertRule =
   | 'customer_sign_in_attack'
   | 'staff_sign_in_attack'
   | 'staff_access_changed'
+  | 'emergency_control_used'
   | 'unusual_deal_volume'
   | 'money_at_risk'
   | 'high_fraud_alert'
@@ -545,6 +546,24 @@ export interface OpsAlert {
   resolved_by: string | null;
   resolution_note: string | null;
 }
+/** ADR-075: the emergency pause (Super Admin only). */
+export interface DealPauseRecord {
+  id: string;
+  started_at: string;
+  started_by: string;
+  reason: string;
+  ended_at: string | null;
+  ended_by: string | null;
+  end_reason: string | null;
+  details: { paused_seconds?: number; payout_windows_extended?: number; funding_windows_extended?: number; queue_turns_extended?: number };
+}
+export interface DealPauseStatus {
+  paused: boolean;
+  /** The latest pause (open or ended), or null if deals have never been paused. */
+  pause: DealPauseRecord | null;
+}
+export type SessionsWho = 'customers' | 'staff' | 'everyone';
+
 export interface OpsAlertsPage {
   items: OpsAlert[];
   /** Live (not resolved) alerts by severity. */
@@ -765,6 +784,11 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     staffWork: () => call<StaffWorkFeed>('GET', '/notifications'),
     systemHealth: (window: HealthWindow) => call<SystemHealth>('GET', `/system-health?window=${window}`),
     opsAlerts: (which: 'live' | 'all' = 'live') => call<OpsAlertsPage>('GET', `/alerts?which=${which}`),
+    dealPauseStatus: () => call<DealPauseStatus>('GET', '/emergency/deals'),
+    pauseDeals: (reason: string) => call<DealPauseStatus>('POST', '/emergency/deals/pause', { reason }),
+    resumeDeals: (reason: string) => call<DealPauseStatus>('POST', '/emergency/deals/resume', { reason }),
+    endSessions: (who: SessionsWho, reason: string) =>
+      call<{ customer_sessions: number; staff_sessions: number }>('POST', '/emergency/sessions/end', { who, reason }),
     acknowledgeAlert: (id: string) => call<OpsAlert>('POST', `/alerts/${encodeURIComponent(id)}/acknowledge`),
     resolveAlert: (id: string, note: string) => call<OpsAlert>('POST', `/alerts/${encodeURIComponent(id)}/resolve`, { note }),
     customerActivity: (id: string, q: { category?: ActivityCategory; since?: string; until?: string; offset?: number; limit?: number }) => {

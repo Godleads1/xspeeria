@@ -53,6 +53,7 @@ from app.models.marketplace import (
 )
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
+from app.services.deal_pause import refuse_if_paused
 from app.services.groups import GROUP_MAX, GROUP_MIN, group_visible
 from app.services.queue import QUEUE_OFFER_STATUSES, pending_minor_expr, queue_facts
 
@@ -171,6 +172,7 @@ class OfferService:
         source_amount: str,
         desired_rate: str,
     ) -> Created:
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         now = self._clock()
         try:
             pair = parse_pair(source_currency, target_currency)
@@ -280,6 +282,7 @@ class OfferService:
         rate ceiling). Each currency becomes an ordinary offer in the group; they are taken
         whole only and only one of them can ever be paid (see `app.services.groups`).
         """
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         now = self._clock()
         if not GROUP_MIN <= len(currencies) <= GROUP_MAX:
             raise _input_error(OfferInputError(FORMAT_ERROR, "Choose between 2 and 5 currencies."))
@@ -632,6 +635,7 @@ class OfferService:
         minimum, rate, official-rate ceiling); ownership and state are read under the row lock
         that taking an offer also uses, so an edit and a take can never both win.
         """
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         if desired_rate is None and source_amount is None:
             raise _input_error(OfferInputError(FORMAT_ERROR, "Change the rate or the amount."))
         offer = await self._owned_for_update(principal, offer_id)

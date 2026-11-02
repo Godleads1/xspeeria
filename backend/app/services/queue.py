@@ -28,6 +28,7 @@ from app.domain.offer_rules import OFFICIAL_RATE
 from app.models.marketplace import QUEUE_ACTIVE, Match, Offer, OfferQueueEntry
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
+from app.services.deal_pause import deals_paused, refuse_if_paused
 from app.services.groups import reopen_group
 from app.services.notifications import notify
 
@@ -145,6 +146,8 @@ async def pass_overdue_turns(db: AsyncSession, offer: Offer, now: datetime) -> b
     sweep. The turns that ran out are marked passed, and the next waiting person gets theirs.
     Returns whether any turn passed; the caller must commit that handoff even if it then refuses.
     """
+    if await deals_paused(db):  # ADR-075: clocks frozen
+        return False
     overdue = (
         await db.scalars(
             select(OfferQueueEntry)
@@ -254,6 +257,7 @@ class QueueService:
         return (ids.index(entry.id) + 1 if entry.id in ids else 0), len(ids)
 
     async def join(self, principal: Principal, offer_id: uuid.UUID) -> dict[str, Any]:
+        await refuse_if_paused(self._db)  # ADR-075: deals paused
         now = self._clock()
         offer = await self._db.scalar(select(Offer).where(Offer.id == offer_id).with_for_update())
         if offer is None:
@@ -409,6 +413,9 @@ class QueueService:
     async def sweep(self, *, limit: int = 200) -> int:
         """Background pass: pass on missed turns, start due turns, end queues for offers that
         will not come back (withdrawn, or completed). One transaction per offer."""
+        if await deals_paused(self._db):  # ADR-075: clocks frozen, nothing is expired
+            await self._db.rollback()
+            return 0
         now = self._clock()
         offer_ids = (
             await self._db.scalars(

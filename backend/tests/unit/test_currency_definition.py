@@ -372,6 +372,7 @@ class TestPackageRegistration:
             "job_status",
             "customer_activity",
             "ops_alerts",
+            "deal_pauses",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -420,7 +421,7 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['adverts', 'api_metrics', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'customer_activity', "
+            "'currency_definitions', 'customer_activity', 'deal_pauses', "
             "'dispute_categories', 'dispute_messages', 'disputes', "
             "'fraud_alerts', "
             "'idempotency_records', 'job_status', "
@@ -512,4 +513,5 @@ class TestPackageRegistration:
             "0034_customer_activity.py",  # customer activity log (ADR-073)
             "0035_security_findings_hardening.py",  # security findings F-001, F-007, F-008
             "0036_ops_alerts.py",  # operations alerts for Super Admins (ADR-074)
+            "0037_deal_pauses.py",  # emergency controls (ADR-075)
         ]

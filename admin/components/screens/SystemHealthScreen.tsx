@@ -28,6 +28,7 @@ import { Button, FormError, PageTitle } from '../forms';
 import { Panel, StatusChip } from '../primitives';
 import { DataTable, type Column } from '../table/DataTable';
 import { when } from './common';
+import { EmergencyPanel } from './EmergencyPanel';
 import { OpsAlertsPanel } from './OpsAlertsPanel';
 
 export const REFRESH_MS = 30_000;
@@ -220,6 +221,7 @@ export function SystemHealthScreen(): ReactElement {
         </span>
       </div>
       <FormError message={error} />
+      <EmergencyPanel />
       <OpsAlertsPanel />
 
       {data && tone ? (
