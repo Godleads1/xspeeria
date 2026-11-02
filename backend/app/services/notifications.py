@@ -19,9 +19,11 @@ from typing import Any
 from fastapi import status
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.db.row_scope import current_scope
 from app.models.marketplace import Match, Offer
 from app.models.notifications import Notification
 from app.models.settlement import Settlement, Transaction
@@ -82,18 +84,28 @@ async def notify(
     kind, allowed = EVENTS[event]
     if not set(data) <= allowed:  # pragma: no cover - guards against careless callers
         raise ValueError(f"{event}: unexpected data {sorted(set(data) - allowed)}")
-    await db.execute(
-        insert(Notification)
-        .values(
-            id=uuid.uuid4(),
-            user_id=user_id,
-            type=kind,
-            payload={"event": event, "data": data},
-            dedupe_key=dedupe_key[:128],
-            created_at=now,
-        )
-        .on_conflict_do_nothing(index_elements=["user_id", "dedupe_key"])
+    row = insert(Notification).values(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        type=kind,
+        payload={"event": event, "data": data},
+        dedupe_key=dedupe_key[:128],
+        created_at=now,
     )
+    scope, scoped_user = current_scope()
+    if scope == "system" or scoped_user == user_id:
+        await db.execute(row.on_conflict_do_nothing(index_elements=["user_id", "dedupe_key"]))
+        return
+    # Telling someone else from a customer's request (taking their offer). Row-level security
+    # (ADR-078) lets this request add their message but not see their inbox, and PostgreSQL's
+    # ON CONFLICT needs to see the row it would collide with. So: plain insert in a savepoint,
+    # and the same fact twice (the unique index) is quietly ignored, as above.
+    try:
+        async with db.begin_nested():
+            await db.execute(row)
+    except IntegrityError as exc:
+        if "uq_notifications_user_dedupe" not in str(exc.orig):
+            raise
 
 
 async def notify_settlement(db: AsyncSession, settlement: Settlement, now: datetime) -> None:

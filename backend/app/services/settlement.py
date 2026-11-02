@@ -49,6 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
+from app.db.row_scope import acting_for_service
 from app.domain.payout_rules import counter_amount_minor
 from app.domain.settlement_rules import (
     DISPATCH_MAX_ATTEMPTS,
@@ -1047,9 +1048,12 @@ class SettlementService:
         leg_id, total = mine.leg_id, mine.amount_minor + mine.fee_minor
         await self._db.rollback()
         self._bank.simulate_pay_in(leg_id, total)
-        await self._bank.deliver(self.ingest)
-        await self.dispatch_due()
-        await self._bank.deliver(self.ingest)
+        # ADR-078: what follows is the bank's and the service's work (partner messages, bank
+        # commands for both legs), only triggered by this customer's pretend payment.
+        async with acting_for_service(self._db, "pretend bank: partner messages and commands"):
+            await self._bank.deliver(self.ingest)
+            await self.dispatch_due()
+            await self._bank.deliver(self.ingest)
         return await self.view(principal, match_id)
 
     # --- 6. staff decisions (admin console) --------------------------------------------------

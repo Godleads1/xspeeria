@@ -514,4 +514,5 @@ class TestPackageRegistration:
             "0035_security_findings_hardening.py",  # security findings F-001, F-007, F-008
             "0036_ops_alerts.py",  # operations alerts for Super Admins (ADR-074)
             "0037_deal_pauses.py",  # emergency controls (ADR-075)
+            "0038_row_level_security.py",  # row-level security (ADR-078)
         ]

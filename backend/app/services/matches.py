@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
+from app.db.row_scope import acting_for_service
 from app.domain.offer_rules import (
     IDEMPOTENCY_TTL,
     MINIMUM_MINOR,
@@ -710,9 +711,11 @@ class MatchService:
             match.preparation_state = "funding_ready"
             match.preparation_ended_at = now
             # ADR-037: open the escrow steps in the same transaction (simulation only).
-            await SettlementService(self._db, self._clock, self._bank).create_for_match(
-                match, offer
-            )
+            # ADR-078: the service builds both parties' legs, so it reads both payout accounts.
+            async with acting_for_service(self._db, "open escrow: both parties' payout accounts"):
+                await SettlementService(self._db, self._clock, self._bank).create_for_match(
+                    match, offer
+                )
         view = match_view(match, offer, principal.user_id, chosen)
         await self._db.commit()
         _logger.info(
