@@ -29,6 +29,7 @@ Layering rule: api -> services -> domain + repositories + providers.
 from app.models.activity import CustomerActivity
 from app.models.adverts import Advert
 from app.models.currency_definition import CurrencyDefinition
+from app.models.deal_pauses import DealPause
 from app.models.disputes import Dispute, DisputeCategory, DisputeMessage
 from app.models.fraud import FraudAlert
 from app.models.identity import (
@@ -70,6 +71,7 @@ from app.models.tiers import TierCheck
 
 __all__ = [
     "Advert",
+    "DealPause",
     "FraudAlert",
     "KycCase",
     "KycReview",

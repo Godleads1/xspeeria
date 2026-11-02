@@ -116,7 +116,7 @@ class AuthSession(Base):
         CheckConstraint(
             "revoke_reason IS NULL OR revoke_reason IN "
             "('logout', 'revoked_by_user', 'token_reuse', 'replaced', 'pin_change', 'pin_reset', "
-            "'unlock_failed', 'account_suspended', 'account_closed')",
+            "'unlock_failed', 'account_suspended', 'account_closed', 'incident')",
             name="revoke_reason_allowed",
         ),
         CheckConstraint(

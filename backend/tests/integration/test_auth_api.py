@@ -50,7 +50,7 @@ PHONE = "+2348038383838"
 EMAIL = "david@example.com"
 PIN = "482613"
 TABLES = (
-    "ops_alerts, staff_audit_log, staff_sessions, staff_codes, staff_accounts, "
+    "deal_pauses, ops_alerts, staff_audit_log, staff_sessions, staff_codes, staff_accounts, "
     "api_metrics, job_status, customer_activity, "
     "tier_checks, offer_queue_entries, kyc_reviews, fraud_alerts, adverts, service_outages, "
     "reversals, dispute_messages, disputes, "

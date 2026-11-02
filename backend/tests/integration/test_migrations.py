@@ -82,6 +82,7 @@ APPROVED_TABLES = {
     "job_status",
     "customer_activity",
     "ops_alerts",
+    "deal_pauses",
     "offer_queue_entries",
     "offer_groups",
     "tier_checks",
@@ -109,8 +110,9 @@ APPROVED_TABLES = {
 # staff bell (ADR-070) -> "0032"; API monitoring (ADR-072) -> "0033";
 # customer activity log (ADR-073) -> "0034";
 # security review hardening (findings F-001, F-007, F-008, 2026-10-28) -> "0035";
-# operations alerts for Super Admins (ADR-074) -> "0036".
-EXPECTED_HEAD = "0036"
+# operations alerts for Super Admins (ADR-074) -> "0036";
+# emergency controls: pause all deals, end every session (ADR-075) -> "0037".
+EXPECTED_HEAD = "0037"
 
 
 def _config(database_url: str) -> Config:
