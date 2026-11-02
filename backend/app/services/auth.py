@@ -38,7 +38,7 @@ from app.core.exceptions import AppError
 from app.core.logging import get_logger
 from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
-from app.core.rate_limit import SlidingWindowLimiter
+from app.core.rate_limit import RateLimiter, SlidingWindowLimiter
 from app.domain.auth_rules import (
     BIOMETRIC_ENROL_WINDOW,
     CHECK_CODE_TTL,
@@ -249,10 +249,10 @@ class AuthRuntime:
     sms: SmsSender | None
     clock: Callable[[], datetime]
     #: ADR-025 §1.2: per network address, shared by every auth endpoint.
-    address_limiter: SlidingWindowLimiter
+    address_limiter: RateLimiter
     #: Wrong-PIN counting for identifiers with no account, so they lock exactly like real
     #: accounts and the lock itself does not reveal which identifiers exist.
-    unknown_identifier_limiter: SlidingWindowLimiter
+    unknown_identifier_limiter: RateLimiter
     #: ADR-035: seals payout account numbers. None: payout accounts are switched off.
     beneficiary_box: SecretBox | None = None
     #: ADR-035: the bank's account name check. None: new accounts stay "pending".
@@ -279,7 +279,7 @@ class AuthRuntime:
     #: ADR-049/060: where photos are kept. None: photo uploads are off.
     object_store: ObjectStore | None = None
     #: ADR-031: offer and marketplace routes, per signed-in user (not shared with sign-in).
-    user_limiter: SlidingWindowLimiter = field(
+    user_limiter: RateLimiter = field(
         default_factory=lambda: SlidingWindowLimiter(
             limit=MARKET_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
         )
@@ -493,7 +493,7 @@ class AuthService:
             # Same shape as a real account: the 5th wrong try within 15 minutes, and every
             # try after it, answers "too many attempts".
             limiter = self._rt.unknown_identifier_limiter
-            if not limiter.hit(key, now) or limiter.count(key, now) >= MAX_PIN_TRIES:
+            if not await limiter.hit(key, now) or await limiter.count(key, now) >= MAX_PIN_TRIES:
                 raise _rate_limited(PIN_LOCK)
             raise _invalid_credentials()
 

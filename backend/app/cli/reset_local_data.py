@@ -27,6 +27,7 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 #: pause history (`deal_pauses`, ADR-075), or
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
+    "rate_limit_hits",  # ADR-080: attempt counts (sign-in limits) go with the accounts
     "customer_activity",
     "ops_alerts",  # ADR-074: about the deals and staff changes being cleared
     "tier_checks",

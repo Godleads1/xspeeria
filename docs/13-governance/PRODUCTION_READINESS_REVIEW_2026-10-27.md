@@ -52,7 +52,7 @@ None of these can be fixed by writing more code alone. They need accounts, partn
 
 | # | Finding | Severity | Notes |
 |---|---|---|---|
-| H-1 | The rate limiter is in memory (`core/rate_limit.py`) | High at more than one server | Correct for one server; needs Redis, or a database-backed limiter, before scaling (ADR-025 §4). |
+| H-1 | The rate limiter is in memory (`core/rate_limit.py`) | High at more than one server | Correct for one server; needs Redis, or a database-backed limiter, before scaling (ADR-025 §4). **Addressed 2026-11-02 (ADR-080):** limits are counted in PostgreSQL and shared by every server; a trusted-proxy setting is still needed with hosting. |
 | H-2 | Keys come from environment variables; no rotation (SEC-026/027) | High | `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY`, `BENEFICIARY_ENCRYPTION_KEY`, `KYC_IDENTITY_KEY`. Move to the secret manager with C-3. |
 | H-3 | No database row-level security (ADR-025 §1.4) | High (defence in depth) | Every query is scoped in code and tested; RLS would be a second lock. **Addressed 2026-11-02 (ADR-078):** forced policies on customers' private tables; deployment must confirm the app's login user has no `BYPASSRLS`. |
 | H-4 | `main` can't require reviews or passing checks (SEC-031) | High | Needs GitHub Pro/Team. Today anyone with write access could push straight to `main`. |

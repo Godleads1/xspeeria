@@ -92,7 +92,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 Full review with the release classification: `docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md` (**DO NOT LAUNCH** — partner bank, licence, hosting, backups, SMS/email, monitoring and an independent test are still missing).
 
 - [x] ~~**Passkeys**~~ — replaced by fingerprint on a trusted phone + face check (ADR-054, owner 2026-10-20). (Checked 2026-10-27.)
-- [ ] **Shared rate limiter (Redis)** before running more than one server; trusted-proxy setting for client addresses. (ADR-025 §4)
+- [x] **Shared rate limiter** — built in the database (ADR-080, 2 Nov 2026). Still to do with hosting: a trusted-proxy setting for client addresses. (ADR-025 §4)
 - [ ] **Secret manager** (key rotation tools are built: ADR-076, PR #95) for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [x] **Database row-level security** as a second layer of permission checks — built (ADR-078, PR #96). At deployment: the app's database login must not be a superuser or have `BYPASSRLS`.
 - [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
@@ -111,7 +111,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 
 - [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
 - [ ] **Super Admin hardware security key** (ADR-051 Decision 2).
-- [ ] **Shared rate limiter** (database-backed until Redis exists) — readiness H-1.
+- [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
 - [ ] **Resend email sender** behind the existing interface — ready to switch on when the account and domain exist.
 - [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
 

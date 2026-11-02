@@ -63,7 +63,7 @@ Notifications = Annotated[NotificationService, Depends(get_service)]
 async def limited(
     principal: CurrentPrincipal, runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)]
 ) -> Principal:
-    if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
+    if not await runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
         raise AppError(
             "AUTH_429_RATE_LIMITED",
             "Too many requests. Please wait a moment and try again.",

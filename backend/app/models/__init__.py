@@ -52,6 +52,7 @@ from app.models.notifications import Notification, PushDelivery, PushToken
 from app.models.ops_alerts import OpsAlert
 from app.models.outages import ServiceOutage
 from app.models.payouts import Beneficiary, MatchPayoutSelection
+from app.models.rate_limits import RateLimitHit
 from app.models.reversals import Reversal
 from app.models.settlement import (
     OutboxMessage,
@@ -83,6 +84,7 @@ __all__ = [
     "OpsAlert",
     "PushDelivery",
     "PushToken",
+    "RateLimitHit",
     "Reversal",
     "ServiceOutage",
     "Dispute",

@@ -81,7 +81,7 @@ async def kyc_approved(
 
     Approved means an approved Didit identity check (ADR-039), or the local-only bypass.
     """
-    if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
+    if not await runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
         raise AppError(
             "AUTH_429_RATE_LIMITED",
             "Too many requests. Please wait a moment and try again.",
@@ -142,7 +142,7 @@ Service = Annotated[OfferService, Depends(get_offer_service)]
 
 async def signed_in_browsing(principal: CurrentPrincipal, runtime: Runtime) -> Principal:
     """ADR-058 Tier 0: anyone signed in may look at the market (per-user request limit)."""
-    if not runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
+    if not await runtime.user_limiter.hit(f"user:{principal.user_id}", runtime.clock()):
         raise AppError(
             "AUTH_429_RATE_LIMITED",
             "Too many requests. Please wait a moment and try again.",

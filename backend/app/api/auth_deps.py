@@ -57,7 +57,7 @@ def client_address(request: Request) -> str:
 async def limit_by_address(
     request: Request, runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)]
 ) -> None:
-    if not runtime.address_limiter.hit("addr:" + client_address(request), runtime.clock()):
+    if not await runtime.address_limiter.hit("addr:" + client_address(request), runtime.clock()):
         raise AppError(
             "AUTH_429_RATE_LIMITED",
             "Too many attempts. Please wait and try again.",
