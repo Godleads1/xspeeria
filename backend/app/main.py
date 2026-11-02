@@ -129,6 +129,17 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         raise ValueError("TEST_LIMITS_DEV is allowed only with APP_ENV=local")
     if settings.demo_autopilot and settings.app_env != "local":
         raise ValueError("DEMO_AUTOPILOT is allowed only with APP_ENV=local")
+    if settings.is_production and not settings.super_admin_key_required:
+        # ADR-051 Decision 2: before live money every Super Admin uses a hardware security key.
+        raise ValueError("SUPER_ADMIN_KEY_REQUIRED must be true in production (ADR-081)")
+    if settings.is_production and (
+        settings.staff_key_rp_id == "localhost"
+        or not settings.staff_key_origin.startswith("https://")
+    ):
+        raise ValueError(
+            "STAFF_KEY_RP_ID and STAFF_KEY_ORIGIN must name the console's https address in "
+            "production (ADR-081)"
+        )
     return AuthRuntime(
         keys=keys,
         secret_box=box,
@@ -160,6 +171,9 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         checks_per_day=CHECKS_PER_DAY * (20 if relaxed else 1),
         tier_checks=_tier_checks(settings),
         object_store=_object_store(settings),
+        staff_key_rp_id=settings.staff_key_rp_id,
+        staff_key_origin=settings.staff_key_origin,
+        super_admin_key_required=settings.super_admin_key_required,
     )
 
 

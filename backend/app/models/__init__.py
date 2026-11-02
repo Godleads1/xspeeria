@@ -67,7 +67,15 @@ from app.models.settlement import (
     Transaction,
     WebhookReceipt,
 )
-from app.models.staff import StaffAccount, StaffAuditEntry, StaffCode, StaffRole, StaffSession
+from app.models.staff import (
+    StaffAccount,
+    StaffAuditEntry,
+    StaffCode,
+    StaffKeyChallenge,
+    StaffRole,
+    StaffSecurityKey,
+    StaffSession,
+)
 from app.models.tiers import TierCheck
 
 __all__ = [
@@ -118,6 +126,8 @@ __all__ = [
     "StaffCode",
     "StaffRole",
     "StaffSession",
+    "StaffKeyChallenge",
+    "StaffSecurityKey",
     "StepUpGrant",
     "TierCheck",
     "TrustedDevice",

@@ -1,0 +1,42 @@
+# Fraud Checks to Replace the 24-Hour Payout Hold: Options (November 2026)
+
+**For the owner to decide** (FX-03; readiness H-6). The owner removed the 24-hour payout hold on 19 Oct 2026 (DEC-044): payouts go out as soon as both sides have paid in. The readiness review asks for compensating checks before real payouts. Nothing here is built or decided.
+
+## What already protects deals
+
+- **Identity checks** with Didit, including AML screening; one person, one verified account (ADR-039–042).
+- **Trade limits by tier**, daily and monthly (ADR-058).
+- **Codes or a face check** to confirm new payout accounts and each deal's payout choice (step-up, ADR-054).
+- **Fraud alerts** (ADR-068):
+  - PIN and code lock-outs;
+  - 3 or more disputes against one person in 30 days;
+  - a payout account in a name that doesn't match the verified name.
+
+  Alerts **never block by themselves**.
+- **Disputes** pause a deal's escrow. Staff can suspend customers, refund through a two-person reversal, and pause all deals.
+
+## The main risk the hold covered
+
+**Account takeover, then a fast payout.** Someone gets into an account, adds their own payout account, takes a deal and is paid before the owner notices. The second check (code or face) makes this harder but not impossible: a SIM swap or a stolen email inbox is enough.
+
+## Options
+
+| # | Check | What it stops | Cost to honest users | Effort |
+|---|---|---|---|---|
+| 1 | **New payout account waits.** A payout account added in the last *N* hours (e.g. 24) can't receive a payout yet; older accounts pay at once. | Takeover → new account → instant payout | Only the first deal to a new account waits | Small |
+| 2 | **Block, not just alert, when the payout name doesn't match** the verified name (the rule exists today as an alert). | Paying out to someone else's account | People whose bank name differs from their ID (initials, maiden names) need staff review | Small |
+| 3 | **New-user caps.** Lower limits for the first 7–30 days after verification, on top of the tiers. | Fresh fake or mule accounts moving large sums | New users trade smaller amounts at first | Small |
+| 4 | **Recent-security-change pause.** After a PIN reset, phone or email change, or sign-in on a new phone, payouts wait *N* hours. | Takeover via reset or SIM swap | Rarely felt | Medium |
+| 5 | **Staff "hold this deal" button.** Compliance can hold one deal's payout from a fraud alert while they look (holds exist today; there's no button for this case). | Lets alerts act fast without suspending the person | None | Small |
+| 6 | **Velocity rules raise high alerts:** many deals in a short time, many payout accounts added, or one payout account used by several customers. | Mule networks, scripted abuse | None (alerts only) | Medium |
+| 7 | **Large first payout needs a second person.** Above an amount, the first payout of a new account or user waits for a Compliance approval. | High-value one-off fraud | Some large first deals wait for review | Medium |
+
+## Suggested starting set
+
+- **1** (new payout account waits 24 hours);
+- **2** (block on name mismatch, with staff review);
+- **5** (hold-this-deal button).
+
+Together they cover the takeover path closely, and honest users rarely notice them. Add **3** if the bank or the lawyer asks for new-user limits. The numbers above are starting points for you to set.
+
+**What I need from you:** which numbers to use for options 1, 3, 4 and 7, if chosen, and who reviews held payouts (Compliance Officer?). The partner bank may also have rules of its own: ask them (C-1).

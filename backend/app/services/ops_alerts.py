@@ -9,7 +9,8 @@ Rule                       Sev.  Raised when
                                  15 minutes (``customer_activity``)
 ``staff_sign_in_attack``    P2   10 or more failed staff sign-ins in 15 minutes
                                  (``staff_audit_log``)
-``staff_access_changed``    P2   a staff account is created, or its role or status changes;
+``staff_access_changed``    P2   a staff account is created, or its role or status changes,
+                                or a security key is added or removed (ADR-081);
                                  a role is created, changed or deleted (one per audit entry)
 ``emergency_control_used``  P1   deals were paused or resumed, or sessions were ended
                                  (ADR-075; one per audit entry)
@@ -126,7 +127,15 @@ _FROM_WARNING = {
     "escrow_messages_failed": "escrow_stalled",
 }
 
-_STAFF_ACCESS_ACTIONS = ("staff_created", "role_created", "role_updated", "role_deleted")
+_STAFF_ACCESS_ACTIONS = (
+    "staff_created",
+    "role_created",
+    "role_updated",
+    "role_deleted",
+    # ADR-081: adding or removing a Super Admin security key.
+    "security_key_added",
+    "security_key_removed",
+)
 #: ADR-075: the emergency controls; each use tells the other Super Admins.
 _EMERGENCY_ACTIONS = ("deals_paused", "deals_resumed", "sessions_ended")
 _MONEY_AT_RISK = ("RECOVERY_REQUIRED", "CLOSED_WITH_LOSS")

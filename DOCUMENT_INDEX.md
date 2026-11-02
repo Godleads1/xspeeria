@@ -151,6 +151,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `078-row-level-security.md` | Row-level security as the second lock (readiness H-3): every transaction tells PostgreSQL its scope (`system`, or `user` + the signed-in customer, transaction-local); forced policies on customers' private tables (sign-in, second checks, identity checks, payout accounts, notifications, …); no scope sees nothing; shared deal tables listed with reasons; migration 0038 (DEC-085) | **IMPLEMENTED** — 2026-11-02 |
 | `079-exposure-hardening.md` | Only a named list of routes works without a login (test-enforced); API started with `python -m app.serve` (no `server: uvicorn` header); validation errors no longer name the validator; throwaway email domains refused at sign-up (public CC0 list, pinned); existing account lockout + per-address limits recorded (DEC-086) | **IMPLEMENTED** — 2026-11-02 |
 | `080-shared-rate-limits.md` | Shared rate limits in PostgreSQL (readiness H-1): every limit counted in `rate_limit_hits` whenever a database is set, so all servers share counts and restarts forget nothing; same limits; own transaction + advisory lock per key; keys stored only as SHA-256; hourly clean-up; migration 0039 (DEC-087) | **IMPLEMENTED** — 2026-11-02 |
+| `081-super-admin-security-keys.md` | Super Admin hardware security keys (WebAuthn/FIDO2): password → email code → touch the key; single-use 5-minute challenges, copied-key and look-alike-site refusal; `SUPER_ADMIN_KEY_REQUIRED` (compulsory in production; key-setup-only session until a key is added); lost key removed by another Super Admin or a server command, audited and alerted; migration 0040 (DEC-088) | **IMPLEMENTED** — 2026-11-02 |
 | `082-resend-email-sender.md` | Email through Resend (ADR-044 provider): codes, "was this you?" alerts and operations alerts; on only with `RESEND_API_KEY` + `EMAIL_FROM` (verified domain); plain text, no links; one retry with the same idempotency key, never a duplicate; nothing logged (DEC-089) | **IMPLEMENTED** — 2026-11-02 (off until set up) |
 
 ### Accounting policy is not architecture
@@ -643,6 +644,16 @@ Owner request 2026-10-27. `app.cli.seed_demo` adds demo customers, demo staff, p
 `docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md`
 
 Release gate result: **DO NOT LAUNCH**. It lists the critical blockers (partner bank, licence, hosting, backups, SMS/email, monitoring, independent test) and the order to fix them. It is an AI-run review, so it does not replace SEC-040. Repeat the review before any pilot.
+
+## Launch planning (2026-11-02)
+
+Prepared for owner decisions. Nothing in them is chosen or built.
+
+- `docs/07-security/ON_CALL_GUIDE.md`: who answers alerts (on call: **Chinedu Egbuchulam**, named 2026-11-02), response times by level, first five minutes, hand-over. A backup person is still to be named.
+- `docs/13-governance/HOSTING_OPTIONS_2026-11.md`: what Xspeeria needs from a host. Covers the **CBN circular of 15 June 2026** (payment data stored in Nigeria from 1 January 2027), a Nigerian cloud vs the AWS Lagos Local Zone vs own servers, and the questions to ask providers and the lawyer.
+- `docs/13-governance/FRAUD_OPTIONS_2026-11.md`: seven checks that could replace the removed 24-hour payout hold (FX-03), with a suggested starting set.
+- `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040).
+- `docs/13-governance/GITHUB_MAIN_PROTECTION.md`: the exact ruleset for `main` once the GitHub plan is upgraded (SEC-031).
 
 ---
 

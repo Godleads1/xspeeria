@@ -22,6 +22,7 @@ import { admin, color } from '../../theme';
 import { PhotoPicker } from '../Avatar';
 import { Button, Form, FormError, Notice, TextInput } from '../forms';
 import { Flag } from '../LanguagePicker';
+import { SecurityKeys } from '../SecurityKeys';
 import { PASSWORD_HINT } from './SetPasswordScreen';
 
 type Tab = 'profile' | 'password';
@@ -292,6 +293,9 @@ function PasswordTab(): ReactElement {
         <p id="twofa-why" style={{ margin: '8px 0 0', fontSize: 12, color: color.text.secondary }}>
           {tr('An email code is needed every time you log in with your email and password. It is always on for staff.')}
         </p>
+      </div>
+      <div style={{ borderTop: `1px solid ${color.border.subtle}`, margin: '24px -24px 0', padding: '20px 24px 0' }}>
+        <SecurityKeys api={api} />
       </div>
     </>
   );

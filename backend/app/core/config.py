@@ -216,6 +216,16 @@ class Settings(BaseSettings):
     local_photo_dir: str = ""
     cors_allowed_origins: str = ""
 
+    #: ADR-081: security keys (WebAuthn) are bound to the admin console's web address. The
+    #: "relying party" ID is its host name (e.g. ``admin.example.com``); the origin is the full
+    #: address the console is opened at. Defaults fit ``npm run dev`` on a developer's computer.
+    staff_key_rp_id: str = "localhost"
+    staff_key_origin: str = "http://localhost:3000"
+    #: ADR-051 Decision 2 / ADR-081: every Super Admin must sign in with a hardware security key.
+    #: Required in production (live money). A Super Admin with no key yet can sign in only to
+    #: register one.
+    super_admin_key_required: bool = False
+
     @field_validator("database_url")
     @classmethod
     def _supported_database_url(cls, value: str | None) -> str | None:
