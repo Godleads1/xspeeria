@@ -75,7 +75,7 @@ async def partner_webhook(
 ) -> Any:
     # Unsigned traffic is still kept as evidence, so bound how fast anyone can add it.
     address = request.client.host if request.client else "unknown"
-    if not runtime.user_limiter.hit(f"webhook:{address}", runtime.clock()):
+    if not await runtime.user_limiter.hit(f"webhook:{address}", runtime.clock()):
         raise AppError("AUTH_429_RATE_LIMITED", "Too many requests.", status_code=429)
     declared = request.headers.get("content-length")
     if declared is not None and (not declared.isdigit() or int(declared) > MAX_WEBHOOK_BYTES):

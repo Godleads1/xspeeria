@@ -373,6 +373,7 @@ class TestPackageRegistration:
             "customer_activity",
             "ops_alerts",
             "deal_pauses",
+            "rate_limit_hits",
             "offer_queue_entries",
             "offer_groups",
             "tier_checks",
@@ -432,7 +433,7 @@ class TestPackageRegistration:
             "'offers', 'ops_alerts', "
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
-            "'push_deliveries', 'push_tokens', "
+            "'push_deliveries', 'push_tokens', 'rate_limit_hits', "
             "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'service_outages', "
             "'settlement_events', "
             "'settlement_holds', 'settlement_legs', 'settlements', "
@@ -515,4 +516,5 @@ class TestPackageRegistration:
             "0036_ops_alerts.py",  # operations alerts for Super Admins (ADR-074)
             "0037_deal_pauses.py",  # emergency controls (ADR-075)
             "0038_row_level_security.py",  # row-level security (ADR-078)
+            "0039_rate_limit_hits.py",  # shared rate limits (ADR-080)
         ]

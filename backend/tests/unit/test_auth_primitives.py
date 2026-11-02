@@ -190,18 +190,19 @@ class TestCodesAndRefreshTokens:
         assert len(hash_refresh_token(a)) == 64 and hash_refresh_token(a) != a
 
 
+@pytest.mark.asyncio
 class TestSlidingWindowLimiter:
-    def test_allows_the_limit_then_refuses_then_recovers(self) -> None:
+    async def test_allows_the_limit_then_refuses_then_recovers(self) -> None:
         limiter = SlidingWindowLimiter(limit=10, window=timedelta(minutes=1))
-        assert all(limiter.hit("a", T0 + timedelta(seconds=i)) for i in range(10))
-        assert not limiter.hit("a", T0 + timedelta(seconds=30))
-        assert limiter.hit("b", T0 + timedelta(seconds=30))  # keys are independent
-        assert limiter.hit("a", T0 + timedelta(seconds=61))
+        assert all([await limiter.hit("a", T0 + timedelta(seconds=i)) for i in range(10)])
+        assert not await limiter.hit("a", T0 + timedelta(seconds=30))
+        assert await limiter.hit("b", T0 + timedelta(seconds=30))  # keys are independent
+        assert await limiter.hit("a", T0 + timedelta(seconds=61))
 
-    def test_memory_is_bounded(self) -> None:
+    async def test_memory_is_bounded(self) -> None:
         limiter = SlidingWindowLimiter(limit=1, window=timedelta(minutes=1), max_keys=100)
         for i in range(1000):
-            limiter.hit(f"k{i}", T0)
+            await limiter.hit(f"k{i}", T0)
         assert len(limiter._hits) <= 100
 
 

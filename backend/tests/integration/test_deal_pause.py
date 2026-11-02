@@ -47,12 +47,20 @@ async def _pause(boss: AsyncClient) -> Any:
 
 async def _resume(boss: AsyncClient) -> Any:
     return await boss.post(
-        "/api/v1/admin/emergency/deals/resume", json={"reason": "Bank confirmed it is fixed"}, headers=H
+        "/api/v1/admin/emergency/deals/resume",
+        json={"reason": "Bank confirmed it is fixed"},
+        headers=H,
     )
 
 
 async def test_a_pause_freezes_the_clocks_and_gives_the_time_back(
-    db_settings: Settings, esc: Escrow, owner: Party, taker: Party, deal: dict[str, Any], staff: Admin, boss: AsyncClient
+    db_settings: Settings,
+    esc: Escrow,
+    owner: Party,
+    taker: Party,
+    deal: dict[str, Any],
+    staff: Admin,
+    boss: AsyncClient,
 ) -> None:
     await _open(esc, deal, owner)
     before = await _sql(db_settings, "SELECT funding_deadline FROM settlements")
@@ -65,7 +73,9 @@ async def test_a_pause_freezes_the_clocks_and_gives_the_time_back(
     # The funding window would have run out, but nothing is expired while paused.
     for _ in range(5):  # the customers keep the app open
         _advance(esc, staff, minutes=2)
-        assert (await owner.env.client.get("/api/v1/users/me", headers=owner._h())).status_code == 200
+        assert (
+            await owner.env.client.get("/api/v1/users/me", headers=owner._h())
+        ).status_code == 200
         assert (await boss.get("/api/v1/admin/me", headers=H)).status_code == 200
     await esc.tick(2)
     assert await _phase(db_settings) == "AWAITING_FUNDING"
@@ -75,7 +85,13 @@ async def test_a_pause_freezes_the_clocks_and_gives_the_time_back(
     assert details["paused_seconds"] == 600 and details["funding_windows_extended"] == 1
     after: datetime = await _sql(db_settings, "SELECT funding_deadline FROM settlements")
     assert (after - before).total_seconds() == 600
-    assert await _sql(db_settings, "SELECT count(*) FROM settlement_events WHERE event_type = 'DeadlineExtended'") == 1
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT count(*) FROM settlement_events WHERE event_type = 'DeadlineExtended'",
+        )
+        == 1
+    )
     # Deals work again.
     r = await owner.publish(source_amount="100.00", desired_rate="1320.50")
     assert r.status_code == 201, r.text
@@ -87,16 +103,27 @@ async def test_a_pause_freezes_the_clocks_and_gives_the_time_back(
 
 
 async def test_bank_commands_are_held_while_paused(
-    db_settings: Settings, esc: Escrow, owner: Party, taker: Party, deal: dict[str, Any], staff: Admin, boss: AsyncClient
+    db_settings: Settings,
+    esc: Escrow,
+    owner: Party,
+    taker: Party,
+    deal: dict[str, Any],
+    staff: Admin,
+    boss: AsyncClient,
 ) -> None:
     assert await _phase(db_settings) == "INITIALIZING"
-    waiting = await _sql(db_settings, "SELECT count(*) FROM outbox_messages WHERE status = 'PENDING'")
+    waiting = await _sql(
+        db_settings, "SELECT count(*) FROM outbox_messages WHERE status = 'PENDING'"
+    )
     assert waiting > 0
     assert (await _pause(boss)).status_code == 200
     await esc.tick(2)
     # The escrow-opening commands never left.
     assert await _phase(db_settings) == "INITIALIZING"
-    assert await _sql(db_settings, "SELECT count(*) FROM outbox_messages WHERE status = 'PENDING'") == waiting
+    assert (
+        await _sql(db_settings, "SELECT count(*) FROM outbox_messages WHERE status = 'PENDING'")
+        == waiting
+    )
     assert (await _resume(boss)).status_code == 200
     await esc.tick()
     assert await _phase(db_settings) == "AWAITING_FUNDING"
@@ -106,10 +133,17 @@ async def test_only_super_admins_with_a_reason(
     db_settings: Settings, esc: Escrow, owner: Party, staff: Admin, boss: AsyncClient
 ) -> None:
     officer = await staff.invite(boss, "officer@xspeeria.test", "compliance_officer")
-    assert (await officer.post("/api/v1/admin/emergency/deals/pause", json=REASON, headers=H)).status_code == 403
+    assert (
+        await officer.post("/api/v1/admin/emergency/deals/pause", json=REASON, headers=H)
+    ).status_code == 403
     assert (await officer.get("/api/v1/admin/emergency/deals", headers=H)).status_code == 403
-    assert (await boss.post("/api/v1/admin/emergency/deals/pause", json={"reason": "no"}, headers=H)).status_code == 422
-    assert (await boss.post("/api/v1/admin/emergency/deals/pause", json=REASON)).status_code in (401, 403)
+    assert (
+        await boss.post("/api/v1/admin/emergency/deals/pause", json={"reason": "no"}, headers=H)
+    ).status_code == 422
+    assert (await boss.post("/api/v1/admin/emergency/deals/pause", json=REASON)).status_code in (
+        401,
+        403,
+    )
     assert (await _resume(boss)).status_code == 409  # not paused
     assert (await _pause(boss)).status_code == 200
     r = await _pause(boss)
@@ -135,10 +169,14 @@ async def test_ending_every_session_signs_everyone_out_but_me(
     assert (await taker.env.client.get("/api/v1/users/me", headers=taker._h())).status_code == 401
     assert (await officer.get("/api/v1/admin/me", headers=H)).status_code == 401
     assert (await boss.get("/api/v1/admin/me", headers=H)).status_code == 200
-    reasons = await _sql(db_settings, "SELECT string_agg(DISTINCT revoke_reason, ',') FROM auth_sessions")
+    reasons = await _sql(
+        db_settings, "SELECT string_agg(DISTINCT revoke_reason, ',') FROM auth_sessions"
+    )
     assert reasons == "incident"
     # Only a Super Admin, and a reason is required.
-    r = await boss.post("/api/v1/admin/emergency/sessions/end", json={"who": "all", "reason": "x" * 10}, headers=H)
+    r = await boss.post(
+        "/api/v1/admin/emergency/sessions/end", json={"who": "all", "reason": "x" * 10}, headers=H
+    )
     assert r.status_code == 422
 
 

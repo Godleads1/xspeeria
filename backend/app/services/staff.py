@@ -252,7 +252,10 @@ class StaffService:
                 detail={"reason": "unknown_or_inactive"},
             )
             await self._db.commit()
-            if not limiter.hit(key, now) or limiter.count(key, now) >= MAX_PASSWORD_TRIES:
+            if (
+                not await limiter.hit(key, now)
+                or await limiter.count(key, now) >= MAX_PASSWORD_TRIES
+            ):
                 raise _locked(PASSWORD_LOCK.total_seconds())
             raise _bad_login()
 

@@ -46,7 +46,7 @@ from app.core.exceptions import install_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.mfa import SecretBox
 from app.core.pin_hashing import PinHasher
-from app.core.rate_limit import SlidingWindowLimiter
+from app.core.rate_limit import DatabaseRateLimiter, RateLimiter, SlidingWindowLimiter
 from app.core.request_logging import install_request_logging
 from app.domain.auth_rules import (
     CHECKS_PER_DAY,
@@ -55,6 +55,7 @@ from app.domain.auth_rules import (
     MAX_PIN_TRIES,
     PIN_LOCK,
 )
+from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.providers.bank_check import DevNameCheck
 from app.providers.didit import DiditClient
 from app.providers.email import DevConsoleEmailSender, EmailSender
@@ -127,10 +128,18 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         hasher=PinHasher(),
         sms=sms,
         clock=clock,
-        address_limiter=SlidingWindowLimiter(
-            limit=LOGIN_REQUESTS_PER_MINUTE * (20 if relaxed else 1), window=timedelta(minutes=1)
+        address_limiter=_limiter(
+            settings,
+            "addr",
+            limit=LOGIN_REQUESTS_PER_MINUTE * (20 if relaxed else 1),
+            window=timedelta(minutes=1),
         ),
-        unknown_identifier_limiter=SlidingWindowLimiter(limit=MAX_PIN_TRIES, window=PIN_LOCK),
+        unknown_identifier_limiter=_limiter(
+            settings, "unknown_id", limit=MAX_PIN_TRIES, window=PIN_LOCK
+        ),
+        user_limiter=_limiter(
+            settings, "user", limit=MARKET_REQUESTS_PER_MINUTE, window=timedelta(minutes=1)
+        ),
         beneficiary_box=beneficiary_box,
         name_check=DevNameCheck() if settings.bank_check_dev else None,
         pretend_bank=PretendBank(clock) if settings.pretend_bank else None,
@@ -144,6 +153,20 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         checks_per_day=CHECKS_PER_DAY * (20 if relaxed else 1),
         tier_checks=_tier_checks(settings),
         object_store=_object_store(settings),
+    )
+
+
+def _limiter(settings: Settings, name: str, *, limit: int, window: timedelta) -> RateLimiter:
+    """ADR-080: with a database, limits are shared by every server and survive restarts.
+
+    Without one (``/health`` only, unit tests) the in-memory limiter is used: one server only.
+    """
+    if not settings.database_url:
+        return SlidingWindowLimiter(limit=limit, window=window)
+    from app.db.session import get_sessionmaker
+
+    return DatabaseRateLimiter(
+        name=name, limit=limit, window=window, sessions=get_sessionmaker(settings)
     )
 
 
@@ -324,9 +347,11 @@ async def _demo_autopilot_loop(settings: Settings, runtime: AuthRuntime) -> None
 
 async def _activity_retention_loop(settings: Settings) -> None:
     """ADR-073: the customer activity log is kept 5 years; older rows are deleted hourly (the
-    database refuses to delete anything younger)."""
+    database refuses to delete anything younger). ADR-080: and rate-limit attempts after an
+    hour."""
     from sqlalchemy import text
 
+    from app.core.rate_limit import prune_rate_limit_hits
     from app.db.session import get_sessionmaker
 
     log = get_logger(__name__)
@@ -339,6 +364,9 @@ async def _activity_retention_loop(settings: Settings) -> None:
                         text("DELETE FROM customer_activity WHERE at < now() - interval '5 years'")
                     )
                     await db.commit()
+                # ADR-080: rate-limit attempts are only needed for an hour.
+                with track_job("Rate-limit cleanup", 3600):
+                    await prune_rate_limit_hits(db, datetime.now(UTC))
         except Exception:  # noqa: BLE001 - try again next hour
             log.exception("activity_retention_failed")
 
