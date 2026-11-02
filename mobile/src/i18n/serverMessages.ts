@@ -28,6 +28,7 @@ export const SERVER_MESSAGES: readonly string[] = [
   k("Enter the phone number with its country code, for example +2348012345678."),
   k("Enter the rate as a number with up to 6 decimal places."),
   k("Enter your 11-digit BVN."),
+  k("Please use a permanent email address. Temporary email services aren't accepted."),
   k("Fingerprint or Face ID could not confirm this. Please try the face check."),
   k("Fingerprint or Face ID is not turned on for this phone."),
   k("Fingerprint or Face ID needs a trusted phone. Log out and log in again on this phone to trust it."),

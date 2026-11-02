@@ -284,6 +284,13 @@ async def test_register_response_carries_nothing_identifying(env: Env) -> None:
         ({"phone": PHONE, "email": EMAIL, "pin": "123456"}, 422, "VAL_422_WEAK_PASSWORD"),
         ({"phone": PHONE, "email": EMAIL, "pin": "4826"}, 422, "VAL_422_WEAK_PASSWORD"),
         ({"phone": PHONE, "email": "nope", "pin": PIN}, 422, "VALIDATION_ERROR"),
+        # ADR-079: throwaway email services, including their subdomains and any letter case.
+        (
+            {"phone": PHONE, "email": "a@mailinator.com", "pin": PIN},
+            422,
+            "VAL_422_DISPOSABLE_EMAIL",
+        ),
+        ({"phone": PHONE, "email": "a@X.YopMail.com", "pin": PIN}, 422, "VAL_422_DISPOSABLE_EMAIL"),
         # Unknown fields are refused, never silently ignored (no mass assignment).
         ({"phone": PHONE, "email": EMAIL, "pin": PIN, "status": "active"}, 422, "VALIDATION_ERROR"),
     ],

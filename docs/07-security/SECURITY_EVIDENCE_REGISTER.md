@@ -47,7 +47,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-011 | IMPLEMENTED (partial) | Sign-in routes: 10 requests a minute per address (ADR-025). Offer routes deliberately not on that shared counter (ADR-030 §2, `test_browsing_offers_does_not_use_up_the_sign_in_limit`); offer, marketplace and match routes: 60 a minute per user (ADR-031, `test_market_requests_are_limited_per_user`). | Body-size limits, timeouts; Redis before more than one server. |
 | SEC-012 | NOT STARTED | No cookie auth, no outbound requests, no redirects yet. | Decide token vs cookie; CSRF if cookies; SSRF allow-list for partner calls. |
 | SEC-013 | IMPLEMENTED (partial) | Admin security headers (`admin/next.config.ts`, checked as served locally 2026-10-17); backend CORS empty by default (`backend/app/core/config.py`); docs/OpenAPI off in production. | CSP script-src with nonces; TLS config UNKNOWN (no deployment). |
-| SEC-014 | IMPLEMENTED (partial, ADR-072, ADR-077) | Live API inventory: System Health lists every route and outside service actually used, with counts. `/health` answers `{"status": "ok"}` only (`test_health.py`). | A written API inventory. |
+| SEC-014 | IMPLEMENTED (partial, ADR-072, ADR-077) | Live API inventory: System Health lists every route and outside service actually used, with counts. `/health` answers `{"status": "ok"}` only (`test_health.py`). ADR-079: only 18 named routes answer without a login (`test_route_access.py`); no `server` header (`app/serve.py`) and no validator wording in errors (`test_fingerprint.py`). | A written API inventory; confirm the hosting adds no `server`/`via` header. |
 
 ## D. Mobile application security
 

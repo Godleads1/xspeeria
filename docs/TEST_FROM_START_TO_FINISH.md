@@ -108,7 +108,7 @@ You need **three PowerShell windows**, all opened in `C:\Users\HomePC\Documents\
 
 ```powershell
 cd backend
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run python -m app.serve --host 0.0.0.0 --port 8000
 ```
 
 Leave it running. **Sign-in codes appear here**, like `[DEV SMS — local only] code for ***0001: 123456` or `code for a***@example.com: 123456`.
