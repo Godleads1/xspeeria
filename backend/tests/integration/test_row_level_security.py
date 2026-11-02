@@ -13,9 +13,10 @@ import importlib.util
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
-from sqlalchemy import func, select, text, update
+from sqlalchemy import event, func, select, text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -35,6 +36,22 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 _MIGRATION = (
     Path(__file__).resolve().parents[3] / "migrations" / "versions" / "0038_row_level_security.py"
 )
+
+
+def _as_app_role(engine: Any) -> Any:
+    """Every connection of ``engine`` runs as the application role (ADR-025 §1.4).
+
+    Superusers and BYPASSRLS roles skip row-level security entirely; CI's database user is a
+    superuser. The app must never connect as one, so these tests take the app's role.
+    """
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_role(dbapi_conn: Any, _record: Any) -> None:
+        cursor = dbapi_conn.cursor()
+        cursor.execute("SET ROLE xspeeria_app")
+        cursor.close()
+
+    return engine
 
 
 def _owned_tables() -> dict[str, str]:
@@ -121,7 +138,7 @@ async def test_customer_scope_sees_only_their_rows_even_unfiltered(
     db_settings: Settings, k: K
 ) -> None:
     a, b = await _two_customers(k, db_settings)
-    engine = build_engine(db_settings)
+    engine = _as_app_role(build_engine(db_settings))
     try:
         async with AsyncSession(engine) as db:
             # System scope (jobs, staff): everything.
@@ -146,7 +163,7 @@ async def test_customer_scope_sees_only_their_rows_even_unfiltered(
 
 async def test_customer_scope_cannot_write_someone_elses_rows(db_settings: Settings, k: K) -> None:
     a, b = await _two_customers(k, db_settings)
-    engine = build_engine(db_settings)
+    engine = _as_app_role(build_engine(db_settings))
     try:
         async with AsyncSession(engine) as db:
             await scope_to_user(db, a)
@@ -185,7 +202,7 @@ async def test_a_customer_may_notify_someone_else_but_not_read_it(
     db_settings: Settings, k: K
 ) -> None:
     a, b = await _two_customers(k, db_settings)
-    engine = build_engine(db_settings)
+    engine = _as_app_role(build_engine(db_settings))
     try:
         async with AsyncSession(engine) as db:
             await scope_to_user(db, a)
@@ -215,12 +232,11 @@ async def test_a_connection_that_never_sets_a_scope_sees_nothing(
 ) -> None:
     await _two_customers(k, db_settings)
     # A bare engine: no app.db.row_scope hook, like psql or a stray script.
-    bare = create_async_engine(database_url)
+    bare = _as_app_role(create_async_engine(database_url))
     try:
         async with bare.connect() as conn:
-            assert (await conn.execute(text("SELECT count(*) FROM notifications"))).scalar() == 0
-            # The application role (ADR-025 §1.4), not the owner, is held to the same rule.
-            await conn.execute(text("SET ROLE xspeeria_app"))
+            # The application role (ADR-025 §1.4), with nothing set: no rows.
+            assert (await conn.execute(text("SELECT current_user"))).scalar() == "xspeeria_app"
             assert (await conn.execute(text("SELECT count(*) FROM notifications"))).scalar() == 0
             await conn.execute(text("SELECT set_config('xspeeria.scope', 'system', true)"))
             assert (await conn.execute(text("SELECT count(*) FROM notifications"))).scalar() == 5
@@ -232,11 +248,34 @@ async def test_a_connection_that_never_sets_a_scope_sees_nothing(
         await bare.dispose()
 
 
+async def test_the_table_owner_is_held_too_unless_superuser(
+    db_settings: Settings, database_url: str, k: K
+) -> None:
+    await _two_customers(k, db_settings)
+    owner = create_async_engine(database_url)
+    try:
+        async with owner.connect() as conn:
+            superuser = (
+                await conn.execute(
+                    text(
+                        "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user"
+                    )
+                )
+            ).scalar()
+            seen = (await conn.execute(text("SELECT count(*) FROM notifications"))).scalar()
+            # FORCE ROW LEVEL SECURITY: the owner sees nothing without a scope. Only a superuser
+            # or BYPASSRLS role sees everything, which is why the app must never use one.
+            assert seen == (5 if superuser else 0)
+            await conn.rollback()
+    finally:
+        await owner.dispose()
+
+
 async def test_a_bad_user_setting_never_matches(
     db_settings: Settings, database_url: str, k: K
 ) -> None:
     await _two_customers(k, db_settings)
-    bare = create_async_engine(database_url)
+    bare = _as_app_role(create_async_engine(database_url))
     try:
         async with bare.connect() as conn:
             await conn.execute(text("SELECT set_config('xspeeria.scope', 'user', true)"))
