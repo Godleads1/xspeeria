@@ -1,15 +1,10 @@
 import type { NextConfig } from 'next';
 
 /**
- * Baseline security headers for the admin console (SEC-14, ASVS V14.4). The CSP below holds
- * only directives that do not depend on how Next injects its scripts; a full script-src
- * policy with nonces is added with the first real admin page (it needs middleware).
+ * Baseline security headers for the admin console (SEC-14, ASVS V14.4). The
+ * Content-Security-Policy, with a fresh script nonce per page, is set in `proxy.ts` (ADR-077).
  */
 const SECURITY_HEADERS = [
-  {
-    key: 'Content-Security-Policy',
-    value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
-  },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'no-referrer' },

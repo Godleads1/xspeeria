@@ -99,3 +99,6 @@ admin/AGENTS.md
 
 # ADR-060: staff photos on a developer computer (LOCAL_PHOTO_DIR); never commit them.
 .local-photos/
+
+# Expo writes this stub when `expo start` runs from the repo root; each workspace has its own.
+/tsconfig.json

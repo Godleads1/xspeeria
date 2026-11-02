@@ -47,7 +47,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 | SEC-011 | IMPLEMENTED (partial) | Sign-in routes: 10 requests a minute per address (ADR-025). Offer routes deliberately not on that shared counter (ADR-030 §2, `test_browsing_offers_does_not_use_up_the_sign_in_limit`); offer, marketplace and match routes: 60 a minute per user (ADR-031, `test_market_requests_are_limited_per_user`). | Body-size limits, timeouts; Redis before more than one server. |
 | SEC-012 | NOT STARTED | No cookie auth, no outbound requests, no redirects yet. | Decide token vs cookie; CSRF if cookies; SSRF allow-list for partner calls. |
 | SEC-013 | IMPLEMENTED (partial) | Admin security headers (`admin/next.config.ts`, checked as served locally 2026-10-17); backend CORS empty by default (`backend/app/core/config.py`); docs/OpenAPI off in production. | CSP script-src with nonces; TLS config UNKNOWN (no deployment). |
-| SEC-014 | IMPLEMENTED (partial, ADR-072) | Live API inventory: System Health lists every route and outside service actually used, with counts. `/health` still returns the environment name. | A written API inventory; trim `/health` output. |
+| SEC-014 | IMPLEMENTED (partial, ADR-072, ADR-077) | Live API inventory: System Health lists every route and outside service actually used, with counts. `/health` answers `{"status": "ok"}` only (`test_health.py`). | A written API inventory. |
 
 ## D. Mobile application security
 
@@ -87,7 +87,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 |---|---|---|---|
 | SEC-031 | **BLOCKED** (upgrade deferred by product owner, ADR-019 §4) | PRs are used, but **branch protection is unavailable**: GitHub returns 403 "Upgrade to GitHub Pro or make this repository public" (checked 2026-10-17). The repo must stay private (licensed fonts). | Product owner: upgrade the plan (GitHub Pro / Team) so `main` can require a reviewed PR and passing checks; then add CODEOWNERS. |
 | SEC-032 | IMPLEMENTED | CI: pytest (unit + PostgreSQL integration), ruff, mypy strict, bandit, ESLint, typecheck, jest/vitest, pip-audit, npm audit gate, gitleaks (`.github/workflows/ci.yml`). | No TypeScript SAST beyond ESLint (CodeQL needs GitHub Advanced Security on private repos). |
-| SEC-033 | NOT STARTED | Lockfiles exist (`uv.lock`, `package-lock.json`). | Generate SBOM (e.g. CycloneDX) in CI and keep it as an artifact. |
+| SEC-033 | IMPLEMENTED (ADR-077) | CycloneDX SBOMs for Python (uv.lock, runtime) and npm (production packages) built on every CI run, checked non-empty by `scripts/check_sbom.py` (`test_sbom_check.py`), and kept as build artifacts for 90 days. | Feed the SBOMs to a vulnerability monitor once hosting exists. |
 | SEC-034 | NOT STARTED | `app_env` setting exists; no environments deployed. | Separate accounts/credentials/data per environment. |
 | SEC-035 | NOT STARTED | No deployment. | OIDC short-lived deploy identity; rollback runbook. |
 
