@@ -108,6 +108,8 @@ After a transfer is initiated, the BAL polls checkTransferStatus as a fallback a
 
 Before a user’s bank account can be used as a settlement destination, it is validated via the partner’s account-name-inquiry capability: Xspeeria submits an account number and bank code, and the partner returns the account holder’s registered name for the user to confirm matches their KYC-verified legal name (Document 05, KYCCases.legal_name) before the account is saved.
 
+> **Amended by the product owner, 2026-11-02 (DEC-007, ADR-083), for payout accounts:** a payout account need **not** be in the user's own name. The owner's example is a school's account for a child's fees. The partner still returns the holder's registered name, and the user still confirms it. They confirm that it is **the person or business they mean to pay**, not that it matches their own name. Paying **into** escrow is unchanged: it must come from an account in the user's own name. Lawyer and partner-bank confirmation for AML is still open.
+
 3.4 Webhook Interface
 
 See Section 5 for the full webhook contract. At the interface-contract level, every partner adapter must be capable of receiving and acknowledging webhook callbacks for at minimum: transfer.completed, transfer.failed, and transfer.reversed events.

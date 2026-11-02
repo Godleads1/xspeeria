@@ -52,7 +52,7 @@ export function AddBeneficiaryScreen({
       currency,
       bank: values.bankName ?? '',
       accountNumber: values.accountNumber ?? '',
-      // The account must be in the user's own KYC name (§3.3); the bank confirms it.
+      // Demo build: the holder name is a stand-in. Server builds get it from the bank (ADR-083).
       name: PROFILE_USER.fullName,
     });
     setValues({});
@@ -92,7 +92,7 @@ export function AddBeneficiaryScreen({
               <Text style={styles.selectPlaceholder}>{tr("Confirmed by your bank")}</Text>
             </View>
           </OutlinedField>
-          <Text style={styles.help}>{tr("You can only add accounts in your own name ({{fullName}}).", { fullName: PROFILE_USER.fullName })}</Text>
+          <Text style={styles.help}>{tr("You can add your own account or someone else’s, for example a school’s.")}</Text>
         </View>
       </ScrollView>
 

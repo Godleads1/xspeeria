@@ -165,7 +165,7 @@ export function ConfirmTradeSheet({
             {side === "buy" ? (
               <Row label={tr("You receive")} value={`${formatHundredths(receiveMinor)} ${receiveCur}`} strong />
             ) : null}
-            <Text style={styles.feeNote}>{tr("Next, choose the accounts in your name that the partner bank pays.")}</Text>
+            <Text style={styles.feeNote}>{tr("Next, choose the accounts the partner bank pays.")}</Text>
           </View>
 
           <View style={styles.hint}>
