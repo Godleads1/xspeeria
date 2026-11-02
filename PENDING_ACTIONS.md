@@ -1,7 +1,7 @@
 # Pending Actions
 
 Things we agreed to do later. When it is time, pick an item, do it, and tick it off here.
-Last updated: 19 Oct 2026.
+Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 
 **Owner:** *You* = product owner decision or action. *Build* = engineering work.
 
@@ -9,8 +9,8 @@ Last updated: 19 Oct 2026.
 
 - [x] **Connect the mobile app to the server sign-in and 2FA** — *Build* — done 18 Oct 2026 for development builds (ADR-027, `docs/RUN_APP_WITH_SERVER.md`). Still to connect:
   - ~~Security screen 2FA management~~ — done (ADR-034).
-  - Face ID log-in (needs passkeys).
-  - Profile name and details from KYC (Home still shows the demo name).
+  - ~~Face ID log-in (needs passkeys)~~ — replaced by fingerprint unlock and the face check (ADR-048, ADR-054).
+  - ~~Profile name and details from KYC~~ — done (ADR-055, PR #48).
 - [ ] *(original plan, for reference)* **Connect the mobile app to the server sign-in and 2FA**
   - Replace the demo log-in and sign-up with the real server (`/api/v1/auth/...`).
   - Add the authenticator set-up screens (QR code and secret from the server, first code, recovery codes shown once).
@@ -85,7 +85,7 @@ Last updated: 19 Oct 2026.
 ## 3. Waiting on something else
 
 - [ ] **Sharper Figma artwork** when the Figma daily limit resets (or you export them): Home card texture (51:1720), avatar photo (39:2968), card backgrounds (1036:4840 / 4864 / 4888) at 3×. (ADR-023)
-- [ ] **node-forge npm audit exception expires 27 Nov 2026** — review before then or CI will fail; zod was fixed on 27 Oct (override to 4.6.7), so only node-forge is left. (`.github/npm-audit-exceptions.json`, ADR-017)
+- [x] **node-forge npm audit exception** — no longer needed: the Expo SDK 58 upgrade (PR #92) left no npm audit exceptions (`.github/npm-audit-exceptions.json` is empty). (2 Nov 2026)
 
 ## 4. Before going live (production)
 
@@ -93,8 +93,8 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 
 - [x] ~~**Passkeys**~~ — replaced by fingerprint on a trusted phone + face check (ADR-054, owner 2026-10-20). (Checked 2026-10-27.)
 - [ ] **Shared rate limiter (Redis)** before running more than one server; trusted-proxy setting for client addresses. (ADR-025 §4)
-- [ ] **Secret manager and key rotation** for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
-- [ ] **Database row-level security** as a second layer of permission checks. (ADR-025 §1.4)
+- [ ] **Secret manager** (key rotation tools are built: ADR-076, PR #95) for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
+- [x] **Database row-level security** as a second layer of permission checks — built (ADR-078, PR #96). At deployment: the app's database login must not be a superuser or have `BYPASSRLS`.
 - [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
 - [ ] **Support's procedure** for a customer who can't pass the face check (lost phone, changed appearance) — *Build drafts, You approve*. (ADR-054)
 - [x] **Email address verification** — built: sign-up needs the email code before any session (ADR-054). A real email provider is still needed (§2). (Checked 2026-10-27.)
@@ -102,12 +102,20 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
 - [ ] **Connect a real SMS and email provider** once chosen — *Build* (only developer senders exist).
 - [ ] **Super Admin hardware security key** before live money — *Build* (ADR-051 Decision 2).
-- [ ] **Backups with a recorded restore, and a "pause all deals" switch** — *Build*, after hosting. (SEC-030, SEC-039)
-- [ ] **Deployment basics:** separate environments, deploy pipeline, SBOM, alerting, incident and disaster-recovery runbooks. (SEC-033 to SEC-039)
+- [ ] **Backups with a recorded restore** — *Build*, after hosting. (SEC-030) The "pause all deals" switch and "sign everyone out" are built (ADR-075, PR #94).
+- [ ] **Deployment basics:** separate environments, deploy pipeline and a disaster-recovery runbook. (SEC-033 to SEC-039) Done already: SBOM in CI (ADR-077), operations alerts and the incident plan (ADR-074).
 - [ ] **Independent penetration test** before launch. (SEC-040)
 - [ ] **Rule to keep:** screenshots of the development build show demo balances — never use them in marketing, investor, partner or regulator material. (ADR-023 §3)
 
+## 4b. Buildable now, no outside party needed (added 2 Nov 2026)
+
+- [ ] **Delete account** in the app and server (the screen says it isn't built). Needs your rule for records kept by law.
+- [ ] **Super Admin hardware security key** (ADR-051 Decision 2).
+- [ ] **Shared rate limiter** (database-backed until Redis exists) — readiness H-1.
+- [ ] **Resend email sender** behind the existing interface — ready to switch on when the account and domain exist.
+- [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
+
 ## 5. Housekeeping
 
-- [ ] Close PR #19 without merging: its 2FA server work already reached `main` through later PRs (ADR-026). (Checked 2026-10-27.)
+- [x] Close PR #19 without merging: its 2FA server work already reached `main` through later PRs (ADR-026). (Checked 2026-10-27.)
 - [ ] Delete old branches on GitHub: `fix/security-review-findings`, `feat/backend-auth-slice`, `feat/auth-1-server`, `feat/auth-2-two-factor`.

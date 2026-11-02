@@ -15,10 +15,58 @@ implementation prohibition.
 
 ## Current Status
 
-**PHASE 1 — CONTROLLED IMPLEMENTATION GO remains in force.** Implementation is **PAUSED at
-governance gates** ahead of Milestone 4.1C.
+**Updated 2 Nov 2026 from the merged pull requests (#18–#97).** Phase 1 controlled implementation
+continues. **Production activation is NOT GRANTED**, and the readiness review of 27 Oct 2026
+classifies the product **DO NOT LAUNCH**
+(`docs/13-governance/PRODUCTION_READINESS_REVIEW_2026-10-27.md`). Everything below runs in
+development and testing only. Money moves only against the **pretend partner bank** (ADR-037).
 
-| Milestone | State |
+| Area | State | Where |
+|---|---|---|
+| Sign-in: phone + email codes, 6-digit PIN, lockout, sessions | **Merged** | #18, #20; ADR-024/025 |
+| Second checks: face check, email codes, fingerprint unlock; PIN reset | **Merged** | #42, #47; ADR-046/048/054 |
+| Identity checks (Didit) per country, two-person review of held checks | **Merged** | #32, #33, #37, #48, #80, #85; ADR-039–043/055/069/071 |
+| Tiers and trade limits (Tiers 0–3) | **Merged** | #62, #63; ADR-058 |
+| Offers, buy requests (multi-currency), market search, location rule, editing | **Merged** | #21, #22, #49–#61; ADR-028–030/056/059 |
+| Taking an offer (Match), waiting queue, one 5-minute extension | **Merged** | #23, #24, #60; ADR-031/059 |
+| Payout accounts and the 30-minute preparation window | **Merged** | #27, #28; ADR-035/036 |
+| Escrow steps — **pretend bank only**, immediate payout once both paid in | **Merged** | #29–#31; ADR-037/038, DEC-044 |
+| My Deals, notifications (in-app + phone push code), disputes | **Merged** | #25, #40, #43, #52; ADR-033/044/052/057 |
+| Admin console: staff sign-in, roles, audit, users, disputes, reversals, outages, adverts, fraud, dashboard, bell, 7 languages, dark mode | **Merged** | #64–#84; ADR-060–070 |
+| API monitoring, customer activity log, deal timeline | **Merged** | #88, #89; ADR-072/073 |
+| Security review: all 17 findings fixed | **Merged** | #90 |
+| Operations alerts, Sentry (off), incident plan | **Merged** | #91; ADR-074 |
+| Expo SDK 58 upgrade | **Merged** | #92 |
+| SBOM in CI, `/health` status only, console nonce script policy | **Merged** | #93; ADR-077 |
+| Emergency controls: pause all deals, sign everyone out (SEC-039) | **Merged** | #94; ADR-075 |
+| Key rotation tools (payout-account and identity keys) | **Merged** | #95; ADR-076 |
+| Row-level security, the database's second lock (readiness H-3) | **Merged** | #96; ADR-078 |
+| No private data without a login; less fingerprinting; no throwaway emails | **Merged** | #97; ADR-079 |
+
+### Not built yet (code)
+
+- **Delete account** (the app screen says it isn't built; nothing is deleted).
+- **Real wallet / ledger**: Home and Cards show Figma demo figures in development builds only
+  (ADR-023). No ledger exists (P-1/P-2 open).
+- **Super Admin hardware security key** (ADR-051 Decision 2; required before live money).
+- **Shared rate limiter** (Redis or database) before more than one server (readiness H-1).
+- **Real SMS and email senders** (only developer senders exist; Resend is chosen for email).
+- **Fraud checks replacing the 24-hour payout hold** (FX-03) before real payouts.
+
+### Waiting on outside parties or owner decisions
+
+Partner bank and licence (Decision 4); hosting, backups and a secret manager; SMS provider;
+Resend account and domain; Expo/Firebase push accounts; Apple and Google developer accounts and
+release builds; official-rate source (Decision 3); native-speaker review of languages;
+independent penetration test; GitHub plan that can protect `main`. Details and owners:
+`PENDING_ACTIONS.md`.
+
+### Status history
+
+The milestone table below was the status as of 18–19 Oct 2026. Every "awaiting merge" entry in
+it has since merged (PRs #21–#33).
+
+| Milestone | State (as of 19 Oct 2026) |
 |---|---|
 | **Milestone 1** — foundation, design system, app shell | **COMPLETE** — PR #5, `a3eb4c0`, 2026-08-25 |
 | **Milestone 4.1A** — Stage 4 persistence foundation | **COMPLETE** — PR #6, `f5ebc12`, 2026-08-27 |
@@ -32,6 +80,9 @@ governance gates** ahead of Milestone 4.1C.
 | **Milestone KYC-1** — identity checks with Didit | **BUILT 2026-10-19, awaiting merge** (ADR-039, DEC-046) — server only; app screens next; migration 0010 |
 | **Milestone AUTH-2** — server 2FA (TOTP, recovery codes, trusted devices, step-up; no money tables) | **AUTHORIZED 2026-10-18** — `docs/adr/026-auth-2-two-factor.md` (DEC-032) |
 | **Milestone AUTH-1** — server sign-in (users, sessions, phone verification; no money tables) | **COMPLETE** — PR #18; **AUTHORIZED 2026-10-18** — `docs/adr/025-auth-1-server-sign-in.md` (DEC-031). Decision 2 resolved by ADR-008/024/025. |
+
+*Historical (August–September 2026), kept as written. The milestones it says are blocked were
+later authorized (18–19 Oct 2026) and merged; see the table at the top of this section.*
 
 Application implementation may begin **only** inside an approved milestone. Domain persistence is
 limited to the Milestone 4.1B approved scope — the `currency_definitions` table and the reusable
@@ -291,7 +342,13 @@ Python + FastAPI
 
 ## Current Blockers
 
-### Gates blocking Milestone 4.1C
+**Today (2 Nov 2026):** the blockers are outside parties and owner decisions, not engineering
+gates. Partner bank and licence (Decision 4), official rate (Decision 3), hosting, SMS/email,
+app-store accounts, and the items in `PENDING_ACTIONS.md` §2–§4. **GATE 4.1B-CD3 is discharged
+(ADR-028) and Decision 2 is resolved (ADR-008/024/025)**; the subsections below are the
+historical record of how those gates stood before 18 Oct 2026.
+
+### Gates blocking Milestone 4.1C (historical — resolved)
 
 - **STEP 9 — DISCHARGED — NO LONGER BLOCKING.** Behavioural verification of the real
   `currency_definitions` table in PostgreSQL is **COMPLETE — HUMAN EVIDENCE ACCEPTED AND CI
@@ -345,7 +402,23 @@ phase transition from child payout records.
 
 ## Next Action
 
-**NEXT HUMAN ACTION REQUIRED:**
+**As of 2 Nov 2026:**
+
+1. **Owner tests the app and the console** on the development setup
+   (`docs/RUN_APP_WITH_SERVER.md`, `docs/TEST_FROM_START_TO_FINISH.md`) before new building
+   starts.
+2. **Outside decisions and accounts** (owner): partner bank, hosting, SMS provider, Resend
+   account and domain, Expo/Firebase push, Apple and Google developer accounts. Most remaining
+   engineering waits on these.
+3. **Buildable without outside parties** (once the owner says go): delete account; Super Admin
+   hardware security key; shared rate limiter; real SMS/email senders behind the chosen
+   providers; release-build configuration.
+4. **Still open with Legal, Compliance and Finance:** Decisions 3 and 4, U-1/U-2, P-1 … P-11 and
+   the `PayoutExecution` aggregate semantics (ADR-001 §14.7).
+
+*Historical next actions (August–September 2026), kept as written:*
+
+~~**NEXT HUMAN ACTION REQUIRED:**~~ *(superseded)*
 Resolve the outstanding governance gates applicable before Milestone 4.1C, beginning with a
 separately authorized human decision process.
 
