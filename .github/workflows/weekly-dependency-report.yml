@@ -1,0 +1,55 @@
+name: Weekly Dependency Report
+
+# Every Monday, and on demand: every known vulnerability in every package, developer tools
+# included (the pull-request gate in ci.yml checks only what ships). Advisories are published
+# between pull requests, so this catches them even in a quiet week.
+#
+# Reports everything in the run summary. Fails (so GitHub notifies the repository owner) only
+# on a high or critical advisory, in any package. Moderates and lows are listed, not blocking.
+# Changes nothing in the repository.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC (06:17 in Lagos)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Dependency report (all packages)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install workspace from lockfile
+        run: npm ci
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+
+      - name: Install Python dependencies from lockfile
+        run: |
+          uv python install 3.12
+          uv sync --locked --python 3.12
+
+      # `|| true`: both tools exit non-zero whenever they find anything; the report step
+      # below makes the pass/fail decision from their JSON.
+      - name: Audit npm packages (developer tools included)
+        run: npm audit --json > "$RUNNER_TEMP/npm.json" || true
+
+      - name: Audit Python packages (developer tools included)
+        run: uv run --no-sync pip-audit --format json --progress-spinner off > "$RUNNER_TEMP/pip.json" || true
+
+      - name: Write the report
+        run: python3 scripts/weekly_dependency_report.py "$RUNNER_TEMP/npm.json" "$RUNNER_TEMP/pip.json" >> "$GITHUB_STEP_SUMMARY"
