@@ -1,0 +1,23 @@
+# ADR-089: only what the images need goes into a build. Secrets never do.
+**/.env
+**/.env.*
+!.env.example
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.next
+**/*.tsbuildinfo
+.git
+.github
+.claude
+docs
+reference
+assets
+mobile/*
+!mobile/package.json
+backend/tests
+*.md
+!admin/README.md
