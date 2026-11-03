@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.db.row_scope import acting_for_service
 from app.domain.offer_rules import SCALE
 from app.domain.tier_rules import LIMITS, day_start, month_start, naira_minor_of
 from app.models.identity import User
@@ -115,9 +116,18 @@ async def check_new_deal(
     await db.execute(select(User.id).where(User.id.in_(people)).order_by(User.id).with_for_update())
     # The taker first: when both would go over, tell the taker about their own limit.
     for person in sorted(people, key=lambda p: p != taker_id):
-        tier = await tier_of(db, person, settings)
-        limits = LIMITS[tier]
         mine = person == taker_id
+        if mine:
+            tier = await tier_of(db, person, settings)
+            day, month = await usage(db, person, now)
+        else:
+            # The owner's identity check and tier checks are their private rows (ADR-078);
+            # the taker's request can't see them. Only the owner's tier and usage are read
+            # here, never shown: a refusal says only "can't be taken right now".
+            async with acting_for_service(db, "deal limits: the other party's tier and usage"):
+                tier = await tier_of(db, person, settings)
+                day, month = await usage(db, person, now)
+        limits = LIMITS[tier]
         if limits is None:
             raise AppError(
                 "AUTH_403_KYC_REQUIRED" if mine else "TRADE_403_COUNTERPARTY_LIMIT",
@@ -126,7 +136,6 @@ async def check_new_deal(
                 else "This offer can’t be taken right now. Try another offer.",
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-        day, month = await usage(db, person, now)
         over_day = day + deal > limits.daily_minor
         over_month = month + deal > limits.monthly_minor
         if not (over_day or over_month):

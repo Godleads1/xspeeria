@@ -319,7 +319,9 @@ def report(stats: Stats, users: int, workers: int, seconds: float) -> dict[str, 
     }
 
 
-async def run(users: list[int], seconds: int, workers: list[int]) -> list[dict[str, Any]]:
+async def run(
+    users: list[int], seconds: int, workers: list[int], same_address: bool = False
+) -> list[dict[str, Any]]:
     settings = Settings(_env_file=None, database_url=os.environ["DATABASE_URL"])  # type: ignore[call-arg]
     results = []
     for w in workers:
@@ -328,32 +330,67 @@ async def run(users: list[int], seconds: int, workers: list[int]) -> list[dict[s
         offers = [p.offer_id for p in people if p.offer_id]
         server = start_server(settings, w)
         try:
-            limits = httpx.Limits(max_connections=max(users) + 10)
-            async with AsyncClient(
-                base_url=f"http://127.0.0.1:{PORT}", timeout=10, limits=limits
-            ) as client:
-                await _wait_up(client)
-                for n in users:
-                    stats = Stats()
-                    until = time.perf_counter() + seconds
-                    started = time.perf_counter()
-                    await asyncio.gather(
-                        *(customer_loop(client, people[i], offers, stats, until) for i in range(n))
+            async with AsyncClient(base_url=f"http://127.0.0.1:{PORT}", timeout=10) as probe:
+                await _wait_up(probe)
+            for n in users:
+                # Each customer from their own address (127.0.x.y), as real phones are; or all
+                # from one address (--same-address: many phones behind one mobile-network NAT).
+                clients = [
+                    AsyncClient(
+                        base_url=f"http://127.0.0.1:{PORT}",
+                        timeout=10,
+                        transport=httpx.AsyncHTTPTransport(
+                            local_address=None
+                            if same_address
+                            else f"127.0.{1 + i // 250}.{1 + i % 250}"
+                        ),
                     )
-                    result = report(stats, n, w, time.perf_counter() - started)
-                    results.append(result)
-                    print(_line(result), flush=True)
+                    for i in range(n)
+                ]
+                stats = Stats()
+                busy_before = _cpu_times()
+                until = time.perf_counter() + seconds
+                started = time.perf_counter()
+                try:
+                    await asyncio.gather(
+                        *(
+                            customer_loop(clients[i], people[i], offers, stats, until)
+                            for i in range(n)
+                        )
+                    )
+                finally:
+                    for c in clients:
+                        await c.aclose()
+                result = report(stats, n, w, time.perf_counter() - started)
+                result["machine_cpu_busy_percent"] = _busy(busy_before, _cpu_times())
+                result["same_address"] = same_address
+                results.append(result)
+                print(_line(result), flush=True)
         finally:
             server.send_signal(signal.SIGINT)
             server.wait(timeout=30)
     return results
 
 
+def _cpu_times() -> tuple[int, int]:
+    """(busy, total) CPU time of the whole machine, from /proc/stat (Linux)."""
+    with open("/proc/stat") as f:
+        parts = [int(x) for x in f.readline().split()[1:]]
+    idle = parts[3] + parts[4]
+    return sum(parts) - idle, sum(parts)
+
+
+def _busy(before: tuple[int, int], after: tuple[int, int]) -> float:
+    total = after[1] - before[1]
+    return round(100 * (after[0] - before[0]) / total, 1) if total else 0.0
+
+
 def _line(r: dict[str, Any]) -> str:
     return (
         f"{r['users']:>4} users, {r['server_processes']} process(es): "
         f"{r['requests_per_second']:>6} req/s, median {r['median_ms']} ms, "
-        f"p95 {r['p95_ms']} ms, p99 {r['p99_ms']} ms, errors {r['errors']}/{r['requests']}"
+        f"p95 {r['p95_ms']} ms, p99 {r['p99_ms']} ms, errors {r['errors']}/{r['requests']}, "
+        f"machine CPU {r.get('machine_cpu_busy_percent')}%"
     )
 
 
@@ -363,12 +400,18 @@ def main() -> None:
     parser.add_argument("--seconds", type=int, default=45)
     parser.add_argument("--server-workers", default="1,2")
     parser.add_argument("--json", help="also write the results to this file")
+    parser.add_argument(
+        "--same-address",
+        action="store_true",
+        help="every customer from one address (many phones behind one mobile-network NAT)",
+    )
     a = parser.parse_args()
     results = asyncio.run(
         run(
             [int(x) for x in a.users.split(",")],
             a.seconds,
             [int(x) for x in a.server_workers.split(",")],
+            a.same_address,
         )
     )
     if a.json:
