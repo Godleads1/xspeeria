@@ -76,7 +76,8 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
 - [ ] **ID checks (KYC) and anti-money-laundering** — provider chosen: **Didit** (ADR-039, server built). Still needed: a Didit account and workflow (ID + liveness + face match + AML), its data processing agreement, NIN/BVN support (ask Didit), and a compliance officer to own the rules.
 - [ ] **SMS and email provider accounts.**
-- [ ] **Hosting** — cloud account (database, Redis, servers; separate test and live), domain name, secret manager. Then move staff and advert photos from the local folder (`LOCAL_PHOTO_DIR`) to the private Cloudflare R2 bucket (ADR-049).
+- [x] **Lawyer: does the CBN data-localisation circular (15 June 2026) cover Xspeeria?** — **Yes** (owner, 3 Nov 2026, DEC-096). Payment data and backups stay in Nigeria from 1 Jan 2027; a hosting region abroad (e.g. AWS Cape Town) is ruled out for it. Still to ask the lawyer: third-party payouts under AML rules; whether Didit, Resend and photo storage (Cloudflare R2) may hold data abroad.
+- [ ] **Hosting, in Nigeria** (DEC-096) — a Nigerian cloud, or the AWS Lagos Local Zone; cloud account (database, servers; separate test and live), domain name, secret manager. Then move staff and advert photos from the local folder (`LOCAL_PHOTO_DIR`) to the private Cloudflare R2 bucket (ADR-049).
 - [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).
 - [ ] **Admin panel inputs** — staff roles and permissions; who reviews disputes, ID checks and frozen accounts.
 - [ ] **Monitoring** — alerting tool and an on-call person (runbooks can be written by *Build*).
