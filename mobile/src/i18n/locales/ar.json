@@ -1424,5 +1424,22 @@
  "• After 5 wrong codes, 2 FA is locked for 15 minutes.": "• بعد 5 رموز خاطئة، تُقفل المصادقة الثنائية لمدة 15 دقيقة.",
  "• Good light and about 2 minutes": "• إضاءة جيدة ونحو دقيقتين",
  "• We never send codes by SMS, and Xspeeria staff will never ask for your codes.": "• لا نرسل الرموز برسائل نصية أبدًا، ولن يطلب موظفو Xspeeria رموزك أبدًا.",
- "• You must be 18 or older": "• يجب أن يكون عمرك 18 عامًا أو أكثر"
+ "• You must be 18 or older": "• يجب أن يكون عمرك 18 عامًا أو أكثر",
+ "Restore your account?": "استعادة حسابك؟",
+ "You asked to delete this account. You can restore it until {{date}}. Your payout accounts and trusted phones need adding again.": "لقد طلبت حذف هذا الحساب. يمكنك استعادته حتى {{date}}. ستحتاج إلى إضافة حسابات الدفع والهواتف الموثوقة مرة أخرى.",
+ "You asked to delete this account. You can still restore it. Your payout accounts and trusted phones need adding again.": "لقد طلبت حذف هذا الحساب. لا يزال بإمكانك استعادته. ستحتاج إلى إضافة حسابات الدفع والهواتف الموثوقة مرة أخرى.",
+ "Restore": "استعادة",
+ "Your account can't be deleted yet": "لا يمكن حذف حسابك بعد",
+ "Your account is closed": "تم إغلاق حسابك",
+ "You can restore it until {{date}} by logging in with your PIN. We've emailed you the details.": "يمكنك استعادته حتى {{date}} بتسجيل الدخول باستخدام رمز PIN. أرسلنا إليك التفاصيل بالبريد الإلكتروني.",
+ "Something went wrong": "حدث خطأ ما",
+ "Delete your account?": "حذف حسابك؟",
+ "Your account closes now: you're logged out everywhere, your open offers are withdrawn and your payout accounts are switched off. You can undo this for 14 days by logging in. Records the law requires are kept for 5 years, for our compliance team only.": "يُغلق حسابك الآن: يتم تسجيل خروجك من كل مكان، وتُسحب عروضك المفتوحة، وتُعطّل حسابات الدفع. يمكنك التراجع خلال 14 يومًا بتسجيل الدخول. تُحفظ السجلات التي يفرضها القانون لمدة 5 سنوات، لفريق الامتثال لدينا فقط.",
+ "Keep my account": "الاحتفاظ بحسابي",
+ "A deal is still in progress. Let it finish first.": "لا تزال هناك صفقة جارية. انتظر حتى تكتمل أولاً.",
+ "A dispute is still open.": "لا يزال هناك نزاع مفتوح.",
+ "A refund is waiting for a decision.": "هناك استرداد بانتظار قرار.",
+ "Our team is reviewing your account. Contact support.": "يراجع فريقنا حسابك. تواصل مع الدعم.",
+ "Your account is frozen or suspended. Contact support.": "حسابك مجمّد أو موقوف. تواصل مع الدعم.",
+ "Delete your account": "حذف حسابك"
 }

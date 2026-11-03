@@ -184,7 +184,7 @@ class ActivityAdminService:
     ) -> dict[str, Any]:
         self._need(p)
         who = await self._rows(
-            "SELECT u.id, u.email, u.phone, u.status, u.created_at, "
+            "SELECT u.id, u.email, u.phone, u.status, u.created_at, u.deletion_requested_at, "
             "(SELECT legal_name FROM kyc_cases k WHERE k.user_id = u.id AND k.status = "
             "'approved' AND legal_name IS NOT NULL ORDER BY decided_at DESC LIMIT 1) AS name "
             "FROM users u WHERE u.id = :u",
@@ -193,6 +193,10 @@ class ActivityAdminService:
         if not who:
             await self._db.rollback()
             raise _not_found()
+        if who[0]["deletion_requested_at"] is not None and not p.can("kyc.read"):
+            # ADR-095 / DEC-106: a deleted account's kept records are for Compliance only.
+            await self._db.rollback()
+            raise forbidden()
         # Every filter is a bound parameter in one fixed query: no SQL is built from text.
         params: dict[str, Any] = {
             "u": user_id,

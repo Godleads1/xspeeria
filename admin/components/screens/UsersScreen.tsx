@@ -28,7 +28,11 @@ import { when } from './common';
 
 const PAGE = 50;
 
-export function CustomerStatusChip({ status }: { status: CustomerStatus }): ReactElement {
+export function CustomerStatusChip({ status, deletion }: { status: CustomerStatus; deletion?: Customer['deletion'] }): ReactElement {
+  // ADR-095: the customer's own deletion (restorable for 14 days), then deleted.
+  if (deletion?.state === 'deleting')
+    return <StatusChip label={tr('Deleting, restorable until {{date}}', { date: when(deletion.restore_until) })} tone="error" />;
+  if (deletion?.state === 'deleted') return <StatusChip label={tr('Deleted by the customer')} tone="error" />;
   if (status === 'suspended') return <StatusChip label={tr('Suspended')} tone="warning" />;
   if (status === 'closed') return <StatusChip label={tr('Closed')} tone="error" />;
   return <StatusChip label={tr('Active')} tone="success" />;
@@ -99,7 +103,7 @@ export function UsersScreen(): ReactElement {
     void load();
   }, [load]);
 
-  const nameOf = (c: Customer) => c.name ?? c.email;
+  const nameOf = (c: Customer) => c.name ?? c.email ?? tr('Deleted account');
 
   async function act(reason: string): Promise<void> {
     if (!asking) return;
@@ -118,7 +122,7 @@ export function UsersScreen(): ReactElement {
   }
 
   const actionsFor = (c: Customer): RowAction[] => {
-    const activity: RowAction[] = canActivity
+    const activity: RowAction[] = canActivity && !(c.deletion && c.email === null)
       ? [{ label: tr('View activity'), testId: `activity-${c.id}`, onSelect: () => window.location.assign(`/users/activity?id=${encodeURIComponent(c.id)}`) }]
       : [];
     return [...activity, ...changesFor(c)];
@@ -146,11 +150,21 @@ export function UsersScreen(): ReactElement {
 
   const columns: readonly Column<Customer>[] = [
     { key: 'ref', header: tr('ID'), render: (c) => <span dir="ltr">{c.ref}</span> },
-    { key: 'name', header: tr('NAME'), render: (c) => c.name ?? <span title={tr('No approved identity check yet')}>—</span> },
-    { key: 'email', header: tr('E-MAIL ADDRESS'), render: (c) => c.email },
-    { key: 'phone', header: tr('PHONE'), render: (c) => <span dir="ltr">{c.phone}</span> },
+    {
+      key: 'name',
+      header: tr('NAME'),
+      render: (c) =>
+        c.name ??
+        (c.deletion && c.email === null ? (
+          <span title={tr('Kept records of a deleted account are for Compliance only.')}>{tr('Deleted account')}</span>
+        ) : (
+          <span title={tr('No approved identity check yet')}>—</span>
+        )),
+    },
+    { key: 'email', header: tr('E-MAIL ADDRESS'), render: (c) => c.email ?? '—' },
+    { key: 'phone', header: tr('PHONE'), render: (c) => <span dir="ltr">{c.phone ?? '—'}</span> },
     { key: 'last', header: tr('LAST LOGIN'), render: (c) => when(c.last_login_at) },
-    { key: 'status', header: tr('STATUS'), render: (c) => <CustomerStatusChip status={c.status} /> },
+    { key: 'status', header: tr('STATUS'), render: (c) => <CustomerStatusChip status={c.status} deletion={c.deletion} /> },
     ...(isSuper || canActivity
       ? [{ key: 'actions', header: tr('ACTION'), render: (c: Customer) => <RowMenu label={tr('Actions for {{name}}', { name: nameOf(c) })} actions={actionsFor(c)} testId={`menu-${c.id}`} /> }]
       : []),

@@ -1051,5 +1051,9 @@
  "This is your only security key. Add another one before removing it.": "هذا هو مفتاح الأمان الوحيد لديك. أضف مفتاحًا آخر قبل إزالته.",
  "Add your security key before using the console.": "أضف مفتاح الأمان قبل استخدام لوحة التحكم.",
  "Remove your own keys from My Profile.": "أزل مفاتيحك من ملفي الشخصي.",
- "Only a Super Admin can do this.": "لا يمكن القيام بذلك إلا للمشرف الأعلى."
+ "Only a Super Admin can do this.": "لا يمكن القيام بذلك إلا للمشرف الأعلى.",
+ "Deleted account": "حساب محذوف",
+ "Deleted by the customer": "حذفه العميل",
+ "Deleting, restorable until {{date}}": "قيد الحذف، قابل للاستعادة حتى {{date}}",
+ "Kept records of a deleted account are for Compliance only.": "السجلات المحفوظة لحساب محذوف مخصصة لفريق الامتثال فقط."
 }

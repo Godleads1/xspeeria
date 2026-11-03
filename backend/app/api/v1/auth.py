@@ -10,12 +10,15 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import (
     BearerToken,
     CurrentPrincipal,
     device_info,
+    get_auth_runtime,
     get_auth_service,
+    get_db_session,
     limit_by_account,
     limit_by_address,
 )
@@ -27,6 +30,8 @@ from app.schemas.auth import (
     ChangePinRequest,
     CheckCodesRequest,
     CheckResponse,
+    DeleteAccountCheckResponse,
+    DeleteAccountResponse,
     DeviceRequest,
     EmailCodeRequest,
     FaceStartResponse,
@@ -47,7 +52,8 @@ from app.schemas.auth import (
     TrustedDeviceResponse,
     VerifyPhoneRequest,
 )
-from app.services.auth import AuthService, CheckStarted, SignedIn, TokenPair
+from app.services.account_deletion import GRACE, AccountDeletionService
+from app.services.auth import AuthRuntime, AuthService, CheckStarted, SignedIn, TokenPair
 
 __all__ = ["account_router", "router"]
 
@@ -59,6 +65,18 @@ router = APIRouter(prefix="/api/v1", dependencies=[Depends(limit_by_address)])
 account_router = APIRouter(prefix="/api/v1", dependencies=[Depends(limit_by_account)])
 
 Service = Annotated[AuthService, Depends(get_auth_service)]
+
+
+async def get_account_deletion(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> AccountDeletionService:
+    # Same request, same database session as ``Service``: the step-up approval is spent in
+    # the deletion's own commit (ADR-095).
+    return AccountDeletionService(db, runtime.clock)
+
+
+Deletion = Annotated[AccountDeletionService, Depends(get_account_deletion)]
 
 
 StepUpToken = Annotated[str | None, Header(alias="X-Step-Up-Token", max_length=128)]
@@ -131,7 +149,9 @@ async def login(
     body: LoginRequest, request: Request, service: Service
 ) -> TokenResponse | CheckResponse:
     device = device_info(request, body.device_id)
-    result = await service.login(body.identifier, body.pin, device, body.device_token)
+    result = await service.login(
+        body.identifier, body.pin, device, body.device_token, restore_account=body.restore_account
+    )
     return _signed_in(result) if isinstance(result, SignedIn) else _check(result)
 
 
@@ -361,6 +381,36 @@ async def change_pin(
 ) -> Response:
     await service.change_pin(principal, body.current_pin, body.new_pin, step_up_token)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@account_router.get(
+    "/users/me/delete-account",
+    response_model=DeleteAccountCheckResponse,
+    tags=["users"],
+    summary="What would stop deleting my account now (ADR-095)",
+)
+async def delete_account_check(
+    principal: CurrentPrincipal, deletion: Deletion
+) -> DeleteAccountCheckResponse:
+    return DeleteAccountCheckResponse(
+        blockers=await deletion.check(principal.user_id), restore_days=GRACE.days
+    )
+
+
+@account_router.post(
+    "/users/me/delete-account",
+    response_model=DeleteAccountResponse,
+    tags=["users"],
+    summary="Delete my account (step-up: account.delete); restorable for 14 days",
+)
+async def delete_account(
+    principal: CurrentPrincipal,
+    service: Service,
+    deletion: Deletion,
+    step_up_token: StepUpToken = None,
+) -> DeleteAccountResponse:
+    await service.consume_step_up(principal, "account.delete", step_up_token)
+    return DeleteAccountResponse(restore_until=await deletion.request(principal.user_id))
 
 
 @router.post(

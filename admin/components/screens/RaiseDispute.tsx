@@ -188,7 +188,7 @@ export function RaiseDispute({ onCancel, onCreated }: { onCancel: () => void; on
               <h3 style={h3}>{tr('Review Dispute')}</h3>
               <dl data-testid="review" style={{ margin: 0, padding: 16, border: `1px solid ${color.border.strong}`, borderRadius: 4, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <Item label={tr('Category')} value={cat?.name ?? category} />
-                <Item label={tr('Customer')} value={customer ? (customer.name ?? customer.email) : '—'} />
+                <Item label={tr('Customer')} value={customer ? (customer.name ?? customer.email ?? tr('Deleted account')) : '—'} />
                 <Item label={tr('Resource ID')} value={deal.trim() || tr('None (support case)')} />
                 <Item label={tr('Describe the issue')} value={what.trim()} />
                 <Item label={tr('Desired Resolution')} value={want.trim() || '—'} />

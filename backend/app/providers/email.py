@@ -60,6 +60,8 @@ ALERT_TEXT = {
     "offer_withdrawn": "An offer on your Xspeeria account was withdrawn",
     "offer_taken": "An offer was taken from your Xspeeria account",
     "account_frozen": "Your Xspeeria account is frozen",
+    "account_deletion_requested": "Your Xspeeria account is being deleted",
+    "account_restored": "Your Xspeeria account was restored",
 }
 
 
@@ -183,6 +185,24 @@ def _alert_text(kind: str, device: str | None, report_url: str | None = None) ->
             "account with you and switch it back on.\n\n"
             "Please contact Xspeeria support. Never share your PIN or codes with anyone, "
             "including Xspeeria staff."
+        )
+    if kind == "account_deletion_requested":
+        # ADR-095 (owner 2026-11-03): what happens, what is kept and why, and how to undo it.
+        return (
+            "Your Xspeeria account was closed because someone asked to delete it.\n"
+            f"{on}\n"
+            "Every device is logged out, your open offers were withdrawn and your payout "
+            "accounts were switched off.\n\n"
+            "You can undo this for 14 days: open the app, log in with your phone number and "
+            "PIN, and choose Restore.\n\n"
+            "After 14 days we delete your in-app messages, phone notification settings and the "
+            "names of your trusted phones.\n\n"
+            "The law requires us to keep some records for 5 years after an account closes: "
+            "your name, phone, email and date of birth, your identity check and ID images, the "
+            "payout accounts you used, and your deals, disputes and refunds. Only our "
+            "compliance team can see them, and they are used for nothing else.\n\n"
+            "If you didn't ask for this, log in and choose Restore, then change your PIN. Never "
+            "share your PIN or codes with anyone, including Xspeeria staff."
         )
     if report_url:
         # ADR-084 (owner 2026-11-02): one link, to Xspeeria's own address, which only asks

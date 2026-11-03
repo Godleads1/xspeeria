@@ -4,7 +4,8 @@
  * Header (avatar, name, "Account details" ›), then the menu: Manage Beneficiaries, KYC and
  * limits, Security, FAQ, Contact Support, Referral Program, Terms and Conditions, the
  * Switch Mode row (light/dark, ADR-010), and a red "Delete Profile". Rows whose screens are not built yet say so
- * instead of doing nothing. MOCK DATA ONLY.
+ * instead of doing nothing. MOCK DATA ONLY in the demo; with a server, "Delete Profile" deletes the
+ * account for real (ADR-095: 14 days to undo by logging in).
  */
 
 import { useState, type ReactElement } from 'react';
@@ -18,6 +19,8 @@ import { ProfileAvatar } from './ProfileAvatar';
 import { useProfile } from './profileStore';
 import { k, tr, useLanguage } from "../../i18n";
 import { LanguageSheet, currentLanguageName } from './LanguageSheet';
+import { messageFor } from '../../api/client';
+import type { DeleteOutcome } from './deleteAccount';
 
 export type ProfileDestination =
   | 'account'
@@ -83,9 +86,15 @@ function Row({
 export function ProfileScreen({
   onOpen,
   onLogOut,
+  deleteAccount,
+  onDeleted,
 }: {
   /** Signs out after a confirmation (ADR-013). */
   onLogOut?: () => void;
+  /** ADR-095, server builds: delete the account (check, second check, delete). */
+  deleteAccount?: () => Promise<DeleteOutcome>;
+  /** After a deletion: the session has ended on the server; sign out here too. */
+  onDeleted?: () => void;
   /** Where each row goes; rows without a screen yet explain that they are coming. */
   onOpen?: (destination: ProfileDestination) => void;
 }): ReactElement {
@@ -99,12 +108,39 @@ export function ProfileScreen({
     else Alert.alert(title, tr("{{title}} is one of the next screens to be built.", { title }));
   };
 
+  const runDelete = async (): Promise<void> => {
+    if (!deleteAccount) return;
+    try {
+      const outcome = await deleteAccount();
+      if (outcome.kind === 'blocked') {
+        Alert.alert(tr("Your account can't be deleted yet"), outcome.reasons.join('\n'));
+      } else if (outcome.kind === 'deleted') {
+        Alert.alert(
+          tr("Your account is closed"),
+          tr("You can restore it until {{date}} by logging in with your PIN. We've emailed you the details.", { date: outcome.restoreUntil.toLocaleDateString() }),
+          [{ text: tr("OK"), onPress: onDeleted }],
+        );
+      }
+    } catch (e) {
+      Alert.alert(tr("Something went wrong"), messageFor(e));
+    }
+  };
+
   const confirmDelete = (): void =>
-    Alert.alert(
-      tr("Delete your profile?"),
-      tr("This closes your Xspeeria account. Trades in progress must finish first, and records we are required to keep by law are retained. This flow is not built yet — nothing will be deleted."),
-      [{ text: tr("Keep my profile"), style: 'cancel' }],
-    );
+    deleteAccount
+      ? Alert.alert(
+          tr("Delete your account?"),
+          tr("Your account closes now: you're logged out everywhere, your open offers are withdrawn and your payout accounts are switched off. You can undo this for 14 days by logging in. Records the law requires are kept for 5 years, for our compliance team only."),
+          [
+            { text: tr("Keep my account"), style: 'cancel' },
+            { text: tr("Delete"), style: 'destructive', onPress: () => void runDelete() },
+          ],
+        )
+      : Alert.alert(
+          tr("Delete your profile?"),
+          tr("This closes your Xspeeria account. Trades in progress must finish first, and records we are required to keep by law are retained. This flow is not built yet — nothing will be deleted."),
+          [{ text: tr("Keep my profile"), style: 'cancel' }],
+        );
 
   return (
     <Screen testID="profile-screen">

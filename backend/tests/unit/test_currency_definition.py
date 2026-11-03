@@ -525,4 +525,5 @@ class TestPackageRegistration:
             "0040_staff_security_keys.py",  # Super Admin security keys (ADR-081)
             "0041_security_notices.py",  # "this wasn't me" emails (ADR-084)
             "0042_app_role_grants.py",  # the app role's missing grant (ADR-094)
+            "0043_account_deletion.py",  # delete account, 14 days to undo (ADR-095)
         ]

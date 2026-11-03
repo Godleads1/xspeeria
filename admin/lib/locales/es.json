@@ -1051,5 +1051,9 @@
  "This is your only security key. Add another one before removing it.": "Es tu única llave de seguridad. Añade otra antes de quitarla.",
  "Add your security key before using the console.": "Añade tu llave de seguridad antes de usar la consola.",
  "Remove your own keys from My Profile.": "Quita tus propias llaves desde Mi perfil.",
- "Only a Super Admin can do this.": "Solo un Super Admin puede hacer esto."
+ "Only a Super Admin can do this.": "Solo un Super Admin puede hacer esto.",
+ "Deleted account": "Cuenta eliminada",
+ "Deleted by the customer": "Eliminada por el cliente",
+ "Deleting, restorable until {{date}}": "Eliminándose, restaurable hasta el {{date}}",
+ "Kept records of a deleted account are for Compliance only.": "Los registros guardados de una cuenta eliminada son solo para Cumplimiento."
 }

@@ -1051,5 +1051,9 @@
  "This is your only security key. Add another one before removing it.": "这是您唯一的安全密钥。请先添加另一把再移除。",
  "Add your security key before using the console.": "使用控制台前请先添加您的安全密钥。",
  "Remove your own keys from My Profile.": "请在“我的资料”中移除您自己的密钥。",
- "Only a Super Admin can do this.": "只有超级管理员可以执行此操作。"
+ "Only a Super Admin can do this.": "只有超级管理员可以执行此操作。",
+ "Deleted account": "已删除的账户",
+ "Deleted by the customer": "已由客户删除",
+ "Deleting, restorable until {{date}}": "删除中，可在 {{date}} 前恢复",
+ "Kept records of a deleted account are for Compliance only.": "已删除账户的保留记录仅供合规团队查看。"
 }

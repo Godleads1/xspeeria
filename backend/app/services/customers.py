@@ -6,6 +6,9 @@
 * Suspended: can't log in or trade until a Super Admin lifts it; sessions end at once; their
   offers leave the market. Deals already under way keep settling — escrow is never touched.
 * Closed: for good. The console can't reopen it; the phone and email stay taken.
+* ADR-095: an account the customer asked to delete shows as "deleting" (with the date it can
+  be restored until) or "deleted". Its kept records are for Compliance only (DEC-106): staff
+  without ``kyc.read`` see no name, email or phone for it, and can't find it by them.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from app.core.exceptions import AppError
 from app.models.identity import AuthSession, User
 from app.models.kyc import KycCase
 from app.models.staff import StaffAuditEntry
+from app.services.account_deletion import GRACE
 from app.services.security_notices import not_me_hold_reason
 from app.services.settlement import SettlementService
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
@@ -78,6 +82,8 @@ class CustomerAdminService:
             name.label("name"),
             kyc.label("kyc_status"),
             last_login.label("last_login_at"),
+            User.deletion_requested_at,
+            User.deleted_at,
         ).where(User.status != "pending_verification")
 
     async def list(
@@ -91,6 +97,7 @@ class CustomerAdminService:
     ) -> dict[str, Any]:
         if not principal.can("users.read"):
             raise forbidden()
+        compliance = principal.can("kyc.read")
         q = self._rows()
         if status_in:
             q = q.where(User.status == status_in)
@@ -106,6 +113,8 @@ class CustomerAdminService:
             if len(digits) >= 4:
                 conditions.append(User.phone.like(f"%{digits}%"))
             q = q.where(or_(*conditions))
+            if not compliance:
+                q = q.where(User.deletion_requested_at.is_(None))
         total = await self._db.scalar(select(func.count()).select_from(q.subquery()))
         rows = (
             await self._db.execute(
@@ -115,20 +124,32 @@ class CustomerAdminService:
         await self._db.rollback()
         return {
             "total": int(total or 0),
-            "items": [
-                {
-                    "id": r.id,
-                    "ref": str(r.id).split("-")[0].upper(),
-                    "name": r.name,
-                    "email": r.email,
-                    "phone": r.phone,
-                    "status": r.status,
-                    "kyc_status": r.kyc_status,
-                    "created_at": r.created_at,
-                    "last_login_at": r.last_login_at,
+            "items": [self._item(r, compliance) for r in rows],
+        }
+
+    @staticmethod
+    def _item(r: Any, compliance: bool) -> dict[str, Any]:
+        hidden = r.deletion_requested_at is not None and not compliance
+        return {
+            "id": r.id,
+            "ref": str(r.id).split("-")[0].upper(),
+            "name": None if hidden else r.name,
+            "email": None if hidden else r.email,
+            "phone": None if hidden else r.phone,
+            "status": r.status,
+            "kyc_status": None if hidden else r.kyc_status,
+            "created_at": r.created_at,
+            "last_login_at": r.last_login_at,
+            # ADR-095: "deleting" (restorable until), "deleted", or none.
+            "deletion": (
+                None
+                if r.deletion_requested_at is None
+                else {
+                    "state": "deleted" if r.deleted_at is not None else "deleting",
+                    "requested_at": r.deletion_requested_at,
+                    "restore_until": r.deletion_requested_at + GRACE,
                 }
-                for r in rows
-            ],
+            ),
         }
 
     async def stats(self, principal: StaffPrincipal) -> dict[str, int]:

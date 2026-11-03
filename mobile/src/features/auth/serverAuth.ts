@@ -150,9 +150,13 @@ export const serverAuth = {
 
   // --- log-in ---
 
-  async login(identifier: string, pin: string, now: number): Promise<LoginOutcome> {
+  /** ADR-095: `restore` reopens an account the customer asked to delete (within 14 days). */
+  async login(identifier: string, pin: string, now: number, options: { restore?: boolean } = {}): Promise<LoginOutcome> {
     const deviceToken = await secureTokens.deviceToken();
-    const r = await authApi.login({ identifier, pin, ...(deviceToken ? { device_token: deviceToken } : {}) }, x());
+    const r = await authApi.login(
+      { identifier, pin, ...(deviceToken ? { device_token: deviceToken } : {}), ...(options.restore ? { restore_account: true } : {}) },
+      x(),
+    );
     if (isCheck(r)) {
       state.check = r;
       return 'check';

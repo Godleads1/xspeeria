@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 
 import { SERVER_MODE } from '../../../src/api/config';
 import { session } from '../../../src/features/auth/session';
+import { deleteMyAccount } from '../../../src/features/profile/deleteAccount';
 import { ProfileScreen, type ProfileDestination } from '../../../src/features/profile/ProfileScreen';
 import { useThemeMode } from '../../../src/theme';
 
@@ -22,5 +23,13 @@ const ROUTES: Record<ProfileDestination, Href> = {
 export default function ProfileRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
-  return <ProfileScreen onOpen={(destination) => router.push(ROUTES[destination])} onLogOut={() => session.logOut()} />;
+  return (
+    <ProfileScreen
+      onOpen={(destination) => router.push(ROUTES[destination])}
+      onLogOut={() => session.logOut()}
+      // ADR-095: server builds delete the account for real; the demo explains only.
+      deleteAccount={SERVER_MODE ? () => deleteMyAccount() : undefined}
+      onDeleted={() => session.logOut()}
+    />
+  );
 }

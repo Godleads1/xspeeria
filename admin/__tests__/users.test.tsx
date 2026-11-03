@@ -91,4 +91,21 @@ describe('users', () => {
     fireEvent.click(screen.getByTestId('reason-confirm'));
     expect(await within(screen.getByTestId('reason-dialog')).findByRole('alert')).toHaveTextContent(/can't be changed/);
   });
+
+  // ADR-095 / DEC-106: an account the customer is deleting; its details are for Compliance only.
+  it('labels a deleted account and shows no details to staff outside Compliance', async () => {
+    const GONE: Customer = {
+      ...ADA, id: 'u-3', ref: 'DEAD0001', name: null, email: null, phone: null, kyc_status: null, status: 'closed',
+      deletion: { state: 'deleting', requested_at: '2026-11-03T10:00:00Z', restore_until: '2026-11-17T10:00:00Z' },
+    };
+    await show(me('super_admin', ['users.read', 'activity.read']), {
+      listCustomers: vi.fn(async () => ({ total: 2, items: [ADA, GONE] })),
+    });
+    const row = screen.getAllByRole('row')[2]!;
+    expect(within(row).getByText('Deleted account')).toBeInTheDocument();
+    expect(within(row).getByText(/Deleting, restorable until/)).toBeInTheDocument();
+    // No "View activity" for it (the server refuses it too); a closed account has no other action.
+    expect(within(row).queryByTestId('menu-u-3')).toBeNull();
+    expect(screen.queryByTestId('activity-u-3')).toBeNull();
+  });
 });

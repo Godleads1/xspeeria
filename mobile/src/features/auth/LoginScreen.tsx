@@ -23,7 +23,7 @@ import { brandWeight, color, space, themed, typography } from "../../theme";
 import { ActionSheet, FieldInput, OutlinedField } from "../market/controls";
 import { confirmWithBiometrics, type BiometricOutcome } from "./biometrics";
 import { API_BASE_URL } from "../../api/config";
-import { messageFor } from "../../api/client";
+import { ApiError, messageFor } from "../../api/client";
 import { DEMO_ACCOUNT } from "./demo";
 import type { LoginOutcome } from "./serverAuth";
 import { PIN_LENGTH } from "./pin";
@@ -87,7 +87,7 @@ export function LoginScreen({
    * on when the app is built with a server address.
    */
   server?: {
-    login: (identifier: string, pin: string, now: number) => Promise<LoginOutcome>;
+    login: (identifier: string, pin: string, now: number, options?: { restore?: boolean }) => Promise<LoginOutcome>;
     /** ADR-048: Face ID/fingerprint resumes the session after the idle lock. */
     unlock?: (now: number) => Promise<boolean>;
   } | null;
@@ -123,13 +123,37 @@ export function LoginScreen({
     const typed = pin;
     setPin("");
     setBusy(true);
-    try {
-      const outcome = await server.login(id.trim(), typed, now());
+    const finish = (outcome: LoginOutcome): void => {
       session.setRemembered(remember ? id.trim() : null);
       if (outcome === "signedIn") onDone();
       else onSecondFactor?.();
+    };
+    try {
+      finish(await server.login(id.trim(), typed, now()));
     } catch (e) {
-      setError(messageFor(e));
+      if (e instanceof ApiError && e.code === "AUTH_403_ACCOUNT_DELETING") {
+        // ADR-095: the right PIN on an account being deleted; it can be restored.
+        const until = typeof e.details?.restore_until === "string" ? new Date(e.details.restore_until) : null;
+        Alert.alert(
+          tr("Restore your account?"),
+          until
+            ? tr("You asked to delete this account. You can restore it until {{date}}. Your payout accounts and trusted phones need adding again.", { date: until.toLocaleDateString() })
+            : tr("You asked to delete this account. You can still restore it. Your payout accounts and trusted phones need adding again."),
+          [
+            { text: tr("Cancel"), style: "cancel" },
+            {
+              text: tr("Restore"),
+              onPress: () => {
+                setBusy(true);
+                server
+                  .login(id.trim(), typed, now(), { restore: true })
+                  .then(finish, (err: unknown) => setError(messageFor(err)))
+                  .finally(() => setBusy(false));
+              },
+            },
+          ],
+        );
+      } else setError(messageFor(e));
     } finally {
       setBusy(false);
     }

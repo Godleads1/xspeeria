@@ -88,6 +88,7 @@ from app.providers.push import PushSender
 from app.providers.sms import SmsSender
 from app.providers.tier_checks import TierCheckProvider
 from app.repositories.identity import IdentityRepository
+from app.services.account_deletion import restore_until
 
 __all__ = [
     "AuthRuntime",
@@ -480,10 +481,22 @@ class AuthService:
     # --- log-in -------------------------------------------------------------------------
 
     async def login(
-        self, identifier: str, pin: str, device: DeviceInfo, device_token: str | None = None
+        self,
+        identifier: str,
+        pin: str,
+        device: DeviceInfo,
+        device_token: str | None = None,
+        *,
+        restore_account: bool = False,
     ) -> CheckStarted | SignedIn:
         """PIN first. Then a session only on a trusted device; otherwise the second check:
-        SMS + email codes before the identity check, a face check after it (ADR-054)."""
+        SMS + email codes before the identity check, a face check after it (ADR-054).
+
+        ADR-095: an account the customer asked to delete can be restored for 14 days. The
+        right PIN alone answers ``AUTH_403_ACCOUNT_DELETING`` (with the date); the same log-in
+        with ``restore_account`` reopens it, then the second check runs as usual (trusted
+        phones were switched off, so it always does). Before the PIN is checked, such an
+        account looks exactly like an unknown one."""
         now = self._now()
         phone = normalise_phone(identifier)
         email = None if phone else normalise_email(identifier)
@@ -491,8 +504,9 @@ class AuthService:
         if phone:
             user = await self._repo.user_by_phone(phone, lock=True)
         elif email:
-            user = await self._repo.active_user_by_email(email, lock=True)
-        if user is not None and user.status != "active":
+            user = await self._repo.finished_user_by_email(email, lock=True)
+        restorable = user is not None and self._restorable(user, now)
+        if user is not None and user.status != "active" and not restorable:
             user = None
 
         if user is None:
@@ -538,6 +552,21 @@ class AuthService:
         user.pin_locked_until = None
         if self._rt.hasher.needs_rehash(user.pin_hash):
             user.pin_hash = self._rt.hasher.hash(pin)
+
+        if restorable:
+            until = restore_until(user)
+            if not restore_account:
+                await self._db.commit()
+                raise _err(
+                    "AUTH_403_ACCOUNT_DELETING",
+                    "This account is being deleted. You can restore it until then.",
+                    status.HTTP_403_FORBIDDEN,
+                    restore_until=until.isoformat() if until else None,
+                )
+            user.status = "active"
+            user.deletion_requested_at = None
+            self._record(activity.entry(user.id, "account_restored", "security", at=now))
+            _logger.info("account_restored", extra={"user_id": str(user.id)})
 
         trusted = await self._trusted_device_for(user.id, device_token, now)
         if trusted is not None:
@@ -760,6 +789,12 @@ class AuthService:
     def _mfa_success(self, user: User) -> None:
         user.mfa_failed_attempts = 0
         user.mfa_locked_until = None
+
+    @staticmethod
+    def _restorable(user: User, now: datetime) -> bool:
+        """ADR-095: closed by the customer's own deletion, and still inside the 14 days."""
+        until = restore_until(user)
+        return user.status == "closed" and until is not None and now < until
 
     def _record(self, row: CustomerActivity) -> None:
         """An activity-log row, plus its "was this you?" email when it is one (ADR-084)."""
