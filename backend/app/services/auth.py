@@ -296,6 +296,10 @@ class AuthRuntime:
     )
 
 
+#: ADR-091: how often a request moves a session's idle clock forward (at most).
+SESSION_TOUCH_EVERY = timedelta(seconds=30)
+
+
 # --- service ------------------------------------------------------------------------------
 
 
@@ -690,7 +694,7 @@ class AuthService:
             claims = self._keys.read_access(access_token, now)
         except InvalidAccessToken:
             raise _unauthorized() from None
-        session = await self._repo.session_by_id(claims.session_id, lock=True)
+        session = await self._repo.session_by_id(claims.session_id)
         if (
             session is None
             or session.user_id != claims.user_id
@@ -698,8 +702,13 @@ class AuthService:
         ):
             await self._db.rollback()
             raise _unauthorized()
-        session.last_active_at = now
-        await self._db.commit()
+        if now - session.last_active_at >= SESSION_TOUCH_EVERY:
+            # ADR-091: the idle clock moves at most every 30 s, not on every request (one
+            # database write saved per request). A session can only end up to 30 s *sooner*.
+            session.last_active_at = now
+            await self._db.commit()
+        else:
+            await self._db.rollback()
         return Principal(user_id=claims.user_id, session_id=claims.session_id)
 
     async def logout(self, principal: Principal) -> None:
