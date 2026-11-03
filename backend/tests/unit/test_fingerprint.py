@@ -79,3 +79,17 @@ async def test_validation_errors_are_plain() -> None:
     ]
     assert not any(n in r.text.lower() for n in _NAMES)
     assert "old" not in r.text  # the submitted value is never echoed
+
+
+async def test_https_only_header_outside_a_developers_computer() -> None:
+    """ADR-093: HSTS and nosniff on every API answer (errors too); no HSTS on plain localhost."""
+    for r in await _answers("production"):
+        assert r.headers["strict-transport-security"] == "max-age=63072000; includeSubDomains"
+        assert r.headers["x-content-type-options"] == "nosniff"
+    for r in await _answers("development"):
+        assert "strict-transport-security" in r.headers
+    app = create_app(Settings(_env_file=None, app_env="local"))  # type: ignore[call-arg]
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.get("/health")
+    assert "strict-transport-security" not in r.headers
+    assert r.headers["x-content-type-options"] == "nosniff"
