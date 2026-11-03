@@ -51,6 +51,9 @@ from app.providers.sms import RecordingSmsSender
 from tests.integration.test_auth_api import KEY, MFA_KEY, PIN, TABLES, Env, _runtime
 
 PORT = 8765
+#: --real-limits: the server keeps its real per-address limits (ADR-087), to prove that many
+#: customers behind one address aren't refused.
+REAL_LIMITS = False
 COUNTRY = {"X-Device-Country": "CA"}  # a country whose currency isn't traded: nothing hidden
 
 
@@ -163,7 +166,7 @@ def start_server(settings: Settings, workers: int) -> subprocess.Popen[bytes]:
         "LOG_LEVEL": "WARNING",
         # Everyone in this test comes from one address; the per-address sign-in limit is raised
         # 20 times (the local-only setting). Per-customer limits are unchanged.
-        "TEST_LIMITS_DEV": "true",
+        "TEST_LIMITS_DEV": "false" if REAL_LIMITS else "true",
     }
     return subprocess.Popen(
         [
@@ -401,11 +404,18 @@ def main() -> None:
     parser.add_argument("--server-workers", default="1,2")
     parser.add_argument("--json", help="also write the results to this file")
     parser.add_argument(
+        "--real-limits",
+        action="store_true",
+        help="keep the server's real per-address limits (don't raise them for the test)",
+    )
+    parser.add_argument(
         "--same-address",
         action="store_true",
         help="every customer from one address (many phones behind one mobile-network NAT)",
     )
     a = parser.parse_args()
+    global REAL_LIMITS
+    REAL_LIMITS = a.real_limits
     results = asyncio.run(
         run(
             [int(x) for x in a.users.split(",")],

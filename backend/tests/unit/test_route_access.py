@@ -94,3 +94,21 @@ def test_only_the_named_routes_work_without_a_login() -> None:
 def test_production_has_no_api_docs() -> None:
     paths = {r.path for r in _routes()}
     assert not {"/docs", "/redoc", "/openapi.json"} & paths
+
+
+def test_sign_in_routes_are_limited_per_address_and_account_routes_per_customer() -> None:
+    """Owner, 2026-11-03 (ADR-087): the per-address limit only on routes used before sign-in;
+    signed-in account routes are limited per customer (many phones share one address)."""
+    from app.api.v1 import auth
+
+    def deps(route: APIRoute) -> set[str]:
+        return _names(route.dependant, set())
+
+    public = [r for r in auth.router.routes if isinstance(r, APIRoute)]
+    account = [r for r in auth.account_router.routes if isinstance(r, APIRoute)]
+    assert public and account
+    for r in public:
+        assert "limit_by_address" in deps(r), r.path
+        assert not _SIGNED_IN & deps(r), f"{r.path} needs sign-in: move it to account_router"
+    for r in account:
+        assert "limit_by_account" in deps(r) and "limit_by_address" not in deps(r), r.path

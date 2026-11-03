@@ -484,7 +484,7 @@ async def test_unknown_accounts_lock_the_same_way(env: Env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_ten_requests_per_minute_per_address(db_settings: Settings) -> None:
+async def test_sign_in_requests_are_limited_per_address(db_settings: Settings) -> None:
     async for e in _env(db_settings, address_limit=10):
         # Different unknown numbers each time, so only the per-address limit can trigger.
         for i in range(10):
@@ -492,9 +492,42 @@ async def test_ten_requests_per_minute_per_address(db_settings: Settings) -> Non
         r = await e.login("+2348090000099", "739152")
         assert r.status_code == 429 and r.json()["error"]["details"]["retry_after_seconds"] == 60
         r = await e.post("/auth/register", {"phone": PHONE, "email": EMAIL, "pin": PIN})
-        assert r.status_code == 429  # the limit is shared by every auth endpoint
+        assert r.status_code == 429  # the limit is shared by every sign-in endpoint
         e.clock.advance(seconds=61)
         assert (await e.login("+2348090000099", "739152")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_signed_in_customers_behind_one_address_are_not_refused(
+    db_settings: Settings,
+) -> None:
+    """Owner, 2026-11-03 (ADR-087): many phones in Nigeria share one mobile-network address.
+    Signed-in account requests don't use up that address's sign-in allowance; each customer
+    has their own."""
+    async for e in _env(db_settings, address_limit=10):
+        tokens = await e.sign_up()  # 3 sign-in requests from this address
+        token = str(tokens["access_token"])
+        for _ in range(40):  # far more than the address allows
+            r = await e.get("/users/me", token)
+            assert r.status_code == 200, r.text
+        assert (await e.get("/users/me/sessions", token)).status_code == 200
+        # The address's own allowance is untouched by them: log-ins still work.
+        assert (await e.login()).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_account_requests_are_limited_per_customer(db_settings: Settings) -> None:
+    from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
+
+    async for e in _env(db_settings):
+        david = str((await e.sign_up())["access_token"])
+        ada = str((await e.sign_up(phone="+2348031112222", email="b@example.com"))["access_token"])
+        for _ in range(MARKET_REQUESTS_PER_MINUTE):
+            assert (await e.get("/users/me", david)).status_code == 200
+        r = await e.get("/users/me", david)
+        assert (r.status_code, _code(r)) == (429, "AUTH_429_RATE_LIMITED")
+        assert r.json()["error"]["details"]["retry_after_seconds"] == 60
+        assert (await e.get("/users/me", ada)).status_code == 200  # another customer is fine
 
 
 # --- tokens, refresh, idle and 7 days -----------------------------------------------------------

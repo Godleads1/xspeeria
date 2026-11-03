@@ -104,7 +104,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Connect a real SMS and email provider** once chosen — *Build* (only developer senders exist).
 - [x] **Super Admin hardware security key** — built (ADR-081, 2 Nov 2026). *You:* buy two keys (e.g. YubiKey) per Super Admin; register them on the live console; then `SUPER_ADMIN_KEY_REQUIRED=true`.
 - [x] **Background worker and a first load test** — built (ADR-085, 3 Nov 2026). *With hosting:* set `RUN_BACKGROUND_JOBS=false` on the web servers and run one `python -m app.worker`; set `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; run the load test again on the real servers.
-- [ ] **Decide at hosting (ADR-085 findings):** the database login (tables' owner, or complete the `xspeeria_app` grants), and the per-address sign-in limit for many phones behind one mobile-network address.
+- [ ] **Decide at hosting (ADR-085 findings):** the database login (tables' owner, or complete the `xspeeria_app` grants), and the trusted-proxy setting (the per-address limit itself was fixed: ADR-087).
 - [ ] **Backups with a recorded restore** — *Build*, after hosting. (SEC-030) The "pause all deals" switch and "sign everyone out" are built (ADR-075, PR #94).
 - [ ] **Deployment basics:** separate environments, deploy pipeline and a disaster-recovery runbook. (SEC-033 to SEC-039) Done already: SBOM in CI (ADR-077), operations alerts and the incident plan (ADR-074).
 - [ ] **Independent penetration test** before launch. (SEC-040)

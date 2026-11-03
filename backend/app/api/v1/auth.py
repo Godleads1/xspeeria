@@ -16,6 +16,7 @@ from app.api.auth_deps import (
     CurrentPrincipal,
     device_info,
     get_auth_service,
+    limit_by_account,
     limit_by_address,
 )
 from app.domain.auth_rules import STEP_UP_TTL
@@ -48,9 +49,14 @@ from app.schemas.auth import (
 )
 from app.services.auth import AuthService, CheckStarted, SignedIn, TokenPair
 
-__all__ = ["router"]
+__all__ = ["account_router", "router"]
 
+#: Before sign-in (sign-up, log-in, codes, PIN reset, token refresh, fingerprint unlock):
+#: limited per network address, and each account also locks after 5 wrong PINs or checks.
 router = APIRouter(prefix="/api/v1", dependencies=[Depends(limit_by_address)])
+#: Signed-in account routes: limited per customer (owner, 2026-11-03: many phones in Nigeria
+#: share one network address).
+account_router = APIRouter(prefix="/api/v1", dependencies=[Depends(limit_by_account)])
 
 Service = Annotated[AuthService, Depends(get_auth_service)]
 
@@ -165,7 +171,7 @@ async def face_finish(
     return _signed_in(await service.face_finish(check_id, device))
 
 
-@router.post(
+@account_router.post(
     "/auth/step-up",
     response_model=StepUpResponse,
     tags=["auth"],
@@ -178,7 +184,7 @@ async def step_up(
     return _step_up(token, body.action)
 
 
-@router.post(
+@account_router.post(
     "/auth/step-up/checks",
     response_model=CheckResponse,
     tags=["auth"],
@@ -190,7 +196,7 @@ async def step_up_check(
     return _check(await service.step_up_check(principal, body.action))
 
 
-@router.post(
+@account_router.post(
     "/auth/step-up/checks/{check_id}/code",
     response_model=StepUpResponse,
     tags=["auth"],
@@ -203,7 +209,7 @@ async def step_up_code(
     return _step_up(token, action)
 
 
-@router.post(
+@account_router.post(
     "/auth/step-up/checks/{check_id}/face",
     response_model=FaceStartResponse,
     tags=["auth"],
@@ -215,7 +221,7 @@ async def step_up_face_start(
     return FaceStartResponse(url=await service.face_start(check_id, principal))
 
 
-@router.post(
+@account_router.post(
     "/auth/step-up/checks/{check_id}/face/result",
     response_model=StepUpResponse,
     tags=["auth"],
@@ -238,7 +244,7 @@ async def refresh(token: BearerToken, service: Service) -> TokenResponse:
     return _tokens(await service.refresh(token))
 
 
-@router.post(
+@account_router.post(
     "/auth/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["auth"],
@@ -249,7 +255,9 @@ async def logout(principal: CurrentPrincipal, service: Service) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/users/me", response_model=ProfileResponse, tags=["users"], summary="My profile")
+@account_router.get(
+    "/users/me", response_model=ProfileResponse, tags=["users"], summary="My profile"
+)
 async def me(principal: CurrentPrincipal, service: Service) -> ProfileResponse:
     user, identity = await service.me(principal)
     return ProfileResponse.model_validate(
@@ -266,7 +274,7 @@ async def me(principal: CurrentPrincipal, service: Service) -> ProfileResponse:
     )
 
 
-@router.get(
+@account_router.get(
     "/users/me/sessions",
     response_model=list[SessionResponse],
     tags=["users"],
@@ -288,7 +296,7 @@ async def my_sessions(principal: CurrentPrincipal, service: Service) -> list[Ses
     ]
 
 
-@router.delete(
+@account_router.delete(
     "/users/me/sessions/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["users"],
@@ -301,7 +309,7 @@ async def revoke_session(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get(
+@account_router.get(
     "/users/me/trusted-devices",
     response_model=list[TrustedDeviceResponse],
     tags=["users"],
@@ -323,7 +331,7 @@ async def trusted_devices(
     ]
 
 
-@router.delete(
+@account_router.delete(
     "/users/me/trusted-devices/{trusted_device_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["users"],
@@ -339,7 +347,7 @@ async def revoke_trusted_device(
 # --- PIN change and reset (ADR-046) ----------------------------------------------------------
 
 
-@router.post(
+@account_router.post(
     "/users/me/pin",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["users"],
@@ -387,7 +395,7 @@ async def pin_reset_confirm(body: PinResetConfirmRequest, service: Service) -> R
 # --- phone number change (ADR-047) -----------------------------------------------------------
 
 
-@router.post(
+@account_router.post(
     "/users/me/phone/start",
     status_code=status.HTTP_202_ACCEPTED,
     tags=["users"],
@@ -403,7 +411,7 @@ async def phone_change_start(
     return {"status": "code_sent"}
 
 
-@router.post(
+@account_router.post(
     "/users/me/phone/confirm",
     tags=["users"],
     summary="Change my phone: the code from the new number applies the change",
@@ -418,7 +426,7 @@ async def phone_change_confirm(
 # --- biometric unlock after the idle lock (ADR-048) ------------------------------------------
 
 
-@router.post(
+@account_router.post(
     "/auth/biometric",
     response_model=BiometricEnableResponse,
     tags=["auth"],
@@ -435,7 +443,7 @@ async def biometric_enable(
     )
 
 
-@router.delete(
+@account_router.delete(
     "/auth/biometric",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["auth"],
