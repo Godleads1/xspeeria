@@ -24,7 +24,12 @@ counts and references only, never account numbers (last 4 digits at most), PINs 
 
 Permissions (checked here, from the database role, on every call): ``fraud_alerts.read`` list
 and open; ``fraud_alerts.create`` raise one by hand; ``fraud_alerts.update`` mark in progress
-and resolve.
+and resolve; ``fraud_alerts.approve`` hold or release one of the customer's deals (ADR-092).
+
+**Holding a deal (ADR-092, owner 2026-11-03).** From an alert that isn't resolved, staff with
+``fraud_alerts.approve`` (Super Admin, Compliance Officer) can hold one of the customer's deals
+whose release hasn't been decided yet, and release it again. The hold blocks only that deal's
+release; the funding window still runs. An alert can't be resolved while it holds a deal.
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ import re
 import unicodedata
 import uuid
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -49,11 +54,19 @@ from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import Match, Offer
 from app.models.payouts import Beneficiary, MatchPayoutSelection
-from app.models.settlement import Transaction
+from app.models.settlement import Settlement, SettlementHold, SettlementLeg, Transaction
 from app.models.staff import StaffAccount, StaffAuditEntry
+from app.services.settlement import SettlementService
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
-__all__ = ["DISPUTES_THRESHOLD", "DISPUTES_WINDOW", "FraudService", "names_share_a_word", "ref"]
+__all__ = [
+    "DISPUTES_THRESHOLD",
+    "DISPUTES_WINDOW",
+    "FraudService",
+    "hold_reason",
+    "names_share_a_word",
+    "ref",
+]
 
 #: Starting values (ADR-068); changing them is an owner decision.
 DISPUTES_THRESHOLD = 3
@@ -77,6 +90,15 @@ NEW_ACCOUNT_LOOKBACK = timedelta(days=7)
 
 def ref(alert_id: uuid.UUID) -> str:
     return "#" + str(alert_id).split("-")[0].upper()
+
+
+def hold_reason(alert_id: uuid.UUID) -> str:
+    """The reason written on the holds an alert opens (ADR-092): ties each hold to its alert."""
+    return f"fraud alert {alert_id}"
+
+
+#: Deals that can still be held: their release hasn't been decided (ADR-001 §6a).
+_HOLDABLE = ("INITIALIZING", "AWAITING_FUNDING")
 
 
 def _err(code: str, message: str, http: int, details: dict[str, Any] | None = None) -> AppError:
@@ -444,8 +466,152 @@ class FraudService:
     ) -> None:
         self._need(principal, "fraud_alerts.update")
         a = await self._open_alert(alert_id)
+        if await self._held_by(alert_id):
+            await self._db.rollback()
+            raise _err(
+                "RES_409_DEALS_HELD",
+                "This alert still holds a deal. Release it first, or ask for a refund in the "
+                "deal's dispute, then resolve.",
+                status.HTTP_409_CONFLICT,
+            )
         now = self._clock()
         a.status, a.resolved_at, a.resolved_by = "resolved", now, principal.staff_id
         a.resolution, a.resolution_note, a.updated_at = resolution, note, now
         self._audit(principal, info, "fraud_alert_resolved", a.id, {"resolution": resolution})
         await self._db.commit()
+
+    # --- holding one deal (ADR-092) ----------------------------------------------------------
+
+    async def _held_by(self, alert_id: uuid.UUID) -> Sequence[uuid.UUID]:
+        rows = await self._db.scalars(
+            select(SettlementHold.settlement_id)
+            .where(
+                SettlementHold.type == "RISK",
+                SettlementHold.reason == hold_reason(alert_id),
+                SettlementHold.closed_at.is_(None),
+            )
+            .distinct()
+        )
+        return rows.all()
+
+    async def _customers_deal(self, user_id: uuid.UUID, settlement_id: uuid.UUID) -> bool:
+        found = await self._db.scalar(
+            select(SettlementLeg.leg_id)
+            .where(
+                SettlementLeg.settlement_id == settlement_id,
+                or_(
+                    SettlementLeg.funder_user_id == user_id, SettlementLeg.payee_user_id == user_id
+                ),
+            )
+            .limit(1)
+        )
+        return found is not None
+
+    async def deals(self, principal: StaffPrincipal, alert_id: uuid.UUID) -> dict[str, Any]:
+        """The alerted customer's deals that can still be held, and those this alert holds."""
+        self._need(principal, "fraud_alerts.read")
+        a = await self._db.get(FraudAlert, alert_id)
+        if a is None:
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That alert was not found.", 404)
+        held: set[uuid.UUID] = set(await self._held_by(alert_id))
+        mine = (
+            select(SettlementLeg.settlement_id)
+            .where(
+                or_(
+                    SettlementLeg.funder_user_id == a.user_id,
+                    SettlementLeg.payee_user_id == a.user_id,
+                )
+            )
+            .distinct()
+        )
+        rows = (
+            await self._db.execute(
+                select(Settlement, Transaction.match_id)
+                .join(Transaction, Transaction.id == Settlement.transaction_id)
+                .where(
+                    Settlement.id.in_(mine),
+                    or_(
+                        Settlement.id.in_(held),
+                        Settlement.phase.in_(_HOLDABLE)
+                        & Settlement.release_authorized_at.is_(None),
+                    ),
+                )
+                .order_by(Settlement.created_at.desc())
+                .limit(50)
+            )
+        ).all()
+        items = [
+            {
+                "settlement_id": st.id,
+                "ref": str(match_id).split("-")[0].upper(),
+                "phase": st.phase,
+                "created_at": st.created_at,
+                "held": st.id in held,
+                "can_hold": st.phase in _HOLDABLE and st.release_authorized_at is None,
+            }
+            for st, match_id in rows
+        ]
+        await self._db.rollback()
+        return {"items": items}
+
+    async def hold_deal(
+        self,
+        principal: StaffPrincipal,
+        info: RequestInfo,
+        alert_id: uuid.UUID,
+        settlement_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        self._need(principal, "fraud_alerts.approve")
+        a = await self._open_alert(alert_id)
+        if not await self._customers_deal(a.user_id, settlement_id):
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That deal was not found for this customer.", 404)
+        opened = await SettlementService(self._db, self._clock, None).hold_one(
+            settlement_id, hold_reason(alert_id)
+        )
+        if opened is None:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_DEAL_NOT_HOLDABLE",
+                "This deal is already paying out or has closed, so it can't be held here.",
+                status.HTTP_409_CONFLICT,
+            )
+        if opened:
+            if a.status == "open":
+                a.status = "in_progress"
+            a.updated_at = self._clock()
+            self._audit(
+                principal, info, "fraud_deal_held", a.id, {"settlement_id": str(settlement_id)}
+            )
+        await self._db.commit()
+        return {"held": True}
+
+    async def release_deal(
+        self,
+        principal: StaffPrincipal,
+        info: RequestInfo,
+        alert_id: uuid.UUID,
+        settlement_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        self._need(principal, "fraud_alerts.approve")
+        a = await self._open_alert(alert_id)
+        if not await self._customers_deal(a.user_id, settlement_id):
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That deal was not found for this customer.", 404)
+        released = await SettlementService(self._db, self._clock, None).release_one(
+            settlement_id, hold_reason(alert_id)
+        )
+        if not released:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_NOT_HELD",
+                "This alert doesn't hold that deal.",
+                status.HTTP_409_CONFLICT,
+            )
+        a.updated_at = self._clock()
+        self._audit(
+            principal, info, "fraud_deal_released", a.id, {"settlement_id": str(settlement_id)}
+        )
+        await self._db.commit()
+        return {"held": False}

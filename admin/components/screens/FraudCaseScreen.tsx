@@ -4,11 +4,13 @@
  * One fraud alert (ADR-068): what raised it, the customer, and the work on it (mark in progress,
  * resolve as confirmed or a false alarm, with a note). An alert never acts by itself; staff use
  * the screens that already exist (Users: suspend — Super Admin; a dispute: ask for a refund).
+ * ADR-092: staff with fraud_alerts.approve can hold one of the customer's unpaid deals here
+ * while they look, and release it; an alert can't be resolved while it holds a deal.
  */
 
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 
-import { messageFor, type FraudAlert } from '../../lib/api';
+import { messageFor, type FraudAlert, type FraudDeal } from '../../lib/api';
 import { count } from '../../lib/figures';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
@@ -46,6 +48,7 @@ export function finding(a: FraudAlert): string {
 export function FraudCaseScreen({ id }: { id: string }): ReactElement {
   const { api, can } = useSession();
   const [a, setA] = useState<FraudAlert | null>(null);
+  const [deals, setDeals] = useState<FraudDeal[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,6 +59,11 @@ export function FraudCaseScreen({ id }: { id: string }): ReactElement {
     setLoadError(null);
     try {
       setA(await api.fraudAlert(id));
+      try {
+        setDeals((await api.fraudDeals(id)).items);
+      } catch {
+        setDeals(null); // the alert still shows; the deals card says it couldn't load
+      }
     } catch (e) {
       setLoadError(messageFor(e));
     }
@@ -139,6 +147,38 @@ export function FraudCaseScreen({ id }: { id: string }): ReactElement {
             </p>
           </Card>
         </div>
+        <Card title={tr('Deals')} testId="fraud-deals">
+          {deals === null ? (
+            <p style={{ margin: 0, fontSize: 14, color: color.text.secondary }}>{tr('The deals could not be loaded.')}</p>
+          ) : deals.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 14, color: color.text.secondary }}>{tr('No deal of this customer can be held now: none is waiting to pay out.')}</p>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {deals.map((d) => (
+                <li key={d.settlement_id} data-testid={`fraud-deal-${d.ref}`} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <span dir="ltr" style={{ fontSize: 15 }}>#{d.ref}</span>
+                  <span style={{ fontSize: 13, color: color.text.secondary }}>{when(d.created_at)}</span>
+                  {d.held ? <span style={{ fontSize: 13, fontWeight: 600, color: color.error.text }}>{tr('Held')}</span> : null}
+                  <span style={{ flex: 1 }} />
+                  {open && can('fraud_alerts.approve') ? (
+                    d.held ? (
+                      <button type="button" data-testid={`fraud-release-${d.ref}`} disabled={busy} onClick={() => void run(() => api.releaseFraudDeal(a.id, d.settlement_id).then(() => undefined), tr('Deal released'))} style={secondary}>
+                        {tr('Release')}
+                      </button>
+                    ) : d.can_hold ? (
+                      <button type="button" data-testid={`fraud-hold-${d.ref}`} disabled={busy} onClick={() => void run(() => api.holdFraudDeal(a.id, d.settlement_id).then(() => undefined), tr('Deal held'))} style={primary}>
+                        {tr('Hold this deal')}
+                      </button>
+                    ) : null
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p style={{ margin: 0, fontSize: 12, color: color.text.secondary }}>
+            {tr('A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.')}
+          </p>
+        </Card>
         {error && !resolving ? (
           <p role="alert" style={{ margin: 0, color: color.error.text }}>
             {error}
