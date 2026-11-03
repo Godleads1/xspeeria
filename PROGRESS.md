@@ -49,6 +49,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | One background worker; first load test (fixed: taking an offer was refused under the row rules) | **Built 3 Nov 2026** | ADR-085 |
 | Several adverts take turns in the advert slot, sliding by themselves | **Built 3 Nov 2026** | ADR-086 |
 | Rate limits that don't refuse customers sharing one mobile-network address | **Built 3 Nov 2026** | ADR-087 |
+| The server logs in to the database with least rights (`xspeeria_app`), grants completed | **Built 3 Nov 2026** | ADR-094 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 
 ### Not built yet (code)
