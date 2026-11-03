@@ -56,6 +56,9 @@ _logger = get_logger(__name__)
 
 #: The confirmation after a report. No link in it.
 FROZEN = "account_frozen"
+#: Emails with no "this wasn't me" link: the account is already frozen, or already closed
+#: by a deletion (ADR-095; the email says how to restore it instead).
+NO_LINK = frozenset({FROZEN, "account_deletion_requested"})
 
 REPORT_PATH = "/api/v1/security/not-me/"
 TOKEN_LIFE = timedelta(days=7)
@@ -114,7 +117,7 @@ class SecurityNoticeSender:
             notice.attempts += 1
             notice.next_try_at = now + RETRY_AFTER * notice.attempts
             link: str | None = None
-            if notice.kind != FROZEN:
+            if notice.kind not in NO_LINK:
                 token = secrets.token_urlsafe(32)
                 notice.token_hash = _hash(token)
                 notice.token_expires_at = now + TOKEN_LIFE

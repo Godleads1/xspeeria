@@ -77,7 +77,8 @@ export const authApi = {
     apiRequest<{ status: string }>('POST', '/api/v1/auth/register', { body, ...x }),
   verifyPhone: (body: { phone: string; code: string; device_id?: string }, x: Extra = {}) =>
     apiRequest<Check>('POST', '/api/v1/auth/verify-phone', { body, ...x }),
-  login: (body: { identifier: string; pin: string; device_token?: string }, x: Extra = {}) =>
+  /** ADR-095: `restore_account` reopens an account being deleted (within 14 days). */
+  login: (body: { identifier: string; pin: string; device_token?: string; restore_account?: boolean }, x: Extra = {}) =>
     apiRequest<Tokens | Check>('POST', '/api/v1/auth/login', { body, ...x }),
   /** Sign-up or log-in: the email code (and the SMS code for an `sms_email` check). */
   checkCodes: (checkId: string, body: { email_code: string; sms_code?: string }, x: Extra = {}) =>

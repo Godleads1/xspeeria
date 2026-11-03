@@ -1424,5 +1424,22 @@
  "• After 5 wrong codes, 2 FA is locked for 15 minutes.": "• Tras 5 códigos incorrectos, la verificación en dos pasos se bloquea 15 minutos.",
  "• Good light and about 2 minutes": "• Buena luz y unos 2 minutos",
  "• We never send codes by SMS, and Xspeeria staff will never ask for your codes.": "• Nunca enviamos códigos por SMS y el equipo de Xspeeria nunca te pedirá tus códigos.",
- "• You must be 18 or older": "• Debes tener 18 años o más"
+ "• You must be 18 or older": "• Debes tener 18 años o más",
+ "Restore your account?": "¿Restaurar tu cuenta?",
+ "You asked to delete this account. You can restore it until {{date}}. Your payout accounts and trusted phones need adding again.": "Pediste eliminar esta cuenta. Puedes restaurarla hasta el {{date}}. Tendrás que volver a añadir tus cuentas de cobro y teléfonos de confianza.",
+ "You asked to delete this account. You can still restore it. Your payout accounts and trusted phones need adding again.": "Pediste eliminar esta cuenta. Todavía puedes restaurarla. Tendrás que volver a añadir tus cuentas de cobro y teléfonos de confianza.",
+ "Restore": "Restaurar",
+ "Your account can't be deleted yet": "Tu cuenta aún no se puede eliminar",
+ "Your account is closed": "Tu cuenta está cerrada",
+ "You can restore it until {{date}} by logging in with your PIN. We've emailed you the details.": "Puedes restaurarla hasta el {{date}} iniciando sesión con tu PIN. Te hemos enviado los detalles por correo.",
+ "Something went wrong": "Algo salió mal",
+ "Delete your account?": "¿Eliminar tu cuenta?",
+ "Your account closes now: you're logged out everywhere, your open offers are withdrawn and your payout accounts are switched off. You can undo this for 14 days by logging in. Records the law requires are kept for 5 years, for our compliance team only.": "Tu cuenta se cierra ahora: se cierra tu sesión en todas partes, se retiran tus ofertas abiertas y se desactivan tus cuentas de cobro. Puedes deshacerlo durante 14 días iniciando sesión. Los registros que exige la ley se guardan 5 años, solo para nuestro equipo de cumplimiento.",
+ "Keep my account": "Mantener mi cuenta",
+ "A deal is still in progress. Let it finish first.": "Todavía hay una operación en curso. Deja que termine primero.",
+ "A dispute is still open.": "Todavía hay una disputa abierta.",
+ "A refund is waiting for a decision.": "Un reembolso está pendiente de decisión.",
+ "Our team is reviewing your account. Contact support.": "Nuestro equipo está revisando tu cuenta. Contacta con soporte.",
+ "Your account is frozen or suspended. Contact support.": "Tu cuenta está congelada o suspendida. Contacta con soporte.",
+ "Delete your account": "Eliminar tu cuenta"
 }
