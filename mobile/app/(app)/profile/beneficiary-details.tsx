@@ -7,9 +7,10 @@ import { DESTINATION_COUNTRIES } from '../../../src/features/profile/data';
 import { requestStepUp } from '../../../src/features/security/stepUp';
 import { useThemeMode } from '../../../src/theme';
 import { tr } from "../../../src/i18n";
+import { DemoOnly } from '../../../src/features/auth/DemoOnly';
 
 /** Route params are untrusted: only a live corridor currency opens the form. */
-export default function BeneficiaryDetailsRoute(): ReactElement {
+function BeneficiaryDetailsRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const { currency } = useLocalSearchParams<{ currency?: string }>();
@@ -25,5 +26,14 @@ export default function BeneficiaryDetailsRoute(): ReactElement {
         Alert.alert(tr("Beneficiary added"), tr("Your bank will confirm the account name."));
       }}
     />
+  );
+}
+
+/** ADR-096: demo only; a release build goes to Home. */
+export default function BeneficiaryDetailsRouteGuarded(): ReactElement {
+  return (
+    <DemoOnly>
+      <BeneficiaryDetailsRoute />
+    </DemoOnly>
   );
 }
