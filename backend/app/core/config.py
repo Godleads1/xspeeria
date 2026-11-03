@@ -23,7 +23,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["Settings", "get_settings", "require_supported_database_url"]
@@ -199,6 +199,17 @@ class Settings(BaseSettings):
     metrics_flush_seconds: int = 60
     #: ADR-074: how often the operations alert rules run (0: off).
     ops_alert_seconds: int = 60
+    #: ADR-085: run the background jobs (deal expiry, escrow, push, security emails, clean-ups)
+    #: inside this web server. True suits one server and a developer's computer. With several
+    #: web servers, set it false on all of them and run ONE worker (`python -m app.worker`).
+    #: Every web server still flushes its own figures and checks the alert rules, so a
+    #: stopped worker is noticed.
+    run_background_jobs: bool = True
+    #: ADR-085: database connections each process keeps open, and how many more it may open
+    #: when busy. Unset: SQLAlchemy's defaults (5 and 10). Set them per deployment so that
+    #: (web processes + worker) x (size + overflow) stays under the database's limit.
+    db_pool_size: int | None = Field(default=None, ge=1, le=200)
+    db_max_overflow: int | None = Field(default=None, ge=0, le=200)
     #: ADR-074: Sentry error tracking. Empty: off. Only scrubbed error details are sent.
     sentry_dsn: str | None = None
     #: ADR-074: the release Sentry files errors under (e.g. the git commit). Optional.

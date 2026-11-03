@@ -7,7 +7,8 @@ import time: the engine is built on first request and cached, and a caller that 
 database without one configured gets `DatabaseNotConfiguredError` rather than a
 `None`-dereference or a connection attempt against an empty URL.
 
-**No pool sizing is configured.** SQLAlchemy's defaults apply. Pool size, overflow,
+**No pool sizing is set in code.** ADR-085: ``DB_POOL_SIZE`` and ``DB_MAX_OVERFLOW`` may be
+set per deployment; unset, SQLAlchemy's defaults apply (5 + 10). Pool size, overflow,
 recycle and timeout are deployment facts -- they depend on instance count, connection
 limits and the managed-Postgres tier, none of which is decided (Decision 4 and the
 infrastructure milestone own them). Writing numbers here would encode a production
@@ -75,7 +76,12 @@ def build_engine(settings: Settings | None = None) -> AsyncEngine:
     lifetime they control rather than the process-wide cached one.
     """
     resolved = settings or get_settings()
-    engine = create_async_engine(_require_url(resolved), future=True, pool_pre_ping=True)
+    pool: dict[str, int] = {}
+    if resolved.db_pool_size is not None:
+        pool["pool_size"] = resolved.db_pool_size
+    if resolved.db_max_overflow is not None:
+        pool["max_overflow"] = resolved.db_max_overflow
+    engine = create_async_engine(_require_url(resolved), future=True, pool_pre_ping=True, **pool)
     # ADR-078: every transaction tells PostgreSQL whose rows it may touch.
     install_row_scope(engine)
     return engine
