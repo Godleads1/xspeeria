@@ -1441,5 +1441,11 @@
  "A refund is waiting for a decision.": "Um reembolso aguarda decisão.",
  "Our team is reviewing your account. Contact support.": "A nossa equipa está a analisar a sua conta. Contacte o suporte.",
  "Your account is frozen or suspended. Contact support.": "A sua conta está congelada ou suspensa. Contacte o suporte.",
- "Delete your account": "Eliminar a sua conta"
+ "Delete your account": "Eliminar a sua conta",
+ "Totals of your completed deals": "Totais das suas transações concluídas",
+ "1 completed deal": "1 transação concluída",
+ "{{count}} completed deals": "{{count}} transações concluídas",
+ "Received": "Recebido",
+ "Sent": "Enviado",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "Histórico de transações, não dinheiro guardado pela Xspeeria. As taxas não estão incluídas."
 }

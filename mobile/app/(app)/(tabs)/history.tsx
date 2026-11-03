@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 
 import { SERVER_MODE } from '../../../src/api/config';
 import { HistoryScreen } from '../../../src/features/history/HistoryScreen';
+import { dealTotals } from '../../../src/features/history/dealTotals';
 import { dealsToHistory } from '../../../src/features/history/serverHistory';
 import { serverDeals, useServerData } from '../../../src/features/history/serverDeals';
 import { useAllHistory } from '../../../src/features/trade/history';
@@ -21,9 +22,12 @@ export default function HistoryRoute(): ReactElement {
   const demo = useAllHistory();
   const { data } = useServerData(SERVER_MODE ? loadDeals : null);
   const items = useMemo(() => (SERVER_MODE ? dealsToHistory(data ?? []) : demo), [data, demo]);
+  // ADR-097: totals of completed deals, server builds only (never on Home: no aggregate figure there).
+  const totals = useMemo(() => (SERVER_MODE && data ? dealTotals(data) : null), [data]);
   return (
     <HistoryScreen
       items={items}
+      totals={totals}
       onOpen={(item) => {
         if (SERVER_MODE) {
           router.push({ pathname: '/market/escrow', params: { match: item.id } });

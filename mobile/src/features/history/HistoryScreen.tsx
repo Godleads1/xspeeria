@@ -23,6 +23,8 @@ import {
   type HistoryItem,
 } from './data';
 import { tr, k } from "../../i18n";
+import { DealTotalsCard } from "./DealTotalsCard";
+import type { DealTotals } from "./dealTotals";
 import { trRich } from "../../i18n/rich";
 
 function CalendarGlyph(): ReactElement {
@@ -120,8 +122,11 @@ export function HistoryScreen({
   items = HISTORY,
   onOpen,
   onMenu,
+  totals = null,
 }: {
   items?: readonly HistoryItem[];
+  /** ADR-097, server builds: totals of completed deals, shown above the list. */
+  totals?: DealTotals | null;
   onOpen?: (item: HistoryItem) => void;
   onMenu?: (key: HistoryMenuKey) => void;
 }): ReactElement {
@@ -145,6 +150,8 @@ export function HistoryScreen({
         <DateField label={tr("Start date")} value={from} onPress={() => setPicking('start')} testID="history-start" />
         <DateField label={tr("End date")} value={to} onPress={() => setPicking('end')} testID="history-end" />
       </View>
+
+      <DealTotalsCard totals={totals} />
 
       {visible.length === 0 ? (
         <Text testID="history-empty" style={styles.empty}>

@@ -1441,5 +1441,11 @@
  "A refund is waiting for a decision.": "有一笔退款正在等待决定。",
  "Our team is reviewing your account. Contact support.": "我们的团队正在审核您的账户，请联系客服。",
  "Your account is frozen or suspended. Contact support.": "您的账户已被冻结或暂停，请联系客服。",
- "Delete your account": "删除您的账户"
+ "Delete your account": "删除您的账户",
+ "Totals of your completed deals": "您已完成交易的合计",
+ "1 completed deal": "1 笔已完成交易",
+ "{{count}} completed deals": "{{count}} 笔已完成交易",
+ "Received": "已收到",
+ "Sent": "已发送",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "这是交易记录，不是 Xspeeria 持有的资金。不含手续费。"
 }

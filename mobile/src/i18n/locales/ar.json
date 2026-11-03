@@ -1441,5 +1441,11 @@
  "A refund is waiting for a decision.": "هناك استرداد بانتظار قرار.",
  "Our team is reviewing your account. Contact support.": "يراجع فريقنا حسابك. تواصل مع الدعم.",
  "Your account is frozen or suspended. Contact support.": "حسابك مجمّد أو موقوف. تواصل مع الدعم.",
- "Delete your account": "حذف حسابك"
+ "Delete your account": "حذف حسابك",
+ "Totals of your completed deals": "إجماليات صفقاتك المكتملة",
+ "1 completed deal": "صفقة واحدة مكتملة",
+ "{{count}} completed deals": "{{count}} صفقات مكتملة",
+ "Received": "المستلَم",
+ "Sent": "المُرسَل",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "سجل صفقات، وليس أموالًا تحتفظ بها Xspeeria. لا يشمل الرسوم."
 }
