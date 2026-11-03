@@ -50,6 +50,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Several adverts take turns in the advert slot, sliding by themselves | **Built 3 Nov 2026** | ADR-086 |
 | Rate limits that don't refuse customers sharing one mobile-network address | **Built 3 Nov 2026** | ADR-087 |
 | Security checklist fixes: Vite patch, weekly dependency report, HTTPS-only header | **Built 3 Nov 2026** | ADR-093 |
+| The server logs in to the database with least rights (`xspeeria_app`), grants completed | **Built 3 Nov 2026** | ADR-094 |
 | Release builds run against the real server (https only); demo-only screens never show in them | **Built 3 Nov 2026** | ADR-096 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |

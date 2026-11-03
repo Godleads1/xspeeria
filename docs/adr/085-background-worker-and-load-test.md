@@ -91,7 +91,7 @@ What the results show:
 2. **Finding, not changed: the `xspeeria_app` role's grants are incomplete.**
    - For example, `idempotency_records` and `matches` have no UPDATE grant, so `SELECT … FOR UPDATE` fails.
    - The app works when it logs in as the tables' owner (not a superuser; the forced row rules still apply), which is how it runs today.
-   - **Decision needed at hosting:** log in as the owner, or complete the `xspeeria_app` grants in a migration.
+   - **Decided (owner, 3 Nov 2026): complete the grants** — done in ADR-094 (migration 0042); the server logs in as `xspeeria_app`.
 3. **Finding: many phones behind one address.** In Nigeria, mobile networks often put many phones behind one shared address (carrier NAT).
    - The sign-in routes' limit of 10 requests a minute **per address** also covers `/users/me` and fingerprint approvals.
    - In the first run, with every customer behind one address, it refused many of those steps.
