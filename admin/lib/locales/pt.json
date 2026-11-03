@@ -1059,7 +1059,7 @@
  "Hold this deal": "Reter esta transação",
  "Deal released": "Transação liberada",
  "Deal held": "Transação retida",
- "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "Uma transação retida não paga nada até ser liberada. Se não for paga por completo a tempo, é cancelada e o dinheiro volta para quem pagou."
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "Uma transação retida não paga nada até ser liberada. Se não for paga por completo a tempo, é cancelada e o dinheiro volta para quem pagou.",
  "Deleted account": "Conta eliminada",
  "Deleted by the customer": "Eliminada pelo cliente",
  "Deleting, restorable until {{date}}": "A eliminar, restaurável até {{date}}",

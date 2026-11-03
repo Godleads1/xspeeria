@@ -1059,7 +1059,7 @@
  "Hold this deal": "تعليق هذه الصفقة",
  "Deal released": "تم إلغاء تعليق الصفقة",
  "Deal held": "تم تعليق الصفقة",
- "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "لا تدفع الصفقة المعلّقة أي مبلغ حتى يُلغى تعليقها. وإذا لم تُدفع بالكامل في الوقت المحدد، تُلغى ويعود المال إلى من دفعه."
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "لا تدفع الصفقة المعلّقة أي مبلغ حتى يُلغى تعليقها. وإذا لم تُدفع بالكامل في الوقت المحدد، تُلغى ويعود المال إلى من دفعه.",
  "Deleted account": "حساب محذوف",
  "Deleted by the customer": "حذفه العميل",
  "Deleting, restorable until {{date}}": "قيد الحذف، قابل للاستعادة حتى {{date}}",
