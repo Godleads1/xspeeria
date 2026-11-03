@@ -397,6 +397,16 @@ export interface FraudAlertRow {
   resolved_at: string | null;
   resolution: 'confirmed' | 'false_alarm' | null;
 }
+/** ADR-092: one of the alerted customer's deals, as the alert's "hold this deal" list shows it. */
+export interface FraudDeal {
+  settlement_id: string;
+  ref: string;
+  phase: string;
+  created_at: string;
+  held: boolean;
+  can_hold: boolean;
+}
+
 export interface FraudAlert extends FraudAlertRow {
   customer_status: string | null;
   customer_phone: string | null;
@@ -867,6 +877,12 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     startFraudAlert: (id: string) => call<void>('POST', `/fraud-alerts/${encodeURIComponent(id)}/start`),
     resolveFraudAlert: (id: string, resolution: 'confirmed' | 'false_alarm', note: string) =>
       call<void>('POST', `/fraud-alerts/${encodeURIComponent(id)}/resolve`, { resolution, note }),
+    fraudDeals: (id: string) => call<{ items: FraudDeal[] }>('GET', `/fraud-alerts/${encodeURIComponent(id)}/deals`),
+    /** fraud_alerts.approve (the server checks). */
+    holdFraudDeal: (id: string, settlementId: string) =>
+      call<{ held: boolean }>('POST', `/fraud-alerts/${encodeURIComponent(id)}/hold-deal`, { settlement_id: settlementId }),
+    releaseFraudDeal: (id: string, settlementId: string) =>
+      call<{ held: boolean }>('POST', `/fraud-alerts/${encodeURIComponent(id)}/release-deal`, { settlement_id: settlementId }),
     reportOutage: (body: OutageInput) => call<{ id: string; ref: string }>('POST', '/outages', body),
     changeOutage: (id: string, body: Partial<OutageInput> & { status?: OutageStatus }) =>
       call<void>('PATCH', `/outages/${encodeURIComponent(id)}`, body),

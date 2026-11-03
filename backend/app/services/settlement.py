@@ -1096,6 +1096,62 @@ class SettlementService:
             held += 1
         return held
 
+    async def hold_one(self, settlement_id: uuid.UUID, reason: str) -> bool | None:
+        """ADR-092: staff hold one deal's payout from a fraud alert. ``True`` if a hold was
+        opened, ``False`` if this reason already holds it (repeat press), ``None`` if the deal
+        can't be held any more (its release is decided, or it has closed). No commit.
+
+        Same rule as :meth:`hold_for_customer`: only before the release decision (ADR-001 §6a);
+        the funding window still runs, so an unpaid deal is cancelled and paid-in money goes
+        back to whoever paid it.
+        """
+        settlement, _legs = await self._lock(settlement_id)
+        if (
+            settlement.phase not in ("INITIALIZING", "AWAITING_FUNDING")
+            or settlement.release_authorized_at is not None
+        ):
+            return None
+        existing = await self._db.scalar(
+            select(SettlementHold.id)
+            .where(
+                SettlementHold.settlement_id == settlement_id,
+                SettlementHold.type == "RISK",
+                SettlementHold.reason == reason[:200],
+                SettlementHold.closed_at.is_(None),
+            )
+            .limit(1)
+        )
+        if existing is not None:
+            return False
+        self._hold(settlement_id, "RISK", reason)
+        return True
+
+    async def release_one(self, settlement_id: uuid.UUID, reason: str) -> bool:
+        """ADR-092: close the hold(s) ``reason`` opened on this deal, then let it move on.
+        ``False`` if there was none open. Other holds (a dispute, a frozen account) stay.
+        No commit."""
+        await self._lock(settlement_id)
+        holds = (
+            await self._db.scalars(
+                select(SettlementHold)
+                .where(
+                    SettlementHold.settlement_id == settlement_id,
+                    SettlementHold.type == "RISK",
+                    SettlementHold.reason == reason[:200],
+                    SettlementHold.closed_at.is_(None),
+                )
+                .with_for_update()
+            )
+        ).all()
+        if not holds:
+            return False
+        now = self._clock()
+        for hold in holds:
+            hold.closed_at = now
+        self._event(settlement_id, None, "HoldClosed", {"type": "RISK", "reason": "staff release"})
+        await self.recheck(settlement_id)
+        return True
+
     async def release_customer_holds(self, user_id: uuid.UUID, reason: str) -> int:
         """ADR-084: staff switched the account back on. Close exactly the holds that
         :meth:`hold_for_customer` opened with ``reason``, then let each deal move on. No commit.

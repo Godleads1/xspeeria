@@ -116,6 +116,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 
 ## 4b. Buildable now, no outside party needed (added 2 Nov 2026)
 
+- [ ] **Delete account** in the app and server (the screen says it isn't built). Record keeping **approved** (DEC-106, 3 Nov 2026): identity, payout and deal records kept 5 years from closing, Compliance-only; audit log and deal events 7 years (`docs/13-governance/DELETE_ACCOUNT_RULE.md`). *You:* the rest of the rule and a grace period, yes or no. *Lawyer:* confirm the 5 years and keeping ID images.
 - [x] **Delete account** — built (ADR-095, 3 Nov 2026): closes at once, 14 days to restore by logging in, clean-up after 14 days, legal records kept 5 years for Compliance only (DEC-106). *Lawyer:* confirm the 5 years and keeping ID images. *Later (first due 2031):* the job that removes personal details after 5 years. *With live accounts:* ask Didit, Resend and photo storage to delete what isn't needed.
 - [x] **Super Admin hardware security key** (ADR-051 Decision 2). Done (ADR-081).
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
