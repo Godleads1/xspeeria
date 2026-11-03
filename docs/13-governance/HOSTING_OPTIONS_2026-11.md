@@ -1,5 +1,7 @@
 # Hosting Options for Xspeeria (November 2026)
 
+> **Owner, 3 Nov 2026 (DEC-096): the lawyer confirmed the CBN circular of 15 June 2026 covers Xspeeria.** Payment data, and its backups, must be stored and managed in Nigeria from 1 January 2027. **Option C below (and a full AWS region such as Cape Town) is ruled out for that data.** The choice is between A (a Nigerian cloud) and B (the AWS Lagos Local Zone, with PostgreSQL run by us and backups confirmed in Lagos). **Lawyer, also 3 Nov 2026:** Didit (identity checks), Resend (email) and photo storage (Cloudflare R2) **may hold data abroad** (DEC-098), and third-party payouts are acceptable under AML rules (DEC-097). The rule above applies to Xspeeria's own payment data and its backups.
+
 **For the owner to decide** (readiness blocker C-3). Nothing here is chosen or bought. Prices are not quoted, because none were verified; get written quotes.
 
 ## 1. The rule that decides most of this
@@ -44,7 +46,7 @@
 
 ## 4. Recommended next steps
 
-1. **Lawyer (C-2):** is Xspeeria covered by the 15 June 2026 circular? Which data must stay in Nigeria? May backups or the identity-check provider (Didit) process data abroad?
+1. ~~**Lawyer (C-2):** is Xspeeria covered by the 15 June 2026 circular?~~ **Answered 3 Nov 2026: yes.** Also answered the same day: Didit, Resend and photo storage may hold data abroad (DEC-098). Originally asked: Which data must stay in Nigeria? May backups or the identity-check provider (Didit) process data abroad?
 2. **Ask 2–3 Nigerian providers** (Layer3 first, because it advertises managed databases and certifications) for a written answer to the table in §2:
    - PostgreSQL 16 with roles and row-level security, and no superuser for the app;
    - backup location and frequency, and the restore process;

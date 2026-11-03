@@ -28,7 +28,7 @@
 ## Consequences
 
 - **The 24-hour wait for new payout accounts** (fraud options paper, option 1) becomes the main protection against a stolen account paying out to a fraudster, because a different name is now normal. It is not built: the owner decides.
-- **Still open:** whether third-party payouts are acceptable under the partner bank's and the law's AML rules. Some banks require screening of the receiving name or limits. Ask the lawyer and the bank (C-1, C-2).
+- **Lawyer, 3 Nov 2026 (DEC-097): third-party payouts are acceptable under AML rules.** Still to confirm with the partner bank, which may require screening of the receiving name or limits (C-1).
 
 ## Evidence
 

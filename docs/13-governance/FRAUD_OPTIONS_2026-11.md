@@ -47,6 +47,6 @@ Together they cover the takeover path, and honest users rarely notice them. Add 
 
 Accepted risk: an account takeover that adds a new account and takes a deal at once can be paid out before the alert is seen or the owner reads the email. If the partner bank or the lawyer requires a cooling-off period on new payees, this decision is reopened.
 
-Also confirm with the lawyer and the partner bank that third-party payouts are acceptable under their AML rules. Some banks require extra checks for them.
+**Lawyer, 3 Nov 2026 (DEC-097): third-party payouts are acceptable under AML rules.** Still confirm with the partner bank: some banks require extra checks for them.
 
 **What I need from you:** which numbers to use for options 1, 3, 4 and 7, if chosen, and who reviews held payouts (Compliance Officer?). The partner bank may also have rules of its own: ask them (C-1).
