@@ -378,3 +378,38 @@ jobs:
       # rejects a tracked `.gitleaksignore`, closing the second suppression channel.
       - name: Tracked sensitive-file guard
         run: python3 scripts/check_sensitive_files.py
+
+  container-images:
+    name: Container Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # ADR-089: both production images must keep building. Nothing is pushed anywhere.
+      - name: Build the API and worker image
+        run: docker build -f backend/Dockerfile -t xspeeria-api:ci .
+
+      - name: Build the admin console image
+        run: >-
+          docker build -f admin/Dockerfile
+          --build-arg ADMIN_API_ORIGIN=http://127.0.0.1:8000
+          -t xspeeria-admin:ci .
+
+      - name: Smoke-test the API image (non-root, no server name, /health answers)
+        run: |
+          set -eu
+          jwt="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          mfa="$(python3 -c 'import base64, os; print(base64.b64encode(os.urandom(32)).decode())')"
+          docker run -d --name api -p 8000:8000 \
+            -e APP_ENV=staging -e JWT_SECRET_KEY="$jwt" -e MFA_ENCRYPTION_KEY="$mfa" \
+            xspeeria-api:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/health >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"ok"'
+          ! curl -sSI http://127.0.0.1:8000/health | grep -qi '^server:'
+          test "$(docker exec api id -u)" = "10001"
+          docker stop -t 30 api
+          test "$(docker inspect -f '{{.State.ExitCode}}' api)" = "0"
