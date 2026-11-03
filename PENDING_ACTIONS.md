@@ -117,7 +117,8 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [x] **Shared rate limiter** (database-backed) — readiness H-1. Done (ADR-080).
 - [x] **"This wasn't me" security emails** — built (ADR-084, 2 Nov 2026): an email for every log-in, account change, payout account change and deal step; the link freezes the account; a Super Admin reactivates it. *You:* set `PUBLIC_API_URL` to the live API's https address (needed in production).
 - [x] **Resend email sender** — built (ADR-082). *You:* create the Resend account, verify the sending domain, then set `RESEND_API_KEY` and `EMAIL_FROM` (steps in ADR-082).
-- [ ] **Release-build settings** for the app (EAS profiles, store metadata) — ready for when the store accounts exist.
+- [x] **Release-build settings** — built (ADR-090, 3 Nov 2026): profiles, bundle ID, store listing draft. *You:* confirm the bundle ID `com.xspeeria.app` (permanent once uploaded), supply a square app icon, approve the listing texts.
+- [ ] **Release builds run against the server** — *Build*, needs your go (ADR-090 blocker): today a store build shows "not available in this build".
 
 ## 5. Housekeeping
 

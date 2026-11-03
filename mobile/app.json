@@ -3,7 +3,7 @@
     "name": "Xspeeria",
     "slug": "xspeeria",
     "owner": "xspeeria-01",
-    "version": "0.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "xspeeria",
     "userInterfaceStyle": "light",
@@ -12,7 +12,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationDefaultAccuracyReduced": true
-      }
+      },
+      "bundleIdentifier": "com.xspeeria.app"
     },
     "android": {
       "edgeToEdgeEnabled": true,
