@@ -60,8 +60,9 @@ export default function RootLayout(): ReactElement | null {
   }, [ready]);
 
   if (!ready) return null;
-  // ADR-018: a release build has no demo services and no real ones yet, so nothing is reachable.
-  if (!DEMO_MODE) return <UnavailableBuild />;
+  // ADR-018: a release build never runs demo services. ADR-096: with a server it runs the
+  // real app; without one nothing is reachable.
+  if (!DEMO_MODE && !SERVER_MODE) return <UnavailableBuild />;
 
   return (
     <Fragment key={lang}>

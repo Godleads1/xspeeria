@@ -5,8 +5,9 @@ import { US_REGION, VerifyRegionScreen } from '../../../src/features/auth/Region
 import { session } from '../../../src/features/auth/session';
 import { kycRegions } from '../../../src/features/profile/kycRegions';
 import { useThemeMode } from '../../../src/theme';
+import { DemoOnly } from '../../../src/features/auth/DemoOnly';
 
-export default function VerifyRegionRoute(): ReactElement {
+function VerifyRegionRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   return (
@@ -18,5 +19,14 @@ export default function VerifyRegionRoute(): ReactElement {
       onDone={() => router.replace('/')}
       onCancel={() => router.back()}
     />
+  );
+}
+
+/** ADR-096: demo only; a release build goes to Home. */
+export default function VerifyRegionRouteGuarded(): ReactElement {
+  return (
+    <DemoOnly>
+      <VerifyRegionRoute />
+    </DemoOnly>
   );
 }

@@ -6,9 +6,10 @@ import { CodeScreen } from '../../../src/features/auth/SignupScreens';
 import { signup, useSignup } from '../../../src/features/auth/signupStore';
 import { useThemeMode } from '../../../src/theme';
 import { tr } from "../../../src/i18n";
+import { DemoOnly } from '../../../src/features/auth/DemoOnly';
 
 /** Not in Figma: the email is confirmed with a code, like every email change (ADR-011). */
-export default function SignupEmailRoute(): ReactElement {
+function SignupEmailRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const draft = useSignup();
@@ -29,5 +30,14 @@ export default function SignupEmailRoute(): ReactElement {
       }}
       random={Crypto.getRandomBytes}
     />
+  );
+}
+
+/** ADR-096: demo only; a release build goes to Home. */
+export default function SignupEmailRouteGuarded(): ReactElement {
+  return (
+    <DemoOnly>
+      <SignupEmailRoute />
+    </DemoOnly>
   );
 }
