@@ -95,6 +95,8 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 
 - [x] ~~**Passkeys**~~ — replaced by fingerprint on a trusted phone + face check (ADR-054, owner 2026-10-20). (Checked 2026-10-27.)
 - [x] **Shared rate limiter** — built in the database (ADR-080, 2 Nov 2026). Still to do with hosting: a trusted-proxy setting for client addresses. (ADR-025 §4)
+- [ ] **With hosting: HTTPS only (ADR-093).** The load balancer serves HTTPS only, redirects plain HTTP, and keeps the `Strict-Transport-Security` header the API sends. Check: `curl -sI https://<api address>/health`.
+- [ ] **Expo `glob`/`minimatch` advisories (ADR-093):** upgrade Expo when a release picks up `glob` ≥ 14.0.2 and `minimatch` ≥ 11.0.1 (the weekly report shows it).
 - [ ] **Secret manager** (key rotation tools are built: ADR-076, PR #95) for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [x] **Database row-level security** as a second layer of permission checks — built (ADR-078, PR #96). At deployment: the app's database login must not be a superuser or have `BYPASSRLS`.
 - [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
