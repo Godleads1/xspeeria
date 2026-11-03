@@ -71,7 +71,7 @@ def test_the_pretend_bank_stays_in_the_web_server() -> None:
 
 
 def test_no_database_no_loops_and_no_worker() -> None:
-    no_db = Settings(_env_file=None)  # type: ignore[call-arg]
+    no_db = Settings(_env_file=None, database_url=None)  # type: ignore[call-arg]
     assert planned_tasks(no_db, _rt(), role="web") == {}
     with pytest.raises(SystemExit):
         _check(no_db)
