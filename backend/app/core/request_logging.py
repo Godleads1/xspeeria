@@ -70,7 +70,16 @@ async def _record_activity(request: Request, route: str, status_code: int) -> No
         _logger.exception("activity_record_failed", extra={"route": route})
 
 
+#: ADR-093: browsers that reach the API must use HTTPS for two years, subdomains included. The
+#: same value as the admin console's (next.config.ts). Sent everywhere except a developer's
+#: own computer (``APP_ENV=local``, plain http://localhost).
+HSTS = "max-age=63072000; includeSubDomains"
+
+
 def install_request_logging(app: FastAPI) -> None:
+    settings = getattr(app.state, "settings", None)
+    https_only = settings is not None and settings.app_env != "local"
+
     @app.middleware("http")
     async def _log(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -92,6 +101,9 @@ def install_request_logging(app: FastAPI) -> None:
             response = await call_next(request)
             status_code = response.status_code
             response.headers["X-Request-ID"] = request_id
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            if https_only:
+                response.headers["Strict-Transport-Security"] = HSTS
             return response
         finally:
             route = _route_template(request)
