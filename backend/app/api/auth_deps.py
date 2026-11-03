@@ -118,6 +118,21 @@ async def current_principal(
 CurrentPrincipal = Annotated[Principal, Depends(current_principal)]
 
 
+async def limit_by_account(
+    principal: CurrentPrincipal, runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)]
+) -> None:
+    """Signed-in account routes: limited per customer, not per network address (owner,
+    2026-11-03). Many phones in Nigeria share one mobile-network address, so a per-address
+    limit would refuse real customers behind a busy one."""
+    if not await runtime.user_limiter.hit(f"account:{principal.user_id}", runtime.clock()):
+        raise AppError(
+            "AUTH_429_RATE_LIMITED",
+            "Too many requests. Please wait a moment and try again.",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            details={"retry_after_seconds": 60},
+        )
+
+
 def device_info(request: Request, device_id: str | None) -> DeviceInfo:
     agent = request.headers.get("user-agent")
     return DeviceInfo(

@@ -547,6 +547,7 @@ def create_app(
         )
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(auth.account_router)
     application.include_router(admin.router)
     application.include_router(offers.router)
     application.include_router(offers.marketplace_router)

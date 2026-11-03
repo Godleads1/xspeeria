@@ -58,8 +58,11 @@ SMS_PER_DAY = 10
 CODE_RESEND_WAIT = timedelta(seconds=60)
 CODE_TTL = timedelta(minutes=10)
 MAX_CODE_TRIES = 5
-#: ADR-025 §1.2 — per network address, shared by every auth endpoint.
-LOGIN_REQUESTS_PER_MINUTE = 10
+#: ADR-025 §1.2 — per network address, on the routes used before sign-in (sign-up, log-in,
+#: codes, PIN reset, token refresh, fingerprint unlock). Owner, 2026-11-03: 60 (was 10), and
+#: signed-in account routes are limited per customer instead, because many phones in Nigeria
+#: share one mobile-network address (ADR-087).
+LOGIN_REQUESTS_PER_MINUTE = 60
 #: ADR-026 — second factor.
 LOGIN_CHALLENGE_TTL = timedelta(minutes=5)  # contract §3.1
 ENROL_CHALLENGE_TTL = timedelta(minutes=10)  # same as the SMS code expiry (ADR-024)

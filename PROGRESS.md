@@ -47,6 +47,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Super Admin hardware security keys (readiness H-5) | **Built 2 Nov 2026** | ADR-081 |
 | "Was this you?" email for every log-in and change, with a "this wasn't me" link that freezes the account | **Built 2 Nov 2026** | ADR-084 |
 | One background worker; first load test (fixed: taking an offer was refused under the row rules) | **Built 3 Nov 2026** | ADR-085 |
+| Rate limits that don't refuse customers sharing one mobile-network address | **Built 3 Nov 2026** | ADR-087 |
 
 ### Not built yet (code)
 
