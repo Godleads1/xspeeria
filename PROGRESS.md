@@ -53,6 +53,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Delete account: closes at once, 14 days to restore, clean-up, legal records kept for Compliance | **Built 3 Nov 2026** | ADR-095 |
 | The server logs in to the database with least rights (`xspeeria_app`), grants completed | **Built 3 Nov 2026** | ADR-094 |
 | Staff "hold this deal" button on a fraud alert | **Built 3 Nov 2026** | ADR-092 |
+| Release builds run against the real server (https only); demo-only screens never show in them | **Built 3 Nov 2026** | ADR-096 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |
 | App Store / Google Play release settings and store listing draft (release builds still blocked, ADR-090) | **Built 3 Nov 2026** | ADR-090 |

@@ -5,9 +5,10 @@
  * `https://…`; plain `http://` is accepted only for this computer or a private home/office
  * network address, so a development build can talk to a server on the developer's laptop.
  *
- * Server mode is for development builds only for now: the rest of the app (marketplace,
- * trades, profile data) is still demo data, and release builds never run demo data
- * (ADR-018), so a release build still shows "not available".
+ * Server mode (ADR-096, owner 2026-11-03): a development build pointed at a server, or a
+ * **release build with an `https://` server address**. A release build never runs demo data
+ * (ADR-018): without a server it still shows "not available", and the screens that only exist
+ * for the demo send it to Home (`DemoOnly`).
  */
 
 import { DEMO_MODE } from '../features/auth/demo';
@@ -33,5 +34,11 @@ export function parseApiUrl(raw: string | undefined | null): string | null {
 
 export const API_BASE_URL: string | null = parseApiUrl(process.env.EXPO_PUBLIC_API_URL);
 
-/** True when a development build is pointed at a real server. */
-export const SERVER_MODE: boolean = DEMO_MODE && API_BASE_URL !== null;
+/** Pure rule, exported for tests (ADR-096): a server address, and https:// in a release build. */
+export function isServerMode(demoBuild: boolean, apiUrl: string | null): boolean {
+  if (apiUrl === null) return false;
+  return demoBuild || apiUrl.startsWith('https://');
+}
+
+/** True when the app talks to a real server. */
+export const SERVER_MODE: boolean = isServerMode(DEMO_MODE, API_BASE_URL);

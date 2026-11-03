@@ -122,6 +122,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [x] **"This wasn't me" security emails** — built (ADR-084, 2 Nov 2026): an email for every log-in, account change, payout account change and deal step; the link freezes the account; a Super Admin reactivates it. *You:* set `PUBLIC_API_URL` to the live API's https address (needed in production).
 - [x] **Resend email sender** — built (ADR-082). *You:* create the Resend account, verify the sending domain, then set `RESEND_API_KEY` and `EMAIL_FROM` (steps in ADR-082).
 - [x] **Release-build settings** — built (ADR-090, 3 Nov 2026): profiles, bundle ID, store listing draft. *You:* confirm the bundle ID `com.xspeeria.app` (permanent once uploaded), supply a square app icon, approve the listing texts.
+- [ ] **First release build on a real phone (ADR-096)** — *You:* on your Expo account, set `EXPO_PUBLIC_API_URL` to the test server's `https://` address for the `preview` profile, then `eas build --profile preview --platform android` and install the APK. Needs the test server (VM2) running.
 - [ ] **Release builds run against the server** — *Build*, needs your go (ADR-090 blocker): today a store build shows "not available in this build".
 
 ## 5. Housekeeping
