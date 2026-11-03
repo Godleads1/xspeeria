@@ -555,6 +555,17 @@ async def test_app_role_grants(db_settings: Settings) -> None:
 
     assert await _sql(db_settings, grants("offers")) == "INSERT,SELECT,UPDATE"
     assert await _sql(db_settings, grants("idempotency_records")) == "DELETE,INSERT,SELECT"
+    # ADR-094: UPDATE on one column only, so the app can lock a record (SELECT … FOR UPDATE)
+    # without being able to change what a record says.
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT string_agg(column_name, ',') FROM information_schema.column_privileges "
+            "WHERE grantee = 'xspeeria_app' AND table_name = 'idempotency_records' "
+            "AND privilege_type = 'UPDATE'",
+        )
+        == "expires_at"
+    )
 
 
 async def test_currency_definitions_command_is_insert_only(db_settings: Settings) -> None:

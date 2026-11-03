@@ -163,6 +163,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `090-store-release-settings.md` | App Store / Google Play settings: bundle ID `com.xspeeria.app`, version 1.0.0, build numbers counted by Expo, `preview` and `production` build profiles; store listing draft (`docs/09-ui-ux/STORE_LISTING_DRAFT.md`); **blocker found: release builds still show "not available" (ADR-018)** until server mode works in release builds (DEC-101) | **IMPLEMENTED** (settings) — 2026-11-03 |
 | `091-cheaper-requests.md` | Fewer database steps per request: the session idle clock is written at most every 30 s (no row lock), a rate-limit check is one statement; ~12–18% less CPU, 3 fewer SQL statements per signed-in request; lighter logging middleware tried and dropped (DEC-102) | **IMPLEMENTED** — 2026-11-03 |
 | `093-security-checklist-fixes.md` | Security checklist fixes: Vite 6.4.5; Expo's `glob`/`minimatch` moderates planned, not forced (Expo is newest, forcing breaks npm; build tools only); weekly dependency report incl. developer tools (fails on high/critical); API sends HSTS + nosniff outside local; load balancer HTTPS-only on the hosting checklist (DEC-103) | **IMPLEMENTED** — 2026-11-03 |
+| `094-app-database-login.md` | The server logs in as the non-owning `xspeeria_app` role; whole suite run as that role found one gap (locking `idempotency_records`), fixed by `UPDATE (expires_at)` only (migration 0042); `tests/as_app_role.py` keeps it checked (DEC-105) | **IMPLEMENTED** — 2026-11-03 |
 
 ### Accounting policy is not architecture
 
