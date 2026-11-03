@@ -31,7 +31,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Advert banner:** send a 3× version (1026 × 339) so it is fully sharp on phones. (ADR-005)
 - [ ] **Figma file:** update the PIN screens from 4 to 6 boxes. (ADR-024)
 - [ ] **GitHub plan upgrade** (Pro/Team) so `main` can require reviews and passing checks. (SEC-031, ADR-019 §4)
-- [x] **Third-party payouts (DEC-007):** decided 2 Nov 2026: **allowed.** A customer may be paid into any account, not only one in their own name (owner's example: a school's account for a child's fees). Still to confirm with the lawyer and the partner bank that this is acceptable for AML.
+- [x] **Third-party payouts (DEC-007):** decided 2 Nov 2026: **allowed.** A customer may be paid into any account, not only one in their own name (owner's example: a school's account for a child's fees). **Lawyer, 3 Nov 2026: acceptable under AML rules** (DEC-097). Still to confirm with the partner bank, which may have its own rules (C-1).
 - [x] **Authorise Milestone 4.1C** — approved 18 Oct 2026; CD3 lock built (ADR-028); offers built (ADR-029).
 - [ ] **Confirm the offer interface details the contract leaves open** — *You* (ADR-029 §4): `filter[currency_pair]` written `USD/NGN`; page shape `items` + `next_offset`; the extra `GET /offers/mine` and `GET /offers/{id}`; amount filters and other sort orders not built yet.
 - [x] **Connect the app's Market screen to the server offers** — *Build* — done 18 Oct 2026 for development builds (ADR-030).
@@ -76,7 +76,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
 - [ ] **ID checks (KYC) and anti-money-laundering** — provider chosen: **Didit** (ADR-039, server built). Still needed: a Didit account and workflow (ID + liveness + face match + AML), its data processing agreement, NIN/BVN support (ask Didit), and a compliance officer to own the rules.
 - [ ] **SMS and email provider accounts.**
-- [x] **Lawyer: does the CBN data-localisation circular (15 June 2026) cover Xspeeria?** — **Yes** (owner, 3 Nov 2026, DEC-096). Payment data and backups stay in Nigeria from 1 Jan 2027; a hosting region abroad (e.g. AWS Cape Town) is ruled out for it. Still to ask the lawyer: third-party payouts under AML rules; whether Didit, Resend and photo storage (Cloudflare R2) may hold data abroad.
+- [x] **Lawyer: does the CBN data-localisation circular (15 June 2026) cover Xspeeria?** — **Yes** (owner, 3 Nov 2026, DEC-096). Payment data and backups stay in Nigeria from 1 Jan 2027; a hosting region abroad (e.g. AWS Cape Town) is ruled out for it. **Lawyer, 3 Nov 2026:** third-party payouts are acceptable under AML rules (DEC-097), and Didit, Resend and photo storage (Cloudflare R2) may hold data abroad (DEC-098); the vendors' data-processing agreements are still to be signed.
 - [ ] **Hosting, in Nigeria** (DEC-096) — a Nigerian cloud, or the AWS Lagos Local Zone; cloud account (database, servers; separate test and live), domain name, secret manager. Then move staff and advert photos from the local folder (`LOCAL_PHOTO_DIR`) to the private Cloudflare R2 bucket (ADR-049).
 - [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).
 - [ ] **Admin panel inputs** — staff roles and permissions; who reviews disputes, ID checks and frozen accounts.
