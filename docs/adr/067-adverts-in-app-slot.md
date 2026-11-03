@@ -9,7 +9,7 @@
 
 ## Decisions
 
-1. **One slot, everyone sees the same advert.** The Market screen's advert slot (Figma node 787:4204, 342 × 113) shows the advert that is switched on and inside its dates. If several qualify, it shows **the one that started last**. When none qualifies, the app keeps its "Place advert here" placeholder.
+1. **Amended by ADR-086 (owner, 2026-11-03): several adverts take turns, sliding every 5 seconds.** **One slot, everyone sees the same advert.** The Market screen's advert slot (Figma node 787:4204, 342 × 113) shows the advert that is switched on and inside its dates. If several qualify, it shows **the one that started last**. When none qualifies, the app keeps its "Place advert here" placeholder.
 2. **What staff set:**
    - the advert name;
    - the post date and end date (Lagos time in the console; the server requires a time zone);

@@ -348,6 +348,8 @@ export interface Advert {
   link_url: string | null;
   active: boolean;
   state: AdvertState;
+  /** ADR-086: its turn in the rotation (1 = first), or null when it isn't taking turns. */
+  position: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -356,6 +358,11 @@ export interface AdvertPage {
   now: string;
   total: number;
   showing_id: string | null;
+  /** ADR-086: the adverts taking turns in the app, in order. */
+  showing_ids: string[];
+  /** ADR-086: seconds each advert stays before the next slides in, and how many take turns. */
+  rotate_seconds: number;
+  max_showing: number;
   /** The app's advert slot in points (342 × 113). */
   slot: { width: number; height: number };
   items: Advert[];

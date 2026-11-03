@@ -35,7 +35,22 @@ from app.models.staff import StaffAccount, StaffAuditEntry
 from app.providers.object_store import ObjectStore, new_key
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
-__all__ = ["SLOT_HEIGHT", "SLOT_WIDTH", "AdvertService", "advert_problem", "current_advert"]
+__all__ = [
+    "MAX_SHOWING",
+    "ROTATE_SECONDS",
+    "SLOT_HEIGHT",
+    "SLOT_WIDTH",
+    "AdvertService",
+    "advert_problem",
+    "current_advert",
+    "showing_adverts",
+]
+
+#: ADR-086 (owner 2026-11-03): several adverts can show; the app slides through them by itself.
+#: Seconds each advert stays before the next slides in, and how many take turns at most (the
+#: newest first). Starting values; changing them is an owner decision.
+ROTATE_SECONDS = 5
+MAX_SHOWING = 10
 
 #: The app's advert slot (Figma node 787:4204; product owner's artwork 342 × 113).
 SLOT_WIDTH = 342
@@ -77,12 +92,12 @@ def _check_link(url: str | None) -> str | None:
 
 
 def _view(
-    a: Advert, who: str | None, now: datetime, showing_id: uuid.UUID | None
+    a: Advert, who: str | None, now: datetime, showing_ids: list[uuid.UUID]
 ) -> dict[str, Any]:
     in_dates = a.active and a.starts_at <= now < a.ends_at
-    # One slot: inside its dates but not the one in the slot -> behind a newer advert.
+    # ADR-086: inside its dates but past the newest MAX_SHOWING -> waiting for a free place.
     state = (
-        ("showing" if a.id == showing_id else "covered")
+        ("showing" if a.id in showing_ids else "covered")
         if in_dates
         else ("off" if not a.active else ("ended" if now >= a.ends_at else "scheduled"))
     )
@@ -96,21 +111,29 @@ def _view(
         "link_url": a.link_url,
         "active": a.active,
         "state": state,
+        "position": showing_ids.index(a.id) + 1 if a.id in showing_ids else None,
         "created_by": who,
         "created_at": a.created_at,
         "updated_at": a.updated_at,
     }
 
 
-async def current_advert(db: AsyncSession, now: datetime) -> Advert | None:
-    """The one advert the app shows now: switched on, inside its dates, started last."""
-    row = await db.scalar(
+async def showing_adverts(db: AsyncSession, now: datetime) -> list[Advert]:
+    """ADR-086: the adverts the app slides through now: switched on, inside their dates, the
+    newest start first, at most ``MAX_SHOWING``."""
+    rows = await db.scalars(
         select(Advert)
         .where(Advert.active.is_(True), Advert.starts_at <= now, Advert.ends_at > now)
         .order_by(Advert.starts_at.desc(), Advert.created_at.desc())
-        .limit(1)
+        .limit(MAX_SHOWING)
     )
-    return row
+    return list(rows.all())
+
+
+async def current_advert(db: AsyncSession, now: datetime) -> Advert | None:
+    """The first advert of the rotation (older app builds show only this one)."""
+    showing = await showing_adverts(db, now)
+    return showing[0] if showing else None
 
 
 class AdvertService:
@@ -199,15 +222,17 @@ class AdvertService:
             )
         ).all()
         now = self._clock()
-        showing = await current_advert(self._db, now)
-        showing_id = showing.id if showing else None  # read before the rollback expires it
-        items = [_view(a, who, now, showing_id) for a, who in rows]
+        showing_ids = [a.id for a in await showing_adverts(self._db, now)]  # before the rollback
+        items = [_view(a, who, now, showing_ids) for a, who in rows]
         total = await self._db.scalar(select(func.count(Advert.id)))
         await self._db.rollback()
         return {
             "now": now,
             "total": int(total or 0),
-            "showing_id": showing_id,
+            "showing_id": showing_ids[0] if showing_ids else None,
+            "showing_ids": showing_ids,
+            "rotate_seconds": ROTATE_SECONDS,
+            "max_showing": MAX_SHOWING,
             "slot": {"width": SLOT_WIDTH, "height": SLOT_HEIGHT},
             "items": items,
         }
@@ -329,13 +354,13 @@ class AdvertService:
     async def picture(
         self, principal: StaffPrincipal | None, advert_id: uuid.UUID
     ) -> tuple[bytes, str] | None:
-        """Staff with adverts.read see any picture; the app only the advert showing now."""
+        """Staff with adverts.read see any picture; the app only the adverts showing now."""
         if principal is not None:
             self._need(principal, "adverts.read")
             a = await self._db.get(Advert, advert_id)
         else:
-            current = await current_advert(self._db, self._clock())
-            a = current if current is not None and current.id == advert_id else None
+            showing = await showing_adverts(self._db, self._clock())
+            a = next((x for x in showing if x.id == advert_id), None)
         key = a.image_key if a else None
         content_type = a.content_type if a else None
         await self._db.rollback()

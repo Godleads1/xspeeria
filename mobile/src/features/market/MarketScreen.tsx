@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { RoundFlag } from "../../components/flags";
 import { Icon } from "../../components/icons";
@@ -43,7 +43,7 @@ import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull }
 import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
-import { safeAdvertLink } from "../../api/advertsApi";
+import { AdvertCarousel, type AdvertSlide } from "./AdvertCarousel";
 import { isKycCountry, type KycCountry } from "../../api/kycApi";
 import { tr, k } from "../../i18n";
 
@@ -87,10 +87,14 @@ export function MarketScreen({
   refreshSignal = 0,
   onQueueListing,
   onMultiRequest,
-  advert = null,
+  adverts = [],
+  advertSeconds,
 }: {
-  /** ADR-067: the advert staff put in the slot (server builds); null shows the placeholder. */
-  advert?: { name: string; link_url: string | null; source: { uri: string; headers: Record<string, string> } } | null;
+  /** ADR-067/086: the adverts staff placed (server builds), newest first; they take turns in
+   * the slot. None shows the placeholder. */
+  adverts?: readonly AdvertSlide[];
+  /** ADR-086: seconds each advert stays before the next slides in (the server's setting). */
+  advertSeconds?: number;
   /** ADR-059 Decision 5: opens "New buy request" in several currencies (server builds). */
   onMultiRequest?: () => void;
   /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
@@ -516,21 +520,10 @@ export function MarketScreen({
 
       {side === "buy" ? (
         <View testID="market-advert" style={styles.advert}>
-          {advert ? (
-            // ADR-067: the advert staff placed from the web admin; everyone sees the same one.
-            <Pressable
-              testID="market-advert-live"
-              accessibilityRole={safeAdvertLink(advert.link_url) ? "link" : "image"}
-              accessibilityLabel={advert.name}
-              disabled={!safeAdvertLink(advert.link_url)}
-              onPress={() => {
-                const link = safeAdvertLink(advert.link_url);
-                if (link) void Linking.openURL(link).catch(() => undefined);
-              }}
-              style={styles.advertImage}
-            >
-              <Image source={advert.source} resizeMode="cover" style={styles.advertImage} />
-            </Pressable>
+          {adverts.length > 0 ? (
+            // ADR-067/086: the adverts staff placed from the web admin; everyone sees the same
+            // ones, sliding by themselves.
+            <AdvertCarousel slides={adverts} rotateSeconds={advertSeconds} />
           ) : (
             // Figma advert slot (node 787:4204). PLACEHOLDER artwork supplied by the product
             // owner; the stock photo needs a confirmed licence before release.
