@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 /**
@@ -23,6 +24,10 @@ const API_ORIGIN = (process.env.ADMIN_API_ORIGIN ?? 'http://127.0.0.1:8000').rep
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // ADR-089: a self-contained server for the container image (`node admin/server.js`). The
+  // repository root is traced too, because the shared token package lives there.
+  output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '..'),
   poweredByHeader: false,
   // The shared token package ships TypeScript source, so Next must compile it.
   transpilePackages: ['@xspeeria/tokens'],
