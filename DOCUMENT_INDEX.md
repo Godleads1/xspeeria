@@ -659,6 +659,7 @@ Prepared for owner decisions. Nothing in them is chosen or built.
 - `docs/07-security/ON_CALL_GUIDE.md`: who answers alerts (on call: **Chinedu Egbuchulam**, named 2026-11-02), response times by level, first five minutes, hand-over. Backup: **Oluwaseun Adesanya** (named 2026-11-03).
 - `docs/13-governance/HOSTING_OPTIONS_2026-11.md`: what Xspeeria needs from a host. Covers the **CBN circular of 15 June 2026** (payment data stored in Nigeria from 1 January 2027), a Nigerian cloud vs the AWS Lagos Local Zone vs own servers, and the questions to ask providers and the lawyer.
 - `docs/13-governance/FRAUD_OPTIONS_2026-11.md`: seven checks that could replace the removed 24-hour payout hold (FX-03), with a suggested starting set.
+- `docs/13-governance/DELETE_ACCOUNT_RULE.md`: what Delete account keeps and for how long. **Approved (DEC-106, 3 Nov 2026):** identity, payout and deal records 5 years from closing, Compliance-only; audit log and deal events 7 years. The rest of the rule is a suggestion awaiting the owner; not built.
 - `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040).
 - `docs/13-governance/GITHUB_MAIN_PROTECTION.md`: the exact ruleset for `main` once the GitHub plan is upgraded (SEC-031).
 
