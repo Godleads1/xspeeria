@@ -12,13 +12,14 @@ import { PayoutDestinationScreen } from '../../../src/features/trade/PayoutDesti
 import { orderReceiveMinor, placeOrder, receiveCurrency } from '../../../src/features/trade/placeOrder';
 import { useThemeMode } from '../../../src/theme';
 import { tr } from "../../../src/i18n";
+import { DemoOnly } from '../../../src/features/auth/DemoOnly';
 
 /**
  * Payout Destination (ADR-022). Opens only for an order confirmed on Select Match (a deep
  * link with no order goes back to Market). Continue → one 2FA check for the whole order →
  * one trade per listing, each paying the chosen accounts.
  */
-export default function PayoutRoute(): ReactElement {
+function PayoutRoute(): ReactElement {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const draft = useOrderDraft();
@@ -60,5 +61,14 @@ export default function PayoutRoute(): ReactElement {
         else router.replace('/marketplace');
       }}
     />
+  );
+}
+
+/** ADR-096: demo only; a release build goes to Home. */
+export default function PayoutRouteGuarded(): ReactElement {
+  return (
+    <DemoOnly>
+      <PayoutRoute />
+    </DemoOnly>
   );
 }

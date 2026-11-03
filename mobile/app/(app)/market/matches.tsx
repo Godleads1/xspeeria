@@ -18,6 +18,7 @@ import {
 import { orderDraft } from "../../../src/features/trade/orderDraft";
 import { tradeStore, useTrades } from "../../../src/features/trade/tradeStore";
 import { useThemeMode } from "../../../src/theme";
+import { DemoOnly } from "../../../src/features/auth/DemoOnly";
 
 /**
  * Route params are untrusted input (deep links can set them), so they are re-validated
@@ -53,7 +54,7 @@ function parseParams(
     : null;
 }
 
-export default function SelectMatchRoute(): ReactElement | null {
+function SelectMatchRoute(): ReactElement | null {
   useThemeMode(); // repaint on light/dark change (ADR-010)
   const router = useRouter();
   const request = parseParams(useLocalSearchParams());
@@ -109,5 +110,14 @@ export default function SelectMatchRoute(): ReactElement | null {
         />
       ) : null}
     </>
+  );
+}
+
+/** ADR-096: demo only; a release build goes to Home. */
+export default function SelectMatchRouteGuarded(): ReactElement {
+  return (
+    <DemoOnly>
+      <SelectMatchRoute />
+    </DemoOnly>
   );
 }

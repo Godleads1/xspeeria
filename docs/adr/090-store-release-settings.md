@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED** (settings) — 2026-11-03. **A release build can't be used yet**: see "Blocker" below. |
+| **Status** | **IMPLEMENTED** (settings) — 2026-11-03. The release-build blocker below was **cleared by ADR-096** (same day). |
 | **Decision ID** | DEC-101 |
 | **Authority** | Owner, 2026-11-03: *"go"* on "App Store and Google Play release settings, ready for when you open the store accounts". |
 
@@ -23,7 +23,7 @@
 4. **The server address for release builds** is set with the `EXPO_PUBLIC_API_URL` environment variable on Expo's servers per profile. It isn't written into a file. It must be `https://` (ADR-027).
 5. **The store listing draft** is in `docs/09-ui-ux/STORE_LISTING_DRAFT.md`: texts, category, the data-collection answers both stores ask for, and what is still needed (icon, screenshots, privacy policy, support address, a reviewer account).
 
-## Blocker: release builds don't run the app yet
+## Blocker: release builds don't run the app yet — **cleared by ADR-096**
 
 **Found while preparing this.** ADR-018 deliberately makes a release build show **"not available in this build"**.
 
