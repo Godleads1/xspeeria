@@ -28,7 +28,7 @@ import { isoToLagos, lagosToIso } from './OutagesScreen';
 
 export const ADVERT_STATE: Record<AdvertState, string> = {
   showing: 'Showing now',
-  covered: 'Behind a newer advert',
+  covered: 'Waiting for a free place',
   scheduled: 'Scheduled',
   ended: 'Ended',
   off: 'Switched off',
@@ -140,11 +140,24 @@ export function AdvertsScreen(): ReactElement {
     },
     { key: 'post', header: tr('Post Date'), render: (a) => when(a.starts_at) },
     { key: 'end', header: tr('End Date'), render: (a) => when(a.ends_at) },
-    { key: 'state', header: tr('Status'), render: (a) => <StateChip state={a.state} /> },
+    {
+      key: 'state',
+      header: tr('Status'),
+      render: (a) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <StateChip state={a.state} />
+          {a.position !== null && page && page.showing_ids.length > 1 ? (
+            <span data-testid={`turn-${a.id}`} style={{ fontSize: 12, color: color.text.secondary }}>
+              {tr('{{n}} of {{total}}', { n: a.position, total: page.showing_ids.length })}
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
     ...(can('adverts.update') ? [{ key: 'actions', header: tr('Action'), render: (a: Advert) => <RowMenu label={tr('Actions for {{name}}', { name: a.name })} actions={actionsFor(a)} testId={`menu-${a.id}`} /> }] : []),
   ];
 
-  const showing = page?.items.find((a) => a.id === page.showing_id) ?? null;
+  const showing = page ? page.items.filter((a) => a.state === 'showing') : [];
   return (
     <>
       <PageTitle
@@ -162,8 +175,14 @@ export function AdvertsScreen(): ReactElement {
       <p data-testid="showing-now" style={{ margin: 0, fontSize: 14, color: color.text.secondary }}>
         {page === null
           ? '\u00a0'
-          : showing
-          ? tr('Everyone using the app sees “{{name}}” on the Market screen now.', { name: showing.name })
+          : showing.length > 1
+          ? tr('{{n}} adverts take turns on the Market screen, newest first; each stays {{seconds}} seconds, then the next slides in. At most {{max}} take turns at once.', {
+              n: showing.length,
+              seconds: page.rotate_seconds,
+              max: page.max_showing,
+            })
+          : showing.length === 1
+          ? tr('Everyone using the app sees “{{name}}” on the Market screen now.', { name: showing[0].name })
           : tr('No advert is showing; the app shows its “Place advert here” picture.')}
       </p>
       <FormError message={error && page ? error : null} />

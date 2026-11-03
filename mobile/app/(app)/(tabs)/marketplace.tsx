@@ -6,6 +6,7 @@ import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { SERVER_MODE } from '../../../src/api/config';
 import { advertImageSource, advertsApi, loadForWeb } from '../../../src/api/advertsApi';
 import { serverAuth } from '../../../src/features/auth/serverAuth';
+import type { AdvertSlide } from '../../../src/features/market/AdvertCarousel';
 import { MarketScreen } from '../../../src/features/market/MarketScreen';
 import { marketServer, queueServer } from '../../../src/features/market/serverOffers';
 import { queueAction } from '../../../src/features/market/queueActions';
@@ -28,29 +29,39 @@ export default function MarketplaceRoute(): ReactElement {
   // Fetch server offers again whenever the tab comes back into view (e.g. after My Offers).
   const [refresh, setRefresh] = useState(0);
   useFocusEffect(useCallback(() => setRefresh((n) => n + 1), []));
-  // ADR-067: the advert staff placed; on any failure the placeholder stays.
-  const [advert, setAdvert] = useState<Parameters<typeof MarketScreen>[0]['advert']>(null);
+  // ADR-067/086: the adverts staff placed, taking turns; on any failure the placeholder stays.
+  const [adverts, setAdverts] = useState<AdvertSlide[]>([]);
+  const [advertSeconds, setAdvertSeconds] = useState<number | undefined>(undefined);
   useEffect(() => {
     if (!SERVER_MODE) return;
     const token = serverAuth.accessToken();
     if (!token) return;
     let alive = true;
     advertsApi
-      .current(token, serverAuth.apiOptions())
-      .then(async (a) => {
-        const header = a ? advertImageSource(a, token, serverAuth.apiOptions().baseUrl ?? undefined) : null;
-        // The web build (local testing) can't send the token with an image: load it first.
-        const source = header && Platform.OS === 'web' ? await loadForWeb(header) : header;
-        if (alive) setAdvert(a && source ? { name: a.name, link_url: a.link_url, source } : null);
+      .showing(token, serverAuth.apiOptions())
+      .then(async (got) => {
+        const base = serverAuth.apiOptions().baseUrl ?? undefined;
+        const slides = await Promise.all(
+          got.items.map(async (a): Promise<AdvertSlide | null> => {
+            const header = advertImageSource(a, token, base);
+            // The web build (local testing) can't send the token with an image: load it first.
+            const source = header && Platform.OS === 'web' ? await loadForWeb(header) : header;
+            return source ? { id: a.id, name: a.name, link_url: a.link_url, source } : null;
+          }),
+        );
+        if (!alive) return;
+        setAdverts(slides.filter((s): s is AdvertSlide => s !== null));
+        setAdvertSeconds(got.rotate_seconds);
       })
-      .catch(() => alive && setAdvert(null));
+      .catch(() => alive && setAdverts([]));
     return () => {
       alive = false;
     };
   }, [refresh]);
   return (
     <MarketScreen
-      advert={advert}
+      adverts={adverts}
+      advertSeconds={advertSeconds}
       server={SERVER_MODE ? marketServer : null}
       refreshSignal={refresh}
       onVerifyIdentity={

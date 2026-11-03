@@ -1,4 +1,4 @@
-/** The advert for the Market screen's advert slot (ADR-067). Read-only. */
+/** The adverts for the Market screen's advert slot (ADR-067; ADR-086). Read-only. */
 
 import { API_BASE_URL } from './config';
 import { apiRequest, type RequestOptions } from './client';
@@ -16,8 +16,14 @@ export interface ServerAdvert {
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;
 
+/** ADR-086: the adverts taking turns now, newest first, and how long each stays. */
+export interface ShowingAdverts {
+  rotate_seconds: number;
+  items: ServerAdvert[];
+}
+
 export const advertsApi = {
-  current: (token: string, x: Extra = {}) => apiRequest<ServerAdvert | null>('GET', '/api/v1/adverts/current', { token, ...x }),
+  showing: (token: string, x: Extra = {}) => apiRequest<ShowingAdverts>('GET', '/api/v1/adverts/showing', { token, ...x }),
 };
 
 /** What <Image source> needs to load the picture with the token, or null without a server. */
