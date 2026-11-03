@@ -158,6 +158,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `085-background-worker-and-load-test.md` | Background jobs can run in one worker (`python -m app.worker`, web servers with `RUN_BACKGROUND_JOBS=false` still report and watch the alert rules); `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; a repeatable load test and its first results (2-core sandbox: fast to about 50 customers at once, ~18 ms server CPU per request, database not the limit, no oversold offers); fixed: taking an offer was refused under the row rules; findings on the app role's grants and shared mobile addresses (DEC-093) | **IMPLEMENTED** — 2026-11-03 |
 | `086-advert-rotation.md` | Several adverts take turns in the Market advert slot (owner): every advert switched on and inside its dates, newest first, at most 10; the app slides every 5 seconds, swipe by hand, a touch pauses, never slides with Reduce motion; `GET /api/v1/adverts/showing`; the console shows each turn and "Waiting for a free place"; amends ADR-067 (DEC-094) | **IMPLEMENTED** — 2026-11-03 |
 | `087-rate-limits-shared-addresses.md` | Many Nigerian phones share one network address (owner: "split limits"): the per-address limit applies only before sign-in and is raised from 10 to 60/min; signed-in account routes are limited per customer (60/min); the 5-wrong-PIN lockout stays; a test keeps each route in the right list; amends ADR-025 §1.2 (DEC-095) | **IMPLEMENTED** — 2026-11-03 |
+| `088-readiness-check.md` | `GET /health/ready` for the load balancer: 200 "ready" only when the database answers within 2 s, else 503 "not_ready"; says nothing else; answer kept 1 s per process; `/health` stays liveness only (DEC-099) | **IMPLEMENTED** — 2026-11-03 |
 | `090-store-release-settings.md` | App Store / Google Play settings: bundle ID `com.xspeeria.app`, version 1.0.0, build numbers counted by Expo, `preview` and `production` build profiles; store listing draft (`docs/09-ui-ux/STORE_LISTING_DRAFT.md`); **blocker found: release builds still show "not available" (ADR-018)** until server mode works in release builds (DEC-101) | **IMPLEMENTED** (settings) — 2026-11-03 |
 
 ### Accounting policy is not architecture
@@ -655,7 +656,7 @@ Release gate result: **DO NOT LAUNCH**. It lists the critical blockers (partner 
 
 Prepared for owner decisions. Nothing in them is chosen or built.
 
-- `docs/07-security/ON_CALL_GUIDE.md`: who answers alerts (on call: **Chinedu Egbuchulam**, named 2026-11-02), response times by level, first five minutes, hand-over. A backup person is still to be named.
+- `docs/07-security/ON_CALL_GUIDE.md`: who answers alerts (on call: **Chinedu Egbuchulam**, named 2026-11-02), response times by level, first five minutes, hand-over. Backup: **Oluwaseun Adesanya** (named 2026-11-03).
 - `docs/13-governance/HOSTING_OPTIONS_2026-11.md`: what Xspeeria needs from a host. Covers the **CBN circular of 15 June 2026** (payment data stored in Nigeria from 1 January 2027), a Nigerian cloud vs the AWS Lagos Local Zone vs own servers, and the questions to ask providers and the lawyer.
 - `docs/13-governance/FRAUD_OPTIONS_2026-11.md`: seven checks that could replace the removed 24-hour payout hold (FX-03), with a suggested starting set.
 - `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040).

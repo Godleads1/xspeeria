@@ -26,6 +26,7 @@ _SIGNED_IN = {
 #: Reachable without a login, and why that's safe.
 PUBLIC_ROUTES = {
     ("GET", "/health"): "says only {'status': 'ok'}",
+    ("GET", "/health/ready"): "says only ready or not_ready (ADR-088)",
     ("POST", "/api/v1/auth/register"): "starts sign-up; same answer whether the number exists",
     ("POST", "/api/v1/auth/verify-phone"): "needs the SMS code",
     ("POST", "/api/v1/auth/login"): "needs the PIN; locks after 5 wrong tries",
