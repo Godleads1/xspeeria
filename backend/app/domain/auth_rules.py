@@ -89,6 +89,8 @@ STEP_UP_ACTIONS = frozenset(
         "payout.confirm",
         # F-007: turning Face ID/fingerprint on (or replacing its key) after the sign-in.
         "biometric.enable",
+        # ADR-095: deleting the account.
+        "account.delete",
     }
 )
 

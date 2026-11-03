@@ -55,6 +55,7 @@ class TestDecidedValues:
             "trade.accept",
             "payout.confirm",
             "biometric.enable",  # security finding F-007 (2026-10-28)
+            "account.delete",  # ADR-095, delete account (owner 2026-11-03)
         }  # ADR-054: mfa.change and recovery_codes.regenerate went with the authenticator
         assert (CHECK_CODE_TTL, FACE_CHECK_TTL) == (timedelta(minutes=10), timedelta(minutes=15))
         assert (CHECKS_PER_HOUR, CHECKS_PER_DAY) == (5, 10)

@@ -163,12 +163,15 @@ export interface Customer {
   ref: string;
   /** Legal name from an approved identity check; null before one. */
   name: string | null;
-  email: string;
-  phone: string;
+  /** ADR-095: null for a deleted account when the viewer isn't Compliance (DEC-106). */
+  email: string | null;
+  phone: string | null;
   status: CustomerStatus;
   kyc_status: string | null;
   created_at: string;
   last_login_at: string | null;
+  /** ADR-095: the customer asked to delete the account. */
+  deletion?: { state: 'deleting' | 'deleted'; requested_at: string; restore_until: string } | null;
 }
 export interface CustomerPage {
   total: number;

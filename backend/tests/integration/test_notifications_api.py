@@ -257,4 +257,6 @@ async def test_only_read_at_can_change_and_nothing_is_deleted(db_settings: Setti
         "FROM information_schema.role_table_grants "
         "WHERE grantee = 'xspeeria_app' AND table_name = 'notifications'",
     )
-    assert grants == "INSERT,SELECT,UPDATE"
+    # ADR-095: DELETE exists only for the 14-day clean-up of a deleted account; the guard
+    # above still refuses every other delete (tested in test_account_deletion.py too).
+    assert grants == "DELETE,INSERT,SELECT,UPDATE"

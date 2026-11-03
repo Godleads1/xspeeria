@@ -63,6 +63,20 @@ class User(Base):
             name="status_allowed",
         ),
         CheckConstraint("failed_pin_attempts >= 0", name="failed_pin_attempts_non_negative"),
+        # ADR-095: a customer's own deletion closes the account; the clean-up comes later.
+        CheckConstraint(
+            "deletion_requested_at IS NULL OR status = 'closed'", name="deletion_only_when_closed"
+        ),
+        CheckConstraint(
+            "deleted_at IS NULL OR (deletion_requested_at IS NOT NULL "
+            "AND deleted_at >= deletion_requested_at)",
+            name="deleted_after_request",
+        ),
+        Index(
+            "ix_users_deletion_due",
+            "deletion_requested_at",
+            postgresql_where=text("deletion_requested_at IS NOT NULL AND deleted_at IS NULL"),
+        ),
         CheckConstraint(
             "(status = 'pending_verification') = (phone_verified_at IS NULL)",
             name="active_iff_verified",
@@ -102,6 +116,10 @@ class User(Base):
     payout_hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: ADR-095: the customer asked to delete the account (restorable for 14 days).
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-095: the 14 days passed and the data with no legal reason to keep was removed.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AuthSession(Base):
@@ -322,7 +340,7 @@ class StepUpGrant(Base):
         CheckConstraint(
             "action IN ('beneficiary.add', 'beneficiary.remove', 'contact.change', "
             "'pin.change', 'mfa.change', 'recovery_codes.regenerate', 'trade.accept', "
-            "'payout.confirm', 'biometric.enable')",
+            "'payout.confirm', 'biometric.enable', 'account.delete')",
             name="action_allowed",
         ),
         Index("uq_step_up_grants_token_hash", "token_hash", unique=True),

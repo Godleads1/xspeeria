@@ -1059,5 +1059,9 @@
  "Hold this deal": "暂扣此交易",
  "Deal released": "交易已解除暂扣",
  "Deal held": "交易已暂扣",
- "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "被暂扣的交易在解除前不会付出任何款项。如未按时全额付款，交易将被取消，款项退还给付款人。"
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "被暂扣的交易在解除前不会付出任何款项。如未按时全额付款，交易将被取消，款项退还给付款人。",
+ "Deleted account": "已删除的账户",
+ "Deleted by the customer": "已由客户删除",
+ "Deleting, restorable until {{date}}": "删除中，可在 {{date}} 前恢复",
+ "Kept records of a deleted account are for Compliance only.": "已删除账户的保留记录仅供合规团队查看。"
 }

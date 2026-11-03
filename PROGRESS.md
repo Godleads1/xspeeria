@@ -50,6 +50,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Several adverts take turns in the advert slot, sliding by themselves | **Built 3 Nov 2026** | ADR-086 |
 | Rate limits that don't refuse customers sharing one mobile-network address | **Built 3 Nov 2026** | ADR-087 |
 | Security checklist fixes: Vite patch, weekly dependency report, HTTPS-only header | **Built 3 Nov 2026** | ADR-093 |
+| Delete account: closes at once, 14 days to restore, clean-up, legal records kept for Compliance | **Built 3 Nov 2026** | ADR-095 |
 | The server logs in to the database with least rights (`xspeeria_app`), grants completed | **Built 3 Nov 2026** | ADR-094 |
 | Staff "hold this deal" button on a fraud alert | **Built 3 Nov 2026** | ADR-092 |
 | Release builds run against the real server (https only); demo-only screens never show in them | **Built 3 Nov 2026** | ADR-096 |
@@ -61,7 +62,6 @@ development and testing only. Money moves only against the **pretend partner ban
 
 ### Not built yet (code)
 
-- **Delete account** (the app screen says it isn't built; nothing is deleted).
 - **Real wallet / ledger**: Home and Cards show Figma demo figures in development builds only
   (ADR-023). No ledger exists (P-1/P-2 open).
 - **Real SMS sender** (no provider chosen). The Resend email sender is built and waits for the account (ADR-082).

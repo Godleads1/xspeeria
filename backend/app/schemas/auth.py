@@ -80,6 +80,8 @@ class LoginRequest(_Strict):
     device_id: str | None = Field(default=None, pattern=_DEVICE_ID)
     #: Returned after the second check; PIN-only log-in on this phone for 30 days.
     device_token: str | None = Field(default=None, pattern=_URLSAFE_PATTERN)
+    #: ADR-095: reopen an account the customer asked to delete (within 14 days).
+    restore_account: bool = False
 
 
 _CODE = r"^[0-9]{6}$"
@@ -179,6 +181,7 @@ StepUpAction = Literal[
     "trade.accept",
     "payout.confirm",
     "biometric.enable",
+    "account.delete",
 ]
 
 
@@ -241,3 +244,23 @@ class SessionResponse(BaseModel):
     last_active_at: datetime
     expires_at: datetime
     current: bool
+
+
+class DeleteAccountCheckResponse(BaseModel):
+    """ADR-095: what would stop a deletion now; empty means it can go ahead."""
+
+    blockers: list[
+        Literal[
+            "account_not_active",
+            "deal_in_progress",
+            "dispute_open",
+            "refund_pending",
+            "under_review",
+        ]
+    ]
+    restore_days: int
+
+
+class DeleteAccountResponse(BaseModel):
+    #: The account can be restored by logging in until this moment.
+    restore_until: datetime

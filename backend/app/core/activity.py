@@ -110,6 +110,9 @@ NOTICE_KINDS = frozenset(
         "fingerprint_turned_on",
         "fingerprint_turned_off",
         "trusted_phone_removed",
+        # ADR-095: deleting and restoring the account
+        "account_deletion_requested",
+        "account_restored",
         # payout accounts
         "payout_account_added",
         "payout_account_removed",

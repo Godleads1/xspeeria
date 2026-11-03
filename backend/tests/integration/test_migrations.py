@@ -120,8 +120,9 @@ APPROVED_TABLES = {
 # shared rate limits (ADR-080) -> "0039";
 # Super Admin hardware security keys (ADR-081) -> "0040";
 # security notice emails with a "this wasn't me" link (ADR-084) -> "0041";
-# the app role's missing grant on idempotency_records (ADR-094) -> "0042".
-EXPECTED_HEAD = "0042"
+# the app role's missing grant on idempotency_records (ADR-094) -> "0042";
+# delete account with 14 days to undo (ADR-095) -> "0043".
+EXPECTED_HEAD = "0043"
 
 
 def _config(database_url: str) -> Config:
