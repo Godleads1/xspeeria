@@ -51,6 +51,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Rate limits that don't refuse customers sharing one mobile-network address | **Built 3 Nov 2026** | ADR-087 |
 | Security checklist fixes: Vite patch, weekly dependency report, HTTPS-only header | **Built 3 Nov 2026** | ADR-093 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
+| Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |
 
 ### Not built yet (code)
 
