@@ -1051,5 +1051,13 @@
  "This is your only security key. Add another one before removing it.": "Es tu única llave de seguridad. Añade otra antes de quitarla.",
  "Add your security key before using the console.": "Añade tu llave de seguridad antes de usar la consola.",
  "Remove your own keys from My Profile.": "Quita tus propias llaves desde Mi perfil.",
- "Only a Super Admin can do this.": "Solo un Super Admin puede hacer esto."
+ "Only a Super Admin can do this.": "Solo un Super Admin puede hacer esto.",
+ "The deals could not be loaded.": "No se pudieron cargar las operaciones.",
+ "No deal of this customer can be held now: none is waiting to pay out.": "Ahora no se puede retener ninguna operación de este cliente: ninguna está pendiente de pago.",
+ "Held": "Retenida",
+ "Release": "Liberar",
+ "Hold this deal": "Retener esta operación",
+ "Deal released": "Operación liberada",
+ "Deal held": "Operación retenida",
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "Una operación retenida no paga nada hasta que se libera. Si no se paga por completo a tiempo, se cancela y el dinero vuelve a quien lo pagó."
 }

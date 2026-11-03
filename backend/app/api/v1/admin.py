@@ -1252,6 +1252,38 @@ async def resolve_fraud_alert(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+class FraudHoldBody(_Strict):
+    settlement_id: uuid.UUID
+
+
+@router.get(
+    "/fraud-alerts/{alert_id}/deals",
+    summary="The customer's deals that can be held, and those this alert holds (fraud_alerts.read)",
+)
+async def fraud_alert_deals(alert_id: uuid.UUID, staff: Staff, service: Fraud) -> Any:
+    return await service.deals(staff, alert_id)
+
+
+@router.post(
+    "/fraud-alerts/{alert_id}/hold-deal",
+    summary="Hold one of the customer's deals while staff look (fraud_alerts.approve)",
+)
+async def hold_fraud_deal(
+    alert_id: uuid.UUID, body: FraudHoldBody, staff: Staff, service: Fraud, info: Info
+) -> Any:
+    return await service.hold_deal(staff, info, alert_id, body.settlement_id)
+
+
+@router.post(
+    "/fraud-alerts/{alert_id}/release-deal",
+    summary="Release a deal this alert holds (fraud_alerts.approve)",
+)
+async def release_fraud_deal(
+    alert_id: uuid.UUID, body: FraudHoldBody, staff: Staff, service: Fraud, info: Info
+) -> Any:
+    return await service.release_deal(staff, info, alert_id, body.settlement_id)
+
+
 # --- identity-check review (ADR-069) -----------------------------------------------------------
 
 

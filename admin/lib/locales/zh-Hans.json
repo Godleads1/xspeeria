@@ -1051,5 +1051,13 @@
  "This is your only security key. Add another one before removing it.": "这是您唯一的安全密钥。请先添加另一把再移除。",
  "Add your security key before using the console.": "使用控制台前请先添加您的安全密钥。",
  "Remove your own keys from My Profile.": "请在“我的资料”中移除您自己的密钥。",
- "Only a Super Admin can do this.": "只有超级管理员可以执行此操作。"
+ "Only a Super Admin can do this.": "只有超级管理员可以执行此操作。",
+ "The deals could not be loaded.": "无法加载交易。",
+ "No deal of this customer can be held now: none is waiting to pay out.": "目前无法暂扣该客户的任何交易：没有等待付款的交易。",
+ "Held": "已暂扣",
+ "Release": "解除暂扣",
+ "Hold this deal": "暂扣此交易",
+ "Deal released": "交易已解除暂扣",
+ "Deal held": "交易已暂扣",
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "被暂扣的交易在解除前不会付出任何款项。如未按时全额付款，交易将被取消，款项退还给付款人。"
 }
