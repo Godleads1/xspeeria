@@ -13,7 +13,7 @@
    - iOS bundle ID **`com.xspeeria.app`**, the same as the existing Android package;
    - version **1.0.0**.
 
-   **The bundle ID and package can't be changed after the first upload to the stores.** The owner should confirm them before the first upload.
+   **The bundle ID and package can't be changed after the first upload to the stores.** **Confirmed by the owner, 3 Nov 2026.**
 2. **Build numbers are counted by Expo's servers** (`appVersionSource: "remote"`, `autoIncrement` on production builds). Every store upload gets a higher number without anyone editing a file.
 3. **Build profiles** (`mobile/eas.json`):
    - `development`: unchanged; the developer build with the demo.
@@ -36,9 +36,16 @@
 
   This is a separate piece of work, waiting for the owner's go.
 
+## App icon (added 3 Nov 2026)
+
+From the square "X" mark the owner supplied:
+
+- `mobile/assets/images/icon.png`: 1024 × 1024, mark on white, no transparency (Apple requires none);
+- `mobile/assets/images/adaptive-icon.png`: Android foreground, transparent, mark kept inside the centre safe zone so round and squircle masks don't cut it; background white;
+- `mobile/assets/images/favicon.png`: 48 × 48 for the web build.
+
 ## Not done (needs the owner)
 
-- A **1024 × 1024 square app icon**. The logo is a wordmark (448 × 127); the stores need a square mark, such as the "X" on its own. Also an Android adaptive icon (foreground and background).
 - **Store accounts:** Apple Developer and Google Play.
 - **Privacy policy and support web addresses,** and **screenshots.**
 - **A test account and test server** for the store reviewers.

@@ -5,6 +5,7 @@
     "owner": "xspeeria-01",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "xspeeria",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -16,6 +17,10 @@
       "bundleIdentifier": "com.xspeeria.app"
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "edgeToEdgeEnabled": true,
       "package": "com.xspeeria.app",
       "allowBackup": false,
@@ -63,6 +68,9 @@
       "eas": {
         "projectId": "9cc8df68-2c8e-40af-9055-872188b8eeff"
       }
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
     }
   }
 }

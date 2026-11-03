@@ -54,7 +54,7 @@ Taken from the code as of 3 Nov 2026. **The owner and the lawyer confirm before 
 ## 4. Still needed before the first upload
 
 - [ ] **Release builds run against the server** (ADR-090 blocker); today they show "not available".
-- [ ] **The app icon:** 1024 × 1024 square, plus an Android adaptive icon.
+- [x] **The app icon:** 1024 × 1024 square, plus an Android adaptive icon (owner's "X" mark, 3 Nov 2026).
 - [ ] **Screenshots:** iPhone 6.7" and 6.5"; Android phone. Five each: market, take an offer, escrow progress, payout account, security.
 - [ ] **Apple Developer account** (yearly fee) and **Google Play Console account** (one-time fee).
 - [ ] **Privacy policy and support pages** online.
