@@ -119,8 +119,9 @@ APPROVED_TABLES = {
 # row-level security on customers' private tables (ADR-078) -> "0038";
 # shared rate limits (ADR-080) -> "0039";
 # Super Admin hardware security keys (ADR-081) -> "0040";
-# security notice emails with a "this wasn't me" link (ADR-084) -> "0041".
-EXPECTED_HEAD = "0041"
+# security notice emails with a "this wasn't me" link (ADR-084) -> "0041";
+# the app role's missing grant on idempotency_records (ADR-094) -> "0042".
+EXPECTED_HEAD = "0042"
 
 
 def _config(database_url: str) -> Config:
