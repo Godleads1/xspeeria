@@ -165,6 +165,7 @@ An ADR marked `PROPOSED` carries no authority. Only `APPROVED` ADRs bind. Supers
 | `091-cheaper-requests.md` | Fewer database steps per request: the session idle clock is written at most every 30 s (no row lock), a rate-limit check is one statement; ~12–18% less CPU, 3 fewer SQL statements per signed-in request; lighter logging middleware tried and dropped (DEC-102) | **IMPLEMENTED** — 2026-11-03 |
 | `093-security-checklist-fixes.md` | Security checklist fixes: Vite 6.4.5; Expo's `glob`/`minimatch` moderates planned, not forced (Expo is newest, forcing breaks npm; build tools only); weekly dependency report incl. developer tools (fails on high/critical); API sends HSTS + nosniff outside local; load balancer HTTPS-only on the hosting checklist (DEC-103) | **IMPLEMENTED** — 2026-11-03 |
 | `094-app-database-login.md` | The server logs in as the non-owning `xspeeria_app` role; whole suite run as that role found one gap (locking `idempotency_records`), fixed by `UPDATE (expires_at)` only (migration 0042); `tests/as_app_role.py` keeps it checked (DEC-105) | **IMPLEMENTED** — 2026-11-03 |
+| `092-hold-this-deal.md` | Staff "hold this deal" from a fraud alert (owner: yes, fraud option 5): `fraud_alerts.approve` holds one of the customer's not-yet-released deals (RISK hold tied to the alert), Release on the same card; funding window still runs; alert can't be resolved while it holds a deal; audited (DEC-104) | **IMPLEMENTED** — 2026-11-03 |
 
 ### Accounting policy is not architecture
 
@@ -664,6 +665,7 @@ Prepared for owner decisions. Nothing in them is chosen or built.
 - `docs/07-security/ON_CALL_GUIDE.md`: who answers alerts (on call: **Chinedu Egbuchulam**, named 2026-11-02), response times by level, first five minutes, hand-over. Backup: **Oluwaseun Adesanya** (named 2026-11-03).
 - `docs/13-governance/HOSTING_OPTIONS_2026-11.md`: what Xspeeria needs from a host. Covers the **CBN circular of 15 June 2026** (payment data stored in Nigeria from 1 January 2027), a Nigerian cloud vs the AWS Lagos Local Zone vs own servers, and the questions to ask providers and the lawyer.
 - `docs/13-governance/FRAUD_OPTIONS_2026-11.md`: seven checks that could replace the removed 24-hour payout hold (FX-03), with a suggested starting set.
+- `docs/13-governance/DELETE_ACCOUNT_RULE.md`: what Delete account keeps and for how long. **Approved (DEC-106, 3 Nov 2026):** identity, payout and deal records 5 years from closing, Compliance-only; audit log and deal events 7 years. The rest of the rule is a suggestion awaiting the owner; not built.
 - `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040).
 - `docs/13-governance/GITHUB_MAIN_PROTECTION.md`: the exact ruleset for `main` once the GitHub plan is upgraded (SEC-031).
 

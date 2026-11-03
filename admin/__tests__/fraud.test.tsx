@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FraudCaseScreen, finding } from '../components/screens/FraudCaseScreen';
 import { FraudScreen } from '../components/screens/FraudScreen';
-import { makeAdminApi, type AdminApi, type FraudAlert, type FraudAlertRow, type Me } from '../lib/api';
+import { makeAdminApi, type AdminApi, type FraudAlert, type FraudAlertRow, type FraudDeal, type Me } from '../lib/api';
 import { SessionProvider } from '../lib/session';
 
 function me(permissions: string[]): Me {
@@ -35,6 +35,9 @@ function mount(who: Me, ui: ReactElement, over: Partial<AdminApi> = {}): AdminAp
     fraudAlert: vi.fn(async () => ALERT),
     startFraudAlert: vi.fn(async () => undefined),
     resolveFraudAlert: vi.fn(async () => undefined),
+    fraudDeals: vi.fn(async () => ({ items: [] })),
+    holdFraudDeal: vi.fn(async () => ({ held: true })),
+    releaseFraudDeal: vi.fn(async () => ({ held: false })),
     reportFraud: vi.fn(async () => ({ id: 'x', ref: '#AAAA0000' })),
     listCustomers: vi.fn(async () => ({
       total: 1,
@@ -101,5 +104,39 @@ describe('one alert', () => {
     await screen.findByTestId('finding');
     expect(screen.queryByTestId('fraud-resolve')).toBeNull();
     expect(screen.queryByTestId('fraud-start')).toBeNull();
+  });
+
+  // ADR-092: hold one of the customer's deals while looking.
+  const DEAL: FraudDeal = { settlement_id: 'st-1', ref: 'AB12CD34', phase: 'AWAITING_FUNDING', created_at: '2026-11-03T09:00:00Z', held: false, can_hold: true };
+  const APPROVER = me([...OFFICER.permissions, 'fraud_alerts.approve']);
+
+  it('holds a deal, then shows it held with Release', async () => {
+    let held = false;
+    const api = mount(APPROVER, <FraudCaseScreen id={ROW.id} />, {
+      fraudDeals: vi.fn(async () => ({ items: [{ ...DEAL, held }] })),
+      holdFraudDeal: vi.fn(async () => {
+        held = true;
+        return { held: true };
+      }),
+    });
+    fireEvent.click(await screen.findByTestId('fraud-hold-AB12CD34'));
+    await waitFor(() => expect(api.holdFraudDeal).toHaveBeenCalledWith(ROW.id, 'st-1'));
+    expect(await screen.findByTestId('fraud-release-AB12CD34')).toBeInTheDocument();
+    expect(within(screen.getByTestId('fraud-deal-AB12CD34')).getByText('Held')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('fraud-release-AB12CD34'));
+    await waitFor(() => expect(api.releaseFraudDeal).toHaveBeenCalledWith(ROW.id, 'st-1'));
+  });
+
+  it('no hold button without fraud_alerts.approve, or once resolved', async () => {
+    mount(OFFICER, <FraudCaseScreen id={ROW.id} />, { fraudDeals: vi.fn(async () => ({ items: [DEAL] })) });
+    expect(await screen.findByTestId('fraud-deal-AB12CD34')).toBeInTheDocument();
+    expect(screen.queryByTestId('fraud-hold-AB12CD34')).toBeNull();
+  });
+
+  it('says so when no deal can be held', async () => {
+    mount(APPROVER, <FraudCaseScreen id={ROW.id} />, {
+      fraudDeals: vi.fn(async () => ({ items: [] })),
+    });
+    expect(await screen.findByText('No deal of this customer can be held now: none is waiting to pay out.')).toBeInTheDocument();
   });
 });

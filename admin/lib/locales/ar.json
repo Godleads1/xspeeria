@@ -1051,5 +1051,13 @@
  "This is your only security key. Add another one before removing it.": "هذا هو مفتاح الأمان الوحيد لديك. أضف مفتاحًا آخر قبل إزالته.",
  "Add your security key before using the console.": "أضف مفتاح الأمان قبل استخدام لوحة التحكم.",
  "Remove your own keys from My Profile.": "أزل مفاتيحك من ملفي الشخصي.",
- "Only a Super Admin can do this.": "لا يمكن القيام بذلك إلا للمشرف الأعلى."
+ "Only a Super Admin can do this.": "لا يمكن القيام بذلك إلا للمشرف الأعلى.",
+ "The deals could not be loaded.": "تعذّر تحميل الصفقات.",
+ "No deal of this customer can be held now: none is waiting to pay out.": "لا يمكن تعليق أي صفقة لهذا العميل الآن: لا توجد صفقة بانتظار الدفع.",
+ "Held": "معلّقة",
+ "Release": "إلغاء التعليق",
+ "Hold this deal": "تعليق هذه الصفقة",
+ "Deal released": "تم إلغاء تعليق الصفقة",
+ "Deal held": "تم تعليق الصفقة",
+ "A held deal pays nothing out until it is released. If it is not fully paid in on time, it is cancelled and the money goes back to whoever paid it.": "لا تدفع الصفقة المعلّقة أي مبلغ حتى يُلغى تعليقها. وإذا لم تُدفع بالكامل في الوقت المحدد، تُلغى ويعود المال إلى من دفعه."
 }

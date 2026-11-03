@@ -34,7 +34,7 @@
 ## Suggested starting set
 
 - **1** (new payout account waits 24 hours). This matters more now that payouts may go to anyone's account (DEC-007): it's the main brake on a takeover that adds the fraudster's account.
-- **5** (hold-this-deal button).
+- **5** (hold-this-deal button). **Chosen and built (owner, 3 Nov 2026): ADR-092.**
 
 Together they cover the takeover path, and honest users rarely notice them. Add **3** if the bank or the lawyer asks for new-user limits. The numbers above are starting points for you to set.
 
