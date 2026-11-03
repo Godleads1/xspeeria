@@ -69,6 +69,6 @@ async def test_the_answer_is_kept_for_a_second(db_settings: Settings) -> None:
             for _ in range(20):
                 assert (await c.get("/health/ready")).status_code == 200
     finally:
-        health._database_answers = real  # type: ignore[assignment]
+        health._database_answers = real
         await dispose_engine()
     assert calls == 1
