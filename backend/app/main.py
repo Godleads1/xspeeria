@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -451,6 +452,48 @@ async def _security_notice_loop(settings: Settings, runtime: AuthRuntime) -> Non
             log.exception("security_notice_round_failed")
 
 
+TaskRole = Literal["web", "worker"]
+
+
+def planned_tasks(
+    settings: Settings, runtime: AuthRuntime, *, role: TaskRole
+) -> dict[str, Callable[[], Coroutine[Any, Any, None]]]:
+    """ADR-085: which background loops a process runs, by name.
+
+    * Every process (web server or worker) flushes its own API and job figures (ADR-072)
+      and checks the operations alert rules (ADR-074). The alert check is idempotent between
+      processes, so the web servers keep watching even when the worker has stopped.
+    * The jobs (deal expiry, queues, fraud scan, escrow, push, security emails, clean-ups)
+      run in the worker, or in the web server when ``RUN_BACKGROUND_JOBS`` is true (one
+      server, or a developer's computer).
+    * The pretend bank (ADR-037) lives in one process's memory, so its escrow work and the
+      demo robots stay in the web server that holds it.
+    """
+    s, rt = settings, runtime
+    out: dict[str, Callable[[], Coroutine[Any, Any, None]]] = {}
+    if not s.database_url:
+        return out
+    if s.metrics_flush_seconds > 0:
+        out["metrics"] = lambda: _metrics_loop(s)
+    if s.ops_alert_seconds > 0:
+        out["alert rules"] = lambda: _ops_alert_loop(s, rt)
+    jobs_here = role == "worker" or s.run_background_jobs
+    in_memory_bank = rt.pretend_bank is not None
+    if jobs_here:
+        if s.preparation_sweep_seconds > 0:
+            out["deal expiry, queues, fraud scan"] = lambda: _sweep_preparations(s, rt)
+            out["retention and clean-up"] = lambda: _activity_retention_loop(s)
+        if rt.push_sender is not None and s.push_tick_seconds > 0:
+            out["phone push"] = lambda: _push_loop(s, rt)
+        if rt.email is not None and s.security_notice_seconds > 0:
+            out["security emails"] = lambda: _security_notice_loop(s, rt)
+    if role == "web" and in_memory_bank and s.escrow_tick_seconds > 0:
+        out["escrow (pretend bank)"] = lambda: _escrow_loop(s, rt)
+    if role == "web" and in_memory_bank and s.demo_autopilot:
+        out["demo robots"] = lambda: _demo_autopilot_loop(s, rt)
+    return out
+
+
 def create_app(
     settings: Settings | None = None, auth_runtime: AuthRuntime | None = None
 ) -> FastAPI:
@@ -462,35 +505,10 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        tasks = []
-        if resolved.database_url and resolved.preparation_sweep_seconds > 0:
-            tasks.append(asyncio.create_task(_sweep_preparations(resolved, runtime)))
-        if (
-            resolved.database_url
-            and runtime.pretend_bank is not None
-            and resolved.escrow_tick_seconds > 0
-        ):
-            tasks.append(asyncio.create_task(_escrow_loop(resolved, runtime)))
-        if resolved.database_url and resolved.preparation_sweep_seconds > 0:
-            tasks.append(asyncio.create_task(_activity_retention_loop(resolved)))
-        if resolved.database_url and resolved.metrics_flush_seconds > 0:
-            tasks.append(asyncio.create_task(_metrics_loop(resolved)))
-        if resolved.database_url and resolved.ops_alert_seconds > 0:
-            tasks.append(asyncio.create_task(_ops_alert_loop(resolved, runtime)))
-        if resolved.demo_autopilot and resolved.database_url:
-            tasks.append(asyncio.create_task(_demo_autopilot_loop(resolved, runtime)))
-        if (
-            resolved.database_url
-            and runtime.push_sender is not None
-            and resolved.push_tick_seconds > 0
-        ):
-            tasks.append(asyncio.create_task(_push_loop(resolved, runtime)))
-        if (
-            resolved.database_url
-            and runtime.email is not None
-            and resolved.security_notice_seconds > 0
-        ):
-            tasks.append(asyncio.create_task(_security_notice_loop(resolved, runtime)))
+        tasks = [
+            asyncio.create_task(start(), name=name)
+            for name, start in planned_tasks(resolved, runtime, role="web").items()
+        ]
         try:
             yield
         finally:

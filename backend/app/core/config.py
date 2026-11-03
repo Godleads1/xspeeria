@@ -199,6 +199,12 @@ class Settings(BaseSettings):
     metrics_flush_seconds: int = 60
     #: ADR-074: how often the operations alert rules run (0: off).
     ops_alert_seconds: int = 60
+    #: ADR-085: run the background jobs (deal expiry, escrow, push, security emails, clean-ups)
+    #: inside this web server. True suits one server and a developer's computer. With several
+    #: web servers, set it false on all of them and run ONE worker (`python -m app.worker`).
+    #: Every web server still flushes its own figures and checks the alert rules, so a
+    #: stopped worker is noticed.
+    run_background_jobs: bool = True
     #: ADR-074: Sentry error tracking. Empty: off. Only scrubbed error details are sent.
     sentry_dsn: str | None = None
     #: ADR-074: the release Sentry files errors under (e.g. the git commit). Optional.
