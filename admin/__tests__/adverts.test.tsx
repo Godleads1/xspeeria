@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AdvertsScreen, fitsSlot } from '../components/screens/AdvertsScreen';
-import { makeAdminApi, type Advert, type AdminApi, type Me } from '../lib/api';
+import { type AdvertPage, makeAdminApi, type Advert, type AdminApi, type Me } from '../lib/api';
 import { SessionProvider } from '../lib/session';
 
 function me(permissions: string[]): Me {
@@ -19,14 +19,22 @@ const BOSS = me(['adverts.read', 'adverts.create', 'adverts.update']);
 const AD: Advert = {
   id: '88888888-2222-3333-4444-555555555555', name: 'Lagos launch', width: 1026, height: 339,
   starts_at: '2026-10-18T00:00:00Z', ends_at: '2026-11-30T00:00:00Z', link_url: 'https://xspeeria.com/launch',
-  active: true, state: 'showing', created_by: 'Boss', created_at: '2026-10-18T00:00:00Z', updated_at: '2026-10-18T00:00:00Z',
+  active: true, state: 'showing', position: 1, created_by: 'Boss', created_at: '2026-10-18T00:00:00Z', updated_at: '2026-10-18T00:00:00Z',
 };
+
+function page(items: Advert[]): AdvertPage {
+  const showing = items.filter((a) => a.state === 'showing').map((a) => a.id);
+  return {
+    now: '2026-10-26T12:00:00Z', total: items.length, showing_id: showing[0] ?? null, showing_ids: showing,
+    rotate_seconds: 5, max_showing: 10, slot: { width: 342, height: 113 }, items,
+  };
+}
 
 function mount(who: Me, over: Partial<AdminApi> = {}): AdminApi {
   const api: AdminApi = {
     ...makeAdminApi(vi.fn()),
     me: vi.fn(async () => who),
-    listAdverts: vi.fn(async () => ({ now: '2026-10-26T12:00:00Z', total: 1, showing_id: AD.id, slot: { width: 342, height: 113 }, items: [AD] })),
+    listAdverts: vi.fn(async () => page([AD])),
     changeAdvert: vi.fn(async () => undefined),
     advertImageUrl: vi.fn(async () => null),
     ...over,
@@ -50,6 +58,19 @@ describe('advert placement setup', () => {
     mount(BOSS);
     expect(await screen.findByText('Showing now')).toBeInTheDocument();
     expect(screen.getByTestId('showing-now')).toHaveTextContent('Everyone using the app sees “Lagos launch”');
+  });
+
+  it('shows that several adverts take turns, and each one\'s turn (ADR-086)', async () => {
+    const second: Advert = { ...AD, id: '99999999-2222-3333-4444-555555555555', name: 'Promo', position: 2 };
+    const waiting: Advert = { ...AD, id: '77777777-2222-3333-4444-555555555555', name: 'Old', state: 'covered', position: null };
+    mount(BOSS, { listAdverts: vi.fn(async () => page([AD, second, waiting])) });
+    await waitFor(() =>
+      expect(screen.getByTestId('showing-now')).toHaveTextContent('2 adverts take turns on the Market screen, newest first; each stays 5 seconds'),
+    );
+    expect(screen.getByTestId(`turn-${AD.id}`)).toHaveTextContent('1 of 2');
+    expect(screen.getByTestId(`turn-${second.id}`)).toHaveTextContent('2 of 2');
+    expect(screen.queryByTestId(`turn-${waiting.id}`)).toBeNull();
+    expect(screen.getByText('Waiting for a free place')).toBeInTheDocument();
   });
 
   it('switches an advert off', async () => {

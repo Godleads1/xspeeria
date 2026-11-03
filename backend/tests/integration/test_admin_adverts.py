@@ -125,12 +125,12 @@ async def test_an_advert_shows_in_the_app_slot_with_hidden_details_removed(
         assert (await staff.login(again, BOSS, BOSS_PW)).status_code == 200
         await owner.relogin()
         assert (await _current(owner))["id"] == later
-        # One slot: the older advert, still inside its dates, is marked as behind it.
+        # ADR-086: both are inside their dates, so both take turns; the newest comes first.
         states = {
-            i["id"]: i["state"]
+            i["id"]: (i["state"], i["position"])
             for i in (await again.get("/api/v1/admin/adverts", headers=H)).json()["items"]
         }
-        assert states == {later: "showing", aid: "covered"}
+        assert states == {later: ("showing", 1), aid: ("showing", 2)}
         assert (
             await again.patch(f"/api/v1/admin/adverts/{later}", json={"active": False}, headers=H)
         ).status_code == 204
@@ -212,3 +212,60 @@ async def test_without_picture_storage_adding_says_so(
     staff.runtime.object_store = None
     r = await boss.post("/api/v1/admin/adverts", json=advert(), headers=H)
     assert r.status_code == 503 and "storage" in r.json()["error"]["message"]
+
+
+async def _showing(p: Party) -> Any:
+    r = await p.env.client.get("/api/v1/adverts/showing", headers=p._h())
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def test_several_adverts_take_turns_newest_first(
+    staff: Admin, boss: AsyncClient, owner: Party, store: LocalFolderStore
+) -> None:
+    """ADR-086 (owner 2026-11-03): many adverts can be posted; the app slides through them."""
+    from app.services.adverts import MAX_SHOWING, ROTATE_SECONDS
+
+    assert await _showing(owner) == {"rotate_seconds": ROTATE_SECONDS, "items": []}
+    ids = []
+    for i in range(MAX_SHOWING + 1):  # 11: one more than can take turns
+        r = await boss.post(
+            "/api/v1/admin/adverts",
+            json=advert(name=f"Ad {i}", starts_at=f"2026-10-{1 + i:02d}T00:00:00+01:00"),
+            headers=H,
+        )
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    # One that hasn't started yet is never sent.
+    future = await boss.post(
+        "/api/v1/admin/adverts",
+        json=advert(name="Next month", starts_at="2026-11-10T00:00:00+01:00"),
+        headers=H,
+    )
+    assert future.status_code == 201, future.text
+    got = await _showing(owner)
+    assert got["rotate_seconds"] == ROTATE_SECONDS
+    shown = [a["id"] for a in got["items"]]
+    assert shown == list(reversed(ids))[:MAX_SHOWING]  # the newest start first
+    # The app can fetch every picture in the rotation, and nothing else.
+    for aid in shown:
+        r = await owner.env.client.get(f"/api/v1/adverts/{aid}/image", headers=owner._h())
+        assert r.status_code == 200
+    for aid in (ids[0], future.json()["id"]):
+        r = await owner.env.client.get(f"/api/v1/adverts/{aid}/image", headers=owner._h())
+        assert r.status_code == 404
+    # Staff see which are taking turns, in order, and which one waits for a free place.
+    listed = (await boss.get("/api/v1/admin/adverts", headers=H)).json()
+    by_id = {i["id"]: i for i in listed["items"]}
+    assert listed["showing_ids"] == shown and listed["max_showing"] == MAX_SHOWING
+    assert by_id[ids[-1]]["position"] == 1 and by_id[ids[1]]["position"] == MAX_SHOWING
+    assert (by_id[ids[0]]["state"], by_id[ids[0]]["position"]) == ("covered", None)
+    assert by_id[future.json()["id"]]["state"] == "scheduled"
+    # Switching one off frees its place: the waiting one joins at the end.
+    r = await boss.patch(f"/api/v1/admin/adverts/{ids[-1]}", json={"active": False}, headers=H)
+    assert r.status_code == 204
+    assert [a["id"] for a in (await _showing(owner))["items"]][-1] == ids[0]
+
+
+async def test_the_showing_list_needs_a_login(owner: Party) -> None:
+    assert (await owner.env.client.get("/api/v1/adverts/showing")).status_code == 401
