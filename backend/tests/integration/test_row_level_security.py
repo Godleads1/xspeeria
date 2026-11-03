@@ -339,6 +339,9 @@ async def test_customer_requests_run_in_their_own_scope(db_settings: Settings, k
 APPROVED_SERVICE_STEPS = {
     ("app/services/matches.py", "open escrow: both parties' payout accounts"),
     ("app/services/settlement.py", "pretend bank: partner messages and commands"),
+    # Found by the load test (ADR-085): the offer owner's verification level and usage decide
+    # whether the deal is within their limits; the taker is told only "can't be taken".
+    ("app/services/limits.py", "deal limits: the other party's tier and usage"),
 }
 
 
@@ -357,3 +360,76 @@ def test_every_step_up_to_system_scope_is_approved() -> None:
             re.findall(r'acting_for_service\(\s*[\w.]+,\s*"[^"]+"\s*\)', source)
         ), f"{path}: acting_for_service needs a literal reason"
     assert found == APPROVED_SERVICE_STEPS
+
+
+async def _row_rules_server(db_settings: Settings) -> None:
+    """The server's own engine is held by the row rules from here on, with the privileges it
+    normally has. Locally the database user owns the tables and isn't a superuser, so the
+    forced rules already apply. CI's user is a superuser (which skips every rule): there the
+    server switches to a plain role that inherits the owner's privileges."""
+    from app.db.session import dispose_engine, get_engine
+
+    await dispose_engine()
+    if not await _sql(db_settings, "SELECT rolsuper FROM pg_roles WHERE rolname = current_user"):
+        return
+    owner = await _sql(db_settings, "SELECT tableowner FROM pg_tables WHERE tablename = 'offers'")
+    await _sql(
+        db_settings,
+        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'xs_rules_test') "
+        "THEN CREATE ROLE xs_rules_test NOLOGIN NOSUPERUSER NOBYPASSRLS; END IF; END $$",
+    )
+    await _sql(db_settings, f'GRANT "{owner}" TO xs_rules_test')  # a name read from the catalog
+
+    @event.listens_for(get_engine(db_settings).sync_engine, "connect")
+    def _set_role(dbapi_conn: Any, _record: Any) -> None:
+        cursor = dbapi_conn.cursor()
+        cursor.execute("SET ROLE xs_rules_test")
+        cursor.close()
+        dbapi_conn.commit()
+
+
+async def _verified(db_settings: Settings, phone: str) -> None:
+    await _sql(
+        db_settings,
+        "INSERT INTO kyc_cases (id, user_id, provider, country, provider_session_id, "
+        "provider_status, status, legal_name, date_of_birth, decided_at, created_at, updated_at) "
+        "SELECT gen_random_uuid(), id, 'didit', c, 'rls-' || c || id, 'Approved', 'approved', "
+        "'Ada Obi', DATE '1990-01-01', now(), now(), now() "
+        "FROM users CROSS JOIN (VALUES ('NG'), ('US')) AS countries(c) WHERE phone = :p",
+        p=phone,
+    )
+
+
+async def test_taking_an_offer_reads_the_owners_tier_under_the_row_rules(
+    db_settings: Settings, clean: None
+) -> None:
+    """Found by the load test (ADR-085). With real identity checks (no developer bypass) and
+    the row rules on, the taker's request couldn't see the owner's identity check, so every
+    offer answered "can't be taken right now"."""
+    from tests.integration.test_auth_api import _env
+    from tests.integration.test_matches_api import OWNER, _person
+
+    async for env in _env(db_settings):
+        owner = await _person(env, OWNER)
+        taker = await _person(env, TAKER)
+        for p in (OWNER[0], TAKER[0]):
+            await _verified(db_settings, p)
+        await _row_rules_server(db_settings)
+        offer = await owner.publish(source_amount="500.00", desired_rate="1320.50")
+        assert offer.status_code == 201, offer.text
+        r = await taker.take(offer.json()["offer_id"], "10.00")
+        assert r.status_code == 201, r.text
+        # The owner's state is still checked: their identity check expires, the offer can't be
+        # taken, and the taker learns nothing about why.
+        await _sql(
+            db_settings,
+            "UPDATE kyc_cases SET status = 'expired' WHERE provider_session_id LIKE 'rls-%' "
+            "AND user_id = (SELECT id FROM users WHERE phone = :p)",
+            p=OWNER[0],
+        )
+        r = await taker.take(offer.json()["offer_id"], "10.00")
+        assert (r.status_code, r.json()["error"]["code"]) == (403, "TRADE_403_COUNTERPARTY_LIMIT")
+        assert "verif" not in r.text.lower()
+    from app.db.session import dispose_engine
+
+    await dispose_engine()
