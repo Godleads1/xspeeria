@@ -1424,5 +1424,11 @@
  "• After 5 wrong codes, 2 FA is locked for 15 minutes.": "• Après 5 codes erronés, la 2FA est bloquée pendant 15 minutes.",
  "• Good light and about 2 minutes": "• Un bon éclairage et environ 2 minutes",
  "• We never send codes by SMS, and Xspeeria staff will never ask for your codes.": "• Nous n'envoyons jamais de codes par SMS, et l'équipe Xspeeria ne vous demandera jamais vos codes.",
- "• You must be 18 or older": "• Vous devez avoir 18 ans ou plus"
+ "• You must be 18 or older": "• Vous devez avoir 18 ans ou plus",
+ "Totals of your completed deals": "Totaux de vos transactions terminées",
+ "1 completed deal": "1 transaction terminée",
+ "{{count}} completed deals": "{{count}} transactions terminées",
+ "Received": "Reçu",
+ "Sent": "Envoyé",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "Historique des transactions, pas de l’argent détenu par Xspeeria. Les frais ne sont pas inclus."
 }

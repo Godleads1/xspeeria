@@ -1424,5 +1424,11 @@
  "• After 5 wrong codes, 2 FA is locked for 15 minutes.": "• 输错 5 次验证码后，双重验证将锁定 15 分钟。",
  "• Good light and about 2 minutes": "• 光线充足，约需 2 分钟",
  "• We never send codes by SMS, and Xspeeria staff will never ask for your codes.": "• 我们绝不会通过短信发送验证码，Xspeeria 员工也绝不会索要您的验证码。",
- "• You must be 18 or older": "• 您必须年满 18 岁"
+ "• You must be 18 or older": "• 您必须年满 18 岁",
+ "Totals of your completed deals": "您已完成交易的合计",
+ "1 completed deal": "1 笔已完成交易",
+ "{{count}} completed deals": "{{count}} 笔已完成交易",
+ "Received": "已收到",
+ "Sent": "已发送",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "这是交易记录，不是 Xspeeria 持有的资金。不含手续费。"
 }

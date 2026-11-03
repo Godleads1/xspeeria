@@ -1424,5 +1424,11 @@
  "• After 5 wrong codes, 2 FA is locked for 15 minutes.": "• بعد 5 رموز خاطئة، تُقفل المصادقة الثنائية لمدة 15 دقيقة.",
  "• Good light and about 2 minutes": "• إضاءة جيدة ونحو دقيقتين",
  "• We never send codes by SMS, and Xspeeria staff will never ask for your codes.": "• لا نرسل الرموز برسائل نصية أبدًا، ولن يطلب موظفو Xspeeria رموزك أبدًا.",
- "• You must be 18 or older": "• يجب أن يكون عمرك 18 عامًا أو أكثر"
+ "• You must be 18 or older": "• يجب أن يكون عمرك 18 عامًا أو أكثر",
+ "Totals of your completed deals": "إجماليات صفقاتك المكتملة",
+ "1 completed deal": "صفقة واحدة مكتملة",
+ "{{count}} completed deals": "{{count}} صفقات مكتملة",
+ "Received": "المستلَم",
+ "Sent": "المُرسَل",
+ "Deal history, not money held by Xspeeria. Fees are not included.": "سجل صفقات، وليس أموالًا تحتفظ بها Xspeeria. لا يشمل الرسوم."
 }
