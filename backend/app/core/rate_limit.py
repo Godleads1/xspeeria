@@ -21,7 +21,19 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from sqlalchemy import ColumnElement, and_, delete, func, select, text
+from sqlalchemy import (
+    ColumnElement,
+    DateTime,
+    LargeBinary,
+    String,
+    and_,
+    delete,
+    func,
+    insert,
+    literal,
+    select,
+    text,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.rate_limits import RateLimitHit
@@ -145,17 +157,29 @@ class DatabaseRateLimiter:
         cutoff = now - self._window
         async with self._sessions() as db, db.begin():
             await self._lock(db, digest)
-            # This key's old attempts go now; other keys' old ones go in the hourly job.
-            await db.execute(
-                delete(RateLimitHit).where(self._mine(digest), RateLimitHit.at <= cutoff)
+            # ADR-091: count this key's attempts inside the window and add this one only if
+            # under the limit, in one statement (a new snapshot after the lock, so two servers
+            # can't both let the last attempt through). Old attempts are pruned by the hourly
+            # job (``prune_rate_limit_hits``); the window filter ignores them meanwhile.
+            added = await db.scalar(
+                insert(RateLimitHit)
+                .from_select(
+                    ["limiter", "key_hash", "at"],
+                    select(
+                        literal(self._name, String()),
+                        literal(digest, LargeBinary()),
+                        literal(now, DateTime(timezone=True)),
+                    ).where(
+                        select(func.count())
+                        .select_from(RateLimitHit)
+                        .where(self._mine(digest), RateLimitHit.at > cutoff)
+                        .scalar_subquery()
+                        < self._limit
+                    ),
+                )
+                .returning(RateLimitHit.id)
             )
-            recent = await db.scalar(
-                select(func.count()).select_from(RateLimitHit).where(self._mine(digest))
-            )
-            if int(recent or 0) >= self._limit:
-                return False
-            db.add(RateLimitHit(limiter=self._name, key_hash=digest, at=now))
-        return True
+        return added is not None
 
     async def count(self, key: str, now: datetime) -> int:
         digest = _digest(self._name, key)
