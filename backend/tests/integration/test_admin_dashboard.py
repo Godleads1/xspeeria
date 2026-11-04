@@ -109,7 +109,8 @@ async def test_a_completed_trade_shows_up_everywhere_with_exact_money(
     value = {v["currency"]: (v["minor"], v["scale"]) for v in o["value"]}
     fees = {v["currency"]: v["minor"] for v in o["fees"]}
     assert value == {"NGN": ("26410000", 2), "USD": ("20000", 2)}
-    assert fees == {"NGN": "264100", "USD": "200"}
+    # ADR-098: taker 1% of ₦264,100 = ₦2,641; maker (offer owner) $2.00 less 25% = $1.50.
+    assert fees == {"NGN": "264100", "USD": "150"}
     assert all(isinstance(v["minor"], str) for v in o["value"] + o["fees"])
     assert o["avg_settlement_seconds"] is not None
     t = f["transactions"]
@@ -117,7 +118,7 @@ async def test_a_completed_trade_shows_up_everywhere_with_exact_money(
     [c] = f["corridors"]
     assert c["pair"] == ["NGN", "USD"] and c["trades"] == 1 and c["average_rate"] == "1320.5000"
     assert (
-        sum(int(x["minor"]) for x in f["revenue"]["fees_by_time"] if x["currency"] == "USD") == 200
+        sum(int(x["minor"]) for x in f["revenue"]["fees_by_time"] if x["currency"] == "USD") == 150
     )
     # Nothing is waiting in escrow once both sides were paid out.
     assert f["revenue"]["waiting_in_escrow"] == []
