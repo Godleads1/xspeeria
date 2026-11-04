@@ -26,7 +26,6 @@ import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import { DemoNote, GhostButton } from "../auth/ui";
 import { ActionSheet, RoundButton } from "../market/controls";
-import { COORDINATION_FEE_LABEL } from "../history/data";
 import { formatHundredths } from "../market/money";
 import { orderSiblings, progressFor, tradeStore, useTrade, useTrades, type Trade } from "./tradeStore";
 import { trRich } from "../../i18n/rich";
@@ -270,7 +269,7 @@ export function TradeScreen({
   const confirmPaid = (): void =>
     Alert.alert(
       tr("Have you paid?"),
-      tr("Only continue once you have sent exactly {{payLabel}} (including the {{COORDINATION_FEE_LABEL}} fee) from a bank account in your name.", { payLabel, COORDINATION_FEE_LABEL }),
+      tr("Only continue once you have sent exactly {{payLabel}} (including the Xspeeria fee) from a bank account in your name.", { payLabel }),
       [
         { text: tr("Not yet"), style: "cancel" },
         {

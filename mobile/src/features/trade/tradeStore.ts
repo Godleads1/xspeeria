@@ -11,7 +11,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { coordinationFeeMinor, type HistoryItem } from '../history/data';
+import { xspeeriaFeeMinor, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
 import { formatHundredths, quoteMinor } from '../market/money';
@@ -58,7 +58,7 @@ export interface Trade {
   /** What the user transfers into escrow, minor units of `payCurrency`, fee included. */
   readonly transferMinor: number;
   readonly payCurrency: string;
-  /** The user's coordination fee (1%), minor units of `payCurrency` (ADR-021). */
+  /** The user's Xspeeria fee, minor units of `payCurrency` (ADR-021, ADR-098). */
   readonly feeMinor: number;
   readonly counterparty: string;
   /** Own accounts the partner bank pays, with the amount each gets (ADR-021). */
@@ -114,8 +114,9 @@ function paidLabel(t: Trade, p: PayoutShare): string {
 }
 
 /**
- * What the user must transfer into escrow, fee included (ADR-021): buying, the NGN amount
- * plus 1% of it in NGN; selling, the foreign amount plus 1% of it in that currency.
+ * What the user must transfer into escrow, fee included (ADR-021, ADR-098): buying, the NGN
+ * amount plus its fee in NGN; selling, the foreign amount plus its fee in that currency. The
+ * demo user takes listings, so pays the taker's fee.
  */
 export function transferFor(
   side: Side,
@@ -124,7 +125,7 @@ export function transferFor(
   rateHundredths: number,
 ): { minor: number; currency: string; feeMinor: number } {
   const sent = side === 'buy' ? ngnFor(amountMinor, rateHundredths) : amountMinor;
-  const feeMinor = coordinationFeeMinor(sent);
+  const feeMinor = xspeeriaFeeMinor(sent, side === 'buy' ? 'NGN' : currency, 'taker');
   const minor = sent + feeMinor;
   if (!Number.isSafeInteger(minor)) throw new Error('Amount to pay is out of range');
   return { minor, currency: side === 'buy' ? 'NGN' : currency, feeMinor };

@@ -105,7 +105,7 @@ Current state of every requirement in `docs/07-security/XSPEERIA_ENTERPRISE_SECU
 
 | ID | State | Note |
 |---|---|---|
-| FX-01 | DOCUMENTED | Server-owned values (Standing Standards §7); trades API. |
+| FX-01 | DOCUMENTED | Server-owned values (Standing Standards §7); trades API. Fee: computed only on the server when the escrow opens (`fee_rules.py`, ADR-098); the app's quote (`GET /api/v1/fees/quote`, signed-in, rate-limited, no account data) is for display and never trusted (`test_fee_rules.py`, `test_fee_quote.py`, `test_escrow_api.py`). |
 | FX-02 | DOCUMENTED | Banking Integration Spec; webhook verification not built. |
 | FX-03 | **OPEN — GAP ACCEPTED FOR SIMULATION** | The 24-hour payout hold (ADR-008) was removed by the product owner on 2026-10-19 (DEC-044): payouts are immediate, protected by authenticator codes on adding and choosing accounts. Release can be stopped by a blocking hold (ADR-037), but no risk check for "new account + immediate payout" and no freeze/escalation process exist. **Must be met before go-live.** |
 | FX-04 | IMPLEMENTED (partial, ADR-073) | `docs/adr/002-financial-event-ledger-architecture.md`. Per-deal timeline: offer, take, payout choices, every escrow event with side, amount and fee, holds, disputes, refunds and the customers' own steps, read-only for the Super Admin; customer activity append-only and kept 5 years (`test_activity_log.py`). |

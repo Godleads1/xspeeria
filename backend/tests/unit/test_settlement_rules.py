@@ -17,7 +17,6 @@ from app.domain.settlement_rules import (
     MONEY_FACTS,
     PHASE_TRANSITIONS,
     TERMINAL_PHASES,
-    coordination_fee_minor,
 )
 from app.providers.pretend_bank import LegCommand, PartnerError, PayoutLine, PretendBank
 from app.services.settlement import _key, _reachable
@@ -25,17 +24,7 @@ from app.services.settlement import _key, _reachable
 T0 = datetime(2026, 10, 19, 12, 0, tzinfo=UTC)
 
 
-@pytest.mark.parametrize(
-    ("sent", "fee"),
-    [(20000, 200), (26410000, 264100), (50, 0), (150, 2), (250, 2), (350, 4), (0, 0), (99, 1)],
-)
-def test_fee_is_one_percent_half_even(sent: int, fee: int) -> None:
-    assert coordination_fee_minor(sent) == fee
-
-
-def test_fee_refuses_negative() -> None:
-    with pytest.raises(ValueError):
-        coordination_fee_minor(-1)
+# The fee itself: tests/unit/test_fee_rules.py (ADR-098).
 
 
 def test_window_is_five_minutes() -> None:

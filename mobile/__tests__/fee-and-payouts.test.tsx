@@ -1,8 +1,9 @@
 /**
- * 1% coordination fee and split payouts (product owner, 2026-10-17; ADR-021).
+ * Fee and split payouts (ADR-021; the fee amount is the Fair Fee of ADR-098, mirrored for the
+ * demo — the server's own figures are pinned in backend/tests/unit/test_fee_rules.py).
  */
 
-import { coordinationFeeMinor } from '../src/features/history/data';
+import { xspeeriaFeeMinor } from '../src/features/history/data';
 import { OFFERS, REQUESTS } from '../src/features/market/data';
 import { allocatePayouts, splitProblem, type PayoutShare } from '../src/features/trade/payoutSplit';
 import { DEMO_STEP_MS, FUNDING_WINDOW_MS, toHistoryItem, tradeStore, transferFor } from '../src/features/trade/tradeStore';
@@ -14,13 +15,20 @@ const share = (id: string, amountMinor: number): PayoutShare => ({ id, name: 'Da
 
 beforeEach(() => tradeStore.reset());
 
-describe('1% coordination fee', () => {
-  it('is 1% of what each side sends, in integers, rounded half to even', () => {
-    expect(coordinationFeeMinor(26500000)).toBe(265000); // ₦265,000.00 → ₦2,650.00
-    expect(coordinationFeeMinor(20000)).toBe(200); // $200.00 → $2.00
-    expect(coordinationFeeMinor(50)).toBe(0); // 0.5 kobo → 0 (even)
-    expect(coordinationFeeMinor(150)).toBe(2); // 1.5 → 2 (even)
-    expect(() => coordinationFeeMinor(-1)).toThrow();
+describe('Xspeeria Fair Fee in the demo (ADR-098)', () => {
+  it('matches the server figures: bands, minimum, maximum, maker 25% less', () => {
+    expect(xspeeriaFeeMinor(26500000, 'NGN')).toBe(265000); // ₦265,000 → ₦2,650 (1% band)
+    expect(xspeeriaFeeMinor(160000000, 'NGN')).toBe(1600000); // ₦1.6m → ₦16,000
+    expect(xspeeriaFeeMinor(160000000, 'NGN', 'maker')).toBe(1200000);
+    expect(xspeeriaFeeMinor(800000000, 'NGN')).toBe(4800000); // capped at ₦48,000
+    expect(xspeeriaFeeMinor(500000, 'NGN')).toBe(80000); // ₦5,000 → minimum ₦800
+    expect(xspeeriaFeeMinor(20000, 'USD')).toBe(200); // $200 → $2
+    expect(xspeeriaFeeMinor(2000, 'USD', 'maker')).toBe(50); // minimum $0.50 even as maker
+    expect(xspeeriaFeeMinor(200000, 'USD')).toBe(1600); // $2,000 → $10 + $6
+    expect(xspeeriaFeeMinor(123456, 'USD')).toBe(1141);
+    expect(xspeeriaFeeMinor(500000, 'USD', 'maker')).toBe(2250); // $30 cap → $22.50
+    expect(xspeeriaFeeMinor(0, 'USD')).toBe(0);
+    expect(() => xspeeriaFeeMinor(-1, 'USD')).toThrow();
   });
 
   it('buyer pays it in NGN, seller in the foreign currency, on top of the amount', () => {
@@ -31,8 +39,8 @@ describe('1% coordination fee', () => {
   it('each trade of a multi-offer order has its own fee and its own 5-minute window', () => {
     const a = tradeStore.create({ side: 'buy', listing: OFFERS[0], amountMinor: 20000, payout: { id: 'b3', name: 'D', bank: 'B', last4: '4410' }, now: NOW, random: rnd, orderId: 'o-x' });
     const b = tradeStore.create({ side: 'buy', listing: OFFERS[3], amountMinor: 30000, payout: { id: 'b3', name: 'D', bank: 'B', last4: '4410' }, now: NOW + 1000, random: rnd, orderId: 'o-x' });
-    expect(a.feeMinor).toBe(coordinationFeeMinor(26500000));
-    expect(b.feeMinor).toBe(coordinationFeeMinor(39750000));
+    expect(a.feeMinor).toBe(xspeeriaFeeMinor(26500000, 'NGN'));
+    expect(b.feeMinor).toBe(xspeeriaFeeMinor(39750000, 'NGN'));
     expect(a.deadline).toBe(NOW + FUNDING_WINDOW_MS);
     expect(b.deadline).toBe(NOW + 1000 + FUNDING_WINDOW_MS);
   });

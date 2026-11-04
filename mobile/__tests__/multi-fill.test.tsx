@@ -111,7 +111,7 @@ describe('Confirm sheet for several trades', () => {
     await render(<ConfirmTradeSheet side="buy" requestedMinor={100000} parts={plan} onAccept={onAccept} onClose={jest.fn()} />);
     expect(screen.getByText('Confirm 4 trades')).toBeTruthy();
     expect(screen.getAllByText('1,000.00 USD')).toHaveLength(2); // you buy, you receive
-    expect(screen.getByText('Coordination fee (1%)')).toBeTruthy();
+    expect(screen.getAllByText('Xspeeria fee').length).toBeGreaterThan(0);
     expect(screen.getByText('13,288.15 NGN')).toBeTruthy();
     expect(screen.getByText('1,342,103.15 NGN')).toBeTruthy(); // 1,328,815.00 + 1%
     expect(screen.queryByTestId('confirm-partial')).toBeNull();

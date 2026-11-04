@@ -20,6 +20,7 @@ import { ErrorState, LoadingState, PrimaryButton, Screen } from "../../component
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { FieldInput, OutlinedField } from "./controls";
 import { divRoundHalfEven, formatHundredths, parseToHundredths } from "./money";
+import type { FeeQuote } from "../../api/feesApi";
 import { foreignMinorFor, groupedRate, type TakeSource } from "./serverOffers";
 import { tr } from "../../i18n";
 
@@ -96,6 +97,27 @@ export function TakeOfferScreen({
   useEffect(() => {
     if (whole && remainingText) setAmount(remainingText);
   }, [whole, remainingText]);
+
+  // ADR-098: the taker pays the fee on what they send (the offer's target currency): naira for
+  // an offer, the foreign currency for a buy request. The server quotes it; it is worked out
+  // again on the server when the escrow opens, so this is for showing only.
+  const sendCurrency = offer?.target_currency ?? "";
+  const sendMinor = request ? (tooMuch ? null : amountMinor) : ngn;
+  const [quote, setQuote] = useState<FeeQuote | null>(null);
+  useEffect(() => {
+    setQuote(null);
+    if (!source.feeQuote || !sendCurrency || sendMinor === null || sendMinor <= 0) return;
+    const ask = source.feeQuote;
+    const text = formatHundredths(sendMinor).replace(/,/g, "");
+    let live = true;
+    const t = setTimeout(() => {
+      ask(sendCurrency, text).then((q) => live && setQuote(q), () => undefined);
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [source, sendCurrency, sendMinor]);
 
   const editAmount = (v: string): void => {
     setAmount(v);
@@ -220,6 +242,15 @@ export function TakeOfferScreen({
             </Text>
           ) : ngn !== null ? (
             <Text testID="take-ngn" style={styles.line}>{tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })}</Text>
+          ) : null}
+          {quote ? (
+            <Text testID="take-fee" style={styles.line}>
+              {tr("Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.", {
+                fee: grouped(quote.fee),
+                total: grouped(quote.total),
+                currency: quote.currency,
+              })}
+            </Text>
           ) : null}
 
 

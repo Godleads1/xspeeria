@@ -197,13 +197,14 @@ async def test_ready_deal_opens_two_escrows_with_fees(
 ) -> None:
     assert await _phase(db_settings) == "INITIALIZING"
     v = await _open(esc, deal, owner)
-    # Owner pays the 200.00 USD they sell, plus 1%; receives NGN 264,100.00.
+    # Owner (the maker) pays the 200.00 USD they sell, plus the maker's fee (ADR-098: 1% less
+    # 25% = 1.50); receives NGN 264,100.00. The taker pays 1% on the naira side.
     assert v["you_pay"] | {"pay_in": None, "leg_id": None} == {
         "leg_id": None,
         "currency": "USD",
         "amount": "200.00",
-        "fee": "2.00",
-        "total": "202.00",
+        "fee": "1.50",
+        "total": "201.50",
         "state": "ESCROW_PROVISIONED",
         "pay_in": None,
     }
@@ -300,7 +301,7 @@ async def test_one_side_pays_is_refunded_in_full_including_fee(
         db_settings,
         "SELECT payload->>'amount_minor' FROM settlement_events WHERE event_type='EscrowReturned'",
     )
-    assert returned == "20200"  # 200.00 + the 2.00 fee (product owner, 2026-10-19)
+    assert returned == "20150"  # 200.00 + the maker's 1.50 fee, back in full (2026-10-19)
     assert await _offer(db_settings) == ("open", 0)
 
 
@@ -312,7 +313,7 @@ async def test_late_money_after_cancel_is_kept_for_a_person(
     esc.env.clock.advance(minutes=6)
     await esc.tick()
     assert await _phase(db_settings) == "CANCELLED"
-    esc.bank.simulate_pay_in(uuid.UUID(leg), 20200)
+    esc.bank.simulate_pay_in(uuid.UUID(leg), 20150)
     await esc.tick()
     assert await _phase(db_settings) == "CANCELLED"
     assert await _sql(
@@ -342,7 +343,7 @@ async def _leg(db_settings: Settings, currency: str) -> tuple[str, str]:
     )
 
 
-def _funded(sid: str, lid: str, amount: int = 20200, code: str = "pretend-us") -> dict[str, Any]:
+def _funded(sid: str, lid: str, amount: int = 20150, code: str = "pretend-us") -> dict[str, Any]:
     return {
         "provider_event_id": f"evt_{uuid.uuid4().hex[:12]}",
         "partner_code": code,
@@ -384,8 +385,8 @@ async def test_old_message_is_replay_suspected(
     "change",
     [
         {"extra": "field"},
-        {"amount_minor": "20200"},
-        {"amount_minor": 20200.0},
+        {"amount_minor": "20150"},
+        {"amount_minor": 20150.0},
         {"status": "FUNDED"},
         {"leg_id": "not-a-uuid"},
         {"partner_code": "pretend-ng"},

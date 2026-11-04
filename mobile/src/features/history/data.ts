@@ -1,7 +1,7 @@
 /**
  * MOCK DATA for History (ADR-006). Shapes follow the Figma History list (342:6121) and
- * receipt (344:6152); figures are corrected so they add up, the fee is the coordination
- * fee (1% of what each side sends, ADR-021; Figma's receipt also shows 1%), and
+ * receipt (344:6152); figures are corrected so they add up, the fee is the Xspeeria Fair
+ * Fee (ADR-098; Figma's receipt showed the earlier 1%), and
  * payout accounts carry only their last four digits — full account numbers are never
  * held or shown in the app.
  *
@@ -57,21 +57,42 @@ export interface HistoryItem {
 }
 
 /**
- * Coordination fee: 1% of the money each side sends, charged in that side's currency
- * (product owner, 2026-10-17, `docs/adr/021-percentage-fee-and-split-payouts.md`;
- * supersedes the flat fee of Business Plan §5). Buyer: 1% of the NGN amount, in NGN.
- * Seller: 1% of the foreign amount, in that currency. Integer basis points, BigInt,
- * rounded half to even. The server computes the authoritative fee.
+ * The Xspeeria Fair Fee (ADR-098), mirrored for the demo build only. The server works out
+ * the real fee (`backend/app/domain/fee_rules.py`); server builds show the server's figure.
+ * Each side pays on the money it sends, in that currency: 1% up to 1,000 / ₦1,600,000, 0.6%
+ * up to 5,000 / ₦8,000,000, 0.3% above; minimum 0.50 / ₦800, maximum 30 / ₦48,000; the side
+ * that posted the offer pays 25% less, never below the minimum. Integer minor units, BigInt,
+ * half to even. Demo currencies the service doesn't offer (CAD, AUD) use the dollar figures.
  */
-export const COORDINATION_FEE_BPS = 100;
+export type FeeSide = 'maker' | 'taker';
 
-export function coordinationFeeMinor(sentMinor: number): number {
+const NAIRA_FEE = { edges: [160_000_000n, 800_000_000n], minimum: 80_000n, maximum: 4_800_000n };
+const FOREIGN_FEE = { edges: [100_000n, 500_000n], minimum: 50n, maximum: 3_000n };
+const BAND_BPS = [100n, 60n, 30n];
+export const MAKER_DISCOUNT_BPS = 2_500n;
+
+export function xspeeriaFeeMinor(sentMinor: number, currency: string, side: FeeSide = 'taker'): number {
   if (!Number.isSafeInteger(sentMinor) || sentMinor < 0) throw new Error('amount must be a non-negative integer (minor units)');
-  return Number(divRoundHalfEven(BigInt(sentMinor) * BigInt(COORDINATION_FEE_BPS), 10000n));
+  if (sentMinor === 0) return 0;
+  const f = currency === 'NGN' ? NAIRA_FEE : FOREIGN_FEE;
+  const sent = BigInt(sentMinor);
+  const bounds = [0n, ...f.edges, sent];
+  let weighted = 0n;
+  for (let i = 0; i < BAND_BPS.length; i++) {
+    const lo = bounds[i];
+    const hi = i < f.edges.length ? (sent < f.edges[i] ? sent : f.edges[i]) : sent;
+    if (hi > lo) weighted += (hi - lo) * BAND_BPS[i];
+    if (i < f.edges.length && sent <= f.edges[i]) break;
+  }
+  let fee = divRoundHalfEven(weighted, 10_000n);
+  if (fee < f.minimum) fee = f.minimum;
+  if (fee > f.maximum) fee = f.maximum;
+  if (side === 'maker') {
+    fee = divRoundHalfEven(fee * (10_000n - MAKER_DISCOUNT_BPS), 10_000n);
+    if (fee < f.minimum) fee = f.minimum;
+  }
+  return Number(fee);
 }
-
-/** "1%" for labels, from the basis points (never a float). */
-export const COORDINATION_FEE_LABEL = `${COORDINATION_FEE_BPS / 100}%`;
 
 /**
  * The stages a trade passes through, in user language, mapped onto ADR-001 leg states:

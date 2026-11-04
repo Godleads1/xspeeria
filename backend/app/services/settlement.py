@@ -50,6 +50,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
 from app.db.row_scope import acting_for_service
+from app.domain.fee_rules import side_fee_minor
 from app.domain.payout_rules import counter_amount_minor
 from app.domain.settlement_rules import (
     DISPATCH_MAX_ATTEMPTS,
@@ -60,7 +61,6 @@ from app.domain.settlement_rules import (
     PARTNER_VOCABULARY,
     REPLAY_WINDOW,
     TERMINAL_PHASES,
-    coordination_fee_minor,
     reversal_problem,
 )
 from app.models.marketplace import Match, Offer
@@ -395,7 +395,10 @@ class SettlementService:
                 state="PENDING",
                 currency=currency,
                 amount_minor=amount,
-                fee_minor=coordination_fee_minor(amount),
+                # ADR-098: the side that posted the offer (REQUESTER) is the maker.
+                fee_minor=side_fee_minor(
+                    amount, currency, "maker" if role == "REQUESTER" else "taker"
+                ),
                 scale=scale,
                 currency_def_version=def_version,
                 source_jurisdiction=partner.jurisdiction,

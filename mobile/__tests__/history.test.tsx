@@ -1,7 +1,7 @@
 import { quoteMinor } from '../src/features/market/money';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { COORDINATION_FEE_BPS, HISTORY, displayDate, filterHistory, parseDisplayDate } from '../src/features/history/data';
+import { HISTORY, displayDate, filterHistory, parseDisplayDate } from '../src/features/history/data';
 import { HistoryScreen } from '../src/features/history/HistoryScreen';
 import { ReceiptScreen } from '../src/features/history/ReceiptScreen';
 
@@ -91,10 +91,9 @@ describe('Receipt (Figma 344:6152)', () => {
     await render(<ReceiptScreen item={h1} onClose={jest.fn()} />);
     expect(screen.getByText('TRANSACTION SUCCESSFUL')).toBeTruthy();
     expect(screen.getByText('628,500.00 NGN')).toBeTruthy();
-    expect(screen.getByText('Coordination Fee (1%)')).toBeTruthy();
+    expect(screen.getAllByText('Xspeeria fee').length).toBeGreaterThan(0);
     expect(screen.getByText('6,285.00 NGN')).toBeTruthy();
     expect(screen.getByText('634,785.00 NGN')).toBeTruthy();
-    expect(COORDINATION_FEE_BPS).toBe(100);
   });
 
   it('masks payout accounts to the last four digits', async () => {

@@ -25,8 +25,9 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Choose an email provider** for security alerts (lock, new device, recovery). Until then alerts only go to the server log. (ADR-026 §2)
 - [ ] **Partner bank:** confirm one escrow account can pay several payout accounts per side, and how payment confirmations are sent (push, email or SMS). (ADR-021 §5)
 - [ ] **Official rate:** which CBN figure applies, and a live rate feed instead of the fixed snapshot (Decision 3). (ADR-020)
-- [ ] **Fee:** decide whether the 1% fee needs a minimum or maximum. (ADR-021 §5)
-- [ ] **Business Plan and investor materials:** update to the 1% fee model. (ADR-021 §1)
+- [x] **Fee:** decided 4 Nov 2026: the Xspeeria Fair Fee — bands, minimum $0.50 / ₦800, maximum $30 / ₦48,000, maker 25% less (ADR-098, DEC-110).
+- [ ] **Fee step 2** — *You*: (a) regular-trader discounts: which rate converts monthly volume to dollars; (b) welcome credit: a computed discount on the 2nd deal (no stored balance, CORRECTIONS_v3 §9.7) or drop it; (c) how the referral 10% (ADR-009) combines with the maker discount; (d) own GBP/EUR figures, or keep the dollar ones. (ADR-098)
+- [ ] **Business Plan, investor materials and Terms of Service §4:** update to the Fair Fee figures. (ADR-021 §1, ADR-098)
 - [ ] **Artwork licences:** confirm for the Welcome pictures, card designs and the advert stock photo. (ADR-012, ADR-013, ADR-005)
 - [ ] **Advert banner:** send a 3× version (1026 × 339) so it is fully sharp on phones. (ADR-005)
 - [ ] **Figma file:** update the PIN screens from 4 to 6 boxes. (ADR-024)

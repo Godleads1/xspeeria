@@ -11,7 +11,6 @@ from __future__ import annotations
 from datetime import timedelta
 
 __all__ = [
-    "COORDINATION_FEE_BPS",
     "DISPATCH_MAX_ATTEMPTS",
     "FUNDING_EXTENSION",
     "FUNDING_WINDOW",
@@ -24,11 +23,10 @@ __all__ = [
     "PHASE_TRANSITIONS",
     "REPLAY_WINDOW",
     "TERMINAL_PHASES",
-    "coordination_fee_minor",
 ]
 
-#: ADR-021 §1: each side pays 1% of what it sends, in that currency, on top.
-COORDINATION_FEE_BPS = 100
+#: ADR-021 §1: each side pays a fee on what it sends, in that currency, on top. How much:
+#: ``app.domain.fee_rules`` (ADR-098, the Xspeeria Fair Fee; replaced the flat 1%).
 #: ADR-021 §2 (product owner, confirmed 2026-10-19: "Keep 5 minutes").
 FUNDING_WINDOW = timedelta(minutes=5)
 #: ADR-059 Decision 4 (product owner, 2026-10-21): the taker may ask once for 5 more minutes.
@@ -113,16 +111,6 @@ PARTNER_VOCABULARY: dict[str, str] = {
     "reversed": "RETURNED",
     "failed": "PAYOUT_FAILED",
 }
-
-
-def coordination_fee_minor(sent_minor: int) -> int:
-    """1% of what one side sends, in minor units, rounded half to even (ADR-019 §2)."""
-    if sent_minor < 0:
-        raise ValueError("amount must be non-negative")
-    q, r = divmod(sent_minor * COORDINATION_FEE_BPS, 10_000)
-    if 2 * r > 10_000 or (2 * r == 10_000 and q % 2 == 1):
-        q += 1
-    return q
 
 
 def reversal_problem(phase: str, release_authorized: bool, leg_states: list[str]) -> str | None:

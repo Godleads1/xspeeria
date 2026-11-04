@@ -21,7 +21,7 @@ import { tr, k } from "../../i18n";
 
 export const SLIDES = [
   { title: k("Welcome to Xspeeria"), body: k("Experience fast, secure, and low-fee currency exchange — anytime, anywhere.") },
-  { title: k("Exchange Money Peer-to-Peer"), body: k("Set your own rate and match with verified people. One clear 1% fee, with no hidden margin in the rate.") },
+  { title: k("Exchange Money Peer-to-Peer"), body: k("Set your own rate and match with verified people. One clear, capped fee, with no hidden margin in the rate.") },
   { title: k("Safe. Verified. Secure."), body: k("Everyone is identity-checked. Your money goes to a partner bank’s escrow, never to Xspeeria, until both sides have paid.") },
   { title: k("Go Global, Seamlessly"), body: k("Exchange naira with people abroad. Each side is paid by local transfer in their own country — no money crosses the border.") },
 ] as const;

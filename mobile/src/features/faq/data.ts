@@ -88,7 +88,7 @@ export const FAQ: readonly FaqItem[] = [
     topic: 'payments',
     question: k("How much does it cost?"),
     answer:
-      k("Xspeeria charges a coordination fee of 1% of the money each side sends, in the currency that side sends. There is no hidden margin in the rate, and the fee is shown before you confirm."),
+      k("Each side pays a fee on the money it sends, in the currency it sends: 1% on the first $1,000 (₦1,600,000), less above that, and never more than $30 (₦48,000). Whoever posted the offer pays 25% less. There is no hidden margin in the rate, and the fee is shown before you confirm."),
   },
   {
     id: 'when-paid',

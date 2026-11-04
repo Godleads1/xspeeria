@@ -2,7 +2,7 @@
  * Escrow steps for one deal (ADR-037, server builds). No Figma frame exists yet; it reuses the
  * My Deals / Choose payout styles.
  *
- * Xspeeria never holds money. Each side pays its amount + 1% fee into the partner bank's escrow
+ * Xspeeria never holds money. Each side pays its amount + the Xspeeria fee (ADR-098) into the partner bank's escrow
  * in its own country, within 5 minutes. Only the bank's confirmation counts as paid — never a
  * tap in the app. When both have paid, the bank pays out at once (DEC-044). If the other side
  * does not pay, your payment comes back in full, fee included.
@@ -227,7 +227,7 @@ export function EscrowScreen({
       <View style={styles.card} testID="escrow-you-pay">
         <Text style={styles.label}>{tr("You pay into escrow")}</Text>
         <Line label={tr("Amount")} value={money(s.you_pay.amount, s.you_pay.currency)} />
-        <Line label={tr("Xspeeria fee (1%)")} value={money(s.you_pay.fee, s.you_pay.currency)} />
+        <Line label={tr("Xspeeria fee")} value={money(s.you_pay.fee, s.you_pay.currency)} />
         <Line label={tr("Total to transfer")} value={money(s.you_pay.total, s.you_pay.currency)} testID="escrow-total" strong />
         {payIn ? (
           <View testID="escrow-pay-in" style={styles.payIn}>

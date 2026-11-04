@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** |
+| **Status** | **APPROVED** — fee **amount** superseded by `098-fair-fee.md` (DEC-110, 2026-11-04): bands, minimum, maximum and a 25% maker discount. The rest stands. |
 | **Date** | 2026-10-17 |
 | **Decision ID** | DEC-027 |
 | **Authority** | Product owner, 2026-10-17: "1. each will pay 1% of the money 2. yes its own 5 minutes window 3. each user can provide more than one payout account and the amount that should be paid to those account. the partnering bank having collected the money using an escrow account will be the one to pay into the payout accounts and confirmation is sent to all parties when the money have been paid"; then, asked about the conflict with the Business Plan, chose **"1% replaces flat fee"** — `DOCUMENT_INDEX.md` §1 rank 2 |
@@ -21,7 +21,8 @@
 - Shown before confirming, on the trade screen, and on the receipt as recorded at the time.
 - The referral discount (ADR-009) stays: 10% off this fee.
 - No minimum or maximum fee is set (none was given). The server computes the
-  authoritative fee.
+  authoritative fee. **Superseded 2026-11-04 by ADR-098** (minimum 0.50 / ₦800, maximum
+  30 / ₦48,000, lower rates on larger amounts, maker 25% less).
 
 **Business consequence (recorded, not decided here):** the Business Plan's §5.3 claim that a
 flat fee is "structurally cheaper" than percentage-margin competitors such as LemFi no longer

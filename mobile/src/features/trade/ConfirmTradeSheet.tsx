@@ -20,7 +20,6 @@ import type { Side } from "../market/MarketScreen";
 import { formatHundredths } from "../market/money";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
-import { COORDINATION_FEE_LABEL } from "../history/data";
 import { tr } from "../../i18n";
 
 function Row({
@@ -133,7 +132,7 @@ export function ConfirmTradeSheet({
               <>
                 <Row label={tr("Amount")} value={`${formatHundredths(totals.ngnMinor)} NGN`} />
                 <Row
-                  label={tr("Coordination fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
+                  label={tr("Xspeeria fee")}
                   value={`${formatHundredths(totals.feeMinor)} NGN`}
                 />
                 <Row
@@ -149,7 +148,7 @@ export function ConfirmTradeSheet({
                   value={`${formatHundredths(totals.ngnMinor)} NGN`}
                 />
                 <Row
-                  label={tr("Coordination fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
+                  label={tr("Xspeeria fee")}
                   value={`${formatHundredths(totals.feeMinor)} ${cur}`}
                 />
                 <Row

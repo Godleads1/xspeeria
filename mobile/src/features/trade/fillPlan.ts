@@ -59,7 +59,7 @@ export interface PlanTotals {
   readonly foreignMinor: number;
   /** NGN value of the parts at their own rates, kobo. */
   readonly ngnMinor: number;
-  /** Sum of each trade's 1% coordination fee, minor units of `payCurrency` (ADR-021). */
+  /** Sum of each trade's own Xspeeria fee, minor units of `payCurrency` (ADR-021, ADR-098). */
   readonly feeMinor: number;
   /** What the user transfers in total, minor units of `payCurrency`, fees included. */
   readonly transferMinor: number;

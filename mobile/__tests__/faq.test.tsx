@@ -7,10 +7,15 @@ describe('FAQ content', () => {
   it('has no placeholder text, other product names, money figures or licence claims', () => {
     const text = JSON.stringify(FAQ);
     expect(text).not.toMatch(/lorem|ipsum|tradebase/i);
-    expect(text).not.toMatch(/₦\s?\d|£\s?\d|\$\s?\d/);
-    // The only percentage allowed is the approved 1% coordination fee (ADR-021).
-    expect(text.match(/\d+(\.\d+)?\s?%/g)).toEqual(['1%']);
-    expect(FAQ.find((i) => i.id === 'cost')?.answer).toMatch(/1% of the money each side sends/);
+    // Money figures and percentages appear only in the fee answer, and only the owner's
+    // Fair Fee figures (ADR-098, pinned on the server in test_fee_rules.py).
+    const others = JSON.stringify(FAQ.filter((i) => i.id !== 'cost'));
+    expect(others).not.toMatch(/₦\s?\d|£\s?\d|\$\s?\d/);
+    expect(others).not.toMatch(/\d+(\.\d+)?\s?%/);
+    const cost = FAQ.find((i) => i.id === 'cost')?.answer ?? '';
+    expect(cost.match(/\d+(\.\d+)?\s?%/g)).toEqual(['1%', '25%']);
+    expect(cost.match(/[₦$£][\d,]+/g)).toEqual(['$1,000', '₦1,600,000', '$30', '₦48,000']);
+    expect(cost).toMatch(/in the currency it sends/);
     expect(text).not.toMatch(/licen[cs]ed|regulated|guarantee/i);
     expect(text).not.toMatch(/wallet balance|your balance/i);
   });
