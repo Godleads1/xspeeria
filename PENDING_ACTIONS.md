@@ -48,7 +48,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
 - [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
 - [x] **ADR-037 §4:** fee stored per leg and 5 retries before a person is alerted, confirmed 8 Nov 2026 (ADR-099).
-- [ ] **Confirm the last ADR-037 §4 detail** — *You*: late money after a cancelled deal kept for a person rather than returned automatically. (Escrows of a cancelled deal left for the bank to close: confirmed 8 Nov 2026, ADR-099.)
+- [x] **The other ADR-037 §4 details**, confirmed 8 Nov 2026 (ADR-099): late money after a cancelled deal is checked by a staff member, then returned by the bank; escrows of a cancelled deal are left for the bank to close.
 - [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
 - [x] **Wait before a new payout account can be paid** — decided 3 Nov 2026: **no wait**. Protection is the double confirmation, the new-account alert (ADR-083) and the "this wasn't me" email (ADR-084); the risk of a fast takeover payout is accepted. Reopen if the bank or lawyer asks for a cooling-off period (DEC-092).
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.

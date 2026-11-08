@@ -62,7 +62,7 @@ Xspeeria never holds money. When a deal is `funding_ready` (ADR-035), the server
 |---|---|---|
 | `fee_minor` on each leg | Stored per leg (1%, half-even) — **APPROVED 2026-11-08** (ADR-099) | ADR-021 says what the fee is but not where it is recorded. |
 | Dispatch attempts | 5, backoff 2, 4, 8, 16 s (ADR-001 §6c says "N") — **APPROVED 2026-11-08** (ADR-099) | How long before a person is alerted. |
-| Late money after CANCELLED | Kept as a STATE_MISMATCH exception for a person; not auto-returned | ADR-001 has no automatic path for it. |
+| Late money after CANCELLED | Kept as a STATE_MISMATCH exception for a person; not auto-returned — **APPROVED 2026-11-08** (ADR-099) | ADR-001 has no automatic path for it. |
 | Escrow opened for a cancelled deal | Left for the partner to close; no "close escrow" command exists yet — **APPROVED 2026-11-08** (ADR-099) | Partner contract not known. |
 
 ## 5. Not built

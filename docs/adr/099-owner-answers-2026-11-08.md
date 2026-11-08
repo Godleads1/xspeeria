@@ -5,7 +5,7 @@
 | **Status** | **APPROVED** — 2026-11-08 (§2 IMPLEMENTED; §1 decided, built when the partner bank's account check exists) |
 | **Decision ID** | DEC-111 |
 | **Authority** | Owner, 2026-11-08, answering three open questions in `PENDING_ACTIONS.md`: "When a bank rejects a payout account and the customer corrects it, does the original deadline stand, or do they get a new one?" → **"new one"**; "Which form should euro payout accounts use (IBAN and BIC?)" → **"Iban"**; "Do you confirm the ADR-037 details (fee stored per side, 5 retries before a person is alerted)?" → **"yes"**. |
-| **Resolves** | Standing Standards §15 open decision **row 10** (resume-vs-new deadline); ADR-001 §14.6 and the data dictionary's "OPEN / CONFIGURABLE" correction deadline; ADR-035 §4 open item; the EUR payout form left open by ADR-022 / ADR-035; two of the four ADR-037 §4 details. |
+| **Resolves** | Standing Standards §15 open decision **row 10** (resume-vs-new deadline); ADR-001 §14.6 and the data dictionary's "OPEN / CONFIGURABLE" correction deadline; ADR-035 §4 open item; the EUR payout form left open by ADR-022 / ADR-035; all four ADR-037 §4 details. |
 
 ## 1. A corrected payout account gets a new deadline
 
@@ -26,7 +26,7 @@
 - **Fee stored per leg** (`settlement_legs.fee_minor`, 1%, half-even): **APPROVED**.
 - **5 dispatch attempts** (backoff 2, 4, 8, 16 s) before a DISPATCH_FAILURE hold alerts a person (`DISPATCH_MAX_ATTEMPTS = 5`): **APPROVED**.
 - **Escrow opened for a cancelled deal is left for the partner bank to close** (no "close escrow" command): **APPROVED** (owner, 2026-11-08: "yes").
-- Still to confirm: late money after a cancelled deal kept for a person rather than returned automatically.
+- **Money that arrives after a deal is cancelled is never returned automatically.** It is kept as an exception for a staff member, who checks who sent it, whether the amount is right and whether anything looks suspicious, then has the bank return it: **APPROVED** (owner, 2026-11-08: "yes to this"). The reason is that automatic refunds are a laundering route and a payout to the wrong place can't be undone.
 
 ## Evidence
 
