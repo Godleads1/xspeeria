@@ -526,4 +526,5 @@ class TestPackageRegistration:
             "0041_security_notices.py",  # "this wasn't me" emails (ADR-084)
             "0042_app_role_grants.py",  # the app role's missing grant (ADR-094)
             "0043_account_deletion.py",  # delete account, 14 days to undo (ADR-095)
+            "0044_iban_last4.py",  # euro payout accounts by IBAN (ADR-099)
         ]

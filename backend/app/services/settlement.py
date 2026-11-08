@@ -766,6 +766,20 @@ class SettlementService:
             )
             if not terminal:
                 self._hold(settlement.id, "RECONCILIATION", "contradictory partner evidence")
+            elif target == "FUNDED":
+                # ADR-099: money paid in after the deal ended. Never returned automatically: a
+                # person checks it, then the bank returns it. Tell the person who paid.
+                match_id = await self._db.scalar(
+                    select(Transaction.match_id).where(Transaction.id == settlement.transaction_id)
+                )
+                await notify(
+                    self._db,
+                    user_id=leg.funder_user_id,
+                    event="settlement.late_money",
+                    dedupe_key=f"late_money:{receipt.id}",
+                    now=self._clock(),
+                    match_id=str(match_id),
+                )
             self._event(
                 settlement.id, leg.leg_id, "ReconciliationMismatchDetected", {"status": msg.status}
             )

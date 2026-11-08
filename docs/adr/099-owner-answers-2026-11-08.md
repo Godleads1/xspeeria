@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** — 2026-11-08 (§2 IMPLEMENTED; §1 decided, built when the partner bank's account check exists) |
+| **Status** | **APPROVED** — 2026-11-08 (§2 and §4 IMPLEMENTED; §1 decided, built when the partner bank's account check exists) |
 | **Decision ID** | DEC-111 |
 | **Authority** | Owner, 2026-11-08, answering three open questions in `PENDING_ACTIONS.md`: "When a bank rejects a payout account and the customer corrects it, does the original deadline stand, or do they get a new one?" → **"new one"**; "Which form should euro payout accounts use (IBAN and BIC?)" → **"Iban"**; "Do you confirm the ADR-037 details (fee stored per side, 5 retries before a person is alerted)?" → **"yes"**. |
 | **Resolves** | Standing Standards §15 open decision **row 10** (resume-vs-new deadline); ADR-001 §14.6 and the data dictionary's "OPEN / CONFIGURABLE" correction deadline; ADR-035 §4 open item; the EUR payout form left open by ADR-022 / ADR-035; all four ADR-037 §4 details. |
@@ -28,7 +28,18 @@
 - **Escrow opened for a cancelled deal is left for the partner bank to close** (no "close escrow" command): **APPROVED** (owner, 2026-11-08: "yes").
 - **Money that arrives after a deal is cancelled is never returned automatically.** It is kept as an exception for a staff member, who checks who sent it, whether the amount is right and whether anything looks suspicious, then has the bank return it: **APPROVED** (owner, 2026-11-08: "yes to this"). The reason is that automatic refunds are a laundering route and a payout to the wrong place can't be undone.
 
+## 4. The payer is told when late money arrives
+
+Owner, 2026-11-08: asked whether the customer should be told when their payment arrives after the deal ended, the owner said **"yes"**.
+
+- When the partner bank reports money paid into a deal that has already ended, the person who paid that side gets one notification, `settlement.late_money`: *"Payment arrived after the deal ended. This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you."*
+- It goes in the app inbox and as a phone push, and links to the deal. One notification per bank message; nothing personal and no amount is included (ADR-044).
+- **Unchanged:** nothing is returned automatically. The reconciliation exception for staff stays exactly as before.
+
 ## Evidence
+
+- `backend/tests/integration/test_escrow_api.py::test_late_money_after_cancel_is_kept_for_a_person`: the payer, and only the payer, gets one `settlement.late_money` notification; nothing is returned on its own.
+- `mobile/__tests__/notifications.test.tsx`: the words, title and a safe deal link for the new notification.
 
 - `backend/tests/unit/test_payout_rules.py`: IBAN examples (DE, FR, NL, MT ending in a letter), typos and wrong formats refused, spaces accepted, nothing but the IBAN.
 - `backend/tests/integration/test_payouts_api.py`: a euro account added by IBAN (last 4 `3000`, and `001S`), with no account number in the answer; a typo refused with 422.

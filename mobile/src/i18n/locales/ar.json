@@ -1452,5 +1452,7 @@
  "Enter a valid IBAN": "أدخل رقم IBAN صالحًا",
  "Payout accounts can be in NGN, USD, GBP or EUR for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR.",
  "Only the bank name and IBAN are needed for EUR.": "لحسابات اليورو يلزم اسم البنك ورقم IBAN فقط.",
- "Enter a valid IBAN.": "أدخل رقم IBAN صالحًا."
+ "Enter a valid IBAN.": "أدخل رقم IBAN صالحًا.",
+ "Payment arrived after the deal ended": "وصلت الدفعة بعد انتهاء الصفقة",
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "كانت هذه الصفقة قد انتهت عندما وصلت دفعتك. سيتحقق فريقنا منها ويطلب من البنك إعادتها إليك."
 }

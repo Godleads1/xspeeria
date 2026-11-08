@@ -1452,5 +1452,7 @@
  "Enter a valid IBAN": "请输入有效的 IBAN",
  "Payout accounts can be in NGN, USD, GBP or EUR for now.": "收款账户目前可以是 NGN、USD、GBP 或 EUR。",
  "Only the bank name and IBAN are needed for EUR.": "欧元账户只需填写银行名称和 IBAN。",
- "Enter a valid IBAN.": "请输入有效的 IBAN。"
+ "Enter a valid IBAN.": "请输入有效的 IBAN。",
+ "Payment arrived after the deal ended": "付款在交易结束后才到账",
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "您的付款到账时，这笔交易已经结束。我们的团队会核实这笔款项，并让银行退还给您。"
 }

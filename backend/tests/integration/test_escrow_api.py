@@ -320,6 +320,23 @@ async def test_late_money_after_cancel_is_kept_for_a_person(
     ) == ("ESCROW_PROVISIONED")
     assert await _sql(db_settings, "SELECT type FROM reconciliation_exceptions") == "STATE_MISMATCH"
     assert await _sql(db_settings, "SELECT verdict FROM webhook_receipts") == "CONTRADICTORY"
+    # ADR-099: the person who paid is told, once, and only them; nothing moves on its own.
+    funder = await _sql(
+        db_settings, "SELECT funder_user_id::text FROM settlement_legs WHERE leg_id = :l", l=leg
+    )
+    late = await _sql(
+        db_settings,
+        "SELECT count(*) FROM notifications WHERE payload->>'event' = 'settlement.late_money'",
+    )
+    to = await _sql(
+        db_settings,
+        "SELECT user_id::text FROM notifications WHERE payload->>'event' = 'settlement.late_money'",
+    )
+    assert (late, to) == (1, funder)
+    returned = await _sql(
+        db_settings, "SELECT count(*) FROM settlement_events WHERE event_type='EscrowReturned'"
+    )
+    assert returned == 0  # never sent back on its own
 
 
 # --- partner messages: abuse --------------------------------------------------------------------

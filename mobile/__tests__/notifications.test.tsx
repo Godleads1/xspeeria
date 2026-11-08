@@ -64,6 +64,7 @@ const EVENTS = [
   'settlement.cancelled',
   'settlement.unwinding',
   'settlement.refunded',
+  'settlement.late_money',
 ];
 
 describe('notification words', () => {

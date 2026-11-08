@@ -1452,5 +1452,7 @@
  "Enter a valid IBAN": "Introduza um IBAN válido",
  "Payout accounts can be in NGN, USD, GBP or EUR for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP ou EUR.",
  "Only the bank name and IBAN are needed for EUR.": "Para EUR só são necessários o nome do banco e o IBAN.",
- "Enter a valid IBAN.": "Introduza um IBAN válido."
+ "Enter a valid IBAN.": "Introduza um IBAN válido.",
+ "Payment arrived after the deal ended": "O pagamento chegou depois do fim do negócio",
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Este negócio já tinha terminado quando o seu pagamento chegou. A nossa equipa vai verificá-lo e pedir ao banco que lho devolva."
 }
