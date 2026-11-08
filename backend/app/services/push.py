@@ -46,6 +46,10 @@ PUSH_COPY: dict[str, tuple[str, str]] = {
     "settlement.cancelled": ("Deal cancelled", "This deal was cancelled before money moved."),
     "settlement.unwinding": ("Refund under way", "Any money paid in is being returned."),
     "settlement.refunded": ("Refund complete", "Any money paid in has been returned."),
+    "settlement.late_money": (
+        "Payment arrived after the deal ended",
+        "Our team will check it and have the bank return it to you.",
+    ),
     "dispute.opened": (
         "A deal is under review",
         "The other side reported a problem. Open Xspeeria.",

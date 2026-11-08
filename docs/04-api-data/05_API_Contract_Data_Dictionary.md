@@ -1255,7 +1255,8 @@ duplicated**, and no table is renamed.
 > funding before authoritative funding, funding is paused pending correction; **after
 > partner-confirmed funding, the funding fact remains true** and payout is blocked pending
 > correction; after irreversible payout, the historical destination is immutable. Whether a
-> correction resumes the original deadline or starts a new one is **OPEN / CONFIGURABLE**.
+> correction resumes the original deadline or starts a new one was **OPEN / CONFIGURABLE**;
+> **decided 2026-11-08: a new deadline** (ADR-099 / DEC-111).
 >
 > No raw bank-detail storage guarantee or tokenisation mechanism beyond existing approved
 > security/partner guidance is specified here.

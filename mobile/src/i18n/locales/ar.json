@@ -747,7 +747,6 @@
  "Payout accounts": "حسابات الاستلام",
  "Payout accounts added": "تمت إضافة حسابات الاستلام",
  "Payout accounts are not available right now.": "حسابات الاستلام غير متاحة حاليًا.",
- "Payout accounts can be in NGN, USD or GBP for now.": "يمكن أن تكون حسابات الاستلام بعملة NGN أو USD أو GBP حاليًا.",
  "Payout accounts can no longer be changed for this deal.": "لم يعد بالإمكان تغيير حسابات الاستلام لهذه الصفقة.",
  "Payout accounts chosen by both sides. Next: pay into escrow.": "اختار الطرفان حسابات الاستلام. التالي: ادفع في حساب الضمان.",
  "Pending": "قيد الانتظار",
@@ -1448,5 +1447,12 @@
  "Received": "المستلَم",
  "Sent": "المُرسَل",
  "Deal history, not money held by Xspeeria. Fees are not included.": "سجل صفقات، وليس أموالًا تحتفظ بها Xspeeria. لا يشمل الرسوم.",
- "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "رسوم Xspeeria: {{fee}} {{currency}}. تدفع {{total}} {{currency}} في حساب الضمان."
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "رسوم Xspeeria: {{fee}} {{currency}}. تدفع {{total}} {{currency}} في حساب الضمان.",
+ "IBAN": "رقم الآيبان (IBAN)",
+ "Enter a valid IBAN": "أدخل رقم IBAN صالحًا",
+ "Payout accounts can be in NGN, USD, GBP or EUR for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR.",
+ "Only the bank name and IBAN are needed for EUR.": "لحسابات اليورو يلزم اسم البنك ورقم IBAN فقط.",
+ "Enter a valid IBAN.": "أدخل رقم IBAN صالحًا.",
+ "Payment arrived after the deal ended": "وصلت الدفعة بعد انتهاء الصفقة",
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "كانت هذه الصفقة قد انتهت عندما وصلت دفعتك. سيتحقق فريقنا منها ويطلب من البنك إعادتها إليك."
 }

@@ -160,6 +160,9 @@ export function notificationCopy(n: Pick<ServerNotification, 'event' | 'data'>):
         tone: 'success',
         link: dealLink(data),
       };
+    case 'settlement.late_money':
+      // ADR-099: never returned automatically; a person checks it, then the bank returns it.
+      return { title: tr("Payment arrived after the deal ended"), body: tr("This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you."), tone: 'warning', link: dealLink(data) };
     default:
       return { title: 'Update', body: tr("Open Xspeeria for details."), tone: 'info', link: null };
   }

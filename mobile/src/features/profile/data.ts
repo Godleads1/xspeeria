@@ -162,14 +162,15 @@ export type BankFieldKey = 'routingNumber' | 'sortCode' | 'bankName' | 'accountN
 export interface BankField {
   readonly key: BankFieldKey;
   readonly label: string;
-  readonly kind: 'digits' | 'text' | 'select';
+  readonly kind: 'digits' | 'text' | 'select' | 'iban';
   readonly maxLength?: number;
 }
 
 /**
  * Fields per payout country. Figma draws the US form (routing number, bank, account,
  * account type); Nigeria (10-digit NUBAN) and the UK (sort code + 8-digit account) use
- * their own national formats. The account holder's name is never typed: the partner bank
+ * their own national formats; euro accounts take the IBAN only, no BIC (owner, 2026-11-08,
+ * ADR-099). The account holder's name is never typed: the partner bank
  * returns it and it must match the user's KYC legal name (Banking spec v1.1 §3.3).
  */
 export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
@@ -188,7 +189,31 @@ export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
     { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
     { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 8 },
   ],
+  EUR: [
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("IBAN"), kind: 'iban', maxLength: 34 },
+  ],
 };
+
+/** An IBAN as typed, without spaces and in capitals (it is usually written in groups of 4). */
+export function normalizeIban(v: string): string {
+  return v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * ISO 13616: 2-letter country, 2 check digits, up to 30 letters/digits, and mod 97 == 1.
+ * Format and checksum only (it catches typos); the server checks again and the bank confirms.
+ */
+export function isValidIban(v: string): boolean {
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(v)) return false;
+  const moved = v.slice(4) + v.slice(0, 4);
+  let rest = 0;
+  for (const ch of moved) {
+    const n = parseInt(ch, 36);
+    for (const d of String(n)) rest = (rest * 10 + Number(d)) % 97;
+  }
+  return rest === 1;
+}
 
 export const ACCOUNT_TYPES = ['Checking', 'Savings'] as const;
 
@@ -228,6 +253,7 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
       if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = tr("Nigerian account numbers are 10 digits");
       if (currency === 'GBP' && !/^\d{8}$/.test(value)) errors.accountNumber = tr("UK account numbers are 8 digits");
       if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
+      if (currency === 'EUR' && !isValidIban(normalizeIban(value))) errors.accountNumber = tr("Enter a valid IBAN");
     }
   }
   return errors;

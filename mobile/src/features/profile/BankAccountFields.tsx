@@ -12,7 +12,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { color, typography, themed } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
-import { ACCOUNT_TYPES, BANK_FORMS, type BankField, type BankFieldKey, type BankFormValues } from './data';
+import { ACCOUNT_TYPES, BANK_FORMS, normalizeIban, type BankField, type BankFieldKey, type BankFormValues } from './data';
 import { tr } from "../../i18n";
 
 export function BankAccountFields({
@@ -30,7 +30,7 @@ export function BankAccountFields({
   const [typeSheet, setTypeSheet] = useState(false);
 
   const set = (f: BankField, raw: string): void => {
-    onChange(f.key, f.kind === 'digits' ? raw.replace(/\D/g, '') : raw);
+    onChange(f.key, f.kind === 'digits' ? raw.replace(/\D/g, '') : f.kind === 'iban' ? normalizeIban(raw) : raw);
   };
 
   return (

@@ -747,7 +747,6 @@
  "Payout accounts": "Contas de recebimento",
  "Payout accounts added": "Contas de recebimento adicionadas",
  "Payout accounts are not available right now.": "As contas de recebimento não estão disponíveis agora.",
- "Payout accounts can be in NGN, USD or GBP for now.": "Por enquanto, as contas de recebimento podem ser em NGN, USD ou GBP.",
  "Payout accounts can no longer be changed for this deal.": "As contas de recebimento não podem mais ser alteradas nesta operação.",
  "Payout accounts chosen by both sides. Next: pay into escrow.": "Os dois lados escolheram as contas de recebimento. Próximo passo: pague na conta de garantia.",
  "Pending": "Pendente",
@@ -1448,5 +1447,12 @@
  "Received": "Recebido",
  "Sent": "Enviado",
  "Deal history, not money held by Xspeeria. Fees are not included.": "Histórico de transações, não dinheiro guardado pela Xspeeria. As taxas não estão incluídas.",
- "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Taxa da Xspeeria: {{fee}} {{currency}}. Paga {{total}} {{currency}} na conta de garantia."
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Taxa da Xspeeria: {{fee}} {{currency}}. Paga {{total}} {{currency}} na conta de garantia.",
+ "IBAN": "IBAN",
+ "Enter a valid IBAN": "Introduza um IBAN válido",
+ "Payout accounts can be in NGN, USD, GBP or EUR for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP ou EUR.",
+ "Only the bank name and IBAN are needed for EUR.": "Para EUR só são necessários o nome do banco e o IBAN.",
+ "Enter a valid IBAN.": "Introduza um IBAN válido.",
+ "Payment arrived after the deal ended": "O pagamento chegou depois do fim do negócio",
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Este negócio já tinha terminado quando o seu pagamento chegou. A nossa equipa vai verificá-lo e pedir ao banco que lho devolva."
 }

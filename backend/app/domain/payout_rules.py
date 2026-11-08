@@ -37,9 +37,9 @@ MAX_PAYOUT_ACCOUNTS_PER_DEAL = 10
 #: PROPOSED literals (ADR-035) for the data dictionary's `Match.preparation_state`.
 PREPARATION_STATES = ("awaiting_payout_accounts", "funding_ready", "expired")
 
-#: Account formats the app already collects (ADR-022, `BANK_FORMS`). EUR has no approved
-#: form yet, so EUR payout accounts are refused (fail closed).
-PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP"})
+#: Account formats the app collects (ADR-022, `BANK_FORMS`). EUR: the IBAN only, no BIC
+#: (owner, 2026-11-08, ADR-099).
+PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR"})
 _ACCOUNT_TYPES = frozenset({"Checking", "Savings"})
 
 
@@ -68,6 +68,23 @@ def is_valid_routing_number(v: str) -> bool:
     return (3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8])) % 10 == 0
 
 
+def normalize_iban(v: str) -> str:
+    """Spaces removed and letters upper-cased, as an IBAN is usually written in groups of 4."""
+    return v.replace(" ", "").upper()
+
+
+def is_valid_iban(v: str) -> bool:
+    """ISO 13616: 2-letter country, 2 check digits, up to 30 letters/digits; mod 97 == 1.
+
+    Format and checksum only (it catches typos); the partner bank confirms the account.
+    """
+    if not re.fullmatch(r"[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}", v):
+        return False
+    moved = v[4:] + v[:4]
+    digits = "".join(str(int(c, 36)) for c in moved)
+    return int(digits) % 97 == 1
+
+
 def _bad(message: str) -> OfferInputError:
     return OfferInputError(FORMAT_ERROR, message)
 
@@ -82,7 +99,7 @@ def parse_account_details(
 ) -> AccountDetails:
     c = currency.upper()
     if c not in PAYOUT_CURRENCIES:
-        raise _bad("Payout accounts can be in NGN, USD or GBP for now.")
+        raise _bad("Payout accounts can be in NGN, USD, GBP or EUR for now.")
     name = bank_name.strip()
     if not 2 <= len(name) <= 60 or not re.fullmatch(r"[A-Za-z0-9 .,&'()\-]+", name):
         raise _bad("Enter the bank name.")
@@ -100,6 +117,13 @@ def parse_account_details(
         if routing_number or account_type:
             raise _bad("Only the sort code, bank name and account number are needed for GBP.")
         return AccountDetails(c, name, account_number, sort_code, None)
+    if c == "EUR":
+        iban = normalize_iban(account_number)
+        if not is_valid_iban(iban):
+            raise _bad("Enter a valid IBAN.")
+        if routing_number or sort_code or account_type:
+            raise _bad("Only the bank name and IBAN are needed for EUR.")
+        return AccountDetails(c, name, iban, None, None)
     # USD
     if not re.fullmatch(r"[0-9]{4,17}", account_number):
         raise _bad("Enter a valid account number.")

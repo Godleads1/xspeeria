@@ -56,6 +56,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Release builds run against the real server (https only); demo-only screens never show in them | **Built 3 Nov 2026** | ADR-096 |
 | History shows totals of completed deals (received/sent per currency); Home stays free of totals | **Built 3 Nov 2026** | ADR-097 |
 | Take-offer screen shows the exact 1% fee and total before confirming | **Built 8 Nov 2026** | ADR-098 |
+| Euro payout accounts by IBAN (no BIC); owner answers on corrected accounts and escrow details recorded | **Built 8 Nov 2026** | ADR-099 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |
 | App Store / Google Play release settings and store listing draft (release builds still blocked, ADR-090) | **Built 3 Nov 2026** | ADR-090 |

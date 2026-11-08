@@ -510,8 +510,8 @@ Preparation failure occurs before any escrow is funded and therefore involves no
 | After partner-confirmed funding, before payout | **Funding remains true** — the money fact is not reversed. Payout is blocked pending correction. This is consistent with §4: release is gated on `beneficiary_validated_at` being non-null |
 | After irreversible payout | Historical destination and payout remain **immutable** |
 
-Whether a corrected beneficiary resumes the original deadline or starts a new one is
-**OPEN / CONFIGURABLE**.
+Whether a corrected beneficiary resumes the original deadline or starts a new one was
+**OPEN / CONFIGURABLE**. **Decided 2026-11-08 (ADR-099 / DEC-111): a new deadline.**
 
 ### 14.7 Split payouts — structure only
 
