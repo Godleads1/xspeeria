@@ -1447,5 +1447,6 @@
  "{{count}} completed deals": "{{count}} transactions terminées",
  "Received": "Reçu",
  "Sent": "Envoyé",
- "Deal history, not money held by Xspeeria. Fees are not included.": "Historique des transactions, pas de l’argent détenu par Xspeeria. Les frais ne sont pas inclus."
+ "Deal history, not money held by Xspeeria. Fees are not included.": "Historique des transactions, pas de l’argent détenu par Xspeeria. Les frais ne sont pas inclus.",
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Frais Xspeeria : {{fee}} {{currency}}. Vous versez {{total}} {{currency}} sur le compte séquestre."
 }
