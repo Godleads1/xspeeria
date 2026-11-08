@@ -62,6 +62,37 @@ async function open(src: TakeSource) {
   return onDone;
 }
 
+describe('Fee shown before confirming (ADR-098)', () => {
+  const wait = (ms: number) => act(async () => { await new Promise((r) => setTimeout(r, ms)); });
+
+  it('asks the server for the 1% fee on the naira the taker sends and shows it', async () => {
+    const src = source();
+    src.feeQuote = jest.fn(async (currency: string, amount: string) => ({
+      currency, amount, fee: '2641.00', total: '266741.00',
+    }));
+    await open(src);
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
+    expect(screen.queryByTestId('take-fee')).toBeNull(); // not until the server answers
+    await wait(350);
+    expect(src.feeQuote).toHaveBeenLastCalledWith('NGN', '264100.00');
+    expect(screen.getByTestId('take-fee')).toHaveTextContent(
+      'Xspeeria fee: 2,641.00 NGN. You pay 266,741.00 NGN into escrow.',
+    );
+  });
+
+  it('shows no fee line when the quote fails or the amount is too much', async () => {
+    const src = source();
+    src.feeQuote = jest.fn(async () => { throw new ApiError('NETWORK', 0, 'x'); });
+    await open(src);
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '200');
+    await wait(350);
+    expect(screen.queryByTestId('take-fee')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('take-amount'), '500.01');
+    await wait(350);
+    expect(src.feeQuote).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('NGN amount (exact, half-even)', () => {
   it('works for 2- and 6-decimal rates', () => {
     expect(ngnMinorFor(20000, '1320.50')).toBe(26410000);

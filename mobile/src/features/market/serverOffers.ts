@@ -10,6 +10,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { ApiError } from '../../api/client';
+import { feesApi, type FeeQuote } from '../../api/feesApi';
 import { offersApi, type ListingsPage, type ServerMatch, type ServerOffer } from '../../api/offersApi';
 import { serverAuth } from '../auth/serverAuth';
 import { countryHeaders, viewerCountry } from '../location/viewerCountry';
@@ -221,6 +222,8 @@ export interface TakeSource {
   /** Same key → same answer; a retry never makes a second Match. */
   accept(offerId: string, amount: string, expectedRate: string, key: string, stepUpToken: string | null): Promise<ServerMatch>;
   newKey(): string;
+  /** ADR-098: the fee on what the taker sends; optional so older test doubles still work. */
+  feeQuote?(currency: string, amount: string): Promise<FeeQuote>;
 }
 
 export const takeServer: TakeSource = {
@@ -229,6 +232,7 @@ export const takeServer: TakeSource = {
   accept: async (offerId, amount, expectedRate, key, stepUpToken) =>
     offersApi.accept(token(), offerId, amount, expectedRate, key, stepUpToken, serverAuth.apiOptions()),
   newKey: () => Crypto.randomUUID(),
+  feeQuote: async (currency, amount) => feesApi.quote(token(), currency, amount, serverAuth.apiOptions()),
 };
 
 export const myDeals = {

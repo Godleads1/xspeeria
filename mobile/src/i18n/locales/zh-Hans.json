@@ -1447,5 +1447,6 @@
  "{{count}} completed deals": "{{count}} 笔已完成交易",
  "Received": "已收到",
  "Sent": "已发送",
- "Deal history, not money held by Xspeeria. Fees are not included.": "这是交易记录，不是 Xspeeria 持有的资金。不含手续费。"
+ "Deal history, not money held by Xspeeria. Fees are not included.": "这是交易记录，不是 Xspeeria 持有的资金。不含手续费。",
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Xspeeria 手续费：{{fee}} {{currency}}。您需向托管账户支付 {{total}} {{currency}}。"
 }

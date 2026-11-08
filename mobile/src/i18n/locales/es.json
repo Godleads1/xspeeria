@@ -1447,5 +1447,6 @@
  "{{count}} completed deals": "{{count}} operaciones completadas",
  "Received": "Recibido",
  "Sent": "Enviado",
- "Deal history, not money held by Xspeeria. Fees are not included.": "Historial de operaciones, no dinero en poder de Xspeeria. No incluye comisiones."
+ "Deal history, not money held by Xspeeria. Fees are not included.": "Historial de operaciones, no dinero en poder de Xspeeria. No incluye comisiones.",
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Comisión de Xspeeria: {{fee}} {{currency}}. Pagas {{total}} {{currency}} en la cuenta de garantía."
 }
