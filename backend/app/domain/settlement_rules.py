@@ -35,7 +35,8 @@ FUNDING_WINDOW = timedelta(minutes=5)
 FUNDING_EXTENSION = timedelta(minutes=5)
 #: Banking spec §5.3: partner timestamps outside ±5 minutes are replay-suspected.
 REPLAY_WINDOW = timedelta(minutes=5)
-#: PROPOSED (ADR-037): dispatch attempts before a DISPATCH_FAILURE hold (ADR-001 §6c says "N").
+#: Owner-approved 2026-11-08 (ADR-037 §4, ADR-099): dispatch attempts before a DISPATCH_FAILURE
+#: hold (ADR-001 §6c says "N").
 DISPATCH_MAX_ATTEMPTS = 5
 
 #: Each leg is domestic (F-8): its currency fixes its jurisdiction. EUR has no single

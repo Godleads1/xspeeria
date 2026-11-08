@@ -44,7 +44,8 @@ class Beneficiary(Base):
     __tablename__ = "beneficiaries"
     __table_args__ = (
         CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_format"),
-        CheckConstraint("account_last4 ~ '^[0-9]{4}$'", name="last4_digits"),
+        # An IBAN can end in letters (ADR-099).
+        CheckConstraint("account_last4 ~ '^[0-9A-Z]{4}$'", name="last4_format"),
         CheckConstraint(
             "validation_state IN ('pending', 'validated', 'failed', 'invalidated')",
             name="validation_state_allowed",

@@ -43,11 +43,12 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build* — done 18 Oct 2026 for development builds (ADR-034).
 - [x] **Payout accounts and preparation** — approved 18 Oct 2026 (30 minutes; sealed number, last 4 shown; pretend bank check); server built (ADR-035).
 - [ ] **Confirm ADR-035 §4 details** — *You*: stage names, routes, changing a choice until both sides have chosen, 10 accounts per deal.
-- [ ] **Corrected account after a bank rejection: same deadline or a new one?** — *You* (Standing Standards §15 row 10).
-- [ ] **EUR payout account form** (IBAN/BIC?) — *You*; EUR payout accounts are refused until then.
+- [x] **Corrected account after a bank rejection:** decided 8 Nov 2026: **a new deadline** (ADR-099). Built once the partner bank's account check exists. *You*: confirm the new deadline is as long as the window being restarted (e.g. 30 minutes to choose accounts).
+- [x] **EUR payout account form:** decided 8 Nov 2026: **IBAN only**, no BIC; built (ADR-099). Euro deals still can't settle until a euro partner bank and country are chosen.
 - [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
 - [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
-- [ ] **Confirm ADR-037 §4 details** — *You*: fee stored per leg; 5 retries before a person is alerted; late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
+- [x] **ADR-037 §4:** fee stored per leg and 5 retries before a person is alerted, confirmed 8 Nov 2026 (ADR-099).
+- [ ] **Confirm the other two ADR-037 §4 details** — *You*: late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
 - [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
 - [x] **Wait before a new payout account can be paid** — decided 3 Nov 2026: **no wait**. Protection is the double confirmation, the new-account alert (ADR-083) and the "this wasn't me" email (ADR-084); the risk of a fast takeover payout is accepted. Reopen if the bank or lawyer asks for a cooling-off period (DEC-092).
 - [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.

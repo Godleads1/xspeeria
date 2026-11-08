@@ -163,8 +163,9 @@ class ChoosePayoutAccountsRequest(_Strict):
 class AddPayoutAccountRequest(_Strict):
     currency: str = Field(pattern=r"^[A-Za-z]{3}$")
     bank_name: str = Field(min_length=1, max_length=60)
-    #: Never logged, never returned; only the last 4 digits are kept readable.
-    account_number: str = Field(min_length=1, max_length=17, repr=False)
+    #: Never logged, never returned; only the last 4 characters are kept readable.
+    #: Up to 17 digits, or an IBAN for EUR (34 characters, plus spaces between groups of 4).
+    account_number: str = Field(min_length=1, max_length=42, repr=False)
     routing_number: str | None = Field(default=None, max_length=9)
     sort_code: str | None = Field(default=None, max_length=6)
     account_type: str | None = Field(default=None, max_length=16)

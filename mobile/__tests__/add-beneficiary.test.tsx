@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { AddBeneficiaryScreen } from '../src/features/profile/AddBeneficiaryScreen';
 import { BeneficiariesScreen } from '../src/features/profile/BeneficiariesScreen';
 import { beneficiaryStore } from '../src/features/profile/beneficiaryStore';
-import { BENEFICIARIES, isValidRoutingNumber, validateBankForm } from '../src/features/profile/data';
+import { BENEFICIARIES, isValidIban, isValidRoutingNumber, normalizeIban, validateBankForm } from '../src/features/profile/data';
 
 beforeEach(() => beneficiaryStore.reset());
 
@@ -29,6 +29,10 @@ describe('bank form validation', () => {
     ).toEqual({});
     expect(validateBankForm('USD', { routingNumber: '021000021', bankName: 'Chase', accountNumber: '1234', accountType: 'Gold' }).accountType).toBeTruthy();
     expect(Object.keys(validateBankForm('NGN', {}))).toEqual(['bankName', 'accountNumber']);
+    // ADR-099: euro accounts take the IBAN only, no BIC; checked by its mod-97 checksum.
+    expect(validateBankForm('EUR', { bankName: 'ING', accountNumber: 'DE89 3704 0044 0532 0130 00' })).toEqual({});
+    expect(validateBankForm('EUR', { bankName: 'ING', accountNumber: 'DE89370400440532013001' }).accountNumber).toMatch(/valid IBAN/);
+    expect(Object.keys(validateBankForm('EUR', {}))).toEqual(['bankName', 'accountNumber']);
   });
 });
 
@@ -93,5 +97,17 @@ describe('2FA re-check (ADR-008)', () => {
     await render(<AddBeneficiaryScreen currency="NGN" onBack={jest.fn()} onDone={jest.fn()} stepUp={check} />);
     await fireEvent.press(screen.getByTestId('add-beneficiary-submit'));
     expect(check).not.toHaveBeenCalled();
+  });
+});
+
+describe('IBAN (ADR-099)', () => {
+  it('accepts real examples, including one ending in a letter, and refuses typos', () => {
+    for (const v of ['DE89370400440532013000', 'FR1420041010050500013M02606', 'NL91ABNA0417164300', 'MT84MALT011000012345MTLCAST001S']) {
+      expect(isValidIban(v)).toBe(true);
+    }
+    for (const v of ['DE89370400440532013001', 'DE8937040044', '1289370400440532013000', '']) {
+      expect(isValidIban(v)).toBe(false);
+    }
+    expect(normalizeIban('de89 3704-0044')).toBe('DE8937040044');
   });
 });

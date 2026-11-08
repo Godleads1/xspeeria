@@ -43,7 +43,7 @@ instructs the bank.
   - NGN: 10 digits.
   - USD: routing number with checksum, account number of 4–17 digits, Checking or Savings.
   - GBP: 6-digit sort code and 8-digit account number.
-  - EUR has no approved form, so EUR accounts are refused.
+  - EUR has no approved form, so EUR accounts are refused. *(Superseded 2026-11-08: EUR accounts by IBAN only, ADR-099.)*
 - A new account has a 24-hour payout hold (`payout_hold_until`), checked when payouts exist.
 - Removing hides the account from the list. A deal that already chose it keeps it.
 
@@ -86,8 +86,9 @@ instructs the bank.
 | Changing a choice | Allowed while waiting, fixed once both sides have chosen |
 | Upper bound | At most 10 accounts per deal (a request limit, not a product rule) |
 
-Still **open** (Standing Standards §15 row 10): if a bank check later invalidates a chosen
-account, does correcting it resume the original deadline or start a new one?
+Was open (Standing Standards §15 row 10): if a bank check later invalidates a chosen
+account, does correcting it resume the original deadline or start a new one? **Decided
+2026-11-08: a new deadline** (ADR-099 / DEC-111).
 
 ## 5. Not in scope
 

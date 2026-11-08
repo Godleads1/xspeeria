@@ -747,7 +747,6 @@
  "Payout accounts": "Comptes de versement",
  "Payout accounts added": "Comptes de versement ajoutés",
  "Payout accounts are not available right now.": "Les comptes de versement ne sont pas disponibles pour le moment.",
- "Payout accounts can be in NGN, USD or GBP for now.": "Les comptes de versement peuvent être en NGN, USD ou GBP pour l'instant.",
  "Payout accounts can no longer be changed for this deal.": "Les comptes de versement ne peuvent plus être modifiés pour cette opération.",
  "Payout accounts chosen by both sides. Next: pay into escrow.": "Comptes de versement choisis par les deux parties. Ensuite : payez sur le séquestre.",
  "Pending": "En attente",
@@ -1448,5 +1447,10 @@
  "Received": "Reçu",
  "Sent": "Envoyé",
  "Deal history, not money held by Xspeeria. Fees are not included.": "Historique des transactions, pas de l’argent détenu par Xspeeria. Les frais ne sont pas inclus.",
- "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Frais Xspeeria : {{fee}} {{currency}}. Vous versez {{total}} {{currency}} sur le compte séquestre."
+ "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Frais Xspeeria : {{fee}} {{currency}}. Vous versez {{total}} {{currency}} sur le compte séquestre.",
+ "IBAN": "IBAN",
+ "Enter a valid IBAN": "Saisissez un IBAN valide",
+ "Payout accounts can be in NGN, USD, GBP or EUR for now.": "Les comptes de versement peuvent être en NGN, USD, GBP ou EUR pour l'instant.",
+ "Only the bank name and IBAN are needed for EUR.": "Seuls le nom de la banque et l'IBAN sont nécessaires pour l'EUR.",
+ "Enter a valid IBAN.": "Saisissez un IBAN valide."
 }

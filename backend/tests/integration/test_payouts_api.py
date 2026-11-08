@@ -203,6 +203,25 @@ async def test_gbp_account(owner: Party) -> None:
     assert r.status_code == 201 and r.json()["account_last4"] == "5678"
 
 
+async def test_eur_account_by_iban(owner: Party) -> None:
+    """ADR-099: the IBAN only; written in groups is fine; it may end in a letter."""
+    r = await owner.add_account(
+        currency="EUR", bank_name="ING", account_number="DE89 3704 0044 0532 0130 00"
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["account_last4"] == "3000" and "account_number" not in r.json()
+    r = await owner.add_account(
+        currency="EUR",
+        bank_name="Bank of Valletta",
+        account_number="MT84MALT011000012345MTLCAST001S",
+    )
+    assert r.status_code == 201 and r.json()["account_last4"] == "001S"
+    r = await owner.add_account(
+        currency="EUR", bank_name="ING", account_number="DE89370400440532013001"
+    )
+    assert r.status_code == 422 and _code(r) == "VALIDATION_ERROR"
+
+
 async def test_adding_needs_an_approval_for_that_action(owner: Party) -> None:
     r = await owner.add_account(
         approve=False, currency="NGN", bank_name="Zenith", account_number="0123456789"
