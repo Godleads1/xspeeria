@@ -25,7 +25,8 @@
 
 - **Fee stored per leg** (`settlement_legs.fee_minor`, 1%, half-even): **APPROVED**.
 - **5 dispatch attempts** (backoff 2, 4, 8, 16 s) before a DISPATCH_FAILURE hold alerts a person (`DISPATCH_MAX_ATTEMPTS = 5`): **APPROVED**.
-- Still to confirm (not asked this time): late money after a cancelled deal kept for a person; escrows of a cancelled deal left for the bank to close.
+- **Escrow opened for a cancelled deal is left for the partner bank to close** (no "close escrow" command): **APPROVED** (owner, 2026-11-08: "yes").
+- Still to confirm: late money after a cancelled deal kept for a person rather than returned automatically.
 
 ## Evidence
 
