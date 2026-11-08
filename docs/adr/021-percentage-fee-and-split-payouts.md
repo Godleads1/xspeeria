@@ -22,6 +22,10 @@
 - The referral discount (ADR-009) stays: 10% off this fee.
 - No minimum or maximum fee is set (none was given). The server computes the
   authoritative fee.
+  **Confirmed by the owner, 2026-11-08:** the fee stays a flat 1%, with no minimum, no
+  maximum, no lower rate on large amounts and no discount for the side that posted the offer.
+  A banded "Fair Fee" was proposed and built (PR #121) and then turned down: "for the
+  transaction fee, it is 1%" → "Flat 1%, nothing else".
 
 **Business consequence (recorded, not decided here):** the Business Plan's §5.3 claim that a
 flat fee is "structurally cheaper" than percentage-margin competitors such as LemFi no longer

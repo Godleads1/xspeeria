@@ -25,7 +25,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Choose an email provider** for security alerts (lock, new device, recovery). Until then alerts only go to the server log. (ADR-026 §2)
 - [ ] **Partner bank:** confirm one escrow account can pay several payout accounts per side, and how payment confirmations are sent (push, email or SMS). (ADR-021 §5)
 - [ ] **Official rate:** which CBN figure applies, and a live rate feed instead of the fixed snapshot (Decision 3). (ADR-020)
-- [ ] **Fee:** decide whether the 1% fee needs a minimum or maximum. (ADR-021 §5)
+- [x] **Fee:** decided 8 Nov 2026: **flat 1%**, no minimum or maximum, no bands, no maker discount (ADR-021 §1; the banded Fair Fee of PR #121 was not adopted).
 - [ ] **Business Plan and investor materials:** update to the 1% fee model. (ADR-021 §1)
 - [ ] **Artwork licences:** confirm for the Welcome pictures, card designs and the advert stock photo. (ADR-012, ADR-013, ADR-005)
 - [ ] **Advert banner:** send a 3× version (1026 × 339) so it is fully sharp on phones. (ADR-005)
