@@ -372,6 +372,8 @@ class TestPackageRegistration:
             "job_status",
             "customer_activity",
             "official_rates",
+            "help_requests",
+            "help_messages",
             "ops_alerts",
             "deal_pauses",
             "rate_limit_hits",
@@ -428,7 +430,7 @@ class TestPackageRegistration:
             "['adverts', 'api_metrics', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
             "'currency_definitions', 'customer_activity', 'deal_pauses', "
             "'dispute_categories', 'dispute_messages', 'disputes', "
-            "'fraud_alerts', "
+            "'fraud_alerts', 'help_messages', 'help_requests', "
             "'idempotency_records', 'job_status', "
             "'kyc_cases', 'kyc_reviews', 'kyc_webhook_events', "
             "'match_payout_selections', "
@@ -530,4 +532,5 @@ class TestPackageRegistration:
             "0044_iban_last4.py",  # euro payout accounts by IBAN (ADR-099)
             "0045_canada.py",  # Canada joins the MVP corridors (ADR-100)
             "0046_official_rates.py",  # automatic CBN rates (ADR-102)
+            "0047_help_requests.py",  # Need-help thread (ADR-103)
         ]

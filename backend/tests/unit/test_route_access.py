@@ -58,6 +58,15 @@ PUBLIC_ROUTES = {
         "/api/v1/security/not-me/{token}",
     ): "needs that one-time link; can only freeze the account it was sent to (ADR-084)",
     ("POST", "/api/v1/webhooks/didit"): "signed by the identity-check provider (HMAC)",
+    (
+        "POST",
+        "/api/v1/help/requests",
+    ): "the Need-help form; same answer whether the phone has an account (ADR-103)",
+    ("GET", "/api/v1/help/requests/{request_id}"): "needs that request's private key (ADR-103)",
+    (
+        "POST",
+        "/api/v1/help/requests/{request_id}/messages",
+    ): "needs that request's private key (ADR-103)",
     ("POST", "/api/v1/webhooks/partners/{partner_code}"): "signed by the partner bank (HMAC)",
 }
 
@@ -105,7 +114,10 @@ def test_sign_in_routes_are_limited_per_address_and_account_routes_per_customer(
     def deps(route: APIRoute) -> set[str]:
         return _names(route.dependant, set())
 
+    from app.api.v1 import help as help_routes
+
     public = [r for r in auth.router.routes if isinstance(r, APIRoute)]
+    public += [r for r in help_routes.router.routes if isinstance(r, APIRoute)]
     account = [r for r in auth.account_router.routes if isinstance(r, APIRoute)]
     assert public and account
     for r in public:

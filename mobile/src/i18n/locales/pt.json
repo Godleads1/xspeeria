@@ -1465,5 +1465,14 @@
  "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP, EUR ou CAD.",
  "Enter your phone number *": "Introduza o seu número de telefone *",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.": "Taxa máxima: {{official}} NGN por {{code}}, calculada a partir da taxa do dólar do CBN e da taxa do Banco do Canadá. A sua taxa tem de ser esta ou inferior.",
- "Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.": "Taxa oficial (CBN, a mais recente): {{official}} NGN por {{code}}. A sua taxa tem de ser esta ou inferior."
+ "Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.": "Taxa oficial (CBN, a mais recente): {{official}} NGN por {{code}}. A sua taxa tem de ser esta ou inferior.",
+ "Can’t log in? Tell us what happened and our team will reply here. Never send your PIN, codes or ID photos.": "Não consegue entrar? Conte-nos o que aconteceu e a nossa equipa responderá aqui. Nunca envie o seu PIN, códigos ou fotos do documento.",
+ "Our team will reply here. Check back later, or tap Refresh. Never send your PIN, codes or ID photos.": "A nossa equipa responderá aqui. Volte mais tarde ou toque em Atualizar. Nunca envie o seu PIN, códigos ou fotos do documento.",
+ "Email": "E-mail",
+ "Need help?": "Precisa de ajuda?",
+ "Refresh": "Atualizar",
+ "Start a new request": "Novo pedido",
+ "Tell us what went wrong": "Conte-nos o que correu mal",
+ "This request is closed. Send a new one if you still need help.": "Este pedido está fechado. Envie um novo se ainda precisar de ajuda.",
+ "What went wrong?": "O que correu mal?"
 }

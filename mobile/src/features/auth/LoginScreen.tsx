@@ -75,6 +75,7 @@ export function LoginScreen({
   onDone,
   onSignUp,
   onForgot,
+  onHelp,
   now = Date.now,
   biometrics = confirmWithBiometrics,
   server = null,
@@ -83,6 +84,8 @@ export function LoginScreen({
   onDone: () => void;
   onSignUp: () => void;
   onForgot: () => void;
+  /** ADR-103: "Need help?" for someone who can't log in (server builds only). */
+  onHelp?: () => void;
   now?: () => number;
   biometrics?: (prompt: string) => Promise<BiometricOutcome>;
   /**
@@ -295,6 +298,17 @@ export function LoginScreen({
         >
           <Text style={styles.forgotText}>{tr("Forgot PIN?")}</Text>
         </Pressable>
+        {onHelp ? (
+          <Pressable
+            testID="login-help"
+            accessibilityRole="link"
+            onPress={onHelp}
+            style={styles.forgot}
+            hitSlop={8}
+          >
+            <Text style={styles.forgotText}>{tr("Need help?")}</Text>
+          </Pressable>
+        ) : null}
         {error ? (
           <Text testID="login-error" style={styles.error}>
             {error}

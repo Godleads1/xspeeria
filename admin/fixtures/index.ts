@@ -14,7 +14,7 @@ export interface NavItem {
   readonly permission?: string;
   /** Figma admin menu: work areas on top, then the "ADMIN" section. */
   readonly section?: 'work' | 'admin';
-  readonly icon?: 'dashboard' | 'disputes' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile' | 'health' | 'deals';
+  readonly icon?: 'dashboard' | 'disputes' | 'help' | 'reversals' | 'fraud' | 'kyc' | 'outages' | 'staff' | 'audit' | 'setups' | 'profile' | 'health' | 'deals';
 }
 
 /**
@@ -26,6 +26,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: 'Dashboard', href: '/', section: 'work', icon: 'dashboard' },
   { id: 'disputes', label: 'Dispute Resolution', href: '/disputes', permission: 'disputes.read', section: 'work', icon: 'disputes' },
+  { id: 'help', label: 'Help requests', href: '/help-requests', permission: 'disputes.read', section: 'work', icon: 'help' },
   { id: 'reversals', label: 'Reversal', href: '/reversals', permission: 'reversals.read', section: 'work', icon: 'reversals' },
   { id: 'fraud', label: 'Fraud Management', href: '/fraud', permission: 'fraud_alerts.read', section: 'work', icon: 'fraud' },
   { id: 'kyc', label: 'Identity checks', href: '/kyc', permission: 'kyc.read', section: 'work', icon: 'kyc' },

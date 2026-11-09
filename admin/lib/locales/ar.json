@@ -1064,5 +1064,18 @@
  "Deleted by the customer": "حذفه العميل",
  "Deleting, restorable until {{date}}": "قيد الحذف، قابل للاستعادة حتى {{date}}",
  "Kept records of a deleted account are for Compliance only.": "السجلات المحفوظة لحساب محذوف مخصصة لفريق الامتثال فقط.",
- "Canada": "كندا"
+ "Canada": "كندا",
+ "Account activity": "نشاط الحساب",
+ "All": "الكل",
+ "Close request": "إغلاق الطلب",
+ "From people who cannot log in. Nothing proves who wrote these: never confirm an account or share its details here. Send the person through the face check or identity check instead.": "من أشخاص لا يستطيعون تسجيل الدخول. لا شيء يثبت من كتبها: لا تؤكد أبدًا وجود حساب ولا تشارك تفاصيله هنا. وجّه الشخص بدلًا من ذلك إلى التحقق بالوجه أو التحقق من الهوية.",
+ "Help requests": "طلبات المساعدة",
+ "No account has this phone number.": "لا يوجد حساب بهذا الرقم.",
+ "No help requests.": "لا توجد طلبات مساعدة.",
+ "Pick a request to read it.": "اختر طلبًا لقراءته.",
+ "Request closed": "تم إغلاق الطلب",
+ "The phone and email both match an account.": "الهاتف والبريد الإلكتروني يطابقان حسابًا.",
+ "The phone matches an account, but the email does not.": "الهاتف يطابق حسابًا، لكن البريد الإلكتروني لا يطابقه.",
+ "This request is closed.": "هذا الطلب مغلق.",
+ "{{n}} messages": "{{n}} رسائل"
 }

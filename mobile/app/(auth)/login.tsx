@@ -24,6 +24,7 @@ export default function LoginRoute(): ReactElement {
       }
       onSignUp={() => router.push("/signup/start")}
       onForgot={() => router.push("/forgot")}
+      onHelp={SERVER_MODE ? () => router.push("/help") : undefined}
       server={SERVER_MODE ? { login: serverAuth.login, unlock: (n) => serverAuth.unlock(n) } : null}
       onSecondFactor={() => router.push("/mfa")}
     />

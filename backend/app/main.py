@@ -32,6 +32,7 @@ from app.api.v1 import (
     disputes,
     fees,
     health,
+    help,
     kyc,
     limits,
     notices,
@@ -590,6 +591,7 @@ def create_app(
     application.include_router(limits.router)
     application.include_router(fees.router)  # ADR-098
     application.include_router(rates.router)  # ADR-102
+    application.include_router(help.router)  # ADR-103
     application.include_router(notices.router)
     application.include_router(adverts.router)
     application.include_router(push.router)

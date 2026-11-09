@@ -1064,5 +1064,18 @@
  "Deleted by the customer": "Eliminada pelo cliente",
  "Deleting, restorable until {{date}}": "A eliminar, restaurável até {{date}}",
  "Kept records of a deleted account are for Compliance only.": "Os registos guardados de uma conta eliminada são apenas para a Conformidade.",
- "Canada": "Canadá"
+ "Canada": "Canadá",
+ "Account activity": "Atividade da conta",
+ "All": "Todos",
+ "Close request": "Fechar pedido",
+ "From people who cannot log in. Nothing proves who wrote these: never confirm an account or share its details here. Send the person through the face check or identity check instead.": "De pessoas que não conseguem entrar. Nada prova quem os escreveu: nunca confirme uma conta nem partilhe os seus dados aqui. Encaminhe a pessoa para a verificação facial ou de identidade.",
+ "Help requests": "Pedidos de ajuda",
+ "No account has this phone number.": "Nenhuma conta tem este número de telefone.",
+ "No help requests.": "Sem pedidos de ajuda.",
+ "Pick a request to read it.": "Escolha um pedido para o ler.",
+ "Request closed": "Pedido fechado",
+ "The phone and email both match an account.": "O telefone e o e-mail correspondem a uma conta.",
+ "The phone matches an account, but the email does not.": "O telefone corresponde a uma conta, mas o e-mail não.",
+ "This request is closed.": "Este pedido está fechado.",
+ "{{n}} messages": "{{n}} mensagens"
 }

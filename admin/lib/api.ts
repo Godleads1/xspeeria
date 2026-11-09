@@ -379,6 +379,23 @@ export interface AdvertInput {
   link_url?: string | null;
 }
 
+/** ADR-103: a "Need help?" request from someone who cannot log in. */
+export interface HelpRequestRow {
+  request_id: string;
+  phone: string;
+  email: string;
+  status: 'open' | 'closed';
+  created_at: string;
+  last_message_at: string;
+  messages: number;
+  /** The account whose phone matches, if any. Nothing proves the writer owns it. */
+  matched_user_id: string | null;
+  email_matches_account: boolean;
+}
+export interface HelpRequestDetail extends HelpRequestRow {
+  thread: { message_id: string; author: 'customer' | 'staff'; staff_id: string | null; body: string; created_at: string }[];
+}
+
 export type FraudRule = 'pin_lockout' | 'code_lockout' | 'disputes_against' | 'payout_name_mismatch' | 'staff_report' | 'customer_reported_not_me';
 export type FraudStatus = 'open' | 'in_progress' | 'resolved';
 export type FraudSeverity = 'low' | 'medium' | 'high';
@@ -930,6 +947,12 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     updateRole: (id: string, changes: { description?: string; permissions?: string[] }) =>
       call<RoleView>('PATCH', `/roles/${encodeURIComponent(id)}`, changes),
     deleteRole: (id: string) => call<void>('DELETE', `/roles/${encodeURIComponent(id)}`),
+    helpRequests: (status?: 'open' | 'closed') =>
+      call<{ items: HelpRequestRow[] }>('GET', `/help-requests${status ? `?status=${status}` : ''}`).then((r) => r.items),
+    helpRequest: (id: string) => call<HelpRequestDetail>('GET', `/help-requests/${encodeURIComponent(id)}`),
+    replyHelp: (id: string, message: string) =>
+      call<void>('POST', `/help-requests/${encodeURIComponent(id)}/messages`, { message }),
+    closeHelp: (id: string) => call<void>('POST', `/help-requests/${encodeURIComponent(id)}/close`),
     auditLog: (q: { action?: string; staffId?: string; before?: number; limit?: number } = {}) => {
       const params = new URLSearchParams();
       if (q.action) params.set('action', q.action);
