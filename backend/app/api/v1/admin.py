@@ -35,6 +35,7 @@ from app.services.dashboard import DashboardService, Period
 from app.services.deal_pause import DealPauseService
 from app.services.dispute_admin import DisputeAdminService
 from app.services.fraud import FraudService
+from app.services.help import HelpService
 from app.services.kyc_review import KycReviewService
 from app.services.ops_alerts import OpsAlertService
 from app.services.outages import OutageService
@@ -832,6 +833,54 @@ async def reply_dispute(
     dispute_id: uuid.UUID, body: ReplyBody, staff: Staff, service: Disputes, info: Info
 ) -> Response:
     await service.reply(staff, info, dispute_id, body.message.strip())
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _help(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> HelpService:
+    return HelpService(db, runtime.clock)
+
+
+Help = Annotated[HelpService, Depends(_help)]
+
+
+@router.get("/help-requests", summary="Help requests from people who can't log in (disputes.read)")
+async def list_help_requests(
+    staff: Staff,
+    service: Help,
+    status_filter: Literal["open", "closed"] | None = Query(default=None, alias="status"),
+) -> dict[str, Any]:
+    return {"items": await service.list_requests(staff, status_filter)}
+
+
+@router.get("/help-requests/{request_id}", summary="One help request (disputes.read)")
+async def get_help_request(request_id: uuid.UUID, staff: Staff, service: Help) -> dict[str, Any]:
+    return await service.detail(staff, request_id)
+
+
+@router.post(
+    "/help-requests/{request_id}/messages",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reply to a help request (disputes.update)",
+)
+async def reply_help_request(
+    request_id: uuid.UUID, body: ReplyBody, staff: Staff, service: Help, info: Info
+) -> Response:
+    await service.staff_reply(staff, info, request_id, body.message.strip())
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/help-requests/{request_id}/close",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Close a help request (disputes.update)",
+)
+async def close_help_request(
+    request_id: uuid.UUID, staff: Staff, service: Help, info: Info
+) -> Response:
+    await service.close(staff, info, request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

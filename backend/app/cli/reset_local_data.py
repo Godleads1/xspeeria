@@ -29,6 +29,8 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
     "rate_limit_hits",  # ADR-080: attempt counts (sign-in limits) go with the accounts
+    "help_messages",  # ADR-103: help threads go with the accounts they are about
+    "help_requests",
     "customer_activity",
     "security_notices",  # ADR-084: emails about the accounts being cleared
     "ops_alerts",  # ADR-074: about the deals and staff changes being cleared
