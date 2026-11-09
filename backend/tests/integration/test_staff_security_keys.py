@@ -35,7 +35,8 @@ async def _fresh_engine(db_settings: Settings) -> AsyncIterator[None]:
         db_settings,
         "TRUNCATE rate_limit_hits, deal_pauses, ops_alerts, api_metrics, job_status, "
         "customer_activity, kyc_reviews, fraud_alerts, adverts, service_outages, reversals, "
-        "dispute_messages, disputes, staff_audit_log, staff_sessions, staff_codes, "
+        "dispute_messages, disputes, help_messages, help_requests, staff_audit_log, "
+        "staff_sessions, staff_codes, "
         "staff_key_challenges, staff_security_keys, staff_accounts",
     )
     yield

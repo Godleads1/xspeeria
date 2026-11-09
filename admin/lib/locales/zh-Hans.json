@@ -1064,5 +1064,18 @@
  "Deleted by the customer": "已由客户删除",
  "Deleting, restorable until {{date}}": "删除中，可在 {{date}} 前恢复",
  "Kept records of a deleted account are for Compliance only.": "已删除账户的保留记录仅供合规团队查看。",
- "Canada": "加拿大"
+ "Canada": "加拿大",
+ "Account activity": "账户活动",
+ "All": "全部",
+ "Close request": "关闭请求",
+ "From people who cannot log in. Nothing proves who wrote these: never confirm an account or share its details here. Send the person through the face check or identity check instead.": "来自无法登录的人。无法证明是谁写的：切勿在此确认账户存在或透露账户信息。请引导对方完成人脸验证或身份验证。",
+ "Help requests": "帮助请求",
+ "No account has this phone number.": "没有账户使用此电话号码。",
+ "No help requests.": "没有帮助请求。",
+ "Pick a request to read it.": "选择一个请求以查看。",
+ "Request closed": "请求已关闭",
+ "The phone and email both match an account.": "电话和邮箱都与某个账户匹配。",
+ "The phone matches an account, but the email does not.": "电话与某个账户匹配，但邮箱不匹配。",
+ "This request is closed.": "此请求已关闭。",
+ "{{n}} messages": "{{n}} 条消息"
 }

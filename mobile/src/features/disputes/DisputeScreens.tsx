@@ -43,7 +43,7 @@ const STATUS: Record<ServerDispute['status'], { label: string; tone: StatusTone 
   resolved: { label: k('Resolved'), tone: 'success' },
 };
 
-function when(iso: string): string {
+export function when(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const hh = String(d.getHours()).padStart(2, '0');
@@ -56,7 +56,7 @@ export function caseTitle(d: ServerDispute): string {
   return d.opened_by_you ? tr('Your dispute on a deal') : tr('The other side reported a problem');
 }
 
-function Header({ title, onBack, testID }: { title: string; onBack: () => void; testID: string }): ReactElement {
+export function Header({ title, onBack, testID }: { title: string; onBack: () => void; testID: string }): ReactElement {
   return (
     <View style={styles.header}>
       <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={tr('Back')} onPress={onBack} hitSlop={12}>
@@ -70,7 +70,7 @@ function Header({ title, onBack, testID }: { title: string; onBack: () => void; 
   );
 }
 
-function Box({ testID, label, value, onChange, lines = 5 }: { testID: string; label: string; value: string; onChange: (v: string) => void; lines?: number }): ReactElement {
+export function Box({ testID, label, value, onChange, lines = 5 }: { testID: string; label: string; value: string; onChange: (v: string) => void; lines?: number }): ReactElement {
   return (
     <View>
       <TextInput

@@ -1064,5 +1064,18 @@
  "Deleted by the customer": "Supprimé par le client",
  "Deleting, restorable until {{date}}": "Suppression en cours, restaurable jusqu’au {{date}}",
  "Kept records of a deleted account are for Compliance only.": "Les données conservées d’un compte supprimé sont réservées à la conformité.",
- "Canada": "Canada"
+ "Canada": "Canada",
+ "Account activity": "Activité du compte",
+ "All": "Toutes",
+ "Close request": "Clore la demande",
+ "From people who cannot log in. Nothing proves who wrote these: never confirm an account or share its details here. Send the person through the face check or identity check instead.": "Envoyées par des personnes qui ne peuvent pas se connecter. Rien ne prouve qui les a écrites : ne confirmez jamais un compte et n’en partagez aucun détail ici. Orientez plutôt la personne vers la vérification faciale ou la vérification d’identité.",
+ "Help requests": "Demandes d’aide",
+ "No account has this phone number.": "Aucun compte n’a ce numéro de téléphone.",
+ "No help requests.": "Aucune demande d’aide.",
+ "Pick a request to read it.": "Choisissez une demande pour la lire.",
+ "Request closed": "Demande close",
+ "The phone and email both match an account.": "Le téléphone et l’e-mail correspondent tous deux à un compte.",
+ "The phone matches an account, but the email does not.": "Le téléphone correspond à un compte, mais pas l’e-mail.",
+ "This request is closed.": "Cette demande est close.",
+ "{{n}} messages": "{{n}} messages"
 }

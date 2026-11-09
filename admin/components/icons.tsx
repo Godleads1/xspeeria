@@ -17,6 +17,7 @@ const PATHS: Record<string, string> = {
   chevron: 'M6 8l4 4 4-4',
   logout: 'M8 4H4v12h4M12 6l4 4-4 4M16 10H8',
   disputes: 'M10 3v14M4 6h12M4 6l-2 5h4zM16 6l-2 5h4zM7 17h6',
+  help: 'M3 4h14v9H8l-4 3v-3H3zM7.5 7.5a2.5 2 0 1 1 3.2 1.9c-.5.2-.7.5-.7 1M10 11.6h.01',
   bell: 'M10 3a4.5 4.5 0 0 0-4.5 4.5c0 4-1.5 5.5-2 6h13c-.5-.5-2-2-2-6A4.5 4.5 0 0 0 10 3Zm-1.6 13.5a1.8 1.8 0 0 0 3.2 0',
   close: 'M6 6l8 8M14 6l-8 8',
   reversals: 'M7 5 4 8l3 3M4 8h8a4 4 0 0 1 0 8H8',

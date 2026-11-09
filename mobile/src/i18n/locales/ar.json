@@ -1465,5 +1465,14 @@
  "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR أو CAD.",
  "Enter your phone number *": "أدخل رقم هاتفك *",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.": "الحد الأقصى للسعر: {{official}} نايرا لكل {{code}}، محسوب من سعر الدولار لدى البنك المركزي النيجيري وسعر بنك كندا. يجب أن يكون سعرك مساويًا لهذا أو أقل.",
- "Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.": "السعر الرسمي (البنك المركزي النيجيري، الأحدث): {{official}} نايرا لكل {{code}}. يجب أن يكون سعرك مساويًا لهذا أو أقل."
+ "Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.": "السعر الرسمي (البنك المركزي النيجيري، الأحدث): {{official}} نايرا لكل {{code}}. يجب أن يكون سعرك مساويًا لهذا أو أقل.",
+ "Can’t log in? Tell us what happened and our team will reply here. Never send your PIN, codes or ID photos.": "لا يمكنك تسجيل الدخول؟ أخبرنا بما حدث وسيرد فريقنا هنا. لا ترسل أبدًا رقم PIN أو الرموز أو صور الهوية.",
+ "Our team will reply here. Check back later, or tap Refresh. Never send your PIN, codes or ID photos.": "سيرد فريقنا هنا. عد لاحقًا أو اضغط تحديث. لا ترسل أبدًا رقم PIN أو الرموز أو صور الهوية.",
+ "Email": "البريد الإلكتروني",
+ "Need help?": "تحتاج مساعدة؟",
+ "Refresh": "تحديث",
+ "Start a new request": "بدء طلب جديد",
+ "Tell us what went wrong": "أخبرنا بما حدث من خطأ",
+ "This request is closed. Send a new one if you still need help.": "هذا الطلب مغلق. أرسل طلبًا جديدًا إذا كنت لا تزال بحاجة إلى المساعدة.",
+ "What went wrong?": "ما الذي حدث؟"
 }
