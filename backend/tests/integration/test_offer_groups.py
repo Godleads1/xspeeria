@@ -88,7 +88,8 @@ async def test_one_request_in_three_currencies(owner: Party, taker: Party) -> No
         (
             {
                 "source_amount": NAIRA,
-                "currencies": [*CURRENCIES, {"currency": "CAD", "desired_rate": "900"}],
+                # CAD above its ceiling (944.70, ADR-101)
+                "currencies": [*CURRENCIES, {"currency": "CAD", "desired_rate": "944.71"}],
             },
             422,
         ),
