@@ -40,7 +40,7 @@ import {
   type Listing,
 } from "./data";
 import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
-import { OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
+import { DERIVED_CEILING, OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
 import { AdvertCarousel, type AdvertSlide } from "./AdvertCarousel";
@@ -412,7 +412,9 @@ export function MarketScreen({
         </OutlinedField>
         {foreign && official !== null ? (
           <Text testID="market-official" style={styles.official}>
-            {tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
+            {DERIVED_CEILING.has(foreign.code)
+              ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.", { official: formatHundredths(official), code: foreign.code })
+              : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
           </Text>
         ) : null}
         {rateError ? (

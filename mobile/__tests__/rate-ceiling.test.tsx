@@ -29,7 +29,9 @@ describe('rate rule', () => {
   });
 
   it('uses the CBN snapshot of 17 Oct 2026 for USD, GBP and EUR', () => {
-    expect(OFFICIAL_RATE).toEqual({ USD: 133326, GBP: 176511, EUR: 149120 });
+    expect(OFFICIAL_RATE).toEqual({ USD: 133326, GBP: 176511, EUR: 149120, CAD: 94470 });
+    // ADR-101: CAD = USD ceiling ÷ 1.4113 (Bank of Canada, 6 Nov 2026), half to even.
+    expect(Math.round(OFFICIAL_RATE.USD / 1.4113)).toBe(OFFICIAL_RATE.CAD);
     expect(rateProblem('GBP', 176511)).toBeNull();
     expect(rateProblem('GBP', 176512)).toBe('above-official');
     expect(rateProblem('EUR', 149120)).toBeNull();
