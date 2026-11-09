@@ -130,4 +130,4 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 ## 5. Housekeeping
 
 - [x] Close PR #19 without merging: its 2FA server work already reached `main` through later PRs (ADR-026). (Checked 2026-10-27.)
-- [ ] Delete old branches on GitHub: `fix/security-review-findings`, `feat/backend-auth-slice`, `feat/auth-1-server`, `feat/auth-2-two-factor`.
+- [x] Old branches deleted on GitHub by the owner, 9 Nov 2026: `fix/security-review-findings`, `feat/backend-auth-slice`, `feat/auth-1-server`, `feat/auth-2-two-factor`.
