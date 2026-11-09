@@ -371,6 +371,7 @@ class TestPackageRegistration:
             "api_metrics",
             "job_status",
             "customer_activity",
+            "official_rates",
             "ops_alerts",
             "deal_pauses",
             "rate_limit_hits",
@@ -433,7 +434,7 @@ class TestPackageRegistration:
             "'match_payout_selections', "
             "'matches', 'mfa_challenges', 'mfa_factors', 'notifications', "
             "'offer_groups', 'offer_queue_entries', "
-            "'offers', 'ops_alerts', "
+            "'offers', 'official_rates', 'ops_alerts', "
             "'outbox_messages', "
             "'partners', 'payout_executions', 'pending_events', 'phone_verifications', "
             "'push_deliveries', 'push_tokens', 'rate_limit_hits', "
@@ -528,4 +529,5 @@ class TestPackageRegistration:
             "0043_account_deletion.py",  # delete account, 14 days to undo (ADR-095)
             "0044_iban_last4.py",  # euro payout accounts by IBAN (ADR-099)
             "0045_canada.py",  # Canada joins the MVP corridors (ADR-100)
+            "0046_official_rates.py",  # automatic CBN rates (ADR-102)
         ]

@@ -40,7 +40,7 @@ import {
   type Listing,
 } from "./data";
 import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
-import { DERIVED_CEILING, OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem } from "./rateCeiling";
+import { DERIVED_CEILING, OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem, type Ceilings } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
 import { AdvertCarousel, type AdvertSlide } from "./AdvertCarousel";
@@ -135,18 +135,33 @@ export function MarketScreen({
   /** One key per offer being published, kept across retries so a retry never doubles it. */
   const pendingKey = useRef<string | null>(null);
 
+  // ADR-102: server builds show and check the ceilings the server enforces right now.
+  const [live, setLive] = useState<Ceilings | null>(null);
+  useEffect(() => {
+    if (!server?.ceilings) return undefined;
+    let on = true;
+    server
+      .ceilings()
+      .then((c) => {
+        if (on) setLive(c);
+      })
+      .catch(() => undefined); // keep the last figures; the server checks every rate anyway
+    return () => {
+      on = false;
+    };
+  }, [server, refreshSignal]);
   const foreign = side === "buy" ? buyCurrency : SELL_CURRENCY;
   const band = foreign ? MARKET_BAND[foreign.code] : undefined;
   const amountMinor = parseToHundredths(amount);
   const rateHundredths = parseToHundredths(rate);
   const potential =
-    band && rateHundredths !== null && (!foreign || rateProblem(foreign.code, rateHundredths) === null)
+    band && rateHundredths !== null && (!foreign || rateProblem(foreign.code, rateHundredths, live) === null)
       ? matchPotential(side, rateHundredths, band)
       : null;
   // The official rate is the maximum (rateCeiling.ts, Standing Standards §7.2).
-  const official = foreign ? officialRateFor(foreign.code) : null;
+  const official = foreign ? officialRateFor(foreign.code, live) : null;
   const problem =
-    foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths) : null;
+    foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths, live) : null;
   const rateError =
     problem === "above-official" && foreign && official !== null
       ? tr("Your rate can’t be above the official rate of NGN {{official}} per {{code}}.", { official: formatHundredths(official), code: foreign.code })
@@ -414,7 +429,9 @@ export function MarketScreen({
           <Text testID="market-official" style={styles.official}>
             {DERIVED_CEILING.has(foreign.code)
               ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.", { official: formatHundredths(official), code: foreign.code })
-              : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
+              : live
+                ? tr("Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.", { official: formatHundredths(official), code: foreign.code })
+                : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
           </Text>
         ) : null}
         {rateError ? (

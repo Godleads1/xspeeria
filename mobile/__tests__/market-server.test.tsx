@@ -85,6 +85,34 @@ function fakeServer(rows: ServerOffer[] = [offer()], requests: ServerOffer[] = [
 }
 
 describe('Market screen with a server (ADR-030)', () => {
+  it('shows and checks the ceiling the server enforces now (ADR-102)', async () => {
+    const server = fakeServer();
+    server.ceilings = jest.fn(async () => ({ USD: 134729, GBP: 180296, EUR: 150354, CAD: 95464 }));
+    await render(<MarketScreen server={server} />);
+    await fireEvent.press(screen.getByTestId('market-currency'));
+    await fireEvent.press(screen.getByTestId('currency-USD'));
+    await flush();
+    await fireEvent.changeText(screen.getByTestId('market-amount'), '100');
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1347.29');
+    expect(screen.getByTestId('market-official')).toHaveTextContent(/Official rate \(CBN, latest\): NGN 1,347\.29 per USD/);
+    expect(screen.queryByTestId('market-rate-error')).toBeNull(); // above the old snapshot, fine now
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1347.30');
+    expect(screen.getByTestId('market-rate-error')).toBeTruthy();
+  });
+
+  it('takes no rate in a currency the server has no current ceiling for', async () => {
+    const server = fakeServer();
+    server.ceilings = jest.fn(async () => ({ GBP: 180296, EUR: 150354 })); // USD over 3 days old
+    await render(<MarketScreen server={server} />);
+    await fireEvent.press(screen.getByTestId('market-currency'));
+    await fireEvent.press(screen.getByTestId('currency-USD'));
+    await flush();
+    await fireEvent.changeText(screen.getByTestId('market-amount'), '100');
+    await fireEvent.changeText(screen.getByTestId('market-rate'), '1300');
+    expect(screen.queryByTestId('market-official')).toBeNull();
+    expect(screen.getByTestId('market-create').props.accessibilityState.disabled).toBe(true);
+  });
+
   it('lists real offers for the chosen currency', async () => {
     const server = fakeServer([offer(), offer({ offer_id: 'b2', desired_rate: '1325.00' })]);
     await render(<MarketScreen server={server} />);

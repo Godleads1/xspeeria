@@ -24,13 +24,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.domain.offer_rules import OFFICIAL_RATE
 from app.models.marketplace import QUEUE_ACTIVE, Match, Offer, OfferQueueEntry
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
 from app.services.deal_pause import deals_paused, refuse_if_paused
 from app.services.groups import reopen_group
 from app.services.notifications import notify
+from app.services.official_rates import current_ceilings
 
 __all__ = [
     "QUEUE_LIMIT",
@@ -271,7 +271,7 @@ class QueueService:
                 status.HTTP_403_FORBIDDEN,
             )
         foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
-        ceiling = OFFICIAL_RATE.get(foreign)
+        ceiling = (await current_ceilings(self._db, self._clock())).get(foreign)
         if (
             offer.status not in QUEUE_OFFER_STATUSES
             or ceiling is None

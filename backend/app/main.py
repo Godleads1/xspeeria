@@ -38,6 +38,7 @@ from app.api.v1 import (
     notifications,
     offers,
     push,
+    rates,
     security_report,
     settlement,
 )
@@ -458,6 +459,24 @@ async def _security_notice_loop(settings: Settings, runtime: AuthRuntime) -> Non
             log.exception("security_notice_round_failed")
 
 
+async def _official_rate_loop(settings: Settings, runtime: AuthRuntime) -> None:
+    """ADR-102: fetch the CBN's USD, GBP and EUR rates, at start and then every hour."""
+    from app.db.session import get_sessionmaker
+    from app.providers.frankfurter import FrankfurterCBN
+    from app.services.official_rates import OfficialRateService
+
+    log = get_logger(__name__)
+    feed = FrankfurterCBN()
+    while True:
+        try:
+            async with get_sessionmaker(settings)() as db:
+                with track_job("Official rates", settings.official_rate_seconds):
+                    await OfficialRateService(db, runtime.clock, feed).refresh()
+        except Exception:  # noqa: BLE001 - a failed fetch keeps the last rate; retry later
+            log.exception("official_rate_refresh_failed")
+        await asyncio.sleep(settings.official_rate_seconds)
+
+
 TaskRole = Literal["web", "worker"]
 
 
@@ -493,6 +512,8 @@ def planned_tasks(
             out["phone push"] = lambda: _push_loop(s, rt)
         if rt.email is not None and s.security_notice_seconds > 0:
             out["security emails"] = lambda: _security_notice_loop(s, rt)
+        if s.official_rate_feed == "frankfurter":
+            out["official rates"] = lambda: _official_rate_loop(s, rt)
     if role == "web" and in_memory_bank and s.escrow_tick_seconds > 0:
         out["escrow (pretend bank)"] = lambda: _escrow_loop(s, rt)
     if role == "web" and in_memory_bank and s.demo_autopilot:
@@ -565,6 +586,7 @@ def create_app(
     application.include_router(disputes.router)
     application.include_router(limits.router)
     application.include_router(fees.router)  # ADR-098
+    application.include_router(rates.router)  # ADR-102
     application.include_router(notices.router)
     application.include_router(adverts.router)
     application.include_router(push.router)

@@ -6,6 +6,7 @@ Rates are always **NGN per 1 unit of the foreign currency**, whichever side the 
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
@@ -19,6 +20,7 @@ __all__ = [
     "MINIMUM_MINOR",
     "OFFICIAL_RATE",
     "OFFICIAL_RATE_AS_OF",
+    "with_derived",
     "CAD_PER_USD",
     "CAD_PER_USD_AS_OF",
     "RATE_PLACES",
@@ -40,7 +42,8 @@ SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2}
 #: CAD: Canada joins the MVP corridors (ADR-100); its ceiling is derived from the USD one (ADR-101).
 FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD"})
 
-#: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate.
+#: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate. ADR-102: used
+#: until the automatic feed has stored its first rate (``services.official_rates``).
 OFFICIAL_RATE: dict[str, Decimal] = {
     "USD": Decimal("1333.26"),
     "GBP": Decimal("1765.11"),
@@ -53,9 +56,20 @@ OFFICIAL_RATE_AS_OF = "2026-10-17"
 #: half to even to the kobo. Refreshing the USD ceiling or this rate changes CAD with it.
 CAD_PER_USD = Decimal("1.4113")
 CAD_PER_USD_AS_OF = "2026-11-06"
-OFFICIAL_RATE["CAD"] = (OFFICIAL_RATE["USD"] / CAD_PER_USD).quantize(
-    Decimal("0.01"), rounding=ROUND_HALF_EVEN
-)
+
+
+def with_derived(fed: dict[str, Decimal]) -> dict[str, Decimal]:
+    """Add the ceilings worked out from others: CAD from USD (ADR-101). No USD, no CAD."""
+    out = dict(fed)
+    usd = out.get("USD")
+    if usd is not None:
+        out["CAD"] = (usd / CAD_PER_USD).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+    else:
+        out.pop("CAD", None)
+    return out
+
+
+OFFICIAL_RATE.update(with_derived(OFFICIAL_RATE))
 
 #: ADR-029 — ₦10,000 or 10 units of the foreign currency.
 MINIMUM_MINOR: dict[str, int] = {
@@ -158,11 +172,16 @@ def parse_rate(text: str) -> Decimal:
         ) from None
 
 
-def rate_problem(rate: Decimal, foreign: str) -> OfferInputError | None:
-    """Positivity first, then the official-rate ceiling (contract §3.3, ADR-020)."""
+def rate_problem(
+    rate: Decimal, foreign: str, ceilings: Mapping[str, Decimal] | None = None
+) -> OfferInputError | None:
+    """Positivity first, then the official-rate ceiling (contract §3.3, ADR-020, ADR-102).
+
+    ``ceilings`` comes from ``services.official_rates.current_ceilings``; None = the snapshot.
+    """
     if rate <= 0:
         return OfferInputError("VAL_422_RATE_NOT_POSITIVE", "The rate must be more than zero.")
-    ceiling = OFFICIAL_RATE.get(foreign)
+    ceiling = (OFFICIAL_RATE if ceilings is None else ceilings).get(foreign)
     if ceiling is None or rate > ceiling or rate > _RATE_MAX:
         limit = f"{ceiling:,.2f}" if ceiling is not None else "not set"
         return OfferInputError(

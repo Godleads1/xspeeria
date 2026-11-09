@@ -46,7 +46,6 @@ from app.db.row_scope import acting_for_service
 from app.domain.offer_rules import (
     IDEMPOTENCY_TTL,
     MINIMUM_MINOR,
-    OFFICIAL_RATE,
     OfferInputError,
     below_minimum,
     parse_amount_minor,
@@ -68,6 +67,7 @@ from app.services.groups import lock_group_for_take
 from app.services.limits import check_new_deal
 from app.services.notifications import notify
 from app.services.offers import Created, money_text, rate_text, replay_idempotent
+from app.services.official_rates import current_ceilings
 from app.services.queue import (
     active_turn,
     mark_taken,
@@ -277,7 +277,7 @@ class MatchService:
         handed_on = await pass_overdue_turns(self._db, offer, now)
 
         # 4. Still listed? Lifecycle status and today's official-rate ceiling (contract §3.5).
-        ceiling = OFFICIAL_RATE.get(_foreign(offer))
+        ceiling = (await current_ceilings(self._db, now)).get(_foreign(offer))
         if offer.status not in ACTIVE_STATUSES or ceiling is None or offer.desired_rate > ceiling:
             await self._db.rollback()
             raise _err(

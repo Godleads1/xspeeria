@@ -340,7 +340,7 @@ The two conditions are disjoint.
   **OPEN/configurable** (§15).
 - **2026-10-17 (product owner):** the applicable reference ceiling is the **official rate**
   for the currency — a rate may equal it or be below it, never above
-  (`docs/adr/020-official-rate-ceiling.md`). The source of the official rate is still open.
+  (`docs/adr/020-official-rate-ceiling.md`). **2026-11-09 (owner):** the source, cadence and staleness are set by `docs/adr/102-automatic-official-rates.md`.
 
 ## 7.3 Insufficient remaining
 
@@ -834,7 +834,7 @@ implementation, document, or assistant.
 | # | Open decision |
 |---|---|
 | 1 | ~~**Decision 2**~~ — **RESOLVED 2026-10-18** (human-approved): MFA by ADR-008 / DEC-014; session lifetime, 6-digit PIN and SMS caps by ADR-024 / DEC-030; PIN hashing, request limits, recovery, S-2, S-3 (individual accounts for now), in-house auth and the logging rule by ADR-025 / DEC-031 |
-| 2 | **Decision 3** — reference-rate provider, cadence, staleness, unavailable behaviour |
+| 2 | ~~**Decision 3** — reference-rate provider, cadence, staleness, unavailable behaviour~~ — **RESOLVED 2026-11-09** (human-approved): CBN rates via Frankfurter, hourly, 3-day staleness then no new offers (ADR-102 / DEC-114) |
 | 3 | **Decision 4** — regulatory/legal posture |
 | 4 | ~~Idempotency retention / TTL~~ — **RESOLVED 2026-10-18** (human-approved): **24 hours** per user, operation and key, by ADR-029 / DEC-035 |
 | 5 | **R5-9** — FXRequest active-MVP status |

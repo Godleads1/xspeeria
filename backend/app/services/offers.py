@@ -31,7 +31,6 @@ from app.domain.offer_rules import (
     CURRENCY_DEF_VERSION,
     FORMAT_ERROR,
     IDEMPOTENCY_TTL,
-    OFFICIAL_RATE,
     SCALE,
     OfferInputError,
     parse_amount_minor,
@@ -55,6 +54,7 @@ from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
 from app.services.deal_pause import refuse_if_paused
 from app.services.groups import GROUP_MAX, GROUP_MIN, group_visible
+from app.services.official_rates import current_ceilings
 from app.services.queue import QUEUE_OFFER_STATUSES, pending_minor_expr, queue_facts
 
 __all__ = ["Created", "OfferService", "offer_view", "replay_idempotent"]
@@ -180,7 +180,7 @@ class OfferService:
             rate = parse_rate(desired_rate)
         except OfferInputError as e:
             raise _input_error(e) from None
-        problem = rate_problem(rate, pair.foreign)
+        problem = rate_problem(rate, pair.foreign, await current_ceilings(self._db, self._clock()))
         if problem is not None:
             raise _input_error(problem)
 
@@ -296,8 +296,9 @@ class OfferService:
             raise _input_error(e) from None
         if len({code for code, _ in parsed}) != len(parsed):
             raise _input_error(OfferInputError(FORMAT_ERROR, "Each currency can be chosen once."))
+        ceilings = await current_ceilings(self._db, self._clock())
         for code, rate in parsed:
-            problem = rate_problem(rate, code)
+            problem = rate_problem(rate, code, ceilings)
             if problem is not None:
                 raise _input_error(problem)
 
@@ -413,8 +414,8 @@ class OfferService:
         except OfferInputError as e:
             raise _input_error(e) from None
         search = search or Search()
-        ceiling = OFFICIAL_RATE.get(pair.foreign)
-        if ceiling is None:  # no official rate yet (CAD, ADR-100): nothing can be listed
+        ceiling = (await current_ceilings(self._db, self._clock())).get(pair.foreign)
+        if ceiling is None:  # no current official rate (ADR-102): nothing can be listed
             return []
         remaining = Offer.source_amount_minor - Offer.matched_amount_minor
         # ADR-059 Decision 4: offers whose whole amount is held by unpaid deals are listed too,
@@ -600,7 +601,8 @@ class OfferService:
         if offer is None:
             raise _not_found()
         mine = offer.user_id == principal.user_id
-        listed = offer.status in ACTIVE_STATUSES and offer.desired_rate <= OFFICIAL_RATE.get(
+        ceilings = await current_ceilings(self._db, self._clock())
+        listed = offer.status in ACTIVE_STATUSES and offer.desired_rate <= ceilings.get(
             offer.target_currency if offer.source_currency == "NGN" else offer.source_currency,
             Decimal(0),
         )
@@ -677,7 +679,7 @@ class OfferService:
                 )
             )
         foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
-        problem = rate_problem(rate, foreign)
+        problem = rate_problem(rate, foreign, await current_ceilings(self._db, self._clock()))
         if problem is not None:
             await self._db.rollback()
             raise _input_error(problem)

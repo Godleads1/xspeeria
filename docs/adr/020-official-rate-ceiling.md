@@ -61,6 +61,7 @@ Consequences:
 
 ## 4. Still open
 
+- **Resolved 2026-11-09 by ADR-102:** the ceilings now update automatically (CBN central rate via Frankfurter, hourly, last good rate kept for 3 days, then no new offers). The text below is kept as history.
 - **This is a fixed snapshot.** Official rates move every business day. The production
   source (CBN feed or approved provider), update cadence, staleness rule and behaviour when
   unavailable remain OPEN (Standing Standards §7.2, §15). Until a live feed exists, the

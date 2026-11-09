@@ -28,6 +28,7 @@ def test_every_account_table_is_listed() -> None:
         "api_metrics",
         "job_status",
         "deal_pauses",  # ADR-075: emergency-control history, like outage notices
+        "official_rates",  # ADR-102: reference data (CBN rates), append-only
     } | {t for t in Base.metadata.tables if t.startswith("staff_")}
     assert set(USER_TABLES) == set(Base.metadata.tables) - kept
 

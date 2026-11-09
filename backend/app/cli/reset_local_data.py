@@ -24,7 +24,8 @@ __all__ = ["USER_TABLES", "reset_user_data"]
 
 #: Everything that belongs to accounts, children before parents. Not `currency_definitions`
 #: (append-only reference data), `partners` (the pretend banks), staff tables, the deal
-#: pause history (`deal_pauses`, ADR-075), or
+#: pause history (`deal_pauses`, ADR-075), the fetched official rates (`official_rates`,
+#: ADR-102, append-only reference data), or
 #: `dispute_categories` (the list staff manage, ADR-063).
 USER_TABLES = (
     "rate_limit_hits",  # ADR-080: attempt counts (sign-in limits) go with the accounts
