@@ -146,7 +146,8 @@ export interface DestinationCountry {
 export const DESTINATION_COUNTRIES: readonly DestinationCountry[] = [
   { name: k("Nigeria"), currency: 'NGN', available: true },
   { name: k("United Kingdom"), currency: 'GBP', available: true },
-  { name: k("United States"), currency: 'USD', available: false, note: k("Coming in Year 2") },
+  { name: k("United States"), currency: 'USD', available: true },
+  { name: k("Canada"), currency: 'CAD', available: true },
 ];
 
 export function searchCountries(list: readonly DestinationCountry[], query: string): DestinationCountry[] {
@@ -157,7 +158,14 @@ export function searchCountries(list: readonly DestinationCountry[], query: stri
 
 /* ------------------------------------------------------------ Account details form */
 
-export type BankFieldKey = 'routingNumber' | 'sortCode' | 'bankName' | 'accountNumber' | 'accountType';
+export type BankFieldKey =
+  | 'routingNumber'
+  | 'sortCode'
+  | 'institutionNumber'
+  | 'transitNumber'
+  | 'bankName'
+  | 'accountNumber'
+  | 'accountType';
 
 export interface BankField {
   readonly key: BankFieldKey;
@@ -192,6 +200,13 @@ export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
   EUR: [
     { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
     { key: 'accountNumber', label: k("IBAN"), kind: 'iban', maxLength: 34 },
+  ],
+  // ADR-100 (owner, 2026-11-09): institution (3 digits), transit (5 digits), any account number.
+  CAD: [
+    { key: 'institutionNumber', label: k("Institution Number"), kind: 'digits', maxLength: 3 },
+    { key: 'transitNumber', label: k("Transit Number"), kind: 'digits', maxLength: 5 },
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 17 },
   ],
 };
 
@@ -248,12 +263,15 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
     if (f.key === 'bankName' && value.length < 2) errors.bankName = tr("Enter the bank name");
     if (f.key === 'routingNumber' && !isValidRoutingNumber(value)) errors.routingNumber = tr("Enter a valid 9-digit routing number");
     if (f.key === 'sortCode' && !/^\d{6}$/.test(value)) errors.sortCode = tr("Sort code is 6 digits");
+    if (f.key === 'institutionNumber' && !/^\d{3}$/.test(value)) errors.institutionNumber = tr("Institution number is 3 digits");
+    if (f.key === 'transitNumber' && !/^\d{5}$/.test(value)) errors.transitNumber = tr("Transit number is 5 digits");
     if (f.key === 'accountType' && !(ACCOUNT_TYPES as readonly string[]).includes(value)) errors.accountType = tr("Choose an account type");
     if (f.key === 'accountNumber') {
       if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = tr("Nigerian account numbers are 10 digits");
       if (currency === 'GBP' && !/^\d{8}$/.test(value)) errors.accountNumber = tr("UK account numbers are 8 digits");
       if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
       if (currency === 'EUR' && !isValidIban(normalizeIban(value))) errors.accountNumber = tr("Enter a valid IBAN");
+      if (currency === 'CAD' && !/^\d{1,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
     }
   }
   return errors;

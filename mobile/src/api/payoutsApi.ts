@@ -27,6 +27,9 @@ export interface NewPayoutAccount {
   routing_number?: string;
   sort_code?: string;
   account_type?: string;
+  /** CAD only (ADR-100). */
+  institution_number?: string;
+  transit_number?: string;
 }
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;

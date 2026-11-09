@@ -33,6 +33,10 @@ describe('bank form validation', () => {
     expect(validateBankForm('EUR', { bankName: 'ING', accountNumber: 'DE89 3704 0044 0532 0130 00' })).toEqual({});
     expect(validateBankForm('EUR', { bankName: 'ING', accountNumber: 'DE89370400440532013001' }).accountNumber).toMatch(/valid IBAN/);
     expect(Object.keys(validateBankForm('EUR', {}))).toEqual(['bankName', 'accountNumber']);
+    // ADR-100: Canada — institution (3 digits), transit (5 digits), any account number.
+    expect(validateBankForm('CAD', { institutionNumber: '003', transitNumber: '12345', bankName: 'RBC', accountNumber: '1234567' })).toEqual({});
+    const bad = validateBankForm('CAD', { institutionNumber: '03', transitNumber: '1234', bankName: 'RBC', accountNumber: '12a' });
+    expect(Object.keys(bad).sort()).toEqual(['accountNumber', 'institutionNumber', 'transitNumber']);
   });
 });
 

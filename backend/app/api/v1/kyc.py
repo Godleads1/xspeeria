@@ -34,7 +34,7 @@ webhooks_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 256 * 1024
 
 
-Country = Literal["NG", "GB", "US"]
+Country = Literal["NG", "GB", "US", "CA"]
 
 
 class StartCheckRequest(BaseModel):

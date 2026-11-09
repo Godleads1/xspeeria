@@ -34,7 +34,7 @@ export interface AddressInput {
   city: string;
   state: string;
   postcode?: string;
-  country: 'NG' | 'GB' | 'US';
+  country: 'NG' | 'GB' | 'US' | 'CA';
 }
 
 const base = '/api/v1/users/me/tier-checks';

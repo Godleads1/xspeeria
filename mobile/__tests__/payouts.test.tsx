@@ -117,6 +117,16 @@ describe('Add payout account', () => {
     });
   });
 
+  it('sends Canadian institution and transit numbers (ADR-100)', () => {
+    expect(toNewAccount('CAD', { institutionNumber: '003', transitNumber: '12345', bankName: 'RBC', accountNumber: '1234567' })).toEqual({
+      currency: 'CAD',
+      bank_name: 'RBC',
+      account_number: '1234567',
+      institution_number: '003',
+      transit_number: '12345',
+    });
+  });
+
   it('checks the format, then confirms it’s you and sends the details', async () => {
     const src = fake();
     const onAdded = jest.fn();

@@ -34,8 +34,10 @@ __all__ = [
 #: `app.cli.currency_definitions` command; permanent under CD3).
 CURRENCY_DEF_VERSION = "iso4217-v1"
 #: ISO 4217 minor units for the launch currencies.
-SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2}
-FOREIGN = frozenset({"USD", "GBP", "EUR"})
+SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2}
+#: CAD: Canada joins the MVP corridors (ADR-100). It has no official-rate ceiling yet, so CAD
+#: offers are refused and none are listed until the owner sets one (fail closed, ADR-020).
+FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD"})
 
 #: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate.
 OFFICIAL_RATE: dict[str, Decimal] = {
@@ -46,7 +48,13 @@ OFFICIAL_RATE: dict[str, Decimal] = {
 OFFICIAL_RATE_AS_OF = "2026-10-17"
 
 #: ADR-029 — ₦10,000 or 10 units of the foreign currency.
-MINIMUM_MINOR: dict[str, int] = {"NGN": 1_000_000, "USD": 1_000, "GBP": 1_000, "EUR": 1_000}
+MINIMUM_MINOR: dict[str, int] = {
+    "NGN": 1_000_000,
+    "USD": 1_000,
+    "GBP": 1_000,
+    "EUR": 1_000,
+    "CAD": 1_000,
+}
 
 #: ADR-031 — offer and marketplace requests per signed-in user per minute (product owner,
 #: 2026-10-18: "60 per user per min"). Separate from the sign-in limit.

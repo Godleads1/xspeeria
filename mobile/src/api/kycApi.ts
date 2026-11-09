@@ -5,19 +5,20 @@ import { k } from "../i18n";
 
 export type KycStatus = 'not_started' | 'pending_documents' | 'under_review' | 'approved' | 'rejected' | 'expired';
 
-/** ADR-042: the countries a user can be verified in. */
-export type KycCountry = 'NG' | 'GB' | 'US';
-export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US'];
+/** ADR-042, ADR-100: the countries a user can be verified in. */
+export type KycCountry = 'NG' | 'GB' | 'US' | 'CA';
+export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US', 'CA'];
 export const COUNTRY_NAME: Record<KycCountry, string> = {
   NG: 'Nigeria',
   GB: k("the United Kingdom"),
   US: k("the United States"),
+  CA: k("Canada"),
 };
 /** Currency code for the round flag. */
-export const COUNTRY_FLAG: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD' };
+export const COUNTRY_FLAG: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD', CA: 'CAD' };
 
 export function isKycCountry(v: unknown): v is KycCountry {
-  return v === 'NG' || v === 'GB' || v === 'US';
+  return v === 'NG' || v === 'GB' || v === 'US' || v === 'CA';
 }
 
 export interface ServerRegions {

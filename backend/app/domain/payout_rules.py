@@ -39,7 +39,7 @@ PREPARATION_STATES = ("awaiting_payout_accounts", "funding_ready", "expired")
 
 #: Account formats the app collects (ADR-022, `BANK_FORMS`). EUR: the IBAN only, no BIC
 #: (owner, 2026-11-08, ADR-099).
-PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR"})
+PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR", "CAD"})
 _ACCOUNT_TYPES = frozenset({"Checking", "Savings"})
 
 
@@ -96,10 +96,14 @@ def parse_account_details(
     routing_number: str | None,
     sort_code: str | None,
     account_type: str | None,
+    institution_number: str | None = None,
+    transit_number: str | None = None,
 ) -> AccountDetails:
     c = currency.upper()
     if c not in PAYOUT_CURRENCIES:
-        raise _bad("Payout accounts can be in NGN, USD, GBP or EUR for now.")
+        raise _bad("Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.")
+    if c != "CAD" and (institution_number or transit_number):
+        raise _bad("Institution and transit numbers are only used for CAD.")
     name = bank_name.strip()
     if not 2 <= len(name) <= 60 or not re.fullmatch(r"[A-Za-z0-9 .,&'()\-]+", name):
         raise _bad("Enter the bank name.")
@@ -124,6 +128,20 @@ def parse_account_details(
         if routing_number or sort_code or account_type:
             raise _bad("Only the bank name and IBAN are needed for EUR.")
         return AccountDetails(c, name, iban, None, None)
+    if c == "CAD":
+        # ADR-100 (owner, 2026-11-09): institution number (3 digits), transit number
+        # (5 digits) and an account number of any length (digits; up to 17, as the form).
+        if not institution_number or not re.fullmatch(r"[0-9]{3}", institution_number):
+            raise _bad("Institution number is 3 digits.")
+        if not transit_number or not re.fullmatch(r"[0-9]{5}", transit_number):
+            raise _bad("Transit number is 5 digits.")
+        if not re.fullmatch(r"[0-9]{1,17}", account_number):
+            raise _bad("Enter a valid account number.")
+        if routing_number or sort_code or account_type:
+            raise _bad(
+                "Only the bank name, institution, transit and account numbers are needed for CAD."
+            )
+        return AccountDetails(c, name, account_number, institution_number + transit_number, None)
     # USD
     if not re.fullmatch(r"[0-9]{4,17}", account_number):
         raise _bad("Enter a valid account number.")

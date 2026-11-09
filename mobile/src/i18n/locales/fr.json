@@ -226,7 +226,6 @@
  "Close receipt": "Fermer le reçu",
  "Code *": "Code *",
  "Codes from an app like Google Authenticator": "Codes d'une application comme Google Authenticator",
- "Coming in Year 2": "Prévu en année 2",
  "Coming soon": "Bientôt disponible",
  "Complete": "Terminé",
  "Completed": "Terminé",
@@ -1450,9 +1449,18 @@
  "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Frais Xspeeria : {{fee}} {{currency}}. Vous versez {{total}} {{currency}} sur le compte séquestre.",
  "IBAN": "IBAN",
  "Enter a valid IBAN": "Saisissez un IBAN valide",
- "Payout accounts can be in NGN, USD, GBP or EUR for now.": "Les comptes de versement peuvent être en NGN, USD, GBP ou EUR pour l'instant.",
  "Only the bank name and IBAN are needed for EUR.": "Seuls le nom de la banque et l'IBAN sont nécessaires pour l'EUR.",
  "Enter a valid IBAN.": "Saisissez un IBAN valide.",
  "Payment arrived after the deal ended": "Paiement reçu après la fin de l’opération",
- "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Cette opération était déjà terminée quand votre paiement est arrivé. Notre équipe va le vérifier et demander à la banque de vous le rembourser."
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Cette opération était déjà terminée quand votre paiement est arrivé. Notre équipe va le vérifier et demander à la banque de vous le rembourser.",
+ "Institution Number": "Numéro d’institution",
+ "Transit Number": "Numéro de domiciliation",
+ "Institution number is 3 digits": "Le numéro d’institution comporte 3 chiffres",
+ "Transit number is 5 digits": "Le numéro de domiciliation comporte 5 chiffres",
+ "Canada": "Canada",
+ "Institution number is 3 digits.": "Le numéro d’institution comporte 3 chiffres.",
+ "Transit number is 5 digits.": "Le numéro de domiciliation comporte 5 chiffres.",
+ "Institution and transit numbers are only used for CAD.": "Les numéros d’institution et de domiciliation ne servent que pour le CAD.",
+ "Only the bank name, institution, transit and account numbers are needed for CAD.": "Pour le CAD, seuls le nom de la banque et les numéros d’institution, de domiciliation et de compte sont nécessaires.",
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Les comptes de versement peuvent être en NGN, USD, GBP, EUR ou CAD pour l’instant."
 }

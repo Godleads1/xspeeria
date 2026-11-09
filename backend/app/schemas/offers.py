@@ -169,6 +169,9 @@ class AddPayoutAccountRequest(_Strict):
     routing_number: str | None = Field(default=None, max_length=9)
     sort_code: str | None = Field(default=None, max_length=6)
     account_type: str | None = Field(default=None, max_length=16)
+    #: CAD only (ADR-100): 3-digit institution and 5-digit transit (branch) numbers.
+    institution_number: str | None = Field(default=None, max_length=3)
+    transit_number: str | None = Field(default=None, max_length=5)
 
 
 class PayoutAccountResponse(BaseModel):

@@ -62,7 +62,9 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **App: country choice and region screens** — done: region screens connected (ADR-045); "Verify your identity" now asks which country you pay from (ADR-071, 2026-10-27).
 - [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
 - [ ] **Canada go-live** — *You + lawyer* (ADR-100): a Canadian partner bank, Canadian legal review (money-services-business registration, provincial rules, PIPEDA), Didit coverage for Canada.
-- [ ] **Build Canada into the product** — *Build* (ADR-100): CAD currency definition, identity checks for CA, settlement jurisdiction, fee quote and app country lists. *You*: choose the CAD payout account fields (e.g. institution, transit and account numbers).
+- [x] **Canada in the product:** built 9 Nov 2026 (ADR-100). The CAD payout form uses institution, transit and account numbers (owner).
+- [ ] **CAD official-rate ceiling** — *You* (ADR-020, ADR-100): which figure caps CAD rates. Until set, CAD offers are refused and none are listed.
+- [ ] **+1 phone numbers at sign-up** (US and Canada) — *Build*, when you say: sign-up takes only +234 and +44 today.
 - [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
 - [ ] **SMS provider** — *You*: later (ADR-044 N-4).
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).

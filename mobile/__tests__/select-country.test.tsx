@@ -4,15 +4,16 @@ import { SelectCountryScreen } from '../src/features/profile/SelectCountryScreen
 import { DESTINATION_COUNTRIES, searchCountries } from '../src/features/profile/data';
 
 describe('destination countries', () => {
-  it('lists only documented corridor countries', () => {
-    expect(DESTINATION_COUNTRIES.map((c) => c.currency).sort()).toEqual(['GBP', 'NGN', 'USD']);
-    expect(DESTINATION_COUNTRIES.filter((c) => c.available).map((c) => c.currency).sort()).toEqual(['GBP', 'NGN']);
+  it('lists the launch corridor countries (ADR-043, ADR-100)', () => {
+    expect(DESTINATION_COUNTRIES.map((c) => c.currency).sort()).toEqual(['CAD', 'GBP', 'NGN', 'USD']);
+    expect(DESTINATION_COUNTRIES.filter((c) => c.available).map((c) => c.currency).sort()).toEqual(['CAD', 'GBP', 'NGN', 'USD']);
   });
 
   it('searches by name or currency code', () => {
     expect(searchCountries(DESTINATION_COUNTRIES, 'kingdom').map((c) => c.currency)).toEqual(['GBP']);
     expect(searchCountries(DESTINATION_COUNTRIES, 'ngn').map((c) => c.name)).toEqual(['Nigeria']);
-    expect(searchCountries(DESTINATION_COUNTRIES, '  ')).toHaveLength(3);
+    expect(searchCountries(DESTINATION_COUNTRIES, 'canada').map((c) => c.currency)).toEqual(['CAD']);
+    expect(searchCountries(DESTINATION_COUNTRIES, '  ')).toHaveLength(4);
     expect(searchCountries(DESTINATION_COUNTRIES, 'Afghanistan')).toHaveLength(0);
   });
 });
@@ -28,12 +29,12 @@ describe('Select Destination Country screen', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ currency: 'GBP' }));
   });
 
-  it('does not select a corridor that is not live yet', async () => {
+  it('selects the US and Canada, which launch with the UK', async () => {
     const onSelect = jest.fn();
     await render(<SelectCountryScreen onBack={jest.fn()} onSelect={onSelect} />);
     await fireEvent.press(screen.getByTestId('country-USD'));
-    expect(onSelect).not.toHaveBeenCalled();
-    expect(screen.getByText('Coming in Year 2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('country-CAD'));
+    expect(onSelect.mock.calls.map((c) => c[0].currency)).toEqual(['USD', 'CAD']);
   });
 
   it('filters and shows an empty state', async () => {

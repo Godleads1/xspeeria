@@ -635,7 +635,7 @@ export interface KycRow {
   ref: string;
   customer: string;
   customer_email: string;
-  country: 'NG' | 'GB' | 'US';
+  country: 'NG' | 'GB' | 'US' | 'CA';
   status: 'under_review' | 'approved' | 'rejected';
   review_reason: KycReviewReason | null;
   awaiting_second: boolean;

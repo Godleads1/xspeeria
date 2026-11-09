@@ -226,7 +226,6 @@
  "Close receipt": "إغلاق الإيصال",
  "Code *": "الرمز *",
  "Codes from an app like Google Authenticator": "رموز من تطبيق مثل Google Authenticator",
- "Coming in Year 2": "قادم في السنة الثانية",
  "Coming soon": "قريبًا",
  "Complete": "مكتمل",
  "Completed": "مكتملة",
@@ -1450,9 +1449,18 @@
  "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "رسوم Xspeeria: {{fee}} {{currency}}. تدفع {{total}} {{currency}} في حساب الضمان.",
  "IBAN": "رقم الآيبان (IBAN)",
  "Enter a valid IBAN": "أدخل رقم IBAN صالحًا",
- "Payout accounts can be in NGN, USD, GBP or EUR for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR.",
  "Only the bank name and IBAN are needed for EUR.": "لحسابات اليورو يلزم اسم البنك ورقم IBAN فقط.",
  "Enter a valid IBAN.": "أدخل رقم IBAN صالحًا.",
  "Payment arrived after the deal ended": "وصلت الدفعة بعد انتهاء الصفقة",
- "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "كانت هذه الصفقة قد انتهت عندما وصلت دفعتك. سيتحقق فريقنا منها ويطلب من البنك إعادتها إليك."
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "كانت هذه الصفقة قد انتهت عندما وصلت دفعتك. سيتحقق فريقنا منها ويطلب من البنك إعادتها إليك.",
+ "Institution Number": "رقم المؤسسة",
+ "Transit Number": "رقم الفرع",
+ "Institution number is 3 digits": "رقم المؤسسة مكوّن من 3 أرقام",
+ "Transit number is 5 digits": "رقم الفرع مكوّن من 5 أرقام",
+ "Canada": "كندا",
+ "Institution number is 3 digits.": "رقم المؤسسة مكوّن من 3 أرقام.",
+ "Transit number is 5 digits.": "رقم الفرع مكوّن من 5 أرقام.",
+ "Institution and transit numbers are only used for CAD.": "رقما المؤسسة والفرع يُستخدمان لحسابات CAD فقط.",
+ "Only the bank name, institution, transit and account numbers are needed for CAD.": "لحسابات CAD يلزم اسم البنك وأرقام المؤسسة والفرع والحساب فقط.",
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR أو CAD."
 }

@@ -27,8 +27,9 @@ export const COUNTRY_LABEL: Record<KycCountry, string> = {
   NG: 'Nigeria',
   GB: k('United Kingdom'),
   US: k('United States'),
+  CA: k('Canada'),
 };
-const CURRENCY: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD' };
+const CURRENCY: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD', CA: 'CAD' };
 
 export const STATUS_WORD: Record<KycStatus, { label: string; tone: StatusTone }> = {
   approved: { label: k('Verified'), tone: 'success' },

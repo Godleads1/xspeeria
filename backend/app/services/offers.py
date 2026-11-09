@@ -413,7 +413,9 @@ class OfferService:
         except OfferInputError as e:
             raise _input_error(e) from None
         search = search or Search()
-        ceiling = OFFICIAL_RATE[pair.foreign]
+        ceiling = OFFICIAL_RATE.get(pair.foreign)
+        if ceiling is None:  # no official rate yet (CAD, ADR-100): nothing can be listed
+            return []
         remaining = Offer.source_amount_minor - Offer.matched_amount_minor
         # ADR-059 Decision 4: offers whose whole amount is held by unpaid deals are listed too,
         # as "waiting for payment" (people may queue for them). Their size is what is held.

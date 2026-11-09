@@ -44,7 +44,13 @@ class TestAmount:
         assert parse_amount_minor("10", "USD") == 1_000
 
     def test_minimums(self) -> None:
-        assert MINIMUM_MINOR == {"NGN": 1_000_000, "USD": 1_000, "GBP": 1_000, "EUR": 1_000}
+        assert MINIMUM_MINOR == {
+            "NGN": 1_000_000,
+            "USD": 1_000,
+            "GBP": 1_000,
+            "EUR": 1_000,
+            "CAD": 1_000,
+        }
         assert _code(parse_amount_minor, "9999.99", "NGN") == "VAL_422_AMOUNT_BELOW_MINIMUM"
         assert _code(parse_amount_minor, "9.99", "EUR") == "VAL_422_AMOUNT_BELOW_MINIMUM"
 
@@ -86,3 +92,10 @@ class TestRate:
     def test_unknown_currency_has_no_ceiling_so_is_refused(self) -> None:
         problem = rate_problem(Decimal("1"), "JPY")
         assert problem is not None and problem.code == "VAL_422_RATE_ABOVE_CEILING"
+
+    def test_cad_has_no_official_rate_yet_so_every_rate_is_refused(self) -> None:
+        """ADR-100: CAD is a launch currency, but no ceiling is set yet (fail closed)."""
+        assert "CAD" not in OFFICIAL_RATE
+        problem = rate_problem(Decimal("1"), "CAD")
+        assert problem is not None and problem.code == "VAL_422_RATE_ABOVE_CEILING"
+        assert "not set" in problem.message

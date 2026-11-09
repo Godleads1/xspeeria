@@ -81,6 +81,8 @@ class PayoutAccountService:
         sort_code: str | None,
         account_type: str | None,
         confirm_step_up: Callable[[], Awaitable[None]],
+        institution_number: str | None = None,
+        transit_number: str | None = None,
     ) -> dict[str, Any]:
         if self._box is None:
             raise _err(
@@ -90,7 +92,14 @@ class PayoutAccountService:
             )
         try:
             details = parse_account_details(
-                currency, bank_name, account_number, routing_number, sort_code, account_type
+                currency,
+                bank_name,
+                account_number,
+                routing_number,
+                sort_code,
+                account_type,
+                institution_number,
+                transit_number,
             )
         except OfferInputError as e:
             raise _err(e.code, e.message, status.HTTP_422_UNPROCESSABLE_CONTENT) from None

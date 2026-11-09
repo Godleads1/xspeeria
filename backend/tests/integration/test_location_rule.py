@@ -45,7 +45,8 @@ def test_currency_of_each_country() -> None:
     assert currency_of("US") == "USD"
     assert currency_of("GB") == "GBP"
     assert currency_of("DE") == "EUR" and currency_of("BG") == "EUR"
-    assert currency_of("CA") is None and currency_of(None) is None
+    assert currency_of("CA") == "CAD"  # ADR-100
+    assert currency_of("JP") is None and currency_of(None) is None
 
 
 @pytest.mark.parametrize(

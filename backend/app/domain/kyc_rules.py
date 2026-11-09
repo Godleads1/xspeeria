@@ -70,6 +70,7 @@ COUNTRIES: dict[str, tuple[str, str]] = {
     "NG": ("NGA", "Nigeria"),
     "GB": ("GBR", "the United Kingdom"),
     "US": ("USA", "the United States"),
+    "CA": ("CAN", "Canada"),  # ADR-100
 }
 
 #: Didit status → our status, for statuses that need no decision to interpret.

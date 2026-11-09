@@ -458,6 +458,8 @@ async def add_payout_account(
         bank_name=body.bank_name,
         account_number=body.account_number,
         routing_number=body.routing_number,
+        institution_number=body.institution_number,
+        transit_number=body.transit_number,
         sort_code=body.sort_code,
         account_type=body.account_type,
         confirm_step_up=confirm,

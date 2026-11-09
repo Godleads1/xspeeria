@@ -150,7 +150,7 @@ export function UpgradeTierScreen({ source, onBack }: { source: UpgradeSource; o
                 <Field testID="upgrade-state" label={tr('State or region')} value={address.state} onChange={(v) => setAddress({ ...address, state: v })} />
                 <Field testID="upgrade-postcode" label={tr('Postcode (if any)')} value={address.postcode ?? ''} onChange={(v) => setAddress({ ...address, postcode: v })} />
                 <View style={styles.chips}>
-                  {(['NG', 'GB', 'US'] as const).map((c) => (
+                  {(['NG', 'GB', 'US', 'CA'] as const).map((c) => (
                     <Pressable
                       key={c}
                       testID={`upgrade-country-${c}`}
@@ -160,7 +160,7 @@ export function UpgradeTierScreen({ source, onBack }: { source: UpgradeSource; o
                       style={[styles.chip, address.country === c ? styles.chipOn : null]}
                     >
                       <Text style={[styles.chipText, address.country === c ? styles.chipTextOn : null]}>
-                        {c === 'NG' ? tr('Nigeria') : c === 'GB' ? tr('United Kingdom') : tr('United States')}
+                        {c === 'NG' ? tr('Nigeria') : c === 'GB' ? tr('United Kingdom') : c === 'US' ? tr('United States') : tr('Canada')}
                       </Text>
                     </Pressable>
                   ))}
