@@ -24,8 +24,8 @@ import { confirmIdentity, type ConfirmIdentity } from '../security/serverConfirm
 import type { PayoutSource } from './serverPayouts';
 import { tr } from "../../i18n";
 
-/** Currencies with an approved account form. EUR waits for its form (ADR-035). */
-export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP'] as const;
+/** Currencies with an approved account form: EUR by IBAN (ADR-099), CAD (ADR-100). */
+export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD'] as const;
 
 export function toNewAccount(currency: string, v: BankFormValues): NewPayoutAccount {
   const out: NewPayoutAccount = {
@@ -36,6 +36,8 @@ export function toNewAccount(currency: string, v: BankFormValues): NewPayoutAcco
   if (v.routingNumber) out.routing_number = v.routingNumber.trim();
   if (v.sortCode) out.sort_code = v.sortCode.trim();
   if (v.accountType) out.account_type = v.accountType;
+  if (v.institutionNumber) out.institution_number = v.institutionNumber.trim();
+  if (v.transitNumber) out.transit_number = v.transitNumber.trim();
   return out;
 }
 

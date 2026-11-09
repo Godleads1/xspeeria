@@ -11,7 +11,7 @@
   One person, one verified account (ADR-041): an approval that matches a person already
   verified on another account — same ID document (keyed hash) or a Didit face/document match —
   is held for review instead.
-* Per country (ADR-042): each check verifies one country (NG, GB, US) with an ID issued
+* Per country (ADR-042, ADR-100): each check verifies one country (NG, GB, US, CA) with an ID issued
   there; a second country's check must match the identity already on the account.
 * ``is_approved``: what offers, deals and payouts require (contract: AUTH_403_KYC_REQUIRED).
 

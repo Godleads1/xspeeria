@@ -1063,5 +1063,6 @@
  "Deleted account": "Compte supprimé",
  "Deleted by the customer": "Supprimé par le client",
  "Deleting, restorable until {{date}}": "Suppression en cours, restaurable jusqu’au {{date}}",
- "Kept records of a deleted account are for Compliance only.": "Les données conservées d’un compte supprimé sont réservées à la conformité."
+ "Kept records of a deleted account are for Compliance only.": "Les données conservées d’un compte supprimé sont réservées à la conformité.",
+ "Canada": "Canada"
 }

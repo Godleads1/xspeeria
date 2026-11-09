@@ -13,6 +13,7 @@ const PLACE = {
   NG: { name: k("Nigeria"), currency: 'NGN' },
   GB: { name: k("United Kingdom"), currency: 'GBP' },
   US: { name: k("United States of America"), currency: 'USD' },
+  CA: { name: k("Canada"), currency: 'CAD' },
 } as const;
 
 /**

@@ -1063,5 +1063,6 @@
  "Deleted account": "已删除的账户",
  "Deleted by the customer": "已由客户删除",
  "Deleting, restorable until {{date}}": "删除中，可在 {{date}} 前恢复",
- "Kept records of a deleted account are for Compliance only.": "已删除账户的保留记录仅供合规团队查看。"
+ "Kept records of a deleted account are for Compliance only.": "已删除账户的保留记录仅供合规团队查看。",
+ "Canada": "加拿大"
 }

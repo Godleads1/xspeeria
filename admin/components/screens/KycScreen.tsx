@@ -39,7 +39,7 @@ export const REVIEW_REASON: Record<KycReviewReason, string> = {
   IDENTITY_MISMATCH: 'Doesn’t match the account’s identity',
   CHECKS_INCOMPLETE: 'Checks incomplete',
 };
-export const COUNTRY_NAME: Record<string, string> = { NG: 'Nigeria', GB: 'United Kingdom', US: 'United States' };
+export const COUNTRY_NAME: Record<string, string> = { NG: 'Nigeria', GB: 'United Kingdom', US: 'United States', CA: 'Canada' };
 
 export function KycStatusChip({ row }: { row: Pick<KycRow, 'status' | 'review_reason' | 'awaiting_second'> }): ReactElement {
   if (row.status === 'approved') return <StatusChip label={tr('Approved')} tone="success" />;

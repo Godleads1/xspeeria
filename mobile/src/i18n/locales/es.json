@@ -226,7 +226,6 @@
  "Close receipt": "Cerrar recibo",
  "Code *": "Código *",
  "Codes from an app like Google Authenticator": "Códigos de una aplicación como Google Authenticator",
- "Coming in Year 2": "Llega en el año 2",
  "Coming soon": "Próximamente",
  "Complete": "Completo",
  "Completed": "Completada",
@@ -1450,9 +1449,18 @@
  "Xspeeria fee: {{fee}} {{currency}}. You pay {{total}} {{currency}} into escrow.": "Comisión de Xspeeria: {{fee}} {{currency}}. Pagas {{total}} {{currency}} en la cuenta de garantía.",
  "IBAN": "IBAN",
  "Enter a valid IBAN": "Introduce un IBAN válido",
- "Payout accounts can be in NGN, USD, GBP or EUR for now.": "Por ahora, las cuentas de pago pueden estar en NGN, USD, GBP o EUR.",
  "Only the bank name and IBAN are needed for EUR.": "Para EUR solo se necesitan el nombre del banco y el IBAN.",
  "Enter a valid IBAN.": "Introduce un IBAN válido.",
  "Payment arrived after the deal ended": "El pago llegó después de terminar la operación",
- "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Esta operación ya había terminado cuando llegó tu pago. Nuestro equipo lo revisará y pedirá al banco que te lo devuelva."
+ "This deal had already ended when your payment arrived. Our team will check it and have the bank return it to you.": "Esta operación ya había terminado cuando llegó tu pago. Nuestro equipo lo revisará y pedirá al banco que te lo devuelva.",
+ "Institution Number": "Número de institución",
+ "Transit Number": "Número de tránsito",
+ "Institution number is 3 digits": "El número de institución tiene 3 dígitos",
+ "Transit number is 5 digits": "El número de tránsito tiene 5 dígitos",
+ "Canada": "Canadá",
+ "Institution number is 3 digits.": "El número de institución tiene 3 dígitos.",
+ "Transit number is 5 digits.": "El número de tránsito tiene 5 dígitos.",
+ "Institution and transit numbers are only used for CAD.": "Los números de institución y de tránsito solo se usan para CAD.",
+ "Only the bank name, institution, transit and account numbers are needed for CAD.": "Para CAD solo se necesitan el nombre del banco y los números de institución, tránsito y cuenta.",
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Por ahora, las cuentas de pago pueden estar en NGN, USD, GBP, EUR o CAD."
 }
