@@ -1462,5 +1462,6 @@
  "Transit number is 5 digits.": "O número de trânsito tem 5 dígitos.",
  "Institution and transit numbers are only used for CAD.": "Os números da instituição e de trânsito só são usados para CAD.",
  "Only the bank name, institution, transit and account numbers are needed for CAD.": "Para CAD só são necessários o nome do banco e os números da instituição, de trânsito e da conta.",
- "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP, EUR ou CAD."
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP, EUR ou CAD.",
+ "Enter your phone number *": "Introduza o seu número de telefone *"
 }

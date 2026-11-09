@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../../components/icons";
 import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
-import { ActionSheet, FieldInput, OutlinedField } from "../market/controls";
+import { FieldInput, OutlinedField } from "../market/controls";
 import { confirmWithBiometrics, type BiometricOutcome } from "./biometrics";
 import { API_BASE_URL } from "../../api/config";
 import { ApiError, messageFor } from "../../api/client";
@@ -36,6 +36,9 @@ import {
   Heading,
   PhoneInput,
   fullPhone,
+  PhoneCountrySheet,
+  splitPhone,
+  type PhoneCountry,
 } from "./ui";
 import { tr } from "../../i18n";
 
@@ -100,13 +103,11 @@ export function LoginScreen({
   const [mode, setMode] = useState<Mode>(
     remembered?.includes("@") ? "email" : "phone",
   );
-  const [country, setCountry] = useState<"NG" | "GB">(
-    remembered?.startsWith("+44") ? "GB" : "NG",
+  const [country, setCountry] = useState<PhoneCountry>(
+    remembered && !remembered.includes("@") ? splitPhone(remembered).country : "NG",
   );
   const [phone, setPhone] = useState(
-    remembered && !remembered.includes("@")
-      ? remembered.replace(/^\+(234|44)/, "")
-      : "",
+    remembered && !remembered.includes("@") ? splitPhone(remembered).local : "",
   );
   const [email, setEmail] = useState(
     remembered?.includes("@") ? remembered : "",
@@ -361,30 +362,11 @@ export function LoginScreen({
         </View>
       </ScrollView>
 
-      <ActionSheet
+      <PhoneCountrySheet
         testID="login-country"
         visible={picker}
         onClose={() => setPicker(false)}
-        actions={[
-          {
-            key: "NG",
-            label: "Nigeria",
-            hint: "+234",
-            onPress: () => {
-              setCountry("NG");
-              setPicker(false);
-            },
-          },
-          {
-            key: "GB",
-            label: tr("United Kingdom"),
-            hint: "+44",
-            onPress: () => {
-              setCountry("GB");
-              setPicker(false);
-            },
-          },
-        ]}
+        onPick={setCountry}
       />
     </KeyboardAvoidingView>
   );
