@@ -48,6 +48,7 @@ from app.domain.auth_rules import (
     CODE_TTL,
     FACE_CHECK_TTL,
     IDLE_TIMEOUT,
+    KYC_REDO_CHECK_TTL,
     MAX_CODE_TRIES,
     MAX_MFA_TRIES,
     MAX_PIN_TRIES,
@@ -89,6 +90,7 @@ from app.providers.sms import SmsSender
 from app.providers.tier_checks import TierCheckProvider
 from app.repositories.identity import IdentityRepository
 from app.services.account_deletion import restore_until
+from app.services.identity_redo import latest_redo, start_redo
 
 __all__ = [
     "AuthRuntime",
@@ -848,6 +850,12 @@ class AuthService:
         """ADR-054: after an approved identity check, the face; before it, codes."""
         if purpose == "signup":
             return "email"
+        if (
+            purpose == "login"
+            and user.identity_redo_requested_at is not None
+            and await self._repo.has_approved_kyc(user.id)
+        ):
+            return "kyc"  # ADR-104: Compliance asked for a new identity check
         if await self._repo.has_approved_kyc(user.id):
             return "face"
         return "sms_email" if purpose == "login" else "email"
@@ -871,7 +879,10 @@ class AuthService:
             await self._db.rollback()
             raise _rate_limited(timedelta(hours=1) if since_hour >= per_hour else timedelta(days=1))
         method = await self._method_for(user, purpose)
-        if method != "face" and self._rt.email is None:
+        if method == "kyc" and self._rt.kyc_provider is None:
+            await self._db.rollback()
+            raise _check_unavailable()
+        if method not in ("face", "kyc") and self._rt.email is None:
             await self._db.rollback()
             raise _check_unavailable()
         if method == "sms_email" and self._rt.sms is None:
@@ -881,7 +892,7 @@ class AuthService:
             await self._db.rollback()
             raise _face_unavailable()
         check_id = uuid.uuid4()
-        email_code = generate_code() if method != "face" else None
+        email_code = generate_code() if method not in ("face", "kyc") else None
         sms_code = generate_code() if method == "sms_email" else None
         row = VerificationCheck(
             id=check_id,
@@ -903,7 +914,14 @@ class AuthService:
             ip_address=device.ip_address if device else None,
             attempts=0,
             created_at=now,
-            expires_at=now + (FACE_CHECK_TTL if method == "face" else CHECK_CODE_TTL),
+            expires_at=now
+            + (
+                FACE_CHECK_TTL
+                if method == "face"
+                else KYC_REDO_CHECK_TTL
+                if method == "kyc"
+                else CHECK_CODE_TTL
+            ),
         )
         self._repo.add(row)
         return row, email_code, sms_code
@@ -921,7 +939,7 @@ class AuthService:
             check_id=row.id,
             purpose=row.purpose,
             method=row.method,
-            email_hint=mask_email(user.email) if row.method != "face" else None,
+            email_hint=mask_email(user.email) if row.method not in ("face", "kyc") else None,
             phone_hint=mask_phone(user.phone) if row.method == "sms_email" else None,
         )
 
@@ -1103,6 +1121,90 @@ class AuthService:
         now = self._now()
         row, user = await self._open_check(check_id, SIGN_IN_PURPOSES, now)
         await self._match_codes(row, user, now, email_code, sms_code)
+        return await self._finish_sign_in(row, user, device, now)
+
+    # --- ADR-104: the redo identity check at a new-phone log-in ---------------------------
+
+    async def kyc_start(self, check_id: uuid.UUID) -> str | None:
+        """Open the identity check Compliance asked for. Starting again counts as a try.
+
+        Returns Didit's page link (shown once, never stored), or None when the check is
+        already finished or being reviewed: the app then asks for the result.
+        """
+        now = self._now()
+        row, user = await self._open_check(check_id, frozenset({"login"}), now)
+        if row.method != "kyc" or row.completed_at is not None:
+            await self._db.rollback()
+            raise _invalid_code()
+        case = await latest_redo(self._db, user)
+        url: str | None = None
+        if case is None or case.status in ("pending_documents", "rejected", "expired"):
+            if row.kyc_case_id is not None:
+                row.attempts = min(row.attempts + 1, MAX_MFA_TRIES)
+            row_id, attempts = row.id, row.attempts
+            await self._db.commit()  # no transaction is held across the call to Didit
+            user = await self._repo.user_for_update(user.id) or user
+            try:
+                case, url = await start_redo(self._db, self._rt.kyc_provider, user, now)
+            except AppError:
+                await self._db.rollback()
+                raise
+            row = await self._repo.check(row_id) or row
+            row.attempts = attempts
+        row.kyc_case_id = case.id
+        await self._db.commit()
+        _logger.info("kyc_redo_check_started", extra={"user_id": str(user.id)})
+        return url
+
+    async def kyc_finish(self, check_id: uuid.UUID, device: DeviceInfo) -> SignedIn:
+        """Finish the log-in once the redo identity check is approved (fails closed)."""
+        now = self._now()
+        row, user = await self._open_check(check_id, frozenset({"login"}), now)
+        case = await self._db.get(KycCase, row.kyc_case_id) if row.kyc_case_id is not None else None
+        if row.method != "kyc" or case is None:
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_FACE_CHECK_NOT_STARTED",
+                "Please take the identity check first.",
+                status.HTTP_409_CONFLICT,
+            )
+        if (
+            case.user_id != user.id
+            or case.purpose != "redo"
+            or user.identity_redo_requested_at is None
+            or case.created_at < user.identity_redo_requested_at
+        ):
+            await self._db.rollback()
+            raise _invalid_code()
+        if case.status == "pending_documents":
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_FACE_CHECK_PENDING",
+                "Your identity check is not finished yet.",
+                status.HTTP_409_CONFLICT,
+            )
+        if case.status == "under_review":
+            await self._db.rollback()
+            raise _err(
+                "AUTH_409_KYC_IN_REVIEW",
+                "Our team is checking your identity check. We will email you when it's done.",
+                status.HTTP_409_CONFLICT,
+            )
+        if case.status != "approved":
+            row.kyc_case_id = None
+            raise await self._mfa_failure(
+                user,
+                now,
+                row,
+                _err(
+                    "AUTH_401_KYC_NOT_APPROVED",
+                    "Your identity check was not approved. Please try again or contact Support.",
+                    status.HTTP_401_UNAUTHORIZED,
+                ),
+            )
+        row.completed_at = now
+        user.identity_redo_requested_at, user.identity_redo_reason = None, None
+        self._mfa_success(user)
         return await self._finish_sign_in(row, user, device, now)
 
     async def face_finish(self, check_id: uuid.UUID, device: DeviceInfo) -> SignedIn:

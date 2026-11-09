@@ -1077,5 +1077,16 @@
  "The phone and email both match an account.": "O telefone e o e-mail correspondem a uma conta.",
  "The phone matches an account, but the email does not.": "O telefone corresponde a uma conta, mas o e-mail não.",
  "This request is closed.": "Este pedido está fechado.",
- "{{n}} messages": "{{n}} mensagens"
+ "{{n}} messages": "{{n}} mensagens",
+ "Ask for a new identity check": "Pedir uma nova verificação de identidade",
+ "Ask {{name}} for a new identity check?": "Pedir a {{name}} uma nova verificação de identidade?",
+ "Cancel new identity check": "Cancelar a nova verificação de identidade",
+ "Cancel the new identity check for {{name}}?": "Cancelar a nova verificação de identidade de {{name}}?",
+ "New identity check asked": "Nova verificação pedida",
+ "Their next log-in on a new phone asks for their ID document and a selfie instead of the face check. The same ID document counts at once; a different one waits for two of you to approve it. Never do this only because someone asked in a help request: follow the support procedure.": "O próximo início de sessão num telemóvel novo pedirá o documento de identificação e uma selfie em vez da verificação facial. O mesmo documento conta de imediato; um diferente aguarda a aprovação de duas pessoas da equipa. Nunca o faça só porque alguém o pediu num pedido de ajuda: siga o procedimento de suporte.",
+ "Their next log-in on a new phone uses the face check again.": "O próximo início de sessão num telemóvel novo volta a usar a verificação facial.",
+ "Yes, Ask": "Sim, pedir",
+ "Yes, Cancel It": "Sim, cancelar",
+ "{{name}} is back to the face check.": "{{name}} volta à verificação facial.",
+ "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} fará uma nova verificação de identidade no próximo início de sessão num telemóvel novo."
 }

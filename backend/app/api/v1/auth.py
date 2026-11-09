@@ -191,6 +191,29 @@ async def face_finish(
     return _signed_in(await service.face_finish(check_id, device))
 
 
+@router.post(
+    "/auth/checks/{check_id}/kyc",
+    response_model=FaceStartResponse,
+    tags=["auth"],
+    summary="Start the identity check Compliance asked for at this log-in (ADR-104)",
+)
+async def kyc_start(check_id: uuid.UUID, service: Service) -> FaceStartResponse:
+    return FaceStartResponse(url=await service.kyc_start(check_id))
+
+
+@router.post(
+    "/auth/checks/{check_id}/kyc/result",
+    response_model=TokenResponse,
+    tags=["auth"],
+    summary="Finish log-in once that identity check is approved (409 while it runs or is reviewed)",
+)
+async def kyc_finish(
+    check_id: uuid.UUID, body: DeviceRequest, request: Request, service: Service
+) -> TokenResponse:
+    device = device_info(request, body.device_id)
+    return _signed_in(await service.kyc_finish(check_id, device))
+
+
 @account_router.post(
     "/auth/step-up",
     response_model=StepUpResponse,

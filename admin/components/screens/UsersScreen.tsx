@@ -63,6 +63,9 @@ export function UsersScreen(): ReactElement {
   const [status, setStatus] = useState<'' | CustomerStatus>('');
   const [offset, setOffset] = useState(0);
   const [asking, setAsking] = useState<{ customer: Customer; action: CustomerAction } | null>(null);
+  // ADR-104: Compliance asks for (or cancels) a new identity check at the next new-phone log-in.
+  const [redo, setRedo] = useState<{ customer: Customer; cancel: boolean } | null>(null);
+  const canRedo = can('kyc.update');
   // A link from another screen (e.g. a fraud alert) can open the list already searched. The value
   // comes from the address bar: it is only ever used as search text (the server checks it).
   useEffect(() => {
@@ -121,11 +124,44 @@ export function UsersScreen(): ReactElement {
     }
   }
 
+  async function actRedo(reason: string): Promise<void> {
+    if (!redo) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      if (redo.cancel) await api.cancelIdentityRedo(redo.customer.id, reason);
+      else await api.requestIdentityRedo(redo.customer.id, reason);
+      setNotice(
+        redo.cancel
+          ? tr('{{name}} is back to the face check.', { name: nameOf(redo.customer) })
+          : tr('{{name}} will take a new identity check at the next log-in on a new phone.', { name: nameOf(redo.customer) }),
+      );
+      setRedo(null);
+      await load();
+    } catch (e) {
+      setActionError(messageFor(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const redoFor = (c: Customer): RowAction[] => {
+    if (!canRedo || c.kyc_status !== 'approved' || c.deletion?.state === 'deleted') return [];
+    const open = (cancel: boolean) => () => {
+      setActionError(null);
+      setNotice(null);
+      setRedo({ customer: c, cancel });
+    };
+    return c.identity_redo_requested_at
+      ? [{ label: tr('Cancel new identity check'), testId: `redo-cancel-${c.id}`, onSelect: open(true) }]
+      : [{ label: tr('Ask for a new identity check'), testId: `redo-${c.id}`, onSelect: open(false) }];
+  };
+
   const actionsFor = (c: Customer): RowAction[] => {
     const activity: RowAction[] = canActivity && !(c.deletion && c.email === null)
       ? [{ label: tr('View activity'), testId: `activity-${c.id}`, onSelect: () => window.location.assign(`/users/activity?id=${encodeURIComponent(c.id)}`) }]
       : [];
-    return [...activity, ...changesFor(c)];
+    return [...activity, ...redoFor(c), ...changesFor(c)];
   };
 
   const changesFor = (c: Customer): RowAction[] => {
@@ -164,8 +200,17 @@ export function UsersScreen(): ReactElement {
     { key: 'email', header: tr('E-MAIL ADDRESS'), render: (c) => c.email ?? '—' },
     { key: 'phone', header: tr('PHONE'), render: (c) => <span dir="ltr">{c.phone ?? '—'}</span> },
     { key: 'last', header: tr('LAST LOGIN'), render: (c) => when(c.last_login_at) },
-    { key: 'status', header: tr('STATUS'), render: (c) => <CustomerStatusChip status={c.status} deletion={c.deletion} /> },
-    ...(isSuper || canActivity
+    {
+      key: 'status',
+      header: tr('STATUS'),
+      render: (c) => (
+        <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+          <CustomerStatusChip status={c.status} deletion={c.deletion} />
+          {c.identity_redo_requested_at ? <StatusChip label={tr('New identity check asked')} tone="warning" /> : null}
+        </span>
+      ),
+    },
+    ...(isSuper || canActivity || canRedo
       ? [{ key: 'actions', header: tr('ACTION'), render: (c: Customer) => <RowMenu label={tr('Actions for {{name}}', { name: nameOf(c) })} actions={actionsFor(c)} testId={`menu-${c.id}`} /> }]
       : []),
   ];
@@ -244,6 +289,25 @@ export function UsersScreen(): ReactElement {
           </div>
         ) : null}
       </Panel>
+      {redo ? (
+        <ReasonDialog
+          title={
+            redo.cancel
+              ? tr('Cancel the new identity check for {{name}}?', { name: nameOf(redo.customer) })
+              : tr('Ask {{name}} for a new identity check?', { name: nameOf(redo.customer) })
+          }
+          description={
+            redo.cancel
+              ? tr('Their next log-in on a new phone uses the face check again.')
+              : tr('Their next log-in on a new phone asks for their ID document and a selfie instead of the face check. The same ID document counts at once; a different one waits for two of you to approve it. Never do this only because someone asked in a help request: follow the support procedure.')
+          }
+          confirm={redo.cancel ? tr('Yes, Cancel It') : tr('Yes, Ask')}
+          busy={busy}
+          error={actionError}
+          onCancel={() => setRedo(null)}
+          onConfirm={(reason) => void actRedo(reason)}
+        />
+      ) : null}
       {asking ? (
         <ReasonDialog
           title={tr(QUESTION[asking.action], { name: nameOf(asking.customer) })}

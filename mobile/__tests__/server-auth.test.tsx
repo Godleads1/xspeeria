@@ -180,6 +180,23 @@ describe('sign-in orchestration', () => {
     expect(session.get().signedIn).toBe(true);
   });
 
+  it('ADR-104: a new identity check Compliance asked for uses the kyc steps', async () => {
+    let done = false;
+    const s = useServer({
+      '/api/v1/auth/login': () => [200, check('login', 'kyc')],
+      '/api/v1/auth/checks/c1/kyc': () => [200, { url: 'https://verify.didit.me/s/2' }],
+      '/api/v1/auth/checks/c1/kyc/result': () =>
+        done ? [200, TOKENS] : err('AUTH_409_KYC_IN_REVIEW', 409, 'Our team is checking your identity check.'),
+    });
+    await serverAuth.login(ME.phone, '482613', T0);
+    await expect(serverAuth.faceStart()).resolves.toBe('https://verify.didit.me/s/2');
+    await expect(serverAuth.faceFinish(T0)).rejects.toMatchObject({ code: 'AUTH_409_KYC_IN_REVIEW' });
+    expect(serverAuth.hasCheck()).toBe(true);
+    done = true;
+    await expect(serverAuth.faceFinish(T0)).resolves.toBe('signedIn');
+    expect(s.calls.some((c) => c.path.endsWith('/face') || c.path.endsWith('/face/result'))).toBe(false);
+  });
+
   it('with no open check, the check calls fail cleanly', async () => {
     useServer({});
     await expect(serverAuth.checkCodes('123456', null, T0)).rejects.toMatchObject({ status: 410 });
@@ -410,6 +427,21 @@ describe('server-mode screens', () => {
     await fireEvent.press(screen.getByTestId('check-face'));
     await act(async () => undefined);
     expect(onDone).toHaveBeenCalledWith('signedIn');
+  });
+
+  it('check screen (kyc): asks for the ID, no code fields', async () => {
+    const faceStart = jest.fn(async () => 'https://verify.didit.me/s/2');
+    const openUrl = jest.fn(async () => undefined);
+    await render(
+      <CheckScreen check={check('login', 'kyc') as never} codes={jest.fn()} faceStart={faceStart} faceFinish={jest.fn()} openUrl={openUrl} onDone={jest.fn()} onRestart={jest.fn()} />,
+    );
+    expect(screen.queryByTestId('check-email')).toBeNull();
+    expect(screen.getByTestId('check-text')).toHaveTextContent(/new identity check/);
+    expect(screen.getByText('Start identity check')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await act(async () => undefined);
+    expect(openUrl).toHaveBeenCalledWith('https://verify.didit.me/s/2');
+    expect(screen.getByText('I’ve finished the identity check')).toBeTruthy();
   });
 
   it('check screen (face, local developer check): no page, straight to the result', async () => {

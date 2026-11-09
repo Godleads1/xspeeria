@@ -28,6 +28,7 @@ __all__ = [
     "KYC_STATUSES",
     "KYC_TRANSITIONS",
     "MIN_AGE",
+    "REDO_NEW_DOCUMENT",
     "REVIEW_REASONS",
     "Outcome",
     "age_on",
@@ -62,7 +63,10 @@ DUPLICATE_IDENTITY = "DUPLICATE_IDENTITY"
 CHECKS_INCOMPLETE = "CHECKS_INCOMPLETE"
 #: ADR-042: a second country's check does not match the identity already on the account.
 IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
-REVIEW_REASONS = (DUPLICATE_IDENTITY, CHECKS_INCOMPLETE, IDENTITY_MISMATCH)
+#: ADR-104: a redo identity check on a different ID document than the approved one: Compliance
+#: compares the two before it counts (owner 2026-11-09: "Same ID, else staff").
+REDO_NEW_DOCUMENT = "REDO_NEW_DOCUMENT"
+REVIEW_REASONS = (DUPLICATE_IDENTITY, CHECKS_INCOMPLETE, IDENTITY_MISMATCH, REDO_NEW_DOCUMENT)
 
 #: ADR-042/043: countries a user can be verified in (MVP corridors), ISO alpha-2 → the
 #: alpha-3 code Didit reports as the ID's ``issuing_state``, and the name shown to users.

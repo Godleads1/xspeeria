@@ -12,6 +12,7 @@ from datetime import timedelta
 __all__ = [
     "ACCESS_TOKEN_TTL",
     "ENROL_CHALLENGE_TTL",
+    "KYC_REDO_CHECK_TTL",
     "LOGIN_CHALLENGE_TTL",
     "MAX_MFA_TRIES",
     "MFA_LOCK",
@@ -75,6 +76,9 @@ STEP_UP_TTL = timedelta(minutes=5)  # one action, within 5 minutes (2026-10-18)
 PAYOUT_HOLD = timedelta(0)
 #: ADR-054 — the second check after the PIN (email/SMS codes or a face check).
 CHECK_CODE_TTL = timedelta(minutes=10)  # same as the SMS code expiry (ADR-024)
+#: ADR-104: one log-in's wait for a redo identity check (chosen while building). The check
+#: itself is kept on the account, so a later log-in can still use it.
+KYC_REDO_CHECK_TTL = timedelta(hours=1)
 FACE_CHECK_TTL = timedelta(minutes=15)  # time to take the selfie in the provider's page
 #: Checks started per account (each may send an SMS, an email or cost a face check).
 CHECKS_PER_HOUR = 5

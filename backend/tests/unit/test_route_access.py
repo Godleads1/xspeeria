@@ -33,6 +33,8 @@ PUBLIC_ROUTES = {
     ("POST", "/api/v1/auth/checks/{check_id}/codes"): "needs the emailed/SMS codes for that check",
     ("POST", "/api/v1/auth/checks/{check_id}/face"): "starts the face check for that check",
     ("POST", "/api/v1/auth/checks/{check_id}/face/result"): "finishes the face check",
+    ("POST", "/api/v1/auth/checks/{check_id}/kyc"): "starts the redo identity check (ADR-104)",
+    ("POST", "/api/v1/auth/checks/{check_id}/kyc/result"): "finishes the redo identity check",
     ("POST", "/api/v1/auth/refresh"): "needs a valid refresh token",
     ("POST", "/api/v1/auth/pin-reset/start"): "same answer whether the account exists",
     ("POST", "/api/v1/auth/pin-reset/verify"): "needs the reset code",

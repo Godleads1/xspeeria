@@ -18,7 +18,8 @@ export interface Check {
   check_required: true;
   check_id: string;
   purpose: 'signup' | 'login' | 'step_up' | 'pin_reset';
-  method: 'email' | 'sms_email' | 'face';
+  /** `kyc`: a new identity check Compliance asked for, instead of the face check (ADR-104). */
+  method: 'email' | 'sms_email' | 'face' | 'kyc';
   email_hint: string | null;
   phone_hint: string | null;
 }
@@ -89,6 +90,15 @@ export const authApi = {
   /** Log-in: the face check result (409 while it is still running). */
   faceResult: (checkId: string, x: Extra = {}) =>
     apiRequest<Tokens>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/face/result`, {
+      body: {},
+      ...x,
+    }),
+  /** ADR-104 log-in: open the identity check Compliance asked for (null: already finished). */
+  kycStart: (checkId: string, x: Extra = {}) =>
+    apiRequest<{ url: string | null }>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/kyc`, x),
+  /** ADR-104 log-in: its result (409 while it runs or our team reviews it). */
+  kycResult: (checkId: string, x: Extra = {}) =>
+    apiRequest<Tokens>('POST', `/api/v1/auth/checks/${encodeURIComponent(checkId)}/kyc/result`, {
       body: {},
       ...x,
     }),

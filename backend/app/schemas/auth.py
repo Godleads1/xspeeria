@@ -89,12 +89,13 @@ _CODE = r"^[0-9]{6}$"
 
 class CheckResponse(BaseModel):
     """ADR-054: the second check still needed. ``method``: ``email`` (a code to the email),
-    ``sms_email`` (an SMS code and an email code) or ``face`` (a face check)."""
+    ``sms_email`` (an SMS code and an email code), ``face`` (a face check) or ``kyc`` (a new
+    identity check Compliance asked for, ADR-104)."""
 
     check_required: Literal[True] = True
     check_id: uuid.UUID
     purpose: Literal["signup", "login", "step_up", "pin_reset"]
-    method: Literal["email", "sms_email", "face"]
+    method: Literal["email", "sms_email", "face", "kyc"]
     #: Masked, for the screen ("d***@example.com", "***3838").
     email_hint: str | None = None
     phone_hint: str | None = None

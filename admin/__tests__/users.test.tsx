@@ -92,6 +92,39 @@ describe('users', () => {
     expect(await within(screen.getByTestId('reason-dialog')).findByRole('alert')).toHaveTextContent(/can't be changed/);
   });
 
+  // ADR-104: Compliance asks for a new identity check at the next new-phone log-in.
+  it('Compliance asks for a new identity check, and can cancel it', async () => {
+    const requestIdentityRedo = vi.fn(async () => ({ id: 'u-1' }));
+    const cancelIdentityRedo = vi.fn(async () => ({ id: 'u-1' }));
+    const asked = { ...ADA, identity_redo_requested_at: '2026-11-09T10:00:00Z' };
+    const listCustomers = vi
+      .fn()
+      .mockResolvedValueOnce({ total: 2, items: [ADA, EVE] })
+      .mockResolvedValue({ total: 2, items: [asked, EVE] });
+    await show(me('compliance_officer', ['users.read', 'kyc.update']), { requestIdentityRedo, cancelIdentityRedo, listCustomers });
+    // Only a customer with an approved identity check can be asked; no Super Admin actions.
+    fireEvent.click(screen.getByTestId('menu-u-1'));
+    expect(screen.queryByTestId('suspend-u-1')).toBeNull();
+    fireEvent.click(screen.getByTestId('redo-u-1'));
+    expect(within(screen.getByTestId('reason-dialog')).getByText(/a different one waits for two of you/)).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('reason'), { target: { value: 'Face check fails, customer called' } });
+    fireEvent.click(screen.getByTestId('reason-confirm'));
+    expect(await screen.findByText(/will take a new identity check/)).toBeInTheDocument();
+    expect(requestIdentityRedo).toHaveBeenCalledWith('u-1', 'Face check fails, customer called');
+    expect(await screen.findByText('New identity check asked')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('menu-u-1'));
+    fireEvent.click(screen.getByTestId('redo-cancel-u-1'));
+    fireEvent.change(screen.getByTestId('reason'), { target: { value: 'Customer passed the face check' } });
+    fireEvent.click(screen.getByTestId('reason-confirm'));
+    await waitFor(() => expect(cancelIdentityRedo).toHaveBeenCalledWith('u-1', 'Customer passed the face check'));
+  });
+
+  it('staff without kyc.update are not offered it', async () => {
+    await show(me('super_admin', ['users.read']));
+    fireEvent.click(screen.getByTestId('menu-u-1'));
+    expect(screen.queryByTestId('redo-u-1')).toBeNull();
+  });
+
   // ADR-095 / DEC-106: an account the customer is deleting; its details are for Compliance only.
   it('labels a deleted account and shows no details to staff outside Compliance', async () => {
     const GONE: Customer = {

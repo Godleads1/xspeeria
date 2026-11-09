@@ -1474,5 +1474,10 @@
  "Start a new request": "发起新请求",
  "Tell us what went wrong": "请告诉我们出了什么问题",
  "This request is closed. Send a new one if you still need help.": "此请求已关闭。如仍需帮助，请发送新的请求。",
- "What went wrong?": "出了什么问题？"
+ "What went wrong?": "出了什么问题？",
+ "Our team asked for a new identity check. Have your ID document ready, then take a selfie.": "我们的团队需要您重新进行身份验证。请准备好身份证件，然后自拍。",
+ "I’ve finished the identity check": "我已完成身份验证",
+ "Start identity check": "开始身份验证",
+ "Open the identity check again": "再次打开身份验证",
+ "Confirm it’s you with your ID": "使用证件确认是您本人"
 }

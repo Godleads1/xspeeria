@@ -1474,5 +1474,10 @@
  "Start a new request": "بدء طلب جديد",
  "Tell us what went wrong": "أخبرنا بما حدث من خطأ",
  "This request is closed. Send a new one if you still need help.": "هذا الطلب مغلق. أرسل طلبًا جديدًا إذا كنت لا تزال بحاجة إلى المساعدة.",
- "What went wrong?": "ما الذي حدث؟"
+ "What went wrong?": "ما الذي حدث؟",
+ "Our team asked for a new identity check. Have your ID document ready, then take a selfie.": "طلب فريقنا تحققًا جديدًا من الهوية. جهّز وثيقة هويتك، ثم التقط صورة ذاتية.",
+ "I’ve finished the identity check": "أنهيت التحقق من الهوية",
+ "Start identity check": "بدء التحقق من الهوية",
+ "Open the identity check again": "افتح التحقق من الهوية مرة أخرى",
+ "Confirm it’s you with your ID": "أكّد أنك أنت باستخدام هويتك"
 }

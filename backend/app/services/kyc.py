@@ -28,7 +28,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import status
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,6 +50,7 @@ from app.domain.kyc_rules import (
 from app.models.kyc import KycCase, KycWebhookEvent
 from app.providers.didit import KycProviderError, KycSessionProvider, verify_signature
 from app.services.auth import Principal
+from app.services.identity_redo import finish_redo, same_document
 from app.services.notifications import notify
 
 __all__ = ["KycService", "WebhookResult", "case_view"]
@@ -148,7 +149,12 @@ class KycService:
     async def _latest(self, user_id: uuid.UUID, country: str) -> KycCase | None:
         case: KycCase | None = await self._db.scalar(
             select(KycCase)
-            .where(KycCase.user_id == user_id, KycCase.country == country)
+            .where(
+                KycCase.user_id == user_id,
+                KycCase.country == country,
+                # ADR-104: an unfinished redo check doesn't replace the approved one here.
+                or_(KycCase.purpose == "standard", KycCase.status == "approved"),
+            )
             .order_by(KycCase.created_at.desc())
             .limit(1)
         )
@@ -422,6 +428,14 @@ class KycService:
                 outcome, key = await self._one_account(case, outcome, decision)
             if outcome is not None and outcome.status == "approved":
                 outcome = await self._same_person(case, outcome)
+            if outcome is not None and outcome.status == "approved" and case.purpose == "redo":
+                outcome = await same_document(
+                    self._db,
+                    case,
+                    outcome,
+                    self._identity_secret,
+                    self._identity_secret_previous,
+                )
             if key is not None and case.identity_key is None and outcome is not None:
                 if outcome.status in ("approved", "under_review"):
                     case.identity_key = key
@@ -442,6 +456,8 @@ class KycService:
             elif (case.status, outcome.status) not in KYC_TRANSITIONS:
                 verdict = "IGNORED_STALE"
             else:
+                if outcome.status == "approved" and case.purpose == "redo":
+                    await finish_redo(self._db, case, now)
                 case.status = outcome.status
                 case.provider_status = provider_status[:32]
                 case.updated_at = now
