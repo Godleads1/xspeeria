@@ -21,7 +21,7 @@ import { FieldInput, OutlinedField } from '../market/controls';
 import { CheckFields } from '../security/CheckFields';
 import { normalisePhone } from '../profile/verification';
 import type { PinSource } from './serverPin';
-import { AuthTop, Heading, PhoneInput, fullPhone } from './ui';
+import { AuthTop, Heading, PhoneCountrySheet, PhoneInput, fullPhone, type PhoneCountry } from './ui';
 import { tr } from "../../i18n";
 
 type Step = 'phone' | 'reset' | 'check' | 'done';
@@ -42,6 +42,8 @@ export function ServerForgotScreen({
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState<PhoneCountry>('NG');
+  const [picker, setPicker] = useState(false);
   const [e164, setE164] = useState<string | null>(null);
   const [sms, setSms] = useState('');
   const [check, setCheck] = useState<Check | null>(null);
@@ -63,7 +65,7 @@ export function ServerForgotScreen({
   };
 
   const sendCode = (): void => {
-    const n = normalisePhone(fullPhone('NG', phone));
+    const n = normalisePhone(fullPhone(country, phone));
     if (!n) return setError(tr("Enter a valid phone number"));
     void run(async () => {
       await source.resetStart(n);
@@ -129,7 +131,8 @@ export function ServerForgotScreen({
           <>
             <Heading title={tr("Forgot PIN")} body={tr("Enter the phone number on your Xspeeria account. We will text you a code.")} />
             <OutlinedField label={tr("Phone Number")} invalid={Boolean(error)}>
-              <PhoneInput testID="forgot-phone" country="NG" value={phone} onChange={setPhone} />
+              <PhoneInput testID="forgot-phone" country={country} value={phone} onChange={setPhone} onPickCountry={() => setPicker(true)} />
+              <PhoneCountrySheet testID="forgot-country" visible={picker} onClose={() => setPicker(false)} onPick={setCountry} />
             </OutlinedField>
           </>
         ) : step === 'reset' ? (

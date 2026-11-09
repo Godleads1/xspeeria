@@ -34,7 +34,7 @@ import { DEMO_MODE, DEMO_NIN_RECORD } from './demo';
 import { detectCountry } from './location';
 import { PIN_LENGTH, pinProblem, sameSecret } from './pin';
 import { signup, useSignup } from './signupStore';
-import { AuthTop, CheckRow, DemoNote, GhostButton, Heading, PhoneInput, PinPad, fullPhone } from './ui';
+import { AuthTop, CheckRow, DemoNote, GhostButton, Heading, PhoneCountrySheet, PhoneInput, PinPad, fullPhone, type PhoneCountry } from './ui';
 import { trRich } from "../../i18n/rich";
 import { tr, k } from "../../i18n";
 
@@ -88,13 +88,18 @@ export function GetStartedScreen({
     };
   }, [detect]);
   const [local, setLocal] = useState('');
+  // Owner, 2026-11-09: people in the US and Canada sign up with their +1 numbers.
+  const [country, setCountry] = useState<PhoneCountry>('NG');
+  const [picker, setPicker] = useState(false);
   const [aml, setAml] = useState(false);
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const phone = normalisePhone(fullPhone('NG', local));
+  const phone = normalisePhone(fullPhone(country, local));
 
   const next = (): void => {
-    if (!phone) return setError(tr("Enter the 10-digit number linked to your NIN"));
+    if (!phone) {
+      return setError(country === 'NG' ? tr("Enter the 10-digit number linked to your NIN") : tr("Enter a valid phone number"));
+    }
     signup.update({ phone });
     onNext();
   };
@@ -114,9 +119,16 @@ export function GetStartedScreen({
         title={tr("Let’s get started")}
         body={tr("We require your National Identification Number (NIN) to verify your identity in compliance with regulatory and Anti-Money Laundering (AML) requirements. This helps ensure a secure and trusted platform for all users.")}
       />
-      <OutlinedField label={tr("Enter Phone Number linked to NIN *")} invalid={Boolean(error)}>
-        <PhoneInput testID="signup-phone" country="NG" value={local} onChange={(t) => { setLocal(t); setError(null); }} />
+      <OutlinedField label={country === 'NG' ? tr("Enter Phone Number linked to NIN *") : tr("Enter your phone number *")} invalid={Boolean(error)}>
+        <PhoneInput
+          testID="signup-phone"
+          country={country}
+          value={local}
+          onChange={(t) => { setLocal(t); setError(null); }}
+          onPickCountry={() => setPicker(true)}
+        />
       </OutlinedField>
+      <PhoneCountrySheet testID="signup-country" visible={picker} onClose={() => setPicker(false)} onPick={(c) => { setCountry(c); setError(null); }} />
       {error ? <Text testID="signup-start-error" style={styles.error}>{error}</Text> : null}
       <CheckRow testID="signup-consent-aml" checked={aml} onToggle={() => setAml((v) => !v)}>{tr("By continuing, you consent to Xspeeria conducting necessary Anti-Money Laundering (AML) checks in accordance with regulatory requirements. These checks help us maintain a safe and compliant platform for all users.")}</CheckRow>
       <CheckRow testID="signup-consent-terms" checked={terms} onToggle={() => setTerms((v) => !v)}>{trRich("By checking this box, you agree to our <1>Terms & Conditions</1> of service and <2>Privacy Notice</2> including verification of your identity through a third party and your mobile service provider", {}, {

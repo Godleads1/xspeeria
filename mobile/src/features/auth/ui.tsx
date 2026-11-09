@@ -7,9 +7,10 @@ import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { DEMO_MODE } from './demo';
-import { tr, useLanguage } from "../../i18n";
+import { k, tr, useLanguage } from "../../i18n";
 import { MenuIcon } from '../../components/menuIcons';
 import { LanguageSheet, currentLanguageName } from '../profile/LanguageSheet';
+import { ActionSheet } from '../market/controls';
 
 /** "← Previous" (optional), the English language chip, and step bars (optional). */
 export function AuthTop({ onBack, step, steps = 3 }: { onBack?: () => void; step?: number; steps?: number }): ReactElement {
@@ -89,6 +90,63 @@ export function GhostButton({ label, onPress, testID }: { label: string; onPress
   );
 }
 
+/**
+ * Countries a phone number can be entered for: the launch corridors (ADR-043, ADR-100).
+ * The US and Canada share +1 (owner, 2026-11-09: sign-up with +1 numbers). The server checks
+ * the full number again (E.164).
+ */
+export type PhoneCountry = 'NG' | 'GB' | 'US' | 'CA';
+export const PHONE_COUNTRIES: readonly { key: PhoneCountry; label: string; code: string; flag: string }[] = [
+  { key: 'NG', label: 'Nigeria', code: '+234', flag: 'NGN' },
+  { key: 'GB', label: k('United Kingdom'), code: '+44', flag: 'GBP' },
+  { key: 'US', label: k('United States'), code: '+1', flag: 'USD' },
+  { key: 'CA', label: k('Canada'), code: '+1', flag: 'CAD' },
+];
+const DIAL: Record<PhoneCountry, { code: string; flag: string }> = {
+  NG: { code: '+234', flag: 'NGN' },
+  GB: { code: '+44', flag: 'GBP' },
+  US: { code: '+1', flag: 'USD' },
+  CA: { code: '+1', flag: 'CAD' },
+};
+
+/** The country and local part of a saved full number (+1 is shown as the US). */
+export function splitPhone(full: string): { country: PhoneCountry; local: string } {
+  if (full.startsWith('+234')) return { country: 'NG', local: full.slice(4) };
+  if (full.startsWith('+44')) return { country: 'GB', local: full.slice(3) };
+  if (full.startsWith('+1')) return { country: 'US', local: full.slice(2) };
+  return { country: 'NG', local: full.replace(/^\+/, '') };
+}
+
+/** Bottom sheet to choose the dialling code. */
+export function PhoneCountrySheet({
+  visible,
+  onClose,
+  onPick,
+  testID,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onPick: (c: PhoneCountry) => void;
+  testID: string;
+}): ReactElement {
+  return (
+    <ActionSheet
+      testID={testID}
+      visible={visible}
+      onClose={onClose}
+      actions={PHONE_COUNTRIES.map((c) => ({
+        key: c.key,
+        label: tr(c.label),
+        hint: c.code,
+        onPress: () => {
+          onPick(c.key);
+          onClose();
+        },
+      }))}
+    />
+  );
+}
+
 /** Flag + dialling code + number. `country` decides the flag and prefix. */
 export function PhoneInput({
   country,
@@ -97,13 +155,13 @@ export function PhoneInput({
   onPickCountry,
   testID,
 }: {
-  country: 'NG' | 'GB';
+  country: PhoneCountry;
   value: string;
   onChange: (t: string) => void;
   onPickCountry?: () => void;
   testID: string;
 }): ReactElement {
-  const code = country === 'NG' ? '+234' : '+44';
+  const { code, flag } = DIAL[country];
   return (
     <View style={styles.phone}>
       <Pressable
@@ -114,7 +172,7 @@ export function PhoneInput({
         onPress={onPickCountry}
         style={styles.country}
       >
-        <RoundFlag code={country === 'NG' ? 'NGN' : 'GBP'} size={22} />
+        <RoundFlag code={flag} size={22} />
         {onPickCountry ? <Icon name="caret" color={color.text.secondary} size={12} /> : null}
         <Text style={styles.code}>{code}</Text>
       </Pressable>
@@ -134,10 +192,11 @@ export function PhoneInput({
   );
 }
 
-/** Builds +CC number from the parts. */
-export function fullPhone(country: 'NG' | 'GB', local: string): string {
-  const digits = local.replace(/\D/g, '').replace(/^0/, '');
-  return `${country === 'NG' ? '+234' : '+44'}${digits}`;
+/** Builds +CC number from the parts: drops the trunk 0 (NG, GB) or a typed leading 1 (+1). */
+export function fullPhone(country: PhoneCountry, local: string): string {
+  const raw = local.replace(/\D/g, '');
+  const digits = DIAL[country].code === '+1' ? raw.replace(/^1(?=\d{10}$)/, '') : raw.replace(/^0/, '');
+  return `${DIAL[country].code}${digits}`;
 }
 
 /** Visible on every simulated step while DEMO_MODE is on. */

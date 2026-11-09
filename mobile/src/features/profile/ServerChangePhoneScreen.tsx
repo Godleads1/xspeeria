@@ -12,7 +12,7 @@ import { messageFor } from '../../api/client';
 import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
-import { PhoneInput, fullPhone } from '../auth/ui';
+import { PhoneCountrySheet, PhoneInput, fullPhone, type PhoneCountry } from '../auth/ui';
 import { FieldInput, OutlinedField } from '../market/controls';
 import { ServerConfirm } from '../security/ServerConfirm';
 import type { ConfirmIdentity } from '../security/serverConfirm';
@@ -39,6 +39,8 @@ export function ServerChangePhoneScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const [raw, setRaw] = useState('');
+  const [country, setCountry] = useState<PhoneCountry>('NG');
+  const [picker, setPicker] = useState(false);
   const [phone, setPhone] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [sent, setSent] = useState(false);
@@ -47,8 +49,8 @@ export function ServerChangePhoneScreen({
   const [error, setError] = useState<string | null>(null);
 
   const next = (): void => {
-    const n = normalisePhone(fullPhone('NG', raw));
-    if (!n) return setError(tr("Enter the full number with country code, e.g. +234 803 000 0000"));
+    const n = normalisePhone(fullPhone(country, raw));
+    if (!n) return setError(tr("Enter a valid phone number"));
     setError(null);
     setPhone(n);
     setAsking(true);
@@ -87,7 +89,8 @@ export function ServerChangePhoneScreen({
           <>
             <Text style={styles.text}>{tr("We will text a 6-digit code to the new number to confirm it is yours.")}</Text>
             <OutlinedField label={tr("New phone number")} invalid={Boolean(error)}>
-              <PhoneInput testID="change-phone-input" country="NG" value={raw} onChange={setRaw} />
+              <PhoneInput testID="change-phone-input" country={country} value={raw} onChange={setRaw} onPickCountry={() => setPicker(true)} />
+              <PhoneCountrySheet testID="change-phone-country" visible={picker} onClose={() => setPicker(false)} onPick={setCountry} />
             </OutlinedField>
           </>
         ) : (

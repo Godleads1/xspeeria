@@ -1462,5 +1462,6 @@
  "Transit number is 5 digits.": "分行编号为 5 位数字。",
  "Institution and transit numbers are only used for CAD.": "机构编号和分行编号仅用于加元账户。",
  "Only the bank name, institution, transit and account numbers are needed for CAD.": "加元账户只需填写银行名称、机构编号、分行编号和账号。",
- "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "收款账户目前可以是 NGN、USD、GBP、EUR 或 CAD。"
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "收款账户目前可以是 NGN、USD、GBP、EUR 或 CAD。",
+ "Enter your phone number *": "请输入您的电话号码 *"
 }

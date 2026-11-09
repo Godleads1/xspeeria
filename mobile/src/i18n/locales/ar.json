@@ -1462,5 +1462,6 @@
  "Transit number is 5 digits.": "رقم الفرع مكوّن من 5 أرقام.",
  "Institution and transit numbers are only used for CAD.": "رقما المؤسسة والفرع يُستخدمان لحسابات CAD فقط.",
  "Only the bank name, institution, transit and account numbers are needed for CAD.": "لحسابات CAD يلزم اسم البنك وأرقام المؤسسة والفرع والحساب فقط.",
- "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR أو CAD."
+ "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR أو CAD.",
+ "Enter your phone number *": "أدخل رقم هاتفك *"
 }
