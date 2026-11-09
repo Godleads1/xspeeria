@@ -113,7 +113,7 @@ async def partners(db_settings: Settings, clean: None) -> None:
     engine = build_engine(db_settings)
     try:
         async with engine.begin() as conn:
-            assert len(await ensure_pretend_partners(conn)) == 3
+            assert len(await ensure_pretend_partners(conn)) == 4  # NG, GB, US and CA (ADR-100)
             assert await ensure_pretend_partners(conn) == []  # insert-only, repeat-safe
     finally:
         await engine.dispose()
