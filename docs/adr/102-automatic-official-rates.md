@@ -19,7 +19,7 @@
 | **Ceiling in force** | For each currency, the **latest stored rate, if fetched in the last 3 days**. |
 | **If it fails** | The last good rate is kept. **After 3 days without a fresh one**, that currency has no ceiling: new offers in it are refused and none are listed (fail closed) until a fetch works again. One currency failing never stops the others. A failed fetch fails the "Official rates" background job, which raises the existing **"background job failing"** operations alert (ADR-074), so staff are told. |
 | **Before the first fetch** | The reviewed snapshot (ADR-020, ADR-101) applies until the feed has stored its first rate. This covers a developer's computer, tests, or the feed switched off. |
-| **Switch** | `OFFICIAL_RATE_FEED=frankfurter` turns it on; the default is `off`. It runs with the background jobs (the worker, or the web server when `RUN_BACKGROUND_JOBS=true`). **Production must set it.** |
+| **Switch** | `OFFICIAL_RATE_FEED=frankfurter` turns it on; the default is `off` (developer computers). It runs with the background jobs (the worker, or the web server when `RUN_BACKGROUND_JOBS=true`). **Production refuses to start without it** (owner, 2026-11-09: "turn it now"; there is no production server yet). |
 | **Parsing** | Exact decimals, never floats. The server refuses anything unexpected: wrong currency, a missing, zero or negative rate, more than 6 decimal places or 6 integer digits, a date in the future, or a response it can't read. |
 
 ## The app

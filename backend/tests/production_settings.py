@@ -10,4 +10,6 @@ PRODUCTION_KEYS: dict[str, object] = {
     "staff_key_origin": "https://admin.xspeeria.test",
     # ADR-084: the "this wasn't me" link in security emails.
     "public_api_url": "https://api.xspeeria.test",
+    # ADR-102: rate ceilings come from the automatic CBN feed.
+    "official_rate_feed": "frankfurter",
 }
