@@ -241,6 +241,13 @@ class Settings(BaseSettings):
     public_api_url: str = "http://localhost:8000"
     #: ADR-084: how often security notice emails are sent (seconds; 0 = off).
     security_notice_seconds: int = 10
+    #: ADR-102 (owner 2026-11-09): fetch the CBN's USD, GBP and EUR rates automatically.
+    #: "frankfurter": through the free Frankfurter API (no key). "off": use the reviewed
+    #: snapshot in offer_rules. Once a rate has been stored, ceilings come from the stored
+    #: rates, and a currency with none fetched in 3 days takes no new offers.
+    official_rate_feed: Literal["off", "frankfurter"] = "off"
+    #: ADR-102: how often the rates are fetched (seconds). The CBN publishes once a business day.
+    official_rate_seconds: int = Field(default=3600, ge=60)
 
     @field_validator("database_url")
     @classmethod
