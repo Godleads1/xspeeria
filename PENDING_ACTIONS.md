@@ -68,7 +68,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **Decide who clears held identity checks** — done 27 Oct 2026: two staff members approve, one can reject (ADR-069).
 - [x] **App screens for the identity check** — *Build* — done 19 Oct 2026 for development builds (ADR-040).
 - [x] **Test Didit end to end** — *You + Build*: done 2026-10-19 (web build + tunnel); results signed, received (200) and applied; found one person verified on two accounts → ADR-041.
-- [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
+- [ ] **Lawyer & partner-bank brief** — drafted 9 Nov 2026 (Claude Doc "Xspeeria: brief for the lawyer and the partner bank"). *You*: review and send.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 
@@ -101,7 +101,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Secret manager** (key rotation tools are built: ADR-076, PR #95) for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [x] **Database row-level security** as a second layer of permission checks — built (ADR-078, PR #96). At deployment: the app's database login must not be a superuser or have `BYPASSRLS`.
 - [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
-- [ ] **Support's procedure** for a customer who can't pass the face check (lost phone, changed appearance) — *Build drafts, You approve*. (ADR-054)
+- [ ] **Support's procedure** for a customer who can't pass the face check — drafted 9 Nov 2026 (Claude Doc "Support procedure: customer can't pass the face check"). *You*: approve, and decide how a locked-out customer reaches Support and whether to build a "redo your identity check" button. (ADR-054)
 - [x] **Email address verification** — built: sign-up needs the email code before any session (ADR-054). A real email provider is still needed (§2). (Checked 2026-10-27.)
 - [x] **Step-up on sensitive actions** — built: payout accounts, choosing payouts, taking offers, PIN and contact changes (`STEP_UP_ACTIONS`). The 24-hour hold was removed by the owner (DEC-044). (Checked 2026-10-27.)
 - [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
