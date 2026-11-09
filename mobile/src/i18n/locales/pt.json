@@ -1474,5 +1474,10 @@
  "Start a new request": "Novo pedido",
  "Tell us what went wrong": "Conte-nos o que correu mal",
  "This request is closed. Send a new one if you still need help.": "Este pedido está fechado. Envie um novo se ainda precisar de ajuda.",
- "What went wrong?": "O que correu mal?"
+ "What went wrong?": "O que correu mal?",
+ "Our team asked for a new identity check. Have your ID document ready, then take a selfie.": "A nossa equipa pediu uma nova verificação de identidade. Tenha o seu documento de identificação à mão e depois tire uma selfie.",
+ "I’ve finished the identity check": "Terminei a verificação de identidade",
+ "Start identity check": "Iniciar verificação de identidade",
+ "Open the identity check again": "Abrir novamente a verificação de identidade",
+ "Confirm it’s you with your ID": "Confirme que é você com o seu documento"
 }

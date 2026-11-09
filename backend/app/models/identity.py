@@ -68,6 +68,10 @@ class User(Base):
             "deletion_requested_at IS NULL OR status = 'closed'", name="deletion_only_when_closed"
         ),
         CheckConstraint(
+            "(identity_redo_requested_at IS NULL) = (identity_redo_reason IS NULL)",
+            name="identity_redo_reason_with_request",
+        ),
+        CheckConstraint(
             "deleted_at IS NULL OR (deletion_requested_at IS NOT NULL "
             "AND deleted_at >= deletion_requested_at)",
             name="deleted_after_request",
@@ -118,6 +122,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     #: ADR-095: the customer asked to delete the account (restorable for 14 days).
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ADR-104: Compliance asked for a new identity check; the next new-phone log-in takes one
+    #: instead of the face check. Cleared when the new check is approved.
+    identity_redo_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    identity_redo_reason: Mapped[str | None] = mapped_column(String(500))
     #: ADR-095: the 14 days passed and the data with no legal reason to keep was removed.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -375,7 +383,12 @@ class VerificationCheck(Base):
         CheckConstraint(
             "purpose IN ('signup', 'login', 'step_up', 'pin_reset')", name="purpose_allowed"
         ),
-        CheckConstraint("method IN ('email', 'sms_email', 'face')", name="method_allowed"),
+        CheckConstraint("method IN ('email', 'sms_email', 'face', 'kyc')", name="method_allowed"),
+        CheckConstraint("kyc_case_id IS NULL OR method = 'kyc'", name="kyc_case_only_for_kyc"),
+        CheckConstraint(
+            "method <> 'kyc' OR (email_code_digest IS NULL AND sms_code_digest IS NULL)",
+            name="kyc_has_no_codes",
+        ),
         CheckConstraint("attempts BETWEEN 0 AND 5", name="attempts_range"),
         CheckConstraint("expires_at > created_at", name="expires_after_created"),
         CheckConstraint(
@@ -408,6 +421,10 @@ class VerificationCheck(Base):
     sms_code_digest: Mapped[str | None] = mapped_column(CHAR(64))
     face_session_id: Mapped[str | None] = mapped_column(String(64))
     face_result: Mapped[str | None] = mapped_column(String(10))
+    #: ADR-104: method ``kyc`` only — the redo identity check this log-in waits for.
+    kyc_case_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kyc_cases.id", ondelete="RESTRICT")
+    )
     device_id: Mapped[str | None] = mapped_column(String(128))
     user_agent: Mapped[str | None] = mapped_column(String(256))
     ip_address: Mapped[str | None] = mapped_column(String(45))

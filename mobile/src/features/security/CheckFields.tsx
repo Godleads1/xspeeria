@@ -3,7 +3,9 @@
  * "Confirm it's you" sheet:
  * - `email`: the 6-digit code sent to the account email;
  * - `sms_email`: a code by SMS and a code by email (a new phone before the identity check);
- * - `face`: a selfie in the provider's page, matched to the identity-check photo.
+ * - `face`: a selfie in the provider's page, matched to the identity-check photo;
+ * - `kyc`: a new identity check (ID document and selfie) that our team asked for (ADR-104);
+ *   the same two steps as the face check.
  *
  * The server owns every rule (tries, expiry, locks); this shows its answers. Codes are never
  * stored or logged. The face page link is opened once and not kept.
@@ -23,6 +25,9 @@ import { tr } from '../../i18n';
 
 /** What the screen says about the check, by method. */
 export function checkText(check: Check): string {
+  if (check.method === 'kyc') {
+    return tr('Our team asked for a new identity check. Have your ID document ready, then take a selfie.');
+  }
   if (check.method === 'face') {
     return tr('Take a quick selfie. We match it to the photo from your identity check.');
   }
@@ -37,7 +42,10 @@ export function checkText(check: Check): string {
 
 /** Errors after which this check cannot go on: start again. */
 export function checkEnded(e: unknown): boolean {
-  return e instanceof ApiError && (e.status === 410 || e.code === 'AUTH_401_FACE_CHECK_FAILED');
+  return (
+    e instanceof ApiError &&
+    (e.status === 410 || e.code === 'AUTH_401_FACE_CHECK_FAILED')
+  );
 }
 
 function Code({ testID, label, value, onChange }: { testID: string; label: string; value: string; onChange: (v: string) => void }): ReactElement {
@@ -139,7 +147,7 @@ export function CheckFields({
       {check.method === 'sms_email' ? (
         <Code testID="check-sms" label={tr('SMS code *')} value={sms} onChange={(v) => { setSms(v); setError(null); }} />
       ) : null}
-      {check.method !== 'face' ? (
+      {check.method !== 'face' && check.method !== 'kyc' ? (
         <Code testID="check-email" label={tr('Email code *')} value={email} onChange={(v) => { setEmail(v); setError(null); }} />
       ) : null}
       {children}
@@ -148,18 +156,26 @@ export function CheckFields({
           {error}
         </Text>
       ) : null}
-      {check.method === 'face' ? (
+      {check.method === 'face' || check.method === 'kyc' ? (
         <View style={styles.actions}>
           <PrimaryButton
             testID="check-face"
-            label={started ? tr('I’ve taken the selfie') : tr('Start face check')}
+            label={
+              check.method === 'kyc'
+                ? started
+                  ? tr('I’ve finished the identity check')
+                  : tr('Start identity check')
+                : started
+                  ? tr('I’ve taken the selfie')
+                  : tr('Start face check')
+            }
             onPress={() => void face()}
             disabled={busy || !ready}
           />
           {started ? (
             <GhostButton
               testID="check-face-again"
-              label={tr('Open the face check again')}
+              label={check.method === 'kyc' ? tr('Open the identity check again') : tr('Open the face check again')}
               onPress={() => {
                 setStarted(false);
                 setError(null);

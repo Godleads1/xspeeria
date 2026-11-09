@@ -170,6 +170,8 @@ export interface Customer {
   kyc_status: string | null;
   created_at: string;
   last_login_at: string | null;
+  /** ADR-104: Compliance asked for a new identity check (shown to Compliance only). */
+  identity_redo_requested_at?: string | null;
   /** ADR-095: the customer asked to delete the account. */
   deletion?: { state: 'deleting' | 'deleted'; requested_at: string; restore_until: string } | null;
 }
@@ -904,6 +906,11 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     changeOutage: (id: string, body: Partial<OutageInput> & { status?: OutageStatus }) =>
       call<void>('PATCH', `/outages/${encodeURIComponent(id)}`, body),
     /** Super Admin only (the server checks); a reason is required. */
+    /** ADR-104: the next new-phone log-in takes a full identity check (kyc.update). */
+    requestIdentityRedo: (id: string, reason: string) =>
+      call<{ id: string }>('POST', `/users/${encodeURIComponent(id)}/identity-redo`, { reason }),
+    cancelIdentityRedo: (id: string, reason: string) =>
+      call<{ id: string }>('POST', `/users/${encodeURIComponent(id)}/identity-redo/cancel`, { reason }),
     changeCustomer: (id: string, action: CustomerAction, reason: string) =>
       call<{ id: string; status: CustomerStatus }>('POST', `/users/${encodeURIComponent(id)}/${action}`, { reason }),
     dashboard: (period: DashboardPeriod, month?: string) =>

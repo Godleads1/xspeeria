@@ -682,6 +682,40 @@ async def customer_stats(
 
 
 @router.post(
+    "/users/{user_id}/identity-redo",
+    summary="Ask for a new identity check at the next new-phone log-in (kyc.update; ADR-104)",
+)
+async def request_identity_redo(
+    user_id: uuid.UUID,
+    body: CustomerChange,
+    staff: Staff,
+    info: Info,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> Any:
+    return await CustomerAdminService(db, runtime.clock).request_identity_redo(
+        staff, user_id, body.reason, info
+    )
+
+
+@router.post(
+    "/users/{user_id}/identity-redo/cancel",
+    summary="Back to the face check (kyc.update; ADR-104)",
+)
+async def cancel_identity_redo(
+    user_id: uuid.UUID,
+    body: CustomerChange,
+    staff: Staff,
+    info: Info,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> Any:
+    return await CustomerAdminService(db, runtime.clock).cancel_identity_redo(
+        staff, user_id, body.reason, info
+    )
+
+
+@router.post(
     "/users/{user_id}/{action}",
     summary="Suspend, reactivate or close a customer (Super Admin only)",
 )

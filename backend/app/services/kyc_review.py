@@ -40,6 +40,7 @@ from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.kyc_reviews import KycReview
 from app.models.staff import StaffAccount, StaffAuditEntry
+from app.services.identity_redo import finish_redo
 from app.services.kyc import UNKNOWN_ACCOUNT
 from app.services.notifications import notify
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
@@ -395,6 +396,8 @@ class KycReviewService:
         now = self._clock()
         row.status, row.decided_by, row.decided_at = "confirmed", principal.staff_id, now
         row.decision_note = note
+        if c.purpose == "redo":
+            await finish_redo(self._db, c, now)  # ADR-104: the older check ends first
         c.status, c.decided_at, c.decision_reason, c.updated_at = "approved", now, None, now
         try:
             await self._db.flush()

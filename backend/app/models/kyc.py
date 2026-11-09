@@ -61,7 +61,7 @@ class KycCase(Base):
         Index("ix_kyc_cases_user_created", "user_id", "created_at"),
         CheckConstraint(
             "review_reason IS NULL OR review_reason IN "
-            "('DUPLICATE_IDENTITY', 'CHECKS_INCOMPLETE', 'IDENTITY_MISMATCH')",
+            "('DUPLICATE_IDENTITY', 'CHECKS_INCOMPLETE', 'IDENTITY_MISMATCH', 'REDO_NEW_DOCUMENT')",
             name="review_reason_allowed",
         ),
         # ADR-041: one approved case per ID document (backstop to the advisory lock).
@@ -73,6 +73,7 @@ class KycCase(Base):
         ),
         Index("ix_kyc_cases_identity_key", "identity_key"),
         CheckConstraint("gender IS NULL OR gender IN ('M', 'F')", name="gender_allowed"),
+        CheckConstraint("purpose IN ('standard', 'redo')", name="purpose_allowed"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -86,6 +87,10 @@ class KycCase(Base):
     #: The provider's own status word, as last received (for support; not personal data).
     provider_status: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
+    #: ADR-104: ``redo`` — a new check Compliance asked for, taken at a new-phone log-in.
+    purpose: Mapped[str] = mapped_column(
+        String(8), nullable=False, server_default=text("'standard'"), default="standard"
+    )
     legal_name: Mapped[str | None] = mapped_column(String(255))
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     #: ADR-055: as printed on the ID ("M"/"F"), set with the approval; shown only to the user.

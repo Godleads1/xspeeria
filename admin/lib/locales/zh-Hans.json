@@ -1077,5 +1077,16 @@
  "The phone and email both match an account.": "电话和邮箱都与某个账户匹配。",
  "The phone matches an account, but the email does not.": "电话与某个账户匹配，但邮箱不匹配。",
  "This request is closed.": "此请求已关闭。",
- "{{n}} messages": "{{n}} 条消息"
+ "{{n}} messages": "{{n}} 条消息",
+ "Ask for a new identity check": "要求重新进行身份验证",
+ "Ask {{name}} for a new identity check?": "要求 {{name}} 重新进行身份验证？",
+ "Cancel new identity check": "取消重新身份验证",
+ "Cancel the new identity check for {{name}}?": "取消 {{name}} 的重新身份验证？",
+ "New identity check asked": "已要求重新验证",
+ "Their next log-in on a new phone asks for their ID document and a selfie instead of the face check. The same ID document counts at once; a different one waits for two of you to approve it. Never do this only because someone asked in a help request: follow the support procedure.": "其下次在新手机上登录时，将要求提供身份证件和自拍，而不是人脸验证。相同证件会立即通过；不同证件需由你们两人批准。切勿仅因帮助请求中有人要求就这样做：请遵循支持流程。",
+ "Their next log-in on a new phone uses the face check again.": "其下次在新手机上登录时将重新使用人脸验证。",
+ "Yes, Ask": "是的，要求",
+ "Yes, Cancel It": "是的，取消",
+ "{{name}} is back to the face check.": "{{name}} 已恢复为人脸验证。",
+ "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} 将在下次于新手机登录时重新进行身份验证。"
 }

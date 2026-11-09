@@ -149,7 +149,7 @@ export function CheckScreen({
   onRestart: (message?: string) => void;
 }): ReactElement {
   const signup = check.purpose === 'signup';
-  const title = signup ? tr("Confirm your email") : check.method === 'face' ? tr("Confirm it’s you with a selfie") : tr("Confirm it’s you");
+  const title = signup ? tr("Confirm your email") : check.method === 'face' ? tr("Confirm it’s you with a selfie") : check.method === 'kyc' ? tr("Confirm it’s you with your ID") : tr("Confirm it’s you");
   const body = signup ? tr("One last step: confirm the email on your account.") : tr("This is a new phone for your account.");
   return (
     <Frame testID="check-screen" top={<AuthTop onBack={() => onRestart()} step={signup ? 3 : undefined} />} footer={null}>

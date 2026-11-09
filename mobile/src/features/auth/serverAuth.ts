@@ -180,13 +180,17 @@ export const serverAuth = {
 
   /** Opens the face check. Null: the local developer check, which needs no page. */
   async faceStart(): Promise<string | null> {
-    return (await authApi.faceStart(openCheck().check_id, x())).url;
+    const check = openCheck();
+    // ADR-104: a new identity check in place of the face check, same two steps.
+    const start = check.method === 'kyc' ? authApi.kycStart : authApi.faceStart;
+    return (await start(check.check_id, x())).url;
   },
 
   /** The face check result. 409 while it is still running (the screen says so). */
   async faceFinish(now: number): Promise<CheckOutcome> {
     const check = openCheck();
-    return finishCheck(check, await authApi.faceResult(check.check_id, x()), now);
+    const result = check.method === 'kyc' ? authApi.kycResult : authApi.faceResult;
+    return finishCheck(check, await result(check.check_id, x()), now);
   },
 
   // --- keeping the session alive ---

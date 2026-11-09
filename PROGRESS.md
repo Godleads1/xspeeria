@@ -62,6 +62,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | CAD offers allowed up to ₦944.70 (worked out from the USD rate and the Bank of Canada rate) | **Built 9 Nov 2026** | ADR-101 |
 | Official rate limits update automatically from the CBN (via Frankfurter); stop new offers after 3 days without a fresh rate | **Built 9 Nov 2026** | ADR-102 |
 | "Need help?" on the log-in screen: locked-out customers chat with Support through the form; staff reply in the admin console | **Built 9 Nov 2026** | ADR-103 |
+| "Redo identity check": Compliance asks; the next new-phone log-in takes a full identity check instead of the face check (same ID counts at once, a different one waits for two staff) | **Built 9 Nov 2026** | ADR-104 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |
 | App Store / Google Play release settings and store listing draft (release builds still blocked, ADR-090) | **Built 3 Nov 2026** | ADR-090 |

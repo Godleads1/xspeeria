@@ -533,4 +533,5 @@ class TestPackageRegistration:
             "0045_canada.py",  # Canada joins the MVP corridors (ADR-100)
             "0046_official_rates.py",  # automatic CBN rates (ADR-102)
             "0047_help_requests.py",  # Need-help thread (ADR-103)
+            "0048_identity_redo.py",  # Redo identity check (ADR-104)
         ]

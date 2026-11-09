@@ -63,7 +63,11 @@ class CustomerAdminService:
         )
         kyc = (
             select(KycCase.status)
-            .where(KycCase.user_id == User.id)
+            .where(
+                KycCase.user_id == User.id,
+                # ADR-104: an unfinished redo check doesn't hide the approved one.
+                or_(KycCase.purpose == "standard", KycCase.status == "approved"),
+            )
             .order_by(KycCase.created_at.desc())
             .limit(1)
             .scalar_subquery()
@@ -84,6 +88,7 @@ class CustomerAdminService:
             last_login.label("last_login_at"),
             User.deletion_requested_at,
             User.deleted_at,
+            User.identity_redo_requested_at,
         ).where(User.status != "pending_verification")
 
     async def list(
@@ -140,6 +145,8 @@ class CustomerAdminService:
             "kyc_status": None if hidden else r.kyc_status,
             "created_at": r.created_at,
             "last_login_at": r.last_login_at,
+            # ADR-104: Compliance asked for a new identity check at the next new-phone log-in.
+            "identity_redo_requested_at": r.identity_redo_requested_at if compliance else None,
             # ADR-095: "deleting" (restorable until), "deleted", or none.
             "deletion": (
                 None
@@ -249,3 +256,91 @@ class CustomerAdminService:
         )
         await self._db.commit()
         return {"id": user_id, "status": to}
+
+    # --- redo identity check (ADR-104) ---------------------------------------------------
+
+    async def request_identity_redo(
+        self, principal: StaffPrincipal, user_id: uuid.UUID, reason: str, info: RequestInfo
+    ) -> dict[str, Any]:
+        """Compliance: the next log-in on a new phone takes a full identity check instead of
+        the face check (for a customer who can't pass it). Signed-in phones are unaffected."""
+        if not principal.can("kyc.update"):
+            raise forbidden()
+        reason = " ".join(reason.split())
+        if not 5 <= len(reason) <= 300:
+            raise _err(
+                "VAL_422_MISSING_FIELD",
+                "Write the reason (5 to 300 characters).",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                {"field": "reason"},
+            )
+        user = await self._db.get(User, user_id, with_for_update=True)
+        if user is None or user.status == "pending_verification" or user.deleted_at is not None:
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That customer was not found.", 404)
+        approved = await self._db.scalar(
+            select(KycCase.id)
+            .where(KycCase.user_id == user_id, KycCase.status == "approved")
+            .limit(1)
+        )
+        if approved is None:
+            await self._db.rollback()
+            raise _err(
+                "RES_409_INVALID_STATE",
+                "This customer has no approved identity check to redo.",
+                status.HTTP_409_CONFLICT,
+            )
+        now: datetime = self._clock()
+        already = user.identity_redo_requested_at is not None
+        if not already:
+            user.identity_redo_requested_at, user.identity_redo_reason = now, reason
+        self._audit_redo(principal, info, "identity_redo_requested", user_id, now, reason)
+        await self._db.commit()
+        return {"id": user_id, "identity_redo_requested_at": user.identity_redo_requested_at}
+
+    async def cancel_identity_redo(
+        self, principal: StaffPrincipal, user_id: uuid.UUID, reason: str, info: RequestInfo
+    ) -> dict[str, Any]:
+        """Compliance: back to the face check. Idempotent."""
+        if not principal.can("kyc.update"):
+            raise forbidden()
+        reason = " ".join(reason.split())
+        if not 5 <= len(reason) <= 300:
+            raise _err(
+                "VAL_422_MISSING_FIELD",
+                "Write the reason (5 to 300 characters).",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                {"field": "reason"},
+            )
+        user = await self._db.get(User, user_id, with_for_update=True)
+        if user is None or user.status == "pending_verification":
+            await self._db.rollback()
+            raise _err("RES_404_NOT_FOUND", "That customer was not found.", 404)
+        now: datetime = self._clock()
+        if user.identity_redo_requested_at is not None:
+            user.identity_redo_requested_at, user.identity_redo_reason = None, None
+            self._audit_redo(principal, info, "identity_redo_cancelled", user_id, now, reason)
+        await self._db.commit()
+        return {"id": user_id, "identity_redo_requested_at": None}
+
+    def _audit_redo(
+        self,
+        principal: StaffPrincipal,
+        info: RequestInfo,
+        action: str,
+        user_id: uuid.UUID,
+        now: datetime,
+        reason: str,
+    ) -> None:
+        self._db.add(
+            StaffAuditEntry(
+                at=now,
+                staff_id=principal.staff_id,
+                action=action,
+                target_type="customer",
+                target_id=str(user_id),
+                detail={"reason": reason},
+                ip_address=info.ip_address,
+                user_agent=info.user_agent,
+            )
+        )
