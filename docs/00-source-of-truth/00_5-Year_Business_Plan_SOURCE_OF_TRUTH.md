@@ -230,7 +230,7 @@ A single-bank dependency is a real strategic risk — for regulatory, commercial
 | Year 4   | 15                              | \+ South Africa ↔︎ UK, and 5 additional Africa–diaspora corridors (e.g., Uganda, Senegal, Ethiopia ↔︎ EU/UK/US)                                                        |
 | Year 5   | 22                              | \+ Intra-Africa corridors (e.g., Nigeria ↔︎ Ghana ↔︎ Kenya) and initial embedded/white-label rollout via bank-network partners into adjacent emerging-market corridors |
 
-*Amended 2026-10-19 by the product owner (DEC-050, `docs/adr/043-mvp-corridors-uk-and-us.md`): Nigeria ↔︎ United States launches with Nigeria ↔︎ United Kingdom at the MVP. Projections below are not recalculated.*
+*Amended 2026-10-19 by the product owner (DEC-050, `docs/adr/043-mvp-corridors-uk-and-us.md`): Nigeria ↔︎ United States launches with Nigeria ↔︎ United Kingdom at the MVP. **Amended again 2026-11-09 (DEC-112, `docs/adr/100-canada-joins-mvp-corridors.md`): Nigeria ↔︎ Canada also launches at the MVP**, so Year 1 has three corridors. Projections below are not recalculated.*
 
 *Table 8.1: Illustrative sequencing, gated at every stage by the KPI framework and go/no-go criteria in the Project Implementation Plan — not a committed launch schedule. Note the pace roughly doubles corridor count year-over-year through Year 3, the single most aggressive assumption in this plan.*
 

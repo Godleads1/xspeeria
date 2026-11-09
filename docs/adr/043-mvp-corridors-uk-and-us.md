@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **APPROVED** — 2026-10-19 |
+| **Status** | **APPROVED** — 2026-10-19; **amended 2026-11-09 by ADR-100: Nigeria ⇄ Canada joins the MVP corridors** |
 | **Decision ID** | DEC-050 |
 | **Authority** | Product owner, 2026-10-19: "we are launching us and uk at the mvp stage"; confirmed **"Yes, UK and US at MVP"** when shown the conflict below. |
 

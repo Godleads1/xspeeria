@@ -27,7 +27,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Official rate:** which CBN figure applies, and a live rate feed instead of the fixed snapshot (Decision 3). (ADR-020)
 - [x] **Fee:** decided 8 Nov 2026: **flat 1%**, no minimum or maximum, no bands, no maker discount (ADR-021 §1; the banded Fair Fee of PR #121 was not adopted).
 - [x] **Business Plan and investor materials:** updated 9 Nov 2026 to the 1% fee (Business Plan §1, §5, §6, §10; Investor Book §7; BRS §11.2).
-- [ ] **Re-model the projections at 1%** — *You*: Business Plan Table 10.1 revenue is recalculated at a 1.0% take rate (lower than before), but EBITDA margins from Year 3, the scenarios (Table 10.2) and the valuations (Section 11) still use the old revenue.
+- [ ] **Re-model the projections at 1% and three launch corridors (ADR-100)** — *You*: Business Plan Table 10.1 revenue is recalculated at a 1.0% take rate (lower than before), but EBITDA margins from Year 3, the scenarios (Table 10.2) and the valuations (Section 11) still use the old revenue.
 - [ ] **Artwork licences:** confirm for the Welcome pictures, card designs and the advert stock photo. (ADR-012, ADR-013, ADR-005)
 - [ ] **Advert banner:** send a 3× version (1026 × 339) so it is fully sharp on phones. (ADR-005)
 - [ ] **Figma file:** update the PIN screens from 4 to 6 boxes. (ADR-024)
@@ -61,6 +61,8 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **Confirm the Nigerian ID rule** — *You*: confirmed 2026-10-19: the Nigerian check needs a **Nigerian-issued ID**; a foreign passport does not count (ADR-042).
 - [x] **App: country choice and region screens** — done: region screens connected (ADR-045); "Verify your identity" now asks which country you pay from (ADR-071, 2026-10-27).
 - [ ] **US and UK go-live** — *You + lawyer*: partner banks in both countries, money-transmission licensing, US SSN/privacy rules, Didit document coverage (ADR-043).
+- [ ] **Canada go-live** — *You + lawyer* (ADR-100): a Canadian partner bank, Canadian legal review (money-services-business registration, provincial rules, PIPEDA), Didit coverage for Canada.
+- [ ] **Build Canada into the product** — *Build* (ADR-100): CAD currency definition, identity checks for CA, settlement jurisdiction, fee quote and app country lists. *You*: choose the CAD payout account fields (e.g. institution, transit and account numbers).
 - [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
 - [ ] **SMS provider** — *You*: later (ADR-044 N-4).
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).
