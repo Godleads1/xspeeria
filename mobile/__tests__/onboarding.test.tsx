@@ -187,6 +187,21 @@ describe('Forgot PIN', () => {
 });
 
 describe('Sign-up', () => {
+  it('step 1 takes a Canadian or US number with +1 (owner, 2026-11-09)', async () => {
+    const onNext = jest.fn();
+    await render(<GetStartedScreen onNext={onNext} onLogIn={jest.fn()} onTerms={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId('signup-phone-country'));
+    await fireEvent.press(screen.getByTestId('signup-country-CA'));
+    expect(screen.getByText('+1')).toBeTruthy();
+    expect(screen.getByText('Enter your phone number *')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('signup-phone'), '1 416 555 0123');
+    await fireEvent.press(screen.getByTestId('signup-consent-aml'));
+    await fireEvent.press(screen.getByTestId('signup-consent-terms'));
+    await fireEvent.press(screen.getByTestId('signup-start-continue'));
+    expect(signup.get().phone).toBe('+14165550123');
+    expect(onNext).toHaveBeenCalled();
+  });
+
   it('step 1 needs a valid NIN phone and both consents', async () => {
     const onNext = jest.fn();
     await render(<GetStartedScreen onNext={onNext} onLogIn={jest.fn()} onTerms={jest.fn()} />);

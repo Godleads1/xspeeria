@@ -37,6 +37,8 @@ describe('contact rules', () => {
     expect(normalisePhone('+234701399012')).toBeNull(); // 9 digits after +234
     expect(normalisePhone('08038383838')).toBeNull(); // no country code
     expect(normalisePhone('+1 (415) 555-0100')).toBe('+14155550100');
+    expect(normalisePhone('+1 415 555 010')).toBeNull(); // +1 needs 10 digits
+    expect(normalisePhone('+1 015 555 0100')).toBeNull(); // area codes don't start with 0 or 1
   });
 
   it('validates and lower-cases email', () => {

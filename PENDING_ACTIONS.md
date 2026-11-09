@@ -64,7 +64,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Canada go-live** — *You + lawyer* (ADR-100): a Canadian partner bank, Canadian legal review (money-services-business registration, provincial rules, PIPEDA), Didit coverage for Canada.
 - [x] **Canada in the product:** built 9 Nov 2026 (ADR-100). The CAD payout form uses institution, transit and account numbers (owner).
 - [x] **CAD rate ceiling:** decided 9 Nov 2026: worked out from the USD ceiling and the Bank of Canada rate, ₦944.70 (ADR-101).
-- [ ] **+1 phone numbers at sign-up** (US and Canada) — *Build*, when you say: sign-up takes only +234 and +44 today.
+- [x] **+1 phone numbers (US and Canada):** built 9 Nov 2026 for sign-up, log-in, forgot PIN and change phone (ADR-100).
 - [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
 - [ ] **SMS provider** — *You*: later (ADR-044 N-4).
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).

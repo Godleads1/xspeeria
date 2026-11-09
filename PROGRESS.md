@@ -58,6 +58,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | Take-offer screen shows the exact 1% fee and total before confirming | **Built 8 Nov 2026** | ADR-098 |
 | Euro payout accounts by IBAN (no BIC); owner answers on corrected accounts and escrow details recorded | **Built 8 Nov 2026** | ADR-099 |
 | Canada: identity checks, CAD payout accounts, settlement jurisdiction (CAD offers wait for an official-rate ceiling) | **Built 9 Nov 2026** | ADR-100 |
+| Sign-up, log-in, forgot PIN and change phone take US and Canadian (+1) numbers | **Built 9 Nov 2026** | ADR-100 |
 | CAD offers allowed up to ₦944.70 (worked out from the USD rate and the Bank of Canada rate) | **Built 9 Nov 2026** | ADR-101 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |

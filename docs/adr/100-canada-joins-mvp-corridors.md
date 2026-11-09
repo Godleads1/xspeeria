@@ -42,7 +42,15 @@ The owner chose the CAD payout form on 2026-11-09: "institution number (3 digits
 - a Canadian partner bank;
 - Didit document coverage and a Didit workflow for Canada;
 - Canadian legal review.
-- Sign-up phone numbers are still Nigerian and UK only (+234, +44). Adding +1 for the US and Canada is a separate item.
+
+## Sign-up with +1 numbers (built 2026-11-09)
+
+Owner, 2026-11-09: asked "do you want customers in the US and Canada to be able to register with their own numbers?", the owner answered **"yes"**.
+
+- **Where:** sign-up, log-in, forgot PIN and change phone all offer a dialling-code picker: Nigeria +234, United Kingdom +44, United States +1, Canada +1. Before this, sign-up, forgot PIN and change phone were fixed to +234, and log-in offered only +234 and +44.
+- **App check:** a +1 number must have exactly 10 digits, and the area code can't start with 0 or 1. A typed leading 1 is dropped. The server still checks every number in full (E.164) and needed no change.
+- **Sign-up wording:** with a non-Nigerian number, the field reads "Enter your phone number" instead of "linked to NIN".
+- **Saved numbers:** the log-in screen shows a remembered +1 number with the US flag (the US and Canada share +1).
 
 ## Evidence
 

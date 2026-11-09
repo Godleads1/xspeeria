@@ -1463,5 +1463,6 @@
  "Institution and transit numbers are only used for CAD.": "رقما المؤسسة والفرع يُستخدمان لحسابات CAD فقط.",
  "Only the bank name, institution, transit and account numbers are needed for CAD.": "لحسابات CAD يلزم اسم البنك وأرقام المؤسسة والفرع والحساب فقط.",
  "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "يمكن أن تكون حسابات الاستلام حاليًا بعملة NGN أو USD أو GBP أو EUR أو CAD.",
+ "Enter your phone number *": "أدخل رقم هاتفك *",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.": "الحد الأقصى للسعر: {{official}} نايرا لكل {{code}}، محسوب من سعر الدولار لدى البنك المركزي النيجيري وسعر بنك كندا. يجب أن يكون سعرك مساويًا لهذا أو أقل."
 }
