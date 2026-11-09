@@ -115,3 +115,39 @@ class TestEuroIban:
     def test_nothing_but_the_iban(self, extra: tuple[str | None, str | None, str | None]) -> None:
         with pytest.raises(OfferInputError):
             parse_account_details("EUR", "ING", "DE89370400440532013000", *extra)
+
+
+class TestCanadianAccount:
+    """ADR-100 (owner, 2026-11-09): institution (3 digits), transit (5 digits), any account."""
+
+    def test_valid(self) -> None:
+        d = parse_account_details("CAD", "RBC", "1234567", None, None, None, "003", "12345")
+        assert (d.currency, d.account_number, d.bank_code, d.last4) == (
+            "CAD",
+            "1234567",
+            "00312345",
+            "4567",
+        )
+        assert parse_account_details("CAD", "TD", "12", None, None, None, "004", "00011").last4
+
+    @pytest.mark.parametrize(
+        ("account", "inst", "transit"),
+        [
+            ("1234567", "03", "12345"),  # institution too short
+            ("1234567", "0031", "12345"),
+            ("1234567", "003", "1234"),  # transit too short
+            ("1234567", "003", None),
+            ("1234567", None, "12345"),
+            ("12a4567", "003", "12345"),  # not digits
+            ("1" * 18, "003", "12345"),  # longer than the form allows
+        ],
+    )
+    def test_invalid(self, account: str, inst: str | None, transit: str | None) -> None:
+        with pytest.raises(OfferInputError):
+            parse_account_details("CAD", "RBC", account, None, None, None, inst, transit)
+
+    def test_nothing_else_and_only_for_cad(self) -> None:
+        with pytest.raises(OfferInputError):
+            parse_account_details("CAD", "RBC", "1234567", "021000021", None, None, "003", "12345")
+        with pytest.raises(OfferInputError):
+            parse_account_details("NGN", "GTBank", "0123456789", None, None, None, "003", None)

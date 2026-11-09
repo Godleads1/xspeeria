@@ -222,6 +222,21 @@ async def test_eur_account_by_iban(owner: Party) -> None:
     assert r.status_code == 422 and _code(r) == "VALIDATION_ERROR"
 
 
+async def test_cad_account(owner: Party) -> None:
+    """ADR-100: institution (3 digits), transit (5 digits) and the account number."""
+    r = await owner.add_account(
+        currency="CAD",
+        bank_name="RBC",
+        account_number="1234567",
+        institution_number="003",
+        transit_number="12345",
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["account_last4"] == "4567" and "account_number" not in r.json()
+    r = await owner.add_account(currency="CAD", bank_name="RBC", account_number="1234567")
+    assert r.status_code == 422 and _code(r) == "VALIDATION_ERROR"
+
+
 async def test_adding_needs_an_approval_for_that_action(owner: Party) -> None:
     r = await owner.add_account(
         approve=False, currency="NGN", bank_name="Zenith", account_number="0123456789"

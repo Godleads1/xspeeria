@@ -102,7 +102,7 @@ class User:
         return await self.env.client.get(f"/api/v1/offers{path}", params=params, headers=self._h())
 
     async def listings(
-        self, pair: str = "USD/NGN", *, country: str | None = "CA", **params: Any
+        self, pair: str = "USD/NGN", *, country: str | None = "JP", **params: Any
     ) -> Response:
         # ADR-059 Decision 2: a country whose currency is not traded here, so nothing is
         # hidden by the location rule unless a test says otherwise.
@@ -183,6 +183,15 @@ async def test_publish_refuses_bad_input(david: User, over: dict[str, str], code
     r = await david.publish(**over)  # type: ignore[arg-type]
     assert r.status_code == 422, r.text
     assert _code(r) == code
+
+
+async def test_cad_is_known_but_has_no_official_rate_yet(david: User) -> None:
+    """ADR-100: CAD offers can't be published or listed until the owner sets a ceiling."""
+    r = await david.publish(source_currency="CAD", desired_rate="900")
+    assert r.status_code in (403, 422), r.text  # not verified in Canada, or no ceiling
+    listed = await david.listings("CAD/NGN")
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["items"] == []
 
 
 async def test_rate_at_the_ceiling_is_allowed(david: User) -> None:

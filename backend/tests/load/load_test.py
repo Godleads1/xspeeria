@@ -54,7 +54,7 @@ PORT = 8765
 #: --real-limits: the server keeps its real per-address limits (ADR-087), to prove that many
 #: customers behind one address aren't refused.
 REAL_LIMITS = False
-COUNTRY = {"X-Device-Country": "CA"}  # a country whose currency isn't traded: nothing hidden
+COUNTRY = {"X-Device-Country": "JP"}  # a country whose currency isn't traded: nothing hidden
 
 
 class RealClock:

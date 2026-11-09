@@ -589,6 +589,7 @@ async def test_uk_check_with_a_uk_id_is_added_to_the_same_account(k: K) -> None:
             {"country": "NG", "status": "approved"},
             {"country": "GB", "status": "approved"},
             {"country": "US", "status": "not_started"},
+            {"country": "CA", "status": "not_started"},  # ADR-100
         ],
         "suggested_country": None,
     }

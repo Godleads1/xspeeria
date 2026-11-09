@@ -41,7 +41,7 @@ DISPATCH_MAX_ATTEMPTS = 5
 
 #: Each leg is domestic (F-8): its currency fixes its jurisdiction. EUR has no single
 #: jurisdiction or approved payout form, so EUR deals cannot settle yet (fail closed).
-JURISDICTION: dict[str, str] = {"NGN": "NG", "USD": "US", "GBP": "GB"}
+JURISDICTION: dict[str, str] = {"NGN": "NG", "USD": "US", "GBP": "GB", "CAD": "CA"}
 
 #: ADR-001 §4 — 9 leg states and their only allowed transitions.
 LEG_STATES = (

@@ -32,6 +32,7 @@ PRETEND_PARTNERS: dict[str, tuple[str, str]] = {
     "NGN": ("pretend-ng", "Pretend Bank Nigeria"),
     "USD": ("pretend-us", "Pretend Bank USA"),
     "GBP": ("pretend-gb", "Pretend Bank UK"),
+    "CAD": ("pretend-ca", "Pretend Bank Canada"),  # ADR-100; simulation only
 }
 
 
