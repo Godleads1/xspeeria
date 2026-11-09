@@ -52,7 +52,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **The other ADR-037 §4 details**, confirmed 8 Nov 2026 (ADR-099): late money after a cancelled deal is checked by a staff member, then returned by the bank; escrows of a cancelled deal are left for the bank to close.
 - [x] **24-hour payout hold** — decided 19 Oct 2026: removed; payouts are immediate once both sides have paid in; codes confirm account changes and each deal's choice (DEC-044).
 - [x] **Wait before a new payout account can be paid** — decided 3 Nov 2026: **no wait**. Protection is the double confirmation, the new-account alert (ADR-083) and the "this wasn't me" email (ADR-084); the risk of a fast takeover payout is accepted. Reopen if the bank or lawyer asks for a cooling-off period (DEC-092).
-- [ ] **Before go-live: fraud checks to replace the 24-hour hold** — *You + Build* (FX-03): e.g. extra checks when a new account is paid right away, and a way to freeze a deal.
+- [ ] **Before go-live: the rest of FX-03** — *You*: deal holds, the "this wasn't me" freeze and the fraud alerts are built (ADR-068, 083, 084, 092). Still open: choose any of options 3 (new-user caps), 4 (pause after security changes), 6 (velocity alerts) and 7 (second person for large first payouts), with numbers (`docs/13-governance/FRAUD_OPTIONS_2026-11.md`).
 - [ ] **Legal, Risk and the bank must confirm U-1 and U-2** (fee refund, 5-minute window) before a real partner (ADR-001 §11).
 - [x] **App escrow steps on a deal** — *Build* — done 19 Oct 2026 for development builds (ADR-038).
 - [ ] **Ask Didit** — *You*: is Nigerian NIN/BVN lookup available, and which Nigerian documents are supported? (ADR-039). Live run 2026-10-19: Didit's NIMC/FRSC/NIS database check is listed for Nigeria but **locked until the first paid top-up**.
@@ -69,7 +69,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **Decide who clears held identity checks** — done 27 Oct 2026: two staff members approve, one can reject (ADR-069).
 - [x] **App screens for the identity check** — *Build* — done 19 Oct 2026 for development builds (ADR-040).
 - [x] **Test Didit end to end** — *You + Build*: done 2026-10-19 (web build + tunnel); results signed, received (200) and applied; found one person verified on two accounts → ADR-041.
-- [ ] **Lawyer & partner-bank brief** — *Build* drafts, *You* send: licence route questions and what a partner bank must provide.
+- [ ] **Lawyer & partner-bank brief** — drafted 9 Nov 2026 (Claude Doc "Xspeeria: brief for the lawyer and the partner bank"). *You*: review and send.
 
 ## 2b. Outside needs — not possible yet (recorded 18 Oct 2026)
 
@@ -102,7 +102,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Secret manager** (key rotation tools are built: ADR-076, PR #95) for `JWT_SECRET_KEY`, `MFA_ENCRYPTION_KEY` and `BENEFICIARY_ENCRYPTION_KEY`; KMS-managed keys for payout account numbers (backend spec). (SEC-026/027)
 - [x] **Database row-level security** as a second layer of permission checks — built (ADR-078, PR #96). At deployment: the app's database login must not be a superuser or have `BYPASSRLS`.
 - [x] **PIN reset flow** — built: SMS code + face check or email code (ADR-046, ADR-054; `test_second_check_api.py`). (Checked 2026-10-27.)
-- [ ] **Support's procedure** for a customer who can't pass the face check (lost phone, changed appearance) — *Build drafts, You approve*. (ADR-054)
+- [ ] **Support's procedure** for a customer who can't pass the face check — drafted 9 Nov 2026 (Claude Doc "Support procedure: customer can't pass the face check"). *You*: approve, and decide how a locked-out customer reaches Support and whether to build a "redo your identity check" button. (ADR-054)
 - [x] **Email address verification** — built: sign-up needs the email code before any session (ADR-054). A real email provider is still needed (§2). (Checked 2026-10-27.)
 - [x] **Step-up on sensitive actions** — built: payout accounts, choosing payouts, taking offers, PIN and contact changes (`STEP_UP_ACTIONS`). The 24-hour hold was removed by the owner (DEC-044). (Checked 2026-10-27.)
 - [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
