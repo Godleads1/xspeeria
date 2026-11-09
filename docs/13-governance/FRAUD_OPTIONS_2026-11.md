@@ -50,3 +50,7 @@ Accepted risk: an account takeover that adds a new account and takes a deal at o
 **Lawyer, 3 Nov 2026 (DEC-097): third-party payouts are acceptable under AML rules.** Still confirm with the partner bank: some banks require extra checks for them.
 
 **What I need from you:** which numbers to use for options 1, 3, 4 and 7, if chosen, and who reviews held payouts (Compliance Officer?). The partner bank may also have rules of its own: ask them (C-1).
+
+**Owner, 9 Nov 2026: no further checks before launch (options 3, 4, 6 and 7 not chosen).** Asked which of the remaining options to add, after discussing the takeover route (SIM swap → the victim's own bank pays into escrow → payout to the thief's account abroad), the owner answered: "just these two": the **face check on a new phone** against the identity-check photo (ADR-054) and the **"this wasn't me" email link that freezes the account** (ADR-084). The fraud alerts and the staff deal hold already built stay (ADR-068, 083, 092).
+
+Accepted risk: if the face check is beaten (for example on the victim's own unlocked phone), a takeover that adds a new payout account and takes a deal can be paid out before the alert is seen or the owner reads the email. Reopened if the partner bank or the lawyer asks for any of these checks.
