@@ -511,13 +511,14 @@ Xspeeria generates revenue through a transparent, disclosed transaction fee appl
 
 > **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
 > each side sends**, in that side's currency, not a flat fee
-> (`docs/adr/021-percentage-fee-and-split-payouts.md`). ASSUMPTION-BRS-04 and §11.2 below are superseded.
+> (`docs/adr/021-percentage-fee-and-split-payouts.md`). ASSUMPTION-BRS-04 is superseded; §11.2
+> below was updated 2026-11-09 (owner, 2026-11-08: flat 1%, no minimum or maximum).
 
-## 11.2 Illustrative Fee Structure (Flat Coordination Fee, Not a Final Rate — see 5-Year Business Plan Section 5)
+## 11.2 Fee Structure (1% Coordination Fee — ADR-021; see 5-Year Business Plan Section 5)
 
 | Fee Component                                                           | Applied To                                                               | Notes                                                                |
 |-------------------------------------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------------|
-| Transaction fee                                                         | Both parties or fee-payer designated at listing time (business decision) | Disclosed to both parties prior to match confirmation                |
+| Transaction fee: 1% of the money each side sends, in its own currency; no minimum or maximum | Both parties, each on what it sends                                      | Shown to each party before they confirm                              |
 | No fee on cancelled/unmatched listings                                  | N/A                                                                      | Ensures users aren’t penalized for unmatched liquidity               |
 | No fee on disputes resolved in complainant’s favor with a refund remedy | N/A                                                                      | Fee is only earned on genuinely completed, undisputed value transfer |
 
