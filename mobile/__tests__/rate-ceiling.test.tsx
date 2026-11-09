@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { listingsFor, OFFERS } from '../src/features/market/data';
 import { MarketScreen } from '../src/features/market/MarketScreen';
-import { OFFICIAL_RATE, officialRateFor, rateProblem } from '../src/features/market/rateCeiling';
+import { ceilingsFromServer, OFFICIAL_RATE, officialRateFor, rateProblem } from '../src/features/market/rateCeiling';
 import { tradeStore } from '../src/features/trade/tradeStore';
 
 const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, (_, i) => (i * 53 + 7) % 256);
@@ -43,6 +43,25 @@ describe('rate rule', () => {
     expect(rateProblem('XYZ', 0)).toBe('not-positive');
     expect(rateProblem('XYZ', 100)).toBe('official-unavailable');
     expect(officialRateFor('XYZ')).toBeNull();
+  });
+});
+
+describe('ceilings from the server (ADR-102)', () => {
+  it('reads decimal text exactly, rounding extra decimals down, and skips nonsense', () => {
+    expect(ceilingsFromServer([
+      { currency: 'USD', max_rate: '1347.29' },
+      { currency: 'GBP', max_rate: '1802.9' },
+      { currency: 'EUR', max_rate: '1503.549' }, // never rounded up past the server's figure
+      { currency: 'CAD', max_rate: 'abc' },
+    ])).toEqual({ USD: 134729, GBP: 180290, EUR: 150354 });
+  });
+
+  it('uses the live figures when given, and the snapshot otherwise', () => {
+    expect(officialRateFor('USD', { USD: 134729 })).toBe(134729);
+    expect(officialRateFor('GBP', { USD: 134729 })).toBeNull(); // not in force: no rate accepted
+    expect(officialRateFor('USD')).toBe(133326);
+    expect(rateProblem('USD', 134729, { USD: 134729 })).toBeNull();
+    expect(rateProblem('USD', 134730, { USD: 134729 })).toBe('above-official');
   });
 });
 

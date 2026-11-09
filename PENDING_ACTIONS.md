@@ -24,7 +24,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [ ] **Choose an SMS provider** — *You*. Until then sign-up answers "not available". (ADR-025 §2)
 - [ ] **Choose an email provider** for security alerts (lock, new device, recovery). Until then alerts only go to the server log. (ADR-026 §2)
 - [ ] **Partner bank:** confirm one escrow account can pay several payout accounts per side, and how payment confirmations are sent (push, email or SMS). (ADR-021 §5)
-- [ ] **Official rate:** which CBN figure applies, and a live rate feed instead of the fixed snapshot (Decision 3). (ADR-020)
+- [x] **Official rate feed:** built 9 Nov 2026: CBN central rates via Frankfurter, hourly, last good rate for 3 days then no new offers (ADR-102). **Deploy:** set `OFFICIAL_RATE_FEED=frankfurter` in production.
 - [x] **Fee:** decided 8 Nov 2026: **flat 1%**, no minimum or maximum, no bands, no maker discount (ADR-021 §1; the banded Fair Fee of PR #121 was not adopted).
 - [x] **Business Plan and investor materials:** updated 9 Nov 2026 to the 1% fee (Business Plan §1, §5, §6, §10; Investor Book §7; BRS §11.2).
 - [ ] **Re-model the projections at 1% and three launch corridors (ADR-100)** — *You*: Business Plan Table 10.1 revenue is recalculated at a 1.0% take rate (lower than before), but EBITDA margins from Year 3, the scenarios (Table 10.2) and the valuations (Section 11) still use the old revenue.

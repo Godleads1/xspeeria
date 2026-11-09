@@ -35,17 +35,36 @@ export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD']);
 /** Date of the snapshot, shown beside the rate. */
 export const OFFICIAL_RATE_AS_OF = '17 Oct 2026';
 
-export function officialRateFor(currency: string): number | null {
-  const v = OFFICIAL_RATE[currency];
+/** NGN per 1 unit, ×100, per currency: what the server says is in force (ADR-102). */
+export type Ceilings = Readonly<Record<string, number>>;
+
+/**
+ * Server builds pass the server's current ceilings (`live`, from the automatic CBN feed);
+ * demo builds and the moment before they load use the snapshot above. A currency the server
+ * leaves out has no ceiling right now (its rate is over 3 days old), so no rate is accepted.
+ */
+export function officialRateFor(currency: string, live?: Ceilings | null): number | null {
+  const v = (live ?? OFFICIAL_RATE)[currency];
   return Number.isSafeInteger(v) && v > 0 ? v : null;
+}
+
+/** The server's ceilings as whole hundredths; a figure with more decimals is rounded DOWN. */
+export function ceilingsFromServer(items: readonly { currency: string; max_rate: string }[]): Ceilings {
+  const out: Record<string, number> = {};
+  for (const { currency, max_rate } of items) {
+    const m = /^(\d{1,6})(?:\.(\d{1,6}))?$/.exec(max_rate);
+    if (!m) continue;
+    out[currency] = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0').slice(0, 2));
+  }
+  return out;
 }
 
 export type RateProblem = 'not-positive' | 'above-official' | 'official-unavailable';
 
 /** Positivity first, then the ceiling (API contract §3.3: the two are disjoint). */
-export function rateProblem(currency: string, rateHundredths: number): RateProblem | null {
+export function rateProblem(currency: string, rateHundredths: number, live?: Ceilings | null): RateProblem | null {
   if (!Number.isSafeInteger(rateHundredths) || rateHundredths <= 0) return 'not-positive';
-  const ceiling = officialRateFor(currency);
+  const ceiling = officialRateFor(currency, live);
   if (ceiling === null) return 'official-unavailable';
   return rateHundredths > ceiling ? 'above-official' : null;
 }

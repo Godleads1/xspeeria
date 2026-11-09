@@ -7,6 +7,8 @@
  * ever passing through floating point.
  */
 
+import { ratesApi } from '../../api/ratesApi';
+import { ceilingsFromServer, type Ceilings } from './rateCeiling';
 import * as Crypto from 'expo-crypto';
 
 import { ApiError } from '../../api/client';
@@ -120,6 +122,8 @@ export interface MarketServer {
    */
   publishBuy(foreign: string, amountMinor: number, rateHundredths: number, key: string): Promise<ServerOffer>;
   newKey(): string;
+  /** ADR-102: the rate ceilings in force now. Optional so older test doubles still work. */
+  ceilings?(): Promise<Ceilings>;
 }
 
 /**
@@ -185,6 +189,7 @@ export const marketServer: MarketServer = {
     );
   },
   newKey: () => Crypto.randomUUID(),
+  ceilings: async () => ceilingsFromServer((await ratesApi.official(token(), serverAuth.apiOptions())).items),
 };
 
 export const myOffers = {
