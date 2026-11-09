@@ -11,7 +11,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
   - ~~Security screen 2FA management~~ — done (ADR-034).
   - ~~Face ID log-in (needs passkeys)~~ — replaced by fingerprint unlock and the face check (ADR-048, ADR-054).
   - ~~Profile name and details from KYC~~ — done (ADR-055, PR #48).
-- [ ] *(original plan, for reference)* **Connect the mobile app to the server sign-in and 2FA**
+- [x] *(original plan, kept for reference; done, see the line above)* **Connect the mobile app to the server sign-in and 2FA**
   - Replace the demo log-in and sign-up with the real server (`/api/v1/auth/...`).
   - Add the authenticator set-up screens (QR code and secret from the server, first code, recovery codes shown once).
   - Keep the refresh token and the trusted-device token in the phone's secure storage.
@@ -21,8 +21,8 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 
 ## 2. Decisions and actions waiting on you
 
-- [ ] **Choose an SMS provider** — *You*. Until then sign-up answers "not available". (ADR-025 §2)
-- [ ] **Choose an email provider** for security alerts (lock, new device, recovery). Until then alerts only go to the server log. (ADR-026 §2)
+- [ ] **Choose an SMS provider** — *You*. Until then sign-up answers "not available". (ADR-025 §2, ADR-044 N-4)
+- [x] **Choose an email provider:** Resend, chosen 19 Oct 2026; the account and domain are still to do (see "Email provider" below). (ADR-026 §2)
 - [ ] **Partner bank:** confirm one escrow account can pay several payout accounts per side, and how payment confirmations are sent (push, email or SMS). (ADR-021 §5)
 - [x] **Official rate feed:** built 9 Nov 2026: CBN central rates via Frankfurter, hourly, last good rate for 3 days then no new offers (ADR-102). Production refuses to start without `OFFICIAL_RATE_FEED=frankfurter`; migration 0046 runs with the first deployment's database setup.
 - [x] **Fee:** decided 8 Nov 2026: **flat 1%**, no minimum or maximum, no bands, no maker discount (ADR-021 §1; the banded Fair Fee of PR #121 was not adopted).
@@ -66,7 +66,6 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **CAD rate ceiling:** decided 9 Nov 2026: worked out from the USD ceiling and the Bank of Canada rate, ₦944.70 (ADR-101).
 - [x] **+1 phone numbers (US and Canada):** built 9 Nov 2026 for sign-up, log-in, forgot PIN and change phone (ADR-100).
 - [x] **Email provider** — *You*: **Resend** (2026-10-19). Still to do: create the Resend account, verify the sending domain (DNS records) and put the API key in your own `.env` (never in chat or Git).
-- [ ] **SMS provider** — *You*: later (ADR-044 N-4).
 - [ ] **Push setup** — *You*: Expo account / Firebase project for phone push (N-3, ADR-044).
 - [ ] **Languages** — *You*: share the Figma link with the language screens; Yoruba, Igbo, Hausa, French, Arabic and Swahili texts need native-speaker review before launch.
 - [ ] **Ghana and Kenya deals** — *You*: decide which deals (cedi/shilling ⇄ naira, or ⇄ UK/US). Canada and UAE fit today's model; all four are after the MVP.
@@ -79,9 +78,9 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 
 - [ ] **Partner bank** — escrow and payouts: API documents, test (sandbox) access, webhook security details, settlement and reconciliation files, signed agreement. Unblocks real money movement. The pretend bank (ADR-037) follows our own Banking spec; the real contract may differ.
 - [ ] **Partner webhook secrets** — stored in a secret manager per partner, with rotation (the pretend bank uses a random one per run).
-- [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and EU.
+- [ ] **Licensing (Decision 4)** — legal opinion on CBN licence or approval for this model, and for the UK, US and Canada (the launch corridors, ADR-043 and ADR-100).
 - [ ] **ID checks (KYC) and anti-money-laundering** — provider chosen: **Didit** (ADR-039, server built). Still needed: a Didit account and workflow (ID + liveness + face match + AML), its data processing agreement, NIN/BVN support (ask Didit), and a compliance officer to own the rules.
-- [ ] **SMS and email provider accounts.**
+- [ ] **SMS and email provider accounts:** an SMS provider once chosen; the Resend account and its sending domain.
 - [x] **Lawyer: does the CBN data-localisation circular (15 June 2026) cover Xspeeria?** — **Yes** (owner, 3 Nov 2026, DEC-096). Payment data and backups stay in Nigeria from 1 Jan 2027; a hosting region abroad (e.g. AWS Cape Town) is ruled out for it. **Lawyer, 3 Nov 2026:** third-party payouts are acceptable under AML rules (DEC-097), and Didit, Resend and photo storage (Cloudflare R2) may hold data abroad (DEC-098); the vendors' data-processing agreements are still to be signed.
 - [ ] **Hosting, in Nigeria** (DEC-096) — a Nigerian cloud, or the AWS Lagos Local Zone; cloud account (database, servers; separate test and live), domain name, secret manager. Then move staff and advert photos from the local folder (`LOCAL_PHOTO_DIR`) to the private Cloudflare R2 bucket (ADR-049).
 - [ ] **App stores** — Apple Developer and Google Play accounts; native build (also needed for passkeys).
@@ -109,7 +108,7 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Support's procedure** for a customer who can't pass the face check — drafted 9 Nov 2026 (Claude Doc "Support procedure: customer can't pass the face check"). *You*: approve, and decide how a locked-out customer reaches Support and whether to build a "redo your identity check" button. (ADR-054)
 - [x] **Email address verification** — built: sign-up needs the email code before any session (ADR-054). A real email provider is still needed (§2). (Checked 2026-10-27.)
 - [x] **Step-up on sensitive actions** — built: payout accounts, choosing payouts, taking offers, PIN and contact changes (`STEP_UP_ACTIONS`). The 24-hour hold was removed by the owner (DEC-044). (Checked 2026-10-27.)
-- [ ] **Fraud plan replacing the 24-hour hold** before real payouts (FX-03) — see §2.
+- [x] **Fraud plan replacing the 24-hour hold** — decided 9 Nov 2026: the new-phone face check and the "this wasn't me" freeze, plus the alerts and deal holds already built; no further checks before launch (FX-03, §2).
 - [ ] **Connect a real SMS and email provider** once chosen — *Build* (only developer senders exist).
 - [x] **Super Admin hardware security key** — built (ADR-081, 2 Nov 2026). *You:* buy two keys (e.g. YubiKey) per Super Admin; register them on the live console; then `SUPER_ADMIN_KEY_REQUIRED=true`.
 - [x] **Background worker and a first load test** — built (ADR-085, 3 Nov 2026). *With hosting:* set `RUN_BACKGROUND_JOBS=false` on the web servers and run one `python -m app.worker`; set `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; run the load test again on the real servers.
