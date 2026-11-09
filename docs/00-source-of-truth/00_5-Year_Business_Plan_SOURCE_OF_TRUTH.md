@@ -69,7 +69,7 @@ Classification: Confidential
 
 # 1. Executive Summary
 
-Xspeeria is a non-custodial, peer-to-peer foreign exchange matching platform that connects individuals and businesses with complementary currency needs, and settles every matched transaction through licensed banking partners. It does not hold customer funds, does not run an FX book, and does not take a spread on the exchange rate. It earns a flat, transparent coordination fee, charged locally on both sides of every match.
+Xspeeria is a non-custodial, peer-to-peer foreign exchange matching platform that connects individuals and businesses with complementary currency needs, and settles every matched transaction through licensed banking partners. It does not hold customer funds, does not run an FX book, and does not take a spread on the exchange rate. It earns a transparent coordination fee of 1% of the money each side sends, charged locally, in that side's own currency, on both sides of every match (ADR-021).
 
 This document sets out an accelerated five-year strategic scenario under which Xspeeria compresses the corridor-expansion, multi-bank-network, and capital-raise trajectory previously modeled over ten years into five, targeting the \$1 billion — “unicorn” — valuation threshold by Year 5. This is a deliberately aggressive planning case: it should be read alongside the scenario analysis in Section 10.4, which models a base, bull, and bear case rather than a single number, because a five-year unicorn trajectory in a regulated financial-infrastructure category carries meaningfully more execution risk than the original ten-year plan.
 
@@ -77,7 +77,7 @@ This document sets out an accelerated five-year strategic scenario under which X
 
 - A large, provable market: high two-way FX demand in African diaspora corridors, much of it currently served by informal, opaque, or margin-heavy channels.
 
-- A structurally cheaper pricing model: a flat, disclosed coordination fee tied to local transfer costs, rather than a hidden percentage margin embedded in the exchange rate.
+- A transparent pricing model: a disclosed 1% coordination fee on what each side sends, shown before the customer confirms, rather than a hidden margin embedded in the exchange rate.
 
 - A capital-light, bank-partnered infrastructure model: no FX book, no custodial risk, low balance-sheet requirement — capital is spent on technology, compliance, and growth, not on funding a trading book.
 
@@ -127,16 +127,13 @@ Xspeeria matches a verified user who holds Currency A and wants Currency B with 
 
 - Multi-sided network effect: more users → faster matches → more users; more banks → more corridors/payout options → more users; more corridors → more cross-corridor matching flexibility — and each loop tightens as the base grows, which is the structural reason a compressed timeline is plausible rather than merely aspirational.
 
-# 5. Pricing Model & Cost Advantage vs. Incumbents
+# 5. Pricing Model & Position vs. Incumbents
 
-> **SUPERSEDED 2026-10-17 (product owner):** the coordination fee is now **1% of the money
-> each side sends**, in that side's currency, not a flat fee
-> (`docs/adr/021-percentage-fee-and-split-payouts.md`). The flat-fee text and the cost comparison in this section are kept as history and no longer describe Xspeeria's pricing; the narrative needs a rewrite.
-
+> **Updated 2026-11-09** to the approved fee (`docs/adr/021-percentage-fee-and-split-payouts.md`, confirmed by the owner 2026-11-08: "Flat 1%, nothing else"). The earlier flat-fee model (7.5× the local instant-transfer cost, with a floor fee) is no longer Xspeeria's pricing; it is kept in `reference/source-docx/` as history.
 
 ## 5.1 The Pricing Principle
 
-Xspeeria charges a flat coordination fee on each side of a matched transaction, in local currency, calculated as a multiple of the standard local instant-transfer cost in that country — rather than a percentage of the transaction amount, and rather than a margin embedded inside the exchange rate. The proposed benchmark multiple is 7.5x the prevailing local domestic instant-transfer fee, with a minimum floor fee applied in corridors where domestic transfers are priced near zero, to keep the model commercially sustainable.
+Xspeeria charges a **coordination fee of 1% of the money each side sends**, in that side's own currency, paid on top of the amount into that side's escrow at the partner bank. There is no minimum, no maximum and no margin inside the exchange rate: the rate is the one the two customers agreed. The app shows the exact fee and the total to pay in before the customer confirms.
 
 <table>
 <colgroup>
@@ -144,40 +141,41 @@ Xspeeria charges a flat coordination fee on each side of a matched transaction, 
 </colgroup>
 <thead>
 <tr class="header">
-<th><p><strong>Worked Example — Nigeria Leg (Illustrative)</strong></p>
-<p>Nigeria's interbank instant transfer (NIP) fee is tiered by regulator/industry convention, commonly around ₦10–₦50 depending on amount sent. Using the ₦50 tier as the benchmark: Xspeeria's Nigeria-side coordination fee = ₦50 × 7.5 = ₦375 per matched transaction, regardless of whether the matched amount is ₦200,000 or ₦2,000,000. This is a flat fee, not a percentage — it does not grow with the size of the transfer. Actual NIP fee tiers, and the multiple applied, should be reconfirmed against current NIBSS/CBN published rates before publishing this figure externally.</p></th>
+<th><p><strong>Worked Example — One Nigeria ⇄ US Deal</strong></p>
+<p>Chidi in Lagos sends ₦1,600,000 to buy $1,000 at an agreed ₦1,600 per dollar. He pays ₦1,600,000 + ₦16,000 (1%) = ₦1,616,000 into his escrow. Sarah in the US sends $1,000 to buy the naira and pays $1,000 + $10 (1%) = $1,010 into hers. Each pays only in their own currency. Xspeeria earns ₦16,000 + $10, about $20 at that rate: 1% of the deal's value on each side, or 1% of the deal's combined value across both legs.</p></th>
 </tr>
 </thead>
 <tbody>
 </tbody>
 </table>
 
-On the counterpart leg (e.g., a UK Faster Payments transfer, which is typically free to consumers), the 7.5x multiplier would round to zero; in such corridors Xspeeria applies a minimum flat coordination fee (e.g., a small fixed amount in the local currency) instead, so the model remains commercially viable while still being priced off a local, low-cost benchmark rather than a percentage of the FX amount.
-
 ## 5.2 How This Compares to LemFi's Model
 
-Independent reviews of LemFi's pricing consistently describe the same structure: LemFi charges a zero or near-zero flat transfer fee on most corridors, including Nigeria, Ghana, and Kenya, and instead earns its margin inside the exchange rate itself, typically in a range of roughly 0.5% to 2% on its busiest African routes. Because that margin is a percentage of the amount sent, the absolute cost to the customer rises in direct proportion to transaction size — a small transfer and a large transfer pay the same percentage, but very different absolute amounts.
+Independent reviews of LemFi's pricing describe a zero or near-zero transfer fee on most corridors, including Nigeria, Ghana and Kenya, with the margin earned inside the exchange rate, typically in a range of roughly 0.5% to 2% on its busiest African routes. That margin is a percentage of the amount sent, and the customer cannot easily see it, because it is not shown separately from the rate.
 
-Xspeeria's flat, local-transfer-cost-based fee behaves the opposite way: the absolute fee stays roughly constant as transaction size grows, so the effective cost as a percentage of the transaction falls the larger the transfer. This produces a genuine, structural crossover point beyond which Xspeeria is materially cheaper than a percentage-margin competitor — and the advantage compounds for the SME, trade, and larger remittance transactions Xspeeria is also targeting, not just small personal remittances.
+Xspeeria's fee is also a percentage, so the honest comparison is **on transparency and rate, not on a size-based cost advantage**:
 
-## 5.3 Illustrative Cost Comparison
+- **Cost to one customer:** 1% of what they send, against a 0.5%–2% margin. Xspeeria sits inside the incumbent's range, cheaper than its higher-margin routes and dearer than its cheapest.
+- **The rate:** Xspeeria takes nothing from the rate, so a customer who would otherwise accept a provider's rate can usually agree a better one directly with the other side. How much better is a pilot measurement, not a promise.
+- **Disclosure:** the 1% is shown as a separate line before confirming, so the full cost is visible at the moment of decision.
 
-| **Transaction Size (NGN equivalent)** | **Xspeeria Flat Fee (both legs, illustrative)** | **LemFi-style FX Margin @ 0.5%–2.0%** | **Xspeeria Advantage**                 |
-|---------------------------------------|-------------------------------------------------|---------------------------------------|----------------------------------------|
-| ₦100,000                              | ~₦4,400 (fixed)                                 | ₦500 – ₦2,000                         | LemFi-style model cheaper at this size |
-| ₦500,000                              | ~₦4,400 (fixed)                                 | ₦2,500 – ₦10,000                      | Comparable to modestly cheaper         |
-| ₦2,000,000                            | ~₦4,400 (fixed)                                 | ₦10,000 – ₦40,000                     | Xspeeria materially cheaper            |
-| ₦10,000,000                           | ~₦4,400 (fixed)                                 | ₦50,000 – ₦200,000                    | Xspeeria dramatically cheaper          |
+## 5.3 Illustrative Cost Comparison (one customer's side)
 
-*Table 5.1: Illustrative only, using placeholder fee levels and a hypothetical GBP-side minimum floor fee combined with the Nigeria-side worked example above. Real figures depend on final commercial terms with the settlement bank(s) and must be validated corridor-by-corridor before publication.*
+| **Amount sent (NGN equivalent)** | **Xspeeria fee (1%, shown separately)** | **LemFi-style FX margin @ 0.5%–2.0% (inside the rate)** | **Reading** |
+|---|---|---|---|
+| ₦100,000 | ₦1,000 | ₦500 – ₦2,000 | Inside the range |
+| ₦500,000 | ₦5,000 | ₦2,500 – ₦10,000 | Inside the range |
+| ₦2,000,000 | ₦20,000 | ₦10,000 – ₦40,000 | Inside the range |
+| ₦10,000,000 | ₦100,000 | ₦50,000 – ₦200,000 | Inside the range; no volume advantage |
+
+*Table 5.1: The Xspeeria column is exact (1%). The competitor range comes from public reviews and must be reconfirmed against live pricing before external use. The table does not include the rate difference in 5.2, which depends on what customers agree.*
 
 ## 5.4 Why This Matters Strategically
 
-- Transparency as differentiation: a flat, disclosed fee is simpler to explain and trust than a rate margin the average consumer cannot easily benchmark against the mid-market rate.
-
-- A pricing model that rewards larger, more valuable transactions is a natural fit for Xspeeria's SME and trade-finance ambitions — a segment percentage-margin remittance apps are not optimized to serve well.
-
-- Both sides pay locally and separately, meaning Xspeeria never needs to hold or price cross-border FX risk itself — reinforcing the non-custodial, capital-light model in Section 4.1.
+- **Transparency as differentiation:** one disclosed percentage, shown before confirming, is simpler to explain and trust than a rate margin the average customer cannot benchmark against the mid-market rate.
+- **Revenue moves with value:** the fee grows with the size of each deal, so revenue tracks matched volume directly, which keeps forecasting simple (Section 10).
+- **Large deals are not cheaper per naira:** with no maximum fee, the SME and trade segment is not won on price per transaction. It must be won on rate, speed, limits and trust; any business tier or volume pricing would need a new owner decision.
+- **Each side pays locally and separately,** so Xspeeria never holds or prices cross-border FX risk itself, keeping the non-custodial, capital-light model of Section 4.1.
 
 # 6. Competitive Positioning
 
@@ -185,7 +183,7 @@ A world-class plan positions the company not just against one named competitor, 
 
 | **Competitor Archetype**                 | **Cost Position**                                  | **Trust/Compliance Depth**                  | **Xspeeria's Relative Edge**                                                                      |
 |------------------------------------------|----------------------------------------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------|
-| LemFi (margin-based remittance/wallet)   | Cheap at small sizes, costlier at scale (% margin) | Regulated EMI, strong brand trust           | Structurally cheaper at SME/trade-size transactions; fully transparent pricing                    |
+| LemFi (margin-based remittance/wallet)   | % margin inside the rate (≈0.5–2%)                 | Regulated EMI, strong brand trust           | Same order of cost (1%), but disclosed separately, with no margin in the user-agreed rate         |
 | Binance P2P (crypto-based P2P)           | Variable, crypto-volatility exposed                | Weaker regulatory alignment in many markets | No crypto volatility; works entirely in licensed fiat rails                                       |
 | Chipper Cash (wallet-based remittance)   | Low/no fee on core routes, wallet custody risk     | Moderate; wallet-based                      | Non-custodial; no wallet risk; user-set rate discovery                                            |
 | Flutterwave (B2B payment infrastructure) | Merchant-fee model, not consumer P2P               | Fully regulated, merchant-focused           | Consumer-facing marketplace layer on top of infrastructure, not a competing rail                  |
@@ -291,11 +289,11 @@ Xspeeria is led by a five-person executive co-founder team, as reflected in the 
 
 ## 10.1 Key Modeling Assumptions
 
-- Average combined revenue per matched transaction (both legs) starts around \$3–\$4 in Year 1 (Nigeria–UK pilot fee levels) and rises as higher-fee corridors (US, Canada, China, Gulf) enter the mix earlier than in the original 10-year plan.
+- Revenue per matched transaction is 1% of each side's amount: about 2% of one side's value, or 1% of the deal's value across both legs. For example, a $1,000 deal earns about $20. Average revenue per transaction therefore follows average deal size, which pilot data must establish.
 
 - User and transaction growth follows a steeper S-curve than the 10-year plan: modest in Year 1 (pilot/validation), then aggressive parallel-corridor acceleration from Year 2 through Year 4, moderating slightly in Year 5 as the base grows large.
 
-- Take rate (revenue as % of matched GMV) starts higher on smaller average transaction sizes and declines over the five years as average transaction size grows and SME/trade volume increases — consistent with the flat-fee mechanics in Section 5.
+- Take rate (revenue as % of matched GMV, both legs) is **1.0%** on completed deals, flat over the five years, because the fee is 1% of each leg with no minimum or maximum. Cancelled and refunded deals earn nothing (BRS §11), so realised take rate can only be at or below 1.0%.
 
 - Operating costs scale sub-linearly with revenue from Year 3 onward (earlier than the 10-year plan) as the technology and compliance base amortizes across a fast-growing transaction base (operating leverage), which is required to reach positive EBITDA by Year 4.
 
@@ -303,13 +301,13 @@ Xspeeria is led by a five-person executive co-founder team, as reflected in the 
 
 | **Year** | **Corridors** | **Verified Users (cum.)** | **Annual GMV** | **Take Rate** | **Annual Revenue** | **EBITDA Margin**      |
 |----------|---------------|---------------------------|----------------|---------------|--------------------|------------------------|
-| Y1       | 1             | 5,000                     | \$10M          | 1.5%          | \$150K             | Negative (build phase) |
-| Y2       | 4             | 100,000                   | \$400M         | 1.5%          | \$6.0M             | Negative (scale phase) |
-| Y3       | 9             | 500,000                   | \$2.2B         | 1.4%          | \$30M              | ~(5%)                  |
-| Y4       | 15            | 2.5M                      | \$9.0B         | 1.25%         | \$112M             | ~12%                   |
-| Y5       | 22            | 6.0M                      | \$22B          | 1.15%         | \$260M             | ~22%                   |
+| Y1       | 1             | 5,000                     | \$10M          | 1.0%          | \$100K             | Negative (build phase) |
+| Y2       | 4             | 100,000                   | \$400M         | 1.0%          | \$4.0M             | Negative (scale phase) |
+| Y3       | 9             | 500,000                   | \$2.2B         | 1.0%          | \$22M              | To re-model            |
+| Y4       | 15            | 2.5M                      | \$9.0B         | 1.0%          | \$90M              | To re-model            |
+| Y5       | 22            | 6.0M                      | \$22B          | 1.0%          | \$220M             | To re-model            |
 
-*Table 10.1: Base-case illustrative scenario. GMV = gross matched transaction value across both legs of all matches. Take rate declines over time consistent with the flat-fee/larger-average-transaction dynamic in Section 5.3.*
+*Table 10.1: Base-case illustrative scenario, updated 2026-11-09 to the 1% fee. GMV = gross matched transaction value across both legs of all matches, so revenue = 1.0% × GMV. Corridors, users and GMV are unchanged from the earlier version. Revenue is 15–33% lower than before (it was based on a 1.5%→1.15% take rate). The EBITDA margins from Year 3, the scenarios in 10.4 and the valuations in Section 11 were built on the old revenue and **must be re-modelled** before external use.*
 
 ## 10.3 Cost Structure Evolution
 
@@ -323,7 +321,9 @@ Xspeeria is led by a five-person executive co-founder team, as reflected in the 
 
 ## 10.4 Scenario Analysis — Base / Bull / Bear
 
-A five-year unicorn timeline is aggressive. A world-class plan does not hide that — it quantifies it. The table below models three scenarios for Year 5 outcomes, driven primarily by how many corridors and bank partners are actually live, and how closely realized take rate and cost leverage track the base-case assumptions.
+A five-year unicorn timeline is aggressive. A world-class plan does not hide that — it quantifies it. > **To re-model (2026-11-09):** the figures in Table 10.2 come from the earlier, higher take rate. At 1.0% the base-case Year 5 revenue is \$220M, not \$260M (Table 10.1); the bear and bull rows, margins and valuations need rebuilding by the owner.
+
+The table below models three scenarios for Year 5 outcomes, driven primarily by how many corridors and bank partners are actually live, and how closely realized take rate and cost leverage track the base-case assumptions.
 
 | **Scenario** | **Year 5 Corridors** | **Year 5 Annual Revenue** | **Year 5 EBITDA Margin** | **Year 5 Valuation (illustrative)** | **Key Driver**                                                                                       |
 |--------------|----------------------|---------------------------|--------------------------|-------------------------------------|------------------------------------------------------------------------------------------------------|
@@ -370,7 +370,7 @@ As an illustrative guardrail, each primary round should target roughly 15–22% 
 | **Strengths**                                                                                                                                                                                                   | **Weaknesses**                                                                                                                                                                                                 |
 |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Opportunities**                                                                                                                                                                                               | **Threats**                                                                                                                                                                                                    |
-| Non-custodial, capital-light model; transparent, structurally cheaper flat-fee pricing; regulation-first posture; experienced, committed founding team                                                          | Early-stage team credibility not yet backed by deep public track record; single anchor bank dependency in Year 1; advisor bios currently lack explicit financial-services credentials                          |
+| Non-custodial, capital-light model; transparent, disclosed 1% pricing with no margin in the rate; regulation-first posture; experienced, committed founding team                                                          | Early-stage team credibility not yet backed by deep public track record; single anchor bank dependency in Year 1; advisor bios currently lack explicit financial-services credentials                          |
 | Large, underserved diaspora FX corridors; embedded/white-label expansion into other fintechs; genuine currency-stability/regulatory-alignment narrative that strengthens both fundraising and bank partnerships | Competitive response from incumbents (LemFi and others) on pricing; regulatory change in any core corridor; execution risk inherent in a compressed 5-year timeline; matching-liquidity risk in thin corridors |
 
 *Table 13.1–13.2: A concise SWOT is included here as a standard element of world-class strategic planning documents; each item links back to a fuller discussion in Sections 6, 7, 9, and 15.*
