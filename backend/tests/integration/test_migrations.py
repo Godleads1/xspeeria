@@ -81,6 +81,7 @@ APPROVED_TABLES = {
     "api_metrics",
     "job_status",
     "customer_activity",
+    "official_rates",
     "ops_alerts",
     "deal_pauses",
     "rate_limit_hits",
