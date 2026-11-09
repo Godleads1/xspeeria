@@ -29,7 +29,7 @@ The owner chose the CAD payout form on 2026-11-09: "institution number (3 digits
 |---|---|
 | Identity checks per country (ADR-042) | Canada (`CA`, Didit issuing state `CAN`) in the server, the app and the admin console. Migration **0045** adds `'CA'` to `ck_kyc_cases_country_allowed`; downgrade fails on purpose while a Canadian check exists. |
 | CAD currency | Scale 2, minimum 10 CAD, a foreign currency against NGN. Its `currency_definitions` row comes from `app.cli.currency_definitions` (insert-only, CD3). |
-| **CAD offers** | **Refused, and none listed, until the owner sets an official-rate ceiling for CAD.** ADR-020 has no CBN figure for CAD, so the rule fails closed: publishing answers `VAL_422_RATE_ABOVE_CEILING` ("not set"), and the marketplace lists nothing for CAD/NGN. |
+| **CAD offers** | ~~Refused until a ceiling is set.~~ **Superseded 2026-11-09 by ADR-101:** the ceiling is ₦944.70, worked out from the USD ceiling and the Bank of Canada USD/CAD rate. |
 | Settlement | `JURISDICTION` CAD→CA; a pretend Canadian bank for development only. |
 | Location rule (ADR-059) | Someone in Canada doesn't see listings selling CAD. Tests that used Canada as "a country whose currency isn't traded" now use Japan. |
 | Payout accounts (ADR-022) | CAD: bank name, **institution number (3 digits)**, **transit number (5 digits)** and **account number (digits, any length up to 17)**. Institution and transit are stored together as the bank code (8 digits); the account number is sealed like every other. Other currencies refuse institution or transit numbers. |

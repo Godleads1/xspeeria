@@ -185,13 +185,16 @@ async def test_publish_refuses_bad_input(david: User, over: dict[str, str], code
     assert _code(r) == code
 
 
-async def test_cad_is_known_but_has_no_official_rate_yet(david: User) -> None:
-    """ADR-100: CAD offers can't be published or listed until the owner sets a ceiling."""
-    r = await david.publish(source_currency="CAD", desired_rate="900")
-    assert r.status_code in (403, 422), r.text  # not verified in Canada, or no ceiling
+async def test_cad_listing_works_and_respects_its_derived_ceiling(david: User) -> None:
+    """ADR-101: CAD/NGN is listed; a CAD offer above 944.70 is refused (once verified)."""
     listed = await david.listings("CAD/NGN")
     assert listed.status_code == 200, listed.text
-    assert listed.json()["items"] == []
+    r = await david.publish(source_currency="CAD", desired_rate="944.71")
+    assert r.status_code == 422 and _code(r) == "VAL_422_RATE_ABOVE_CEILING", r.text
+    r = await david.publish(source_currency="CAD", desired_rate="944.70")
+    assert r.status_code == 201, r.text
+    listed = (await david.listings("CAD/NGN")).json()["items"]
+    assert [o["desired_rate"] for o in listed] == ["944.70"]
 
 
 async def test_rate_at_the_ceiling_is_allowed(david: User) -> None:

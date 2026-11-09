@@ -1463,5 +1463,6 @@
  "Institution and transit numbers are only used for CAD.": "Os números da instituição e de trânsito só são usados para CAD.",
  "Only the bank name, institution, transit and account numbers are needed for CAD.": "Para CAD só são necessários o nome do banco e os números da instituição, de trânsito e da conta.",
  "Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.": "Por agora, as contas de pagamento podem estar em NGN, USD, GBP, EUR ou CAD.",
- "Enter your phone number *": "Introduza o seu número de telefone *"
+ "Enter your phone number *": "Introduza o seu número de telefone *",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.": "Taxa máxima: {{official}} NGN por {{code}}, calculada a partir da taxa do dólar do CBN e da taxa do Banco do Canadá. A sua taxa tem de ser esta ou inferior."
 }

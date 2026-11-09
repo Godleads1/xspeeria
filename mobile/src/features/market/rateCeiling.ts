@@ -14,7 +14,11 @@
  * figures shown. Cross-checked against CBN figures for 15 Oct reported by Arbiterz
  * (USD 1,332.75, GBP 1,764.26, EUR 1,490.48). Official rates move daily: a live feed, its
  * cadence, staleness and "unavailable" behaviour are still OPEN (ADR-020 §3). A currency
- * with no official rate here (CAD, AUD) accepts no rate at all (fail closed).
+ * with no official rate here (AUD) accepts no rate at all (fail closed).
+ *
+ * CAD (ADR-101, owner 2026-11-09): no reliable CBN figure, so the ceiling is the USD one ÷
+ * the Bank of Canada USD/CAD rate (1.4113 on 6 Nov 2026), half to even: 1,333.26 ÷ 1.4113 =
+ * 944.70. The server derives the same figure; the app shows it with its own wording.
  */
 
 /** NGN per 1 unit, ×100. CBN official rate snapshot (see above). */
@@ -22,7 +26,11 @@ export const OFFICIAL_RATE: Readonly<Record<string, number>> = {
   USD: 133326,
   GBP: 176511,
   EUR: 149120,
+  CAD: 94470, // derived, ADR-101
 };
+
+/** Currencies whose ceiling is derived, not published by the CBN (ADR-101). */
+export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD']);
 
 /** Date of the snapshot, shown beside the rate. */
 export const OFFICIAL_RATE_AS_OF = '17 Oct 2026';

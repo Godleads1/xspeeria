@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 
 __all__ = [
     "CURRENCY_DEF_VERSION",
@@ -19,6 +19,8 @@ __all__ = [
     "MINIMUM_MINOR",
     "OFFICIAL_RATE",
     "OFFICIAL_RATE_AS_OF",
+    "CAD_PER_USD",
+    "CAD_PER_USD_AS_OF",
     "RATE_PLACES",
     "SCALE",
     "OfferInputError",
@@ -35,8 +37,7 @@ __all__ = [
 CURRENCY_DEF_VERSION = "iso4217-v1"
 #: ISO 4217 minor units for the launch currencies.
 SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2}
-#: CAD: Canada joins the MVP corridors (ADR-100). It has no official-rate ceiling yet, so CAD
-#: offers are refused and none are listed until the owner sets one (fail closed, ADR-020).
+#: CAD: Canada joins the MVP corridors (ADR-100); its ceiling is derived from the USD one (ADR-101).
 FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD"})
 
 #: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate.
@@ -46,6 +47,15 @@ OFFICIAL_RATE: dict[str, Decimal] = {
     "EUR": Decimal("1491.20"),
 }
 OFFICIAL_RATE_AS_OF = "2026-10-17"
+
+#: ADR-101 (owner, 2026-11-09): the CBN publishes no CAD figure we can rely on, so the CAD
+#: ceiling = the USD ceiling ÷ Bank of Canada's daily USD/CAD rate (CAD per 1 USD), rounded
+#: half to even to the kobo. Refreshing the USD ceiling or this rate changes CAD with it.
+CAD_PER_USD = Decimal("1.4113")
+CAD_PER_USD_AS_OF = "2026-11-06"
+OFFICIAL_RATE["CAD"] = (OFFICIAL_RATE["USD"] / CAD_PER_USD).quantize(
+    Decimal("0.01"), rounding=ROUND_HALF_EVEN
+)
 
 #: ADR-029 — ₦10,000 or 10 units of the foreign currency.
 MINIMUM_MINOR: dict[str, int] = {

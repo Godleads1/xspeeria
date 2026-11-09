@@ -7,6 +7,8 @@ from decimal import Decimal
 import pytest
 
 from app.domain.offer_rules import (
+    CAD_PER_USD,
+    CAD_PER_USD_AS_OF,
     MINIMUM_MINOR,
     OFFICIAL_RATE,
     OfferInputError,
@@ -82,7 +84,7 @@ class TestRate:
         problem = rate_problem(Decimal("-5000"), "USD")
         assert problem is not None and problem.code == "VAL_422_RATE_NOT_POSITIVE"
 
-    @pytest.mark.parametrize("foreign", ["USD", "GBP", "EUR"])
+    @pytest.mark.parametrize("foreign", ["USD", "GBP", "EUR", "CAD"])
     def test_ceiling_is_the_official_rate(self, foreign: str) -> None:
         ceiling = OFFICIAL_RATE[foreign]
         assert rate_problem(ceiling, foreign) is None
@@ -93,9 +95,10 @@ class TestRate:
         problem = rate_problem(Decimal("1"), "JPY")
         assert problem is not None and problem.code == "VAL_422_RATE_ABOVE_CEILING"
 
-    def test_cad_has_no_official_rate_yet_so_every_rate_is_refused(self) -> None:
-        """ADR-100: CAD is a launch currency, but no ceiling is set yet (fail closed)."""
-        assert "CAD" not in OFFICIAL_RATE
-        problem = rate_problem(Decimal("1"), "CAD")
+    def test_cad_ceiling_is_derived_from_the_usd_one(self) -> None:
+        """ADR-101: USD ceiling ÷ Bank of Canada USD/CAD (6 Nov 2026: 1.4113)."""
+        assert CAD_PER_USD == Decimal("1.4113") and CAD_PER_USD_AS_OF == "2026-11-06"
+        assert OFFICIAL_RATE["CAD"] == Decimal("944.70")  # 1,333.26 ÷ 1.4113 = 944.6964…
+        assert rate_problem(Decimal("944.70"), "CAD") is None
+        problem = rate_problem(Decimal("944.71"), "CAD")
         assert problem is not None and problem.code == "VAL_422_RATE_ABOVE_CEILING"
-        assert "not set" in problem.message

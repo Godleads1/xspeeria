@@ -31,7 +31,7 @@ export const RECEIVABLE: readonly Currency[] = [NGN];
 /**
  * Current market band (NGN per 1 unit, ×100), per foreign currency. MOCK. Repriced
  * 2026-10-17 (ADR-020) so the top of each band is the CBN official rate, the maximum any
- * rate may be. CAD and AUD have no official rate yet, so no band is shown for them.
+ * rate may be. AUD has no official rate, and CAD (ADR-101) has no demo band, so none is shown.
  */
 export const MARKET_BAND: Readonly<Record<string, { low: number; high: number }>> = {
   USD: { low: 130500, high: 133326 },
@@ -63,7 +63,7 @@ export interface Listing {
 
 /**
  * Sell offers a buyer can take (Buy mode). MOCK. Rates repriced 2026-10-17 to sit at or
- * below the CBN official rate (ADR-020); Figma's amounts and labels are kept. CAD and AUD
+ * below the CBN official rate (ADR-020); Figma’s amounts and labels are kept. CAD and AUD
  * offers stay in the data but are not eligible (no official rate yet).
  */
 export const OFFERS: readonly Listing[] = [
