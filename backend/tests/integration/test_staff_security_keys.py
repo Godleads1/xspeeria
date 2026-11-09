@@ -251,3 +251,9 @@ async def test_production_refuses_to_start_without_required_keys() -> None:
         build_auth_runtime(Settings(**base))  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="STAFF_KEY_RP_ID"):
         build_auth_runtime(Settings(**base, super_admin_key_required=True))  # type: ignore[arg-type]
+    # ADR-102: rate ceilings must come from the automatic CBN feed in production.
+    from tests.production_settings import PRODUCTION_KEYS
+
+    no_feed = {**PRODUCTION_KEYS, "official_rate_feed": "off"}
+    with pytest.raises(ValueError, match="OFFICIAL_RATE_FEED"):
+        build_auth_runtime(Settings(**base, **no_feed))  # type: ignore[arg-type]

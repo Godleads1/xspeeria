@@ -147,6 +147,9 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
     if settings.is_production and not settings.public_api_url.startswith("https://"):
         # ADR-084: the "this wasn't me" link in every security email points here.
         raise ValueError("PUBLIC_API_URL must be the API's https address in production (ADR-084)")
+    if settings.is_production and settings.official_rate_feed == "off":
+        # ADR-102 (owner 2026-11-09: "turn it now"): live rate ceilings, never the old snapshot.
+        raise ValueError("OFFICIAL_RATE_FEED must be frankfurter in production (ADR-102)")
     return AuthRuntime(
         keys=keys,
         secret_box=box,
