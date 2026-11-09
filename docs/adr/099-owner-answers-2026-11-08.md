@@ -10,7 +10,7 @@
 ## 1. A corrected payout account gets a new deadline
 
 - When the bank rejects or invalidates a payout account a customer chose for a deal, and the customer corrects it (chooses or adds a valid account), the window they were in **starts again**: a new deadline, rather than the rest of the old one.
-- **Length (reading, to confirm):** the new deadline is as long as the window being restarted (for example 30 minutes to choose payout accounts, ADR-035). The owner said "new one" and gave no other length.
+- **Length: 10 minutes** (owner, 2026-11-09). Asked whether it should be as long as the original window, the owner said "No", then chose **"10 minutes"**. From the moment the bank's rejection is recorded, the customer has 10 minutes to choose or add a valid account. If they don't, the deal is cancelled under the normal rules.
 - **Unchanged (ADR-001 §14.6):** a confirmed payment stays confirmed, and payout stays blocked until the account is corrected. Neither side is paid to an account the bank has not confirmed.
 - **Not built yet:** today the only bank account check is the local development one, which approves every account. An account that stops being usable before payout puts the deal on a RISK hold for a person (ADR-037). The correct-and-restart flow is built when the partner bank's account check (name check, rejection notices) is known, so that the rejection signal is not invented.
 

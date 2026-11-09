@@ -44,7 +44,7 @@ Last updated: 2 Nov 2026 (checked against merged PRs up to #97).
 - [x] **2FA settings in the app** (replace authenticator, new recovery codes) — *Build* — done 18 Oct 2026 for development builds (ADR-034).
 - [x] **Payout accounts and preparation** — approved 18 Oct 2026 (30 minutes; sealed number, last 4 shown; pretend bank check); server built (ADR-035).
 - [ ] **Confirm ADR-035 §4 details** — *You*: stage names, routes, changing a choice until both sides have chosen, 10 accounts per deal.
-- [x] **Corrected account after a bank rejection:** decided 8 Nov 2026: **a new deadline** (ADR-099). Built once the partner bank's account check exists. *You*: confirm the new deadline is as long as the window being restarted (e.g. 30 minutes to choose accounts).
+- [x] **Corrected account after a bank rejection:** decided: **a new deadline of 10 minutes** (owner, 8 and 9 Nov 2026; ADR-099). Built once the partner bank's account check exists.
 - [x] **EUR payout account form:** decided 8 Nov 2026: **IBAN only**, no BIC; built (ADR-099). Euro deals still can't settle until a euro partner bank and country are chosen.
 - [x] **App screens for payout accounts and choosing them for a deal** — *Build* — done 18 Oct 2026 for development builds (ADR-036).
 - [x] **Escrow with a pretend bank** — approved 19 Oct 2026 (simulation only; 5-minute funding window; fee refunded in full on a failed deal); server built (ADR-037).
