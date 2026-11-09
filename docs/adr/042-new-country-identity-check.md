@@ -9,7 +9,7 @@
 
 ## Rules
 
-1. **Verification is per country.** Countries: Nigeria (`NG`), United Kingdom (`GB`), United States (`US`) — the MVP corridors (ADR-043).
+1. **Verification is per country.** Countries: Nigeria (`NG`), United Kingdom (`GB`), United States (`US`) — the MVP corridors (ADR-043). *Canada (`CA`) joins the MVP corridors (ADR-100, 2026-11-09); not built yet.*
 2. **A deal needs verification in the country you pay from.** The country is the currency's jurisdiction (`settlement_rules.JURISDICTION`: NGN→NG, GBP→GB, USD→US).
    - Posting an offer: the offer's *source* currency (what the maker pays).
    - Taking an offer: the offer's *target* currency (what the taker pays).
