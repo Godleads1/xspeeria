@@ -17,7 +17,7 @@ import { Icon } from "../../components/icons";
 import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import type { Side } from "../market/MarketScreen";
-import { formatHundredths, formatRate } from "../market/money";
+import { formatAmount, formatHundredths, formatRate } from "../market/money";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_LABEL } from "../history/data";
@@ -86,7 +86,7 @@ export function ConfirmTradeSheet({
           {short ? (
             <Text testID="confirm-partial" style={styles.notice}>
               {(() => {
-                const v = { asked: formatHundredths(requestedMinor), filled: formatHundredths(totals.foreignMinor), cur, count: parts.length };
+                const v = { asked: formatAmount(cur, requestedMinor), filled: formatAmount(cur, totals.foreignMinor), cur, count: parts.length };
                 const isBuy = side === "buy";
                 if (several) {
                   return isBuy
@@ -110,7 +110,7 @@ export function ConfirmTradeSheet({
               {parts.map((p, i) => (
                 <Row
                   key={p.listing.id}
-                  label={`${i + 1}. ${formatHundredths(p.amountMinor)} ${cur}`}
+                  label={`${i + 1}. ${formatAmount(cur, p.amountMinor)} ${cur}`}
                   value={`NGN ${p.listing.rateLabel ?? formatRate(p.listing.rateMilli)}/${cur}`}
                 />
               ))}
@@ -120,7 +120,7 @@ export function ConfirmTradeSheet({
           <View style={styles.card}>
             <Row
               label={side === "buy" ? tr("You buy") : tr("You sell")}
-              value={`${formatHundredths(totals.foreignMinor)} ${cur}`}
+              value={`${formatAmount(cur, totals.foreignMinor)} ${cur}`}
               strong
             />
             {several ? null : (
@@ -150,11 +150,11 @@ export function ConfirmTradeSheet({
                 />
                 <Row
                   label={tr("Coordination fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
-                  value={`${formatHundredths(totals.feeMinor)} ${cur}`}
+                  value={`${formatAmount(cur, totals.feeMinor)} ${cur}`}
                 />
                 <Row
                   label={tr("You transfer")}
-                  value={`${formatHundredths(totals.transferMinor)} ${cur}`}
+                  value={`${formatAmount(cur, totals.transferMinor)} ${cur}`}
                   strong
                 />
               </>
@@ -163,7 +163,7 @@ export function ConfirmTradeSheet({
 
           <View testID="confirm-receive" style={styles.card}>
             {side === "buy" ? (
-              <Row label={tr("You receive")} value={`${formatHundredths(receiveMinor)} ${receiveCur}`} strong />
+              <Row label={tr("You receive")} value={`${formatAmount(receiveCur, receiveMinor)} ${receiveCur}`} strong />
             ) : null}
             <Text style={styles.feeNote}>{tr("Next, choose the accounts the partner bank pays.")}</Text>
           </View>

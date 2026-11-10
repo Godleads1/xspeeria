@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { Redirect, useRouter } from 'expo-router';
 
-import { formatHundredths } from '../../../src/features/market/money';
+import { formatAmount } from '../../../src/features/market/money';
 import { useBeneficiaries } from '../../../src/features/profile/beneficiaryStore';
 import { useProfile } from '../../../src/features/profile/profileStore';
 import { requestStepUp } from '../../../src/features/security/stepUp';
@@ -42,7 +42,7 @@ function PayoutRoute(): ReactElement {
       onManageBeneficiaries={() => router.push('/profile/beneficiaries')}
       onContinue={async (recipients) => {
         const cur = draft.parts[0].listing.currency;
-        const amount = formatHundredths(draft.parts.reduce((s, p) => s + p.amountMinor, 0));
+        const amount = formatAmount(draft.parts[0].listing.currency, draft.parts.reduce((s, p) => s + p.amountMinor, 0));
         const action = draft.side === 'buy' ? tr("Buy {{amount}} {{cur}}", { amount, cur }) : tr("Sell {{amount}} {{cur}}", { amount, cur });
         const trades = draft.parts.length > 1 ? tr(" in {{count}} trades", { count: draft.parts.length }) : '';
         const accounts = recipients.length === 1 ? tr("paid to 1 account") : tr("paid to {{count}} accounts", { count: recipients.length });

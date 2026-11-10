@@ -27,7 +27,7 @@ import { brandWeight, color, space, themed, typography } from "../../theme";
 import { DemoNote, GhostButton } from "../auth/ui";
 import { ActionSheet, RoundButton } from "../market/controls";
 import { COORDINATION_FEE_LABEL } from "../history/data";
-import { formatHundredths } from "../market/money";
+import { formatAmount } from "../market/money";
 import { orderSiblings, progressFor, tradeStore, useTrade, useTrades, type Trade } from "./tradeStore";
 import { trRich } from "../../i18n/rich";
 import { tr, k } from "../../i18n";
@@ -214,11 +214,11 @@ function OrderStrip({ trade, onOpenTrade }: { trade: Trade; onOpenTrade?: (id: s
           key={o.id}
           testID={`trade-order-${o.id}`}
           accessibilityRole="button"
-          accessibilityLabel={tr("Open trade {{reference}}, {{amountMinor}} {{currency}}, {{value}}", { reference: o.reference, amountMinor: formatHundredths(o.amountMinor), currency: o.currency, value: tr(PHASE_LABEL[o.phase]) })}
+          accessibilityLabel={tr("Open trade {{reference}}, {{amountMinor}} {{currency}}, {{value}}", { reference: o.reference, amountMinor: formatAmount(o.currency, o.amountMinor), currency: o.currency, value: tr(PHASE_LABEL[o.phase]) })}
           onPress={onOpenTrade ? () => onOpenTrade(o.id) : undefined}
           style={styles.orderRow}
         >
-          <Text style={styles.orderAmount}>{`${formatHundredths(o.amountMinor)} ${o.currency}`}</Text>
+          <Text style={styles.orderAmount}>{`${formatAmount(o.currency, o.amountMinor)} ${o.currency}`}</Text>
           <Text style={styles.orderPhase}>{tr(PHASE_LABEL[o.phase])}</Text>
         </Pressable>
       ))}
@@ -264,7 +264,7 @@ export function TradeScreen({
   if (!trade) return null;
   const t = trade;
   const left = t.deadline - now();
-  const payLabel = `${t.payCurrency} ${formatHundredths(t.transferMinor)}`;
+  const payLabel = `${t.payCurrency} ${formatAmount(t.payCurrency, t.transferMinor)}`;
   const ended = t.phase === "expired" || t.phase === "cancelled";
 
   const confirmPaid = (): void =>

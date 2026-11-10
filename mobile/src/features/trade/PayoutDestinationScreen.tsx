@@ -25,7 +25,7 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField, RoundButton } from '../market/controls';
-import { formatHundredths, parseToHundredths } from '../market/money';
+import { formatAmount, parseAmount } from '../market/money';
 import { BankAccountFields } from '../profile/BankAccountFields';
 import { BANK_FORMS, validateBankForm, type BankFieldKey, type BankFormValues, type Beneficiary } from '../profile/data';
 import { splitProblem } from './payoutSplit';
@@ -49,9 +49,9 @@ export interface Recipient {
 /** What to show under the list: what is left to place, or by how much it is over. */
 export function assignmentMessage(totalMinor: number, recipients: readonly Recipient[], currency: string): string | null {
   const assigned = recipients.reduce((sum, r) => sum + r.amountMinor, 0);
-  if (recipients.length === 0) return tr("Add an account to receive {{totalMinor}} {{currency}}.", { totalMinor: formatHundredths(totalMinor), currency });
-  if (assigned > totalMinor) return tr("That is {{totalMinor}} {{currency}} more than you receive.", { totalMinor: formatHundredths(assigned - totalMinor), currency });
-  if (assigned < totalMinor) return tr("Left to assign: {{assigned}} {{currency}}.", { assigned: formatHundredths(totalMinor - assigned), currency });
+  if (recipients.length === 0) return tr("Add an account to receive {{totalMinor}} {{currency}}.", { totalMinor: formatAmount(currency, totalMinor), currency });
+  if (assigned > totalMinor) return tr("That is {{totalMinor}} {{currency}} more than you receive.", { totalMinor: formatAmount(currency, assigned - totalMinor), currency });
+  if (assigned < totalMinor) return tr("Left to assign: {{assigned}} {{currency}}.", { assigned: formatAmount(currency, totalMinor - assigned), currency });
   return null;
 }
 
@@ -118,9 +118,9 @@ export function PayoutDestinationScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.totalRow} accessible accessibilityLabel={tr("Total amount {{totalMinor}} {{currency}}", { totalMinor: formatHundredths(totalMinor), currency })}>
+        <View style={styles.totalRow} accessible accessibilityLabel={tr("Total amount {{totalMinor}} {{currency}}", { totalMinor: formatAmount(currency, totalMinor), currency })}>
           <Text style={styles.totalLabel}>{tr("Total Amount")}</Text>
-          <Text testID="payout-total" style={styles.totalValue}>{`${formatHundredths(totalMinor)} ${currency}`}</Text>
+          <Text testID="payout-total" style={styles.totalValue}>{`${formatAmount(currency, totalMinor)} ${currency}`}</Text>
         </View>
 
         <Text accessibilityRole="header" style={styles.section}>{tr("Fund Card")}</Text>
@@ -149,7 +149,7 @@ export function PayoutDestinationScreen({
                 <Text testID={`payout-hold-${r.key}`} style={styles.hold}>{tr("New account: confirmed with your authenticator code")}</Text>
               ) : null}
             </View>
-            <Text testID={`payout-amount-${r.key}`} style={styles.cardAmount}>{`${formatHundredths(r.amountMinor)} ${currency}`}</Text>
+            <Text testID={`payout-amount-${r.key}`} style={styles.cardAmount}>{`${formatAmount(currency, r.amountMinor)} ${currency}`}</Text>
             <Pressable
               testID={`payout-menu-${r.key}`}
               accessibilityRole="button"
@@ -267,12 +267,12 @@ function AmountSheet({
   onSave: (amountMinor: number) => void;
   onClose: () => void;
 }): ReactElement {
-  const [text, setText] = useState(initialMinor > 0 ? formatHundredths(initialMinor) : '');
+  const [text, setText] = useState(initialMinor > 0 ? formatAmount(currency, initialMinor) : '');
   const [error, setError] = useState<string | null>(null);
   const save = (): void => {
-    const m = parseToHundredths(text);
+    const m = parseAmount(currency, text);
     if (m === null) return setError(tr("Enter an amount, for example 250 or 250.50"));
-    if (m > maxMinor) return setError(tr("At most {{maxMinor}} {{currency}} is left for this account.", { maxMinor: formatHundredths(maxMinor), currency }));
+    if (m > maxMinor) return setError(tr("At most {{maxMinor}} {{currency}} is left for this account.", { maxMinor: formatAmount(currency, maxMinor), currency }));
     onSave(m);
   };
   return (
@@ -319,11 +319,11 @@ export function NewRecipientSheet({
   const add = (): void => {
     const found = validateBankForm(currency, values);
     setErrors(found);
-    const m = full ? leftMinor : parseToHundredths(amount);
+    const m = full ? leftMinor : parseAmount(currency, amount);
     let amountProblem: string | null = null;
     if (leftMinor === 0) amountProblem = tr("Nothing is left to assign. Change another account’s amount first.");
     else if (m === null || m <= 0) amountProblem = tr("Enter an amount, for example 250 or 250.50");
-    else if (m > leftMinor) amountProblem = tr("At most {{leftMinor}} {{currency}} is left to assign.", { leftMinor: formatHundredths(leftMinor), currency });
+    else if (m > leftMinor) amountProblem = tr("At most {{leftMinor}} {{currency}} is left to assign.", { leftMinor: formatAmount(currency, leftMinor), currency });
     setAmountError(amountProblem);
     if (Object.keys(found).length > 0 || amountProblem !== null || m === null) return;
     // Only the last 4 digits are kept on the device; the full number goes once to the
@@ -380,13 +380,13 @@ export function NewRecipientSheet({
 
               <View style={styles.amountHead}>
                 <Text accessibilityRole="header" style={[styles.section, styles.amountSection]}>{tr("Amount")}</Text>
-                <Text testID="payout-new-left" style={styles.leftLabel}>{tr("Left to assign: {{leftMinor}} {{currency}}", { leftMinor: formatHundredths(leftMinor), currency })}</Text>
+                <Text testID="payout-new-left" style={styles.leftLabel}>{tr("Left to assign: {{leftMinor}} {{currency}}", { leftMinor: formatAmount(currency, leftMinor), currency })}</Text>
               </View>
               <OutlinedField label={tr("Enter Amount")} invalid={amountError !== null}>
                 <FieldInput
                   testID="payout-new-amount"
                   accessibilityLabel={tr("Amount in {{currency}}", { currency })}
-                  value={full ? formatHundredths(leftMinor) : amount}
+                  value={full ? formatAmount(currency, leftMinor) : amount}
                   onChangeText={(t) => { setAmount(t); setFull(false); setAmountError(null); }}
                 />
               </OutlinedField>

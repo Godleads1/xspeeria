@@ -11,10 +11,10 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { coordinationFeeMinor, type HistoryItem } from '../history/data';
+import { coordinationFeeIn, type HistoryItem } from '../history/data';
 import type { Listing } from '../market/data';
 import type { Side } from '../market/MarketScreen';
-import { formatHundredths, quoteMinor } from '../market/money';
+import { formatAmount, quoteMinor } from '../market/money';
 import { splitProblem, type PayoutShare } from './payoutSplit';
 import { rateProblem } from '../market/rateCeiling';
 import { DEMO_MODE } from '../auth/demo';
@@ -107,9 +107,9 @@ export function receiveFor(side: Side, amountMinor: number, rateMilli: number): 
 function paidLabel(t: Trade, p: PayoutShare): string {
   const cur = t.side === 'buy' ? t.currency : 'NGN';
   // DEC-044: a newly added account is paid at once, like any other.
-  if (p.isNew) return tr("{{amountMinor}} {{cur}} to your new account ending {{last4}}", { amountMinor: formatHundredths(p.amountMinor), cur, last4: p.last4 });
+  if (p.isNew) return tr("{{amountMinor}} {{cur}} to your new account ending {{last4}}", { amountMinor: formatAmount(cur, p.amountMinor), cur, last4: p.last4 });
   return t.payouts.length > 1
-    ? tr("Paid {{amountMinor}} {{cur}} to your account ending {{last4}}", { amountMinor: formatHundredths(p.amountMinor), cur, last4: p.last4 })
+    ? tr("Paid {{amountMinor}} {{cur}} to your account ending {{last4}}", { amountMinor: formatAmount(cur, p.amountMinor), cur, last4: p.last4 })
     : tr("Paid to your account ending {{last4}}", { last4: p.last4 });
 }
 
@@ -124,7 +124,7 @@ export function transferFor(
   rateMilli: number,
 ): { minor: number; currency: string; feeMinor: number } {
   const sent = side === 'buy' ? ngnFor(amountMinor, rateMilli) : amountMinor;
-  const feeMinor = coordinationFeeMinor(sent);
+  const feeMinor = coordinationFeeIn(side === 'buy' ? 'NGN' : currency, sent);
   const minor = sent + feeMinor;
   if (!Number.isSafeInteger(minor)) throw new Error('Amount to pay is out of range');
   return { minor, currency: side === 'buy' ? 'NGN' : currency, feeMinor };

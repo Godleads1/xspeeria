@@ -5,7 +5,7 @@
  */
 
 import type { ServerMatch } from '../../api/offersApi';
-import { formatHundredths } from '../market/money';
+import { formatAmount } from '../market/money';
 import { toMinor } from './serverHistory';
 
 export interface CurrencyTotal {
@@ -58,5 +58,5 @@ export function dealTotals(deals: readonly ServerMatch[]): DealTotals {
 
 /** `"USD 1,200.00"`. */
 export function totalText(t: CurrencyTotal): string {
-  return `${t.currency} ${formatHundredths(t.minor)}`;
+  return `${t.currency} ${formatAmount(t.currency, t.minor)}`;
 }
