@@ -95,7 +95,7 @@ export function GhostButton({ label, onPress, testID }: { label: string; onPress
  * The US and Canada share +1 (owner, 2026-11-09: sign-up with +1 numbers). The server checks
  * the full number again (E.164).
  */
-export type PhoneCountry = 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN';
+export type PhoneCountry = 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN' | 'EG' | 'ZA' | 'MA' | 'ET' | 'KE' | 'SN' | 'GH' | 'ZW' | 'UG' | 'ZM' | 'TZ';
 export const PHONE_COUNTRIES: readonly { key: PhoneCountry; label: string; code: string; flag: string }[] = [
   { key: 'NG', label: 'Nigeria', code: '+234', flag: 'NGN' },
   { key: 'GB', label: k('United Kingdom'), code: '+44', flag: 'GBP' },
@@ -105,6 +105,18 @@ export const PHONE_COUNTRIES: readonly { key: PhoneCountry; label: string; code:
   { key: 'DE', label: k('Germany'), code: '+49', flag: 'DE' },
   { key: 'FR', label: k('France'), code: '+33', flag: 'FR' },
   { key: 'CN', label: k('China'), code: '+86', flag: 'CNY' },
+  // ADR-107 (owner, 2026-11-10): eleven African countries.
+  { key: 'EG', label: k('Egypt'), code: '+20', flag: 'EG' },
+  { key: 'ZA', label: k('South Africa'), code: '+27', flag: 'ZA' },
+  { key: 'MA', label: k('Morocco'), code: '+212', flag: 'MA' },
+  { key: 'ET', label: k('Ethiopia'), code: '+251', flag: 'ET' },
+  { key: 'KE', label: k('Kenya'), code: '+254', flag: 'KE' },
+  { key: 'SN', label: k('Senegal'), code: '+221', flag: 'SN' },
+  { key: 'GH', label: k('Ghana'), code: '+233', flag: 'GH' },
+  { key: 'ZW', label: k('Zimbabwe'), code: '+263', flag: 'ZW' },
+  { key: 'UG', label: k('Uganda'), code: '+256', flag: 'UG' },
+  { key: 'ZM', label: k('Zambia'), code: '+260', flag: 'ZM' },
+  { key: 'TZ', label: k('Tanzania'), code: '+255', flag: 'TZ' },
 ];
 const DIAL: Record<PhoneCountry, { code: string; flag: string }> = {
   NG: { code: '+234', flag: 'NGN' },
@@ -114,6 +126,17 @@ const DIAL: Record<PhoneCountry, { code: string; flag: string }> = {
   DE: { code: '+49', flag: 'DE' },
   FR: { code: '+33', flag: 'FR' },
   CN: { code: '+86', flag: 'CNY' },
+  EG: { code: '+20', flag: 'EG' },
+  ZA: { code: '+27', flag: 'ZA' },
+  MA: { code: '+212', flag: 'MA' },
+  ET: { code: '+251', flag: 'ET' },
+  KE: { code: '+254', flag: 'KE' },
+  SN: { code: '+221', flag: 'SN' },
+  GH: { code: '+233', flag: 'GH' },
+  ZW: { code: '+263', flag: 'ZW' },
+  UG: { code: '+256', flag: 'UG' },
+  ZM: { code: '+260', flag: 'ZM' },
+  TZ: { code: '+255', flag: 'TZ' },
 };
 
 /** The country and local part of a saved full number (+1 is shown as the US). */
@@ -124,6 +147,19 @@ export function splitPhone(full: string): { country: PhoneCountry; local: string
   if (full.startsWith('+49')) return { country: 'DE', local: full.slice(3) };
   if (full.startsWith('+33')) return { country: 'FR', local: full.slice(3) };
   if (full.startsWith('+86')) return { country: 'CN', local: full.slice(3) };
+  // ADR-107: three-digit codes first, then +20 and +27.
+  if (full.startsWith('+212')) return { country: 'MA', local: full.slice(4) };
+  if (full.startsWith('+251')) return { country: 'ET', local: full.slice(4) };
+  if (full.startsWith('+254')) return { country: 'KE', local: full.slice(4) };
+  if (full.startsWith('+221')) return { country: 'SN', local: full.slice(4) };
+  if (full.startsWith('+233')) return { country: 'GH', local: full.slice(4) };
+  if (full.startsWith('+263')) return { country: 'ZW', local: full.slice(4) };
+  if (full.startsWith('+256')) return { country: 'UG', local: full.slice(4) };
+  if (full.startsWith('+260')) return { country: 'ZM', local: full.slice(4) };
+  if (full.startsWith('+255')) return { country: 'TZ', local: full.slice(4) };
+  if (full.startsWith('+20')) return { country: 'EG', local: full.slice(3) };
+  if (full.startsWith('+27')) return { country: 'ZA', local: full.slice(3) };
+
   return { country: 'NG', local: full.replace(/^\+/, '') };
 }
 

@@ -17,6 +17,17 @@ const PLACE = {
   DE: { name: k("Germany"), currency: 'EUR' },
   FR: { name: k("France"), currency: 'EUR' },
   CN: { name: k("China"), currency: 'CNY' },
+  EG: { name: k("Egypt"), currency: 'EGP' },
+  ZA: { name: k("South Africa"), currency: 'ZAR' },
+  MA: { name: k("Morocco"), currency: 'MAD' },
+  ET: { name: k("Ethiopia"), currency: 'ETB' },
+  KE: { name: k("Kenya"), currency: 'KES' },
+  SN: { name: k("Senegal"), currency: 'XOF' },
+  GH: { name: k("Ghana"), currency: 'GHS' },
+  ZW: { name: k("Zimbabwe"), currency: 'USD' },
+  UG: { name: k("Uganda"), currency: 'UGX' },
+  ZM: { name: k("Zambia"), currency: 'ZMW' },
+  TZ: { name: k("Tanzania"), currency: 'TZS' },
 } as const;
 
 /**

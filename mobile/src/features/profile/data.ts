@@ -166,6 +166,7 @@ export type BankFieldKey =
   | 'institutionNumber'
   | 'transitNumber'
   | 'cnapsCode'
+  | 'branchCode'
   | 'bankName'
   | 'accountNumber'
   | 'accountType';
@@ -173,8 +174,41 @@ export type BankFieldKey =
 export interface BankField {
   readonly key: BankFieldKey;
   readonly label: string;
-  readonly kind: 'digits' | 'text' | 'select' | 'iban';
+  readonly kind: 'digits' | 'text' | 'select' | 'iban' | 'phone';
   readonly maxLength?: number;
+  /** ADR-107: may be left empty (an African bank's branch code). */
+  readonly optional?: boolean;
+}
+
+/** ADR-107: the African currencies (Zimbabwe pays in US dollars). */
+export const AFRICAN_CURRENCIES = ['EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS'] as const;
+/** Mobile money (owner, 2026-11-10: "Bank and mobile money"): the wallet's calling code. */
+export const MOBILE_MONEY_PREFIX: Readonly<Record<string, string>> = {
+  KES: '254',
+  GHS: '233',
+  UGX: '256',
+  TZS: '255',
+  ZMW: '260',
+  XOF: '221',
+  USD: '263', // Zimbabwe pays in US dollars
+};
+/** How the account is paid: a US bank (USD only), a bank in Africa, or mobile money. */
+export type PayoutKind = 'standard' | 'bank' | 'mobile_money';
+
+/** The kinds offered for a currency; the first is the default. */
+export function payoutKinds(currency: string): readonly PayoutKind[] {
+  const african = (AFRICAN_CURRENCIES as readonly string[]).includes(currency);
+  const mobile = currency in MOBILE_MONEY_PREFIX;
+  if (currency === 'USD') return ['standard', 'bank', 'mobile_money'];
+  if (african) return mobile ? ['bank', 'mobile_money'] : ['bank'];
+  return ['standard'];
+}
+
+/** The BANK_FORMS key for a currency and kind. */
+export function bankFormKey(currency: string, kind: PayoutKind = 'standard'): string {
+  if (kind === 'mobile_money') return 'MOBILE_MONEY';
+  if (kind === 'bank') return 'AFRICA_BANK';
+  return currency;
 }
 
 /**
@@ -216,6 +250,17 @@ export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
     { key: 'cnapsCode', label: k("CNAPS Code"), kind: 'digits', maxLength: 12 },
     { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
     { key: 'accountNumber', label: k("Card or Account Number"), kind: 'digits', maxLength: 19 },
+  ],
+  // ADR-107: a bank in Africa (account number or IBAN; the branch code if the bank uses one).
+  AFRICA_BANK: [
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Account Number or IBAN"), kind: 'iban', maxLength: 42 },
+    { key: 'branchCode', label: k("Bank or Branch Code"), kind: 'text', maxLength: 11, optional: true },
+  ],
+  // ADR-107: a mobile-money wallet (e.g. M-Pesa, MTN MoMo).
+  MOBILE_MONEY: [
+    { key: 'bankName', label: k("Mobile Money Provider"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Wallet Phone Number"), kind: 'phone', maxLength: 16 },
   ],
 };
 
@@ -259,14 +304,35 @@ export function isValidRoutingNumber(v: string): boolean {
 }
 
 /** Client-side format checks only; the server and partner bank remain authoritative. */
-export function validateBankForm(currency: string, v: BankFormValues): Partial<Record<BankFieldKey, string>> {
+export function validateBankForm(
+  currency: string,
+  v: BankFormValues,
+  kind: PayoutKind = 'standard',
+): Partial<Record<BankFieldKey, string>> {
   const errors: Partial<Record<BankFieldKey, string>> = {};
-  const fields = BANK_FORMS[currency];
+  const fields = BANK_FORMS[bankFormKey(currency, kind)];
   if (!fields) return errors;
   for (const f of fields) {
     const value = (v[f.key] ?? '').trim();
     if (value === '') {
-      errors[f.key] = tr("{{label}} is required", { label: tr(f.label) });
+      if (!f.optional) errors[f.key] = tr("{{label}} is required", { label: tr(f.label) });
+      continue;
+    }
+    if (kind !== 'standard') {
+      // ADR-107: the bank-in-Africa and mobile-money forms.
+      if (f.key === 'bankName' && value.length < 2) errors.bankName = tr("Enter the bank name");
+      if (f.key === 'branchCode' && !/^[A-Za-z0-9]{2,11}$/.test(value)) {
+        errors.branchCode = tr("The bank or branch code is 2 to 11 letters and digits");
+      }
+      if (f.key === 'accountNumber' && kind === 'bank' && !/^[A-Z0-9]{5,34}$/.test(value.replace(/[\s-]/g, '').toUpperCase())) {
+        errors.accountNumber = tr("Enter the account number (5 to 34 letters and digits)");
+      }
+      if (f.key === 'accountNumber' && kind === 'mobile_money') {
+        const prefix = MOBILE_MONEY_PREFIX[currency] ?? '';
+        if (!new RegExp(`^\\+?${prefix}[1-9]\\d{7,9}$`).test(value.replace(/[\s-]/g, ''))) {
+          errors.accountNumber = tr("Enter the wallet's phone number, starting +{{prefix}}", { prefix });
+        }
+      }
       continue;
     }
     if (f.key === 'bankName' && value.length < 2) errors.bankName = tr("Enter the bank name");

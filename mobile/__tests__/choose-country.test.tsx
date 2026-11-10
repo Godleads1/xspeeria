@@ -36,7 +36,8 @@ describe('choose a country to verify', () => {
     // Not on the server's list: not verified.
     expect(screen.getByLabelText('United States, pay in USD: Not verified')).toBeTruthy();
     expect(screen.getByText('You can pay in NGN')).toBeTruthy();
-    expect(screen.getByText('Needed to pay in USD')).toBeTruthy();
+    // The US and Zimbabwe (ADR-107) both pay in US dollars.
+    expect(screen.getAllByText('Needed to pay in USD')).toHaveLength(2);
   });
 
   it('ADR-105: shows Germany and France; China only when the server lists it', async () => {

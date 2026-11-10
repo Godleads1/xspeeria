@@ -12,6 +12,17 @@ const NAME = {
   DE: k("Germany"),
   FR: k("France"),
   CN: k("China"),
+  EG: k("Egypt"),
+  ZA: k("South Africa"),
+  MA: k("Morocco"),
+  ET: k("Ethiopia"),
+  KE: k("Kenya"),
+  SN: k("Senegal"),
+  GH: k("Ghana"),
+  ZW: k("Zimbabwe"),
+  UG: k("Uganda"),
+  ZM: k("Zambia"),
+  TZ: k("Tanzania"),
 } as const;
 
 /** Approved and in-progress countries (ADR-042); refused, expired and untouched ones are not listed. */
