@@ -11,6 +11,7 @@ from app.domain.offer_rules import (
     CAD_PER_USD_AS_OF,
     MINIMUM_MINOR,
     OFFICIAL_RATE,
+    STORED_RATE_PLACES,
     OfferInputError,
     below_minimum,
     parse_amount_minor,
@@ -77,8 +78,14 @@ class TestAcceptAmount:
 
 
 class TestRate:
-    def test_parses_up_to_six_places(self) -> None:
-        assert parse_rate("1320.123456") == Decimal("1320.123456")
+    def test_parses_up_to_three_places(self) -> None:
+        # Owner 2026-11-10: "3 decimal not 6". More decimals are refused, never rounded.
+        assert parse_rate("1320.123") == Decimal("1320.123")
+        assert parse_rate("0.306") == Decimal("0.306")
+        assert _code(parse_rate, "1320.1234") == "VALIDATION_ERROR"
+        assert _code(parse_rate, "1.123456") == "VALIDATION_ERROR"
+        # Reading back a rate the server showed: an older stored rate may have 6 decimals.
+        assert parse_rate("1320.123456", STORED_RATE_PLACES) == Decimal("1320.123456")
         assert _code(parse_rate, "1.1234567") == "VALIDATION_ERROR"
         assert _code(parse_rate, "NaN") == "VALIDATION_ERROR"
         assert _code(parse_rate, "Infinity") == "VALIDATION_ERROR"
@@ -93,7 +100,7 @@ class TestRate:
     def test_ceiling_is_the_official_rate(self, foreign: str) -> None:
         ceiling = OFFICIAL_RATE[foreign]
         assert rate_problem(ceiling, foreign) is None
-        problem = rate_problem(ceiling + Decimal("0.000001"), foreign)
+        problem = rate_problem(ceiling + Decimal("0.001"), foreign)
         assert problem is not None and problem.code == "VAL_422_RATE_ABOVE_CEILING"
 
     def test_unknown_currency_has_no_ceiling_so_is_refused(self) -> None:

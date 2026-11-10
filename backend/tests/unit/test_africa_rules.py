@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 import pytest
 
@@ -33,10 +33,15 @@ def test_countries_and_currencies() -> None:
 def test_ceilings_follow_usd_and_the_xof_peg() -> None:
     usd, eur = OFFICIAL_RATE["USD"], OFFICIAL_RATE["EUR"]
     for c, per_usd in AFRICA_PER_USD.items():
-        assert OFFICIAL_RATE[c] == (usd / per_usd).quantize(Decimal("0.000001"))
-    assert OFFICIAL_RATE["XOF"] == (eur / XOF_PER_EUR).quantize(Decimal("0.000001"))
-    # Low-value currencies keep 6 decimals (a Ugandan shilling is about ₦0.31).
-    assert OFFICIAL_RATE["UGX"] < 1 and OFFICIAL_RATE["UGX"].as_tuple().exponent == -6
+        exact = usd / per_usd
+        assert OFFICIAL_RATE[c] == exact.quantize(Decimal("0.001"), rounding=ROUND_DOWN)
+        # Rounded down: the limit never exceeds the official rate.
+        assert OFFICIAL_RATE[c] <= exact
+    assert OFFICIAL_RATE["XOF"] == (eur / XOF_PER_EUR).quantize(
+        Decimal("0.001"), rounding=ROUND_DOWN
+    )
+    # Owner: "3 decimal not 6" (a Ugandan shilling is about ₦0.31).
+    assert OFFICIAL_RATE["UGX"] == Decimal("0.306") and OFFICIAL_RATE["XOF"] == Decimal("2.273")
     # No base ceiling, none derived.
     assert not AFRICAN & set(with_derived({"GBP": Decimal("1765")}))
 

@@ -46,6 +46,7 @@ from app.db.row_scope import acting_for_service
 from app.domain.offer_rules import (
     IDEMPOTENCY_TTL,
     MINIMUM_MINOR,
+    STORED_RATE_PLACES,
     OfferInputError,
     below_minimum,
     parse_amount_minor,
@@ -296,7 +297,7 @@ class MatchService:
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         try:
-            shown_rate = parse_rate(expected_rate)
+            shown_rate = parse_rate(expected_rate, STORED_RATE_PLACES)
         except OfferInputError as e:
             await self._db.rollback()
             raise _err(e.code, e.message, status.HTTP_422_UNPROCESSABLE_CONTENT) from None

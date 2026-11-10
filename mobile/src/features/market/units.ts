@@ -3,10 +3,12 @@
  *
  * The first Market code worked in hundredths: rates to 2 decimals and amounts in cents. The
  * African currencies need more: a Ugandan shilling is worth about ₦0.307, so rates go to
- * **6 decimals** (owner, 2026-11-10: "Allow up to 6 decimals"), and the Ugandan shilling
- * and the CFA franc have **no cents**, so their amounts are whole numbers.
+ * **3 decimals** (owner, 2026-11-10: "3 decimal not 6", replacing "Allow up to 6 decimals"),
+ * and the Ugandan shilling and the CFA franc have **no cents**, so their amounts are whole
+ * numbers.
  *
- * Everything here is strings and integers: rates in millionths ("micros"), amounts in each
+ * Everything here is strings and integers: rates in millionths ("micros", the server's
+ * NUMERIC(12,6), so any stored rate or limit is read exactly), amounts in each
  * currency's own minor units. Products use BigInt and round half to even, the server's rule
  * (ADR-002 §4.4). Nothing passes through binary floating point. The server checks every
  * value again; these helpers are for display and form feedback.
@@ -34,8 +36,10 @@ export const CURRENCY_DECIMALS: Readonly<Record<string, number>> = {
   TZS: 2,
 };
 
-/** Rates are NGN per 1 unit, to 6 decimals (the server's NUMERIC(12,6)). */
-export const RATE_PLACES = 6;
+/** A typed rate (NGN per 1 unit) has at most 3 decimals, as the server's `RATE_PLACES`. */
+export const RATE_PLACES = 3;
+/** Rates are held in millionths, the server's storage (NUMERIC(12,6)). */
+const MICRO_PLACES = 6;
 const RATE_UNIT = 1_000_000;
 const RATE_MAX_MICROS = 999_999_999_999; // 999,999.999999
 
@@ -89,11 +93,11 @@ export function minorToText(minor: number, currency: string): string {
   return formatMinor(minor, currency).replace(/,/g, '');
 }
 
-/** Typed rate → millionths (`"0.3069"` → 306900; `"1,320.5"` → 1320500000). */
+/** Typed rate, up to 3 decimals → millionths (`"0.307"` → 307000; `"1,320.5"` → 1320500000). */
 export function parseRateMicros(input: string): number | null {
   const parts = split(input, RATE_PLACES);
   if (!parts) return null;
-  const micros = Number(parts.whole) * RATE_UNIT + Number((parts.fraction || '').padEnd(RATE_PLACES, '0') || 0);
+  const micros = Number(parts.whole) * RATE_UNIT + Number((parts.fraction || '').padEnd(MICRO_PLACES, '0') || 0);
   if (!Number.isSafeInteger(micros) || micros <= 0 || micros > RATE_MAX_MICROS) return null;
   return micros;
 }
@@ -102,22 +106,23 @@ export function parseRateMicros(input: string): number | null {
 export function rateTextToMicros(text: string): number | null {
   const m = /^(\d{1,6})(?:\.(\d{1,6}))?$/.exec(text);
   if (!m) return null;
-  return Number(m[1]) * RATE_UNIT + Number((m[2] ?? '').padEnd(RATE_PLACES, '0'));
+  return Number(m[1]) * RATE_UNIT + Number((m[2] ?? '').padEnd(MICRO_PLACES, '0'));
 }
 
 /**
- * Millionths → display text: grouped, at least 2 decimals, at most 6, trailing zeros beyond
- * the second dropped (`1320500000` → `"1,320.50"`, `306904` → `"0.306904"`).
+ * Millionths → display text: grouped, at least 2 decimals, trailing zeros beyond the second
+ * dropped (`1320500000` → `"1,320.50"`, `307000` → `"0.307"`). A rate stored before the
+ * 3-decimal rule keeps its exact figure (`306904` → `"0.306904"`).
  */
 export function formatRateMicros(micros: number): string {
   if (!Number.isSafeInteger(micros) || micros < 0) throw new Error('formatRateMicros needs a non-negative safe integer');
   const whole = String(Math.trunc(micros / RATE_UNIT)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  let fraction = String(micros % RATE_UNIT).padStart(RATE_PLACES, '0');
+  let fraction = String(micros % RATE_UNIT).padStart(MICRO_PLACES, '0');
   while (fraction.length > 2 && fraction.endsWith('0')) fraction = fraction.slice(0, -1);
   return `${whole}.${fraction}`;
 }
 
-/** Millionths → the plain text the server takes (`306904` → `"0.306904"`). */
+/** Millionths → the plain text the server takes (`307000` → `"0.307"`). */
 export function rateMicrosToText(micros: number): string {
   return formatRateMicros(micros).replace(/,/g, '');
 }
@@ -137,7 +142,7 @@ export function nairaFor(amountMinor: number, currency: string, rateMicros: numb
     throw new Error('nairaFor needs non-negative safe integers');
   }
   const numerator = BigInt(amountMinor) * BigInt(rateMicros) * 100n;
-  return toSafe(divRoundHalfEven(numerator, pow10(decimalsOf(currency) + RATE_PLACES)));
+  return toSafe(divRoundHalfEven(numerator, pow10(decimalsOf(currency) + MICRO_PLACES)));
 }
 
 /**
@@ -149,7 +154,7 @@ export function foreignFor(nairaKobo: number, currency: string, rateMicros: numb
     throw new Error('foreignFor needs non-negative safe integers');
   }
   if (rateMicros === 0) return null;
-  const numerator = BigInt(nairaKobo) * pow10(RATE_PLACES + decimalsOf(currency));
+  const numerator = BigInt(nairaKobo) * pow10(MICRO_PLACES + decimalsOf(currency));
   return toSafe(divRoundHalfEven(numerator, BigInt(rateMicros) * 100n));
 }
 

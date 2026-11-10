@@ -147,9 +147,9 @@ async def test_the_app_reads_the_ceilings_signed_in(env: Env, db: AsyncSession) 
         "GBP": "1765.11",
         "USD": "1333.26",
     }
-    # ADR-107: the African ceilings are worked out to 6 decimals (USD ÷ units per USD; XOF
-    # from the euro's fixed rate). The yuan is off by default (ADR-106).
-    assert items["UGX"] == "0.306904" and items["XOF"] == "2.27332"
+    # ADR-107: the African ceilings are worked out to 3 decimals, rounded down (USD ÷ units
+    # per USD; XOF from the euro's fixed rate). The yuan is off by default (ADR-106).
+    assert items["UGX"] == "0.306" and items["XOF"] == "2.273"
     assert "CNY" not in items
     assert sorted(i["currency"] for i in body["items"] if i["derived"]) == sorted({"CAD"} | AFRICAN)
     assert body["cad_per_usd"] == "1.4113"

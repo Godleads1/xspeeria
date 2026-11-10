@@ -9,7 +9,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
-from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 
 __all__ = [
     "CURRENCY_DEF_VERSION",
@@ -30,6 +30,7 @@ __all__ = [
     "CNY_PER_USD",
     "CNY_PER_USD_AS_OF",
     "RATE_PLACES",
+    "STORED_RATE_PLACES",
     "SCALE",
     "OfferInputError",
     "Pair",
@@ -92,7 +93,8 @@ CAD_PER_USD_AS_OF = "2026-11-06"
 CNY_PER_USD = Decimal("6.7167")
 CNY_PER_USD_AS_OF = "2026-11-10"
 #: ADR-107 (owner 2026-11-10): each African currency's ceiling = the USD ceiling ÷ its units
-#: per 1 USD, to 6 decimals (a shilling is worth well under a naira). Source: the Kenya Revenue
+#: per 1 USD, cut to 3 decimals (owner 2026-11-10: "3 decimal not 6"; round down, so a ceiling
+#: never exceeds the official rate). Source: the Kenya Revenue
 #: Authority's official exchange rates for 2–8 November 2026 (KES 129.95 per USD), crossed
 #: through the US dollar; ZMW from Frankfurter's blended central-bank rate (not on the KRA
 #: list). Check each against its central bank before the live server switches it on.
@@ -111,7 +113,7 @@ AFRICA_PER_USD_AS_OF = "2026-11-02"
 #: The CFA franc (BCEAO) is fixed to the euro: 655.957 XOF per 1 EUR, so its ceiling comes
 #: from the EUR one.
 XOF_PER_EUR = Decimal("655.957")
-_SIX = Decimal("0.000001")
+_THREE = Decimal("0.001")
 
 
 def with_derived(fed: dict[str, Decimal]) -> dict[str, Decimal]:
@@ -126,11 +128,11 @@ def with_derived(fed: dict[str, Decimal]) -> dict[str, Decimal]:
             out.pop(currency, None)
     for currency, per_usd in AFRICA_PER_USD.items():
         if usd is not None:
-            out[currency] = (usd / per_usd).quantize(_SIX, rounding=ROUND_HALF_EVEN)
+            out[currency] = (usd / per_usd).quantize(_THREE, rounding=ROUND_DOWN)
         else:
             out.pop(currency, None)
     if eur is not None:
-        out["XOF"] = (eur / XOF_PER_EUR).quantize(_SIX, rounding=ROUND_HALF_EVEN)
+        out["XOF"] = (eur / XOF_PER_EUR).quantize(_THREE, rounding=ROUND_DOWN)
     else:
         out.pop("XOF", None)
     return out
@@ -157,8 +159,10 @@ MARKET_REQUESTS_PER_MINUTE = 60
 #: ADR-029 — remember each Idempotency-Key for 24 hours.
 IDEMPOTENCY_TTL = timedelta(hours=24)
 
-#: NUMERIC(12,6): up to 6 decimal places, 6 integer digits.
-RATE_PLACES = 6
+#: A rate has at most 3 decimal places (owner 2026-11-10: "3 decimal not 6", server and app).
+#: Storage stays NUMERIC(12,6): 6 integer digits, and older stored rates are kept exactly.
+RATE_PLACES = 3
+STORED_RATE_PLACES = 6
 _RATE_MAX = Decimal("999999.999999")
 _DECIMAL_TEXT = re.compile(r"^[0-9]{1,15}(\.[0-9]{1,8})?$")
 
@@ -231,16 +235,23 @@ def below_minimum(currency: str) -> OfferInputError:
     )
 
 
-def parse_rate(text: str) -> Decimal:
-    """Decimal text, up to 6 places. Sign and size are judged by :func:`rate_problem`."""
+def parse_rate(text: str, places: int = RATE_PLACES) -> Decimal:
+    """Decimal text, up to 3 places (refused, never rounded). Sign and size are judged by
+    :func:`rate_problem`. ``places=STORED_RATE_PLACES`` reads back a rate the server showed,
+    which may be an older one with more decimals (confirming a take)."""
     try:
-        if not re.fullmatch(r"^-?[0-9]{1,7}(\.[0-9]{1,6})?$", text):
+        if not re.fullmatch(rf"^-?[0-9]{{1,7}}(\.[0-9]{{1,{places}}})?$", text):
             raise InvalidOperation
         return Decimal(text)
     except InvalidOperation:
         raise OfferInputError(
-            FORMAT_ERROR, "Enter the rate as a number with up to 6 decimal places."
+            FORMAT_ERROR, f"Enter the rate as a number with up to {RATE_PLACES} decimal places."
         ) from None
+
+
+def _shown(v: Decimal) -> str:
+    """Grouped, at least 2 decimals, never rounded (2.273 stays 2.273, not 2.27)."""
+    return f"{v:,.2f}" if v == v.quantize(Decimal("0.01")) else f"{v.normalize():,f}"
 
 
 def rate_problem(
@@ -254,7 +265,7 @@ def rate_problem(
         return OfferInputError("VAL_422_RATE_NOT_POSITIVE", "The rate must be more than zero.")
     ceiling = (OFFICIAL_RATE if ceilings is None else ceilings).get(foreign)
     if ceiling is None or rate > ceiling or rate > _RATE_MAX:
-        limit = f"{ceiling:,.2f}" if ceiling is not None else "not set"
+        limit = _shown(ceiling) if ceiling is not None else "not set"
         return OfferInputError(
             "VAL_422_RATE_ABOVE_CEILING",
             f"The rate can’t be above the official rate (NGN {limit} per {foreign}).",
