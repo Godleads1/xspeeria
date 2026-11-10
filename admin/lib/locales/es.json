@@ -1116,5 +1116,6 @@
  "Yes, Switch Off": "Sí, desactivar",
  "Yes, Switch On": "Sí, activar",
  "{{c}} is off.": "{{c}} está desactivada.",
- "{{c}} is on.": "{{c}} está activada."
+ "{{c}} is on.": "{{c}} está activada.",
+ "A closed request is deleted after 12 hours, with its messages and contact details.": "Una solicitud cerrada se elimina a las 12 horas, con sus mensajes y datos de contacto."
 }

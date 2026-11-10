@@ -175,6 +175,9 @@ export function HelpRequestsScreen(): ReactElement {
                   <button type="button" data-testid="help-close" disabled={busy} onClick={() => void run(() => api.closeHelp(detail.request_id), tr('Request closed'))} style={{ ...tool, alignSelf: 'flex-start' }}>
                     {tr('Close request')}
                   </button>
+                  <p data-testid="help-delete-note" style={{ margin: 0, fontSize: 12, color: color.text.secondary }}>
+                    {tr('A closed request is deleted after 12 hours, with its messages and contact details.')}
+                  </p>
                 </>
               ) : null}
             </>

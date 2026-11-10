@@ -38,7 +38,14 @@ A customer who can't pass the new-phone face check (ADR-054) can't log in. The i
 - **Anyone can open a request for any phone number.** The form changes nothing on the account. The match is shown to staff as a hint only, and the procedure forbids acting on it alone.
 - **Losing the phone loses the thread.** The person starts a new request. This is the same as having no account access.
 - **Staff replies are not pushed to the phone.** The customer sees them when they open "Need help?" again or tap Refresh. There is no SMS or email for replies (no provider yet), and an email would go to an address nothing proves belongs to the writer.
-- **No automatic retention yet.** Help requests are kept until a retention rule is set (with the rest of the retention schedule, SEC-022).
+- **Retention (amended 2026-11-10).** Owner: "it must be deleted on 12 hours".
+  - A closed request is deleted 12 hours after it is closed: the phone, email and every message. The hourly clean-up job does this, so it happens between 12 and 13 hours after closing.
+  - Open requests are kept until staff close them.
+  - The database refuses to delete a request that is open or was closed less than 12 hours ago (migration 0052), so no code path can delete one early.
+  - The staff audit log keeps that the request existed, who replied and who closed it, but none of its contents.
+  - The phone forgets a deleted request and shows the form again.
+  - Staff see the 12-hour rule beside **Close request**, and customers see it on a closed thread.
+  - Evidence: `test_closed_requests_are_deleted_12_hours_after_closing` and `test_the_database_refuses_to_delete_a_request_early`; mobile `need-help.test.tsx`.
 
 ## Evidence
 

@@ -115,6 +115,34 @@ describe('Need help (ADR-103)', () => {
     expect(screen.getByTestId('help-send')).toBeTruthy();
   });
 
+  it('says a closed request is deleted after 12 hours', async () => {
+    await render(<NeedHelpScreen source={fake('closed')} store={memoryStore({ requestId: 'r-1', key: 'k' })} onBack={jest.fn()} />);
+    await flush();
+    expect(screen.getByTestId('help-deleted-note')).toHaveTextContent('Closed requests and their messages are deleted after 12 hours.');
+  });
+
+  it('forgets a request the server has deleted and shows the form again', async () => {
+    const src = fake();
+    src.read.mockRejectedValue(new ApiError('RES_404_NOT_FOUND', 404, 'That help request was not found.'));
+    const store = memoryStore({ requestId: 'r-1', key: 'k' });
+    await render(<NeedHelpScreen source={src} store={store} onBack={jest.fn()} />);
+    await flush();
+    await flush();
+    expect(store.clear).toHaveBeenCalled();
+    expect(screen.getByTestId('help-send')).toBeTruthy();
+    expect(src.read).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the request when the server just can’t be reached', async () => {
+    const src = fake();
+    src.read.mockRejectedValue(new ApiError('NETWORK', 0, 'Can’t reach Xspeeria.'));
+    const store = memoryStore({ requestId: 'r-1', key: 'k' });
+    await render(<NeedHelpScreen source={src} store={store} onBack={jest.fn()} />);
+    await flush();
+    expect(store.clear).not.toHaveBeenCalled();
+    expect(screen.getByText('Can’t reach Xspeeria.')).toBeTruthy();
+  });
+
   it('the log-in screen shows "Need help?" only when given', async () => {
     const onHelp = jest.fn();
     const { rerender } = await render(<LoginScreen onDone={jest.fn()} onSignUp={jest.fn()} onForgot={jest.fn()} />);
