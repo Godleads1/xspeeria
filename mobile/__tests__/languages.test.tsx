@@ -1,5 +1,5 @@
 /**
- * ADR-053: the seven app languages. Every sentence the app shows has a translation in each
+ * ADR-053/ADR-108: the nine app languages. Every sentence the app shows has a translation in each
  * language, with the same {{placeholders}} and <n> tags, and nothing stale is left behind.
  */
 import fs from 'fs';
@@ -41,7 +41,7 @@ describe('language files', () => {
     expect(KEYS.has('Welcome Back')).toBe(true);
   });
 
-  it.each(['fr', 'ar', 'es', 'zh-Hans', 'pt'] as const)('%s translates every sentence, keeping placeholders and tags', (code) => {
+  it.each(['fr', 'ar', 'es', 'zh-Hans', 'pt', 'sw', 'am'] as const)('%s translates every sentence, keeping placeholders and tags', (code) => {
     const words = RESOURCES[code];
     const missing = [...KEYS].filter((k) => !words[k]?.trim());
     expect(missing).toEqual([]);
@@ -61,8 +61,8 @@ describe('language files', () => {
     expect(us['Deal cancelled']).toBe('Deal canceled');
   });
 
-  it('offers exactly the seven languages the owner chose', () => {
-    expect(LANGUAGES.map((l) => l.code)).toEqual(['en-GB', 'en-US', 'fr', 'ar', 'es', 'zh-Hans', 'pt']);
+  it('offers exactly the nine languages the owner chose', () => {
+    expect(LANGUAGES.map((l) => l.code)).toEqual(['en-GB', 'en-US', 'fr', 'ar', 'es', 'zh-Hans', 'pt', 'sw', 'am']);
     expect(LANGUAGES.filter((l) => isRtl(l.code)).map((l) => l.code)).toEqual(['ar']);
   });
 });
@@ -75,6 +75,8 @@ describe('choosing a language', () => {
     expect(deviceLanguage([{ languageTag: 'zh-Hans-CN', languageCode: 'zh', regionCode: 'CN' }])).toBe('zh-Hans');
     // Traditional Chinese is not offered: fall through to the next phone language.
     expect(deviceLanguage([{ languageTag: 'zh-Hant-TW', languageCode: 'zh', regionCode: 'TW' }, { languageTag: 'pt-BR', languageCode: 'pt', regionCode: 'BR' }])).toBe('pt');
+    expect(deviceLanguage([{ languageTag: 'sw-KE', languageCode: 'sw', regionCode: 'KE' }])).toBe('sw');
+    expect(deviceLanguage([{ languageTag: 'am-ET', languageCode: 'am', regionCode: 'ET' }])).toBe('am');
     expect(deviceLanguage([{ languageTag: 'yo-NG', languageCode: 'yo', regionCode: 'NG' }])).toBe('en-GB');
     expect(deviceLanguage([])).toBe('en-GB');
   });

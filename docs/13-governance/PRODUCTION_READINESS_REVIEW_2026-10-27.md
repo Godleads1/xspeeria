@@ -63,7 +63,7 @@ None of these can be fixed by writing more code alone. They need accounts, partn
 | M-3 | Background sweeps run inside every API server (`main.py`) | Medium | Row locks with `skip_locked` and one-alert-per-rule unique indexes limit double work. Behaviour with several servers is **UNKNOWN — NOT VERIFIED**; test it, or run sweeps in one worker. |
 | M-4 | Console Content-Security-Policy has no `script-src` | Medium | `admin/next.config.ts` sets frame-ancestors, base-uri, object-src, form-action and the other baseline headers. A script policy with nonces needs middleware, and the no-flash theme script needs a hash (ADR-064). |
 | M-5 | node-forge npm exception until 27 Nov 2026 (ADR-017) | Medium | Build tooling only; no patched version exists yet. |
-| M-6 | Translations are machine drafts (ADR-053, ADR-060) | Medium | Native-speaker review before launch. |
+| M-6 | Translations are machine drafts (ADR-053, ADR-060; Swahili and Amharic ADR-108) | Medium | Native-speaker review before launch. |
 | L-1 | Several to-do items were out of date | Low | Fixed in this review (§6). |
 
 ## 5. Required remediation, in order

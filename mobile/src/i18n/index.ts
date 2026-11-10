@@ -1,6 +1,7 @@
 /**
  * App languages (ADR-053). Owner, 2026-10-19: "English UK, English US, French, Arabic,
- * Spanish, Chinese (Simplified), Portuguese — for both the mobile and the web".
+ * Spanish, Chinese (Simplified), Portuguese — for both the mobile and the web". Owner,
+ * 2026-11-10 (ADR-108): Swahili and Amharic added to the mobile app for the African corridors.
  *
  * The English (UK) sentence is the key: `t('Welcome Back')`. A language file maps each
  * English sentence to its translation; anything missing falls back to English, so a gap shows
@@ -25,6 +26,8 @@ import enUS from './locales/en-US.json';
 import es from './locales/es.json';
 import fr from './locales/fr.json';
 import pt from './locales/pt.json';
+import sw from './locales/sw.json';
+import am from './locales/am.json';
 import zhHans from './locales/zh-Hans.json';
 
 export const LANGUAGES = [
@@ -35,6 +38,8 @@ export const LANGUAGES = [
   { code: 'es', name: 'Spanish', native: 'Español' },
   { code: 'zh-Hans', name: 'Chinese (Simplified)', native: '简体中文' },
   { code: 'pt', name: 'Portuguese', native: 'Português' },
+  { code: 'sw', name: 'Swahili', native: 'Kiswahili' },
+  { code: 'am', name: 'Amharic', native: 'አማርኛ' },
 ] as const;
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code'];
@@ -46,6 +51,8 @@ export const RESOURCES: Record<Exclude<LanguageCode, 'en-GB'>, Record<string, st
   es,
   'zh-Hans': zhHans,
   pt,
+  sw,
+  am,
 };
 
 const KEY = 'xspeeria.language';
@@ -67,7 +74,7 @@ export function deviceLanguage(tags: readonly { languageTag?: string | null; lan
       if (/Hant|TW|HK|MO/.test(tag) || ['TW', 'HK', 'MO'].includes(region)) continue;
       return 'zh-Hans';
     }
-    if (lang === 'fr' || lang === 'ar' || lang === 'es' || lang === 'pt') return lang;
+    if (lang === 'fr' || lang === 'ar' || lang === 'es' || lang === 'pt' || lang === 'sw' || lang === 'am') return lang;
   }
   return 'en-GB';
 }
