@@ -1488,5 +1488,6 @@
  "France": "France",
  "Germany": "Allemagne",
  "The CNAPS code is 12 digits": "Le code CNAPS comporte 12 chiffres",
- "Germany and France": "Allemagne et France"
+ "Germany and France": "Allemagne et France",
+ "Search {{currencies}} offers": "Rechercher des offres {{currencies}}"
 }

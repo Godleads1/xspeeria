@@ -30,7 +30,7 @@ import {
   filterProblem,
   pairFor,
   readQuery,
-  SEARCH_CURRENCIES,
+  shownSearchCurrencies,
   SORTS,
   STATUSES,
   type SearchState,
@@ -49,7 +49,10 @@ export function SearchScreen({
   onTake,
   onPostRequest,
   onQueue,
+  offered,
 }: {
+  /** The currencies the server offers now (server builds); see `shownSearchCurrencies`. */
+  offered?: ReadonlySet<string> | null;
   /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
   onQueue?: (listing: Listing) => Promise<string | null>;
   initial?: SearchState;
@@ -271,6 +274,7 @@ export function SearchScreen({
       <FilterSheet
         visible={sheet}
         value={state}
+        offered={offered}
         onClose={() => setSheet(false)}
         onApply={(next) => {
           setSheet(false);
@@ -367,9 +371,11 @@ export function FilterSheet({
   value,
   onClose,
   onApply,
+  offered,
 }: {
   visible: boolean;
   value: SearchState;
+  offered?: ReadonlySet<string> | null;
   onClose: () => void;
   onApply: (s: SearchState) => void;
 }): ReactElement {
@@ -414,7 +420,7 @@ export function FilterSheet({
 
           <Text style={styles.label}>{tr('CURRENCY')}</Text>
           <View style={styles.chipRow}>
-            {SEARCH_CURRENCIES.map((c) => (
+            {shownSearchCurrencies(offered).map((c) => (
               <Chip key={c} testID={`filter-currency-${c}`} label={c} on={draft.currency === c} onPress={() => set({ currency: c })} />
             ))}
           </View>

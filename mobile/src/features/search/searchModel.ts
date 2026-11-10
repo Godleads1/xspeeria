@@ -9,9 +9,23 @@
 import type { SearchParams } from '../../api/offersApi';
 import { k, tr } from '../../i18n';
 
-/** Only currencies with an official rate (ADR-020): no CAD chip (owner, 2026-10-21). */
-export const SEARCH_CURRENCIES = ['USD', 'GBP', 'EUR'] as const;
+/**
+ * Currencies with an official rate limit (ADR-020). CAD has one since ADR-101 (owner
+ * 2026-11-10: "Show CAD, and CNY when on", replacing the 2026-10-21 "no CAD chip"); the yuan
+ * only when the server offers it (ADR-105). See `shownSearchCurrencies`.
+ */
+export const SEARCH_CURRENCIES = ['USD', 'GBP', 'EUR', 'CAD', 'CNY'] as const;
 export type SearchCurrency = (typeof SEARCH_CURRENCIES)[number];
+/** Shown only when the server lists them (switched off until then). */
+const SWITCHED: ReadonlySet<string> = new Set(['CNY']);
+
+/**
+ * The chips to show. `offered`: the currencies with a rate limit on the server now (server
+ * builds); without it (demo builds, or before it loads) every built-in one but the switched.
+ */
+export function shownSearchCurrencies(offered?: ReadonlySet<string> | null): readonly SearchCurrency[] {
+  return SEARCH_CURRENCIES.filter((c) => (offered ? offered.has(c) : !SWITCHED.has(c)));
+}
 
 /** `buy`: people selling the currency for naira. `sell`: buy requests paying naira. */
 export type Side = 'buy' | 'sell';
@@ -62,6 +76,8 @@ const WORDS: Record<string, SearchCurrency> = {
   usd: 'USD', dollar: 'USD', dollars: 'USD', $: 'USD',
   gbp: 'GBP', pound: 'GBP', pounds: 'GBP', '£': 'GBP',
   eur: 'EUR', euro: 'EUR', euros: 'EUR', '€': 'EUR',
+  cad: 'CAD', 'c$': 'CAD',
+  cny: 'CNY', yuan: 'CNY', rmb: 'CNY', renminbi: 'CNY',
 };
 
 /**

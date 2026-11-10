@@ -53,6 +53,7 @@ export function HomeScreen({
   demoActivity = [],
   showReadiness = true,
   onSearch,
+  offered,
   notices = [],
 }: {
   user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
@@ -75,6 +76,8 @@ export function HomeScreen({
   showReadiness?: boolean;
   /** ADR-059: "Find a deal" under the header. Server builds only (search needs the server). */
   onSearch?: (s: HomeSearch) => void;
+  /** Currencies the server offers now, for the search chips (server builds). */
+  offered?: ReadonlySet<string> | null;
   /** ADR-066: outage notices from staff; shown first while they last. Server builds only. */
   notices?: readonly ServiceNotice[];
 }): ReactElement {
@@ -97,7 +100,7 @@ export function HomeScreen({
       {status === 'ready' ? (
         <View style={styles.body}>
           <ServiceNotices notices={notices} />
-          {onSearch ? <HomeSearchBar onSearch={onSearch} /> : null}
+          {onSearch ? <HomeSearchBar onSearch={onSearch} offered={offered} /> : null}
           <View>
             {demoHero ? (
               <View style={styles.hero}>

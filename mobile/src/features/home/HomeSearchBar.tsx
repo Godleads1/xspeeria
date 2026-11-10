@@ -9,7 +9,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { tr } from '../../i18n';
 import { brandWeight, color, space, themed, typography } from '../../theme';
-import { SEARCH_CURRENCIES, type SearchCurrency } from '../search/searchModel';
+import { shownSearchCurrencies, type SearchCurrency } from '../search/searchModel';
 
 export interface HomeSearch {
   readonly query: string;
@@ -17,8 +17,16 @@ export interface HomeSearch {
   readonly filters?: boolean;
 }
 
-export function HomeSearchBar({ onSearch }: { onSearch: (s: HomeSearch) => void }): ReactElement {
+export function HomeSearchBar({
+  onSearch,
+  offered,
+}: {
+  onSearch: (s: HomeSearch) => void;
+  /** The currencies the server offers now (server builds); see `shownSearchCurrencies`. */
+  offered?: ReadonlySet<string> | null;
+}): ReactElement {
   const [query, setQuery] = useState('');
+  const chips = shownSearchCurrencies(offered);
   return (
     <View testID="home-search" style={styles.wrap}>
       <Text nativeID="home-search-label" style={styles.label}>{tr('FIND A DEAL')}</Text>
@@ -33,7 +41,7 @@ export function HomeSearchBar({ onSearch }: { onSearch: (s: HomeSearch) => void 
             onChangeText={(t) => setQuery(t.slice(0, 40))}
             onSubmitEditing={() => onSearch({ query })}
             returnKeyType="search"
-            placeholder={tr('Search USD, GBP, EUR offers')}
+            placeholder={tr('Search {{currencies}} offers', { currencies: chips.join(', ') })}
             placeholderTextColor={color.text.secondary}
             autoCorrect={false}
             autoCapitalize="none"
@@ -51,7 +59,7 @@ export function HomeSearchBar({ onSearch }: { onSearch: (s: HomeSearch) => void 
         </Pressable>
       </View>
       <View style={styles.chips}>
-        {SEARCH_CURRENCIES.map((c) => (
+        {chips.map((c) => (
           <Pressable
             key={c}
             testID={`home-search-${c}`}
