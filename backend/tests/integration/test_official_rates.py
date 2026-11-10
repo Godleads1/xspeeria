@@ -66,7 +66,9 @@ async def _rates(env: Env, user: User | None) -> Response:
 
 
 async def test_snapshot_until_the_feed_has_stored_a_rate(env: Env, db: AsyncSession) -> None:
-    assert await current_ceilings(db, env.clock()) == OFFICIAL_RATE
+    # The yuan is switched off by default (ADR-105, ADR-106), so it has no rate limit in force.
+    expected = {c: v for c, v in OFFICIAL_RATE.items() if c != "CNY"}
+    assert await current_ceilings(db, env.clock()) == expected
     assert OFFICIAL_RATE["CAD"] == Decimal("944.70")
 
 
