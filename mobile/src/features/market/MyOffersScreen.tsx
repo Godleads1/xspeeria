@@ -15,7 +15,7 @@ import type { ServerOffer } from "../../api/offersApi";
 import { Icon } from "../../components/icons";
 import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTone } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
-import { formatAmount, parseAmount, parseRate } from "./money";
+import { amountDecimals, formatAmount, parseAmount, parseRate } from "./money";
 import { exactHundredths, foreignMinorFor, groupedRate } from "./serverOffers";
 import { tr, k } from "../../i18n";
 
@@ -97,7 +97,7 @@ export function MyOffersScreen({
     const amountMinor = parseAmount(foreign, editing.amount);
     const rateMilli = parseRate(editing.rate);
     if (amountMinor === null || rateMilli === null) {
-      setNotice(tr("Enter the amount and the rate as numbers, e.g. 1000.00."));
+      setNotice(amountDecimals(foreign) === 0 ? tr("Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.") : tr("Enter the amount and the rate as numbers, e.g. 1000.00."));
       return;
     }
     setWorking(o.offer_id);
