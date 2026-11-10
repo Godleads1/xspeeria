@@ -18,6 +18,7 @@ import {
   pairFor,
   readQuery,
   SEARCH_CURRENCIES,
+  shownSearchCurrencies,
   toParams,
   type SearchState,
 } from '../src/features/search/searchModel';
@@ -64,9 +65,15 @@ async function renderSearch(over: Partial<Parameters<typeof SearchScreen>[0]> = 
 }
 
 describe('search model', () => {
-  it('offers only currencies with an official rate (no CAD)', () => {
-    expect(SEARCH_CURRENCIES).toEqual(['USD', 'GBP', 'EUR']);
-    expect(isSearchCurrency('CAD')).toBe(false);
+  it('offers the currencies with an official rate; the yuan only when the server offers it', () => {
+    expect(SEARCH_CURRENCIES).toEqual(['USD', 'GBP', 'EUR', 'CAD', 'CNY']);
+    expect(shownSearchCurrencies()).toEqual(['USD', 'GBP', 'EUR', 'CAD']);
+    expect(shownSearchCurrencies(new Set(['USD', 'GBP', 'EUR', 'CAD', 'CNY']))).toEqual(['USD', 'GBP', 'EUR', 'CAD', 'CNY']);
+    // A currency switched off on the server has no rate limit there, so it isn't shown.
+    expect(shownSearchCurrencies(new Set(['USD', 'GBP']))).toEqual(['USD', 'GBP']);
+    expect(isSearchCurrency('CAD')).toBe(true);
+    expect(isSearchCurrency('JPY')).toBe(false);
+    expect(readQuery('500 yuan')).toEqual({ currency: 'CNY', minAmount: '500' });
     expect(isSearchCurrency('usd')).toBe(false);
     expect(isSearchCurrency(undefined)).toBe(false);
   });
@@ -263,6 +270,7 @@ describe('Home search bar', () => {
     expect(onSearch).toHaveBeenLastCalledWith({ query: '', currency: 'GBP' });
     await fireEvent.press(screen.getByTestId('home-search-filters'));
     expect(onSearch).toHaveBeenLastCalledWith({ query: '500 USD', filters: true });
-    expect(screen.queryByTestId('home-search-CAD')).toBeNull();
+    expect(screen.getByTestId('home-search-CAD')).toBeTruthy();
+    expect(screen.queryByTestId('home-search-CNY')).toBeNull();
   });
 });

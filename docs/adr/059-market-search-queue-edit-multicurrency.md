@@ -68,6 +68,7 @@ Owner: "a user who want to sell nigeria can choose another other currencies make
 
 ## Corrections log
 
+- 2026-11-10 (owner): "Show CAD, and CNY when on" — CAD now has an official rate limit (ADR-101), so Find a deal shows USD, GBP, EUR and CAD; the yuan only when the server offers it (ADR-105). Replaces the 2026-10-21 CAD decision below.
 - 2026-10-21 (owner, answering questions from the build): CAD chip left out; search extends `marketplace/listings`; Rule A applies in every country; whole-amount-only only for 2+ currency requests.
 - 2026-10-26 (owner): status filter is **Available now / Success**; Success lists completed trades (rate, amount, time; no names; no action); waiting offers stay in Available with their queue note.
 
