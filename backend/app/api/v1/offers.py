@@ -51,6 +51,7 @@ from app.schemas.offers import (
     UpdateRateRequest,
 )
 from app.services.auth import AuthRuntime, AuthService, Principal
+from app.services.currency_switch import refuse_if_switched_off
 from app.services.kyc import KycService
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
@@ -200,6 +201,7 @@ async def create_offer(
     db: Db,
 ) -> Any:
     refuse_china_if_off(settings, body.source_currency, body.target_currency)  # ADR-105
+    await refuse_if_switched_off(db, body.source_currency, body.target_currency)  # ADR-106
     # The maker pays the source currency (ADR-042).
     await require_pay_country(principal, body.source_currency, settings, runtime, db)
     result = await service.create(
@@ -230,6 +232,7 @@ async def create_group(
 ) -> Any:
     """ADR-059 Decision 5. The maker pays naira, so the Nigeria identity check applies."""
     refuse_china_if_off(settings, *(c.currency for c in body.currencies))  # ADR-105
+    await refuse_if_switched_off(db, *(c.currency for c in body.currencies))  # ADR-106
     await require_pay_country(principal, "NGN", settings, runtime, db)
     result = await service.create_group(
         principal,
@@ -464,9 +467,11 @@ async def add_payout_account(
     accounts: PayoutAccounts,
     auth: Auth,
     settings: Settings_,
+    db: Db,
     step_up_token: StepUpToken = None,
 ) -> Any:
     refuse_china_if_off(settings, body.currency)  # ADR-105
+    await refuse_if_switched_off(db, body.currency)  # ADR-106
 
     async def confirm() -> None:
         await auth.consume_step_up(principal, "beneficiary.add", step_up_token)

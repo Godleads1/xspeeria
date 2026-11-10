@@ -29,6 +29,7 @@ from app.core.logging import get_logger
 from app.domain.offer_rules import OFFICIAL_RATE, with_derived
 from app.models.official_rates import OfficialRate
 from app.providers.frankfurter import RateFeedError, RateQuote
+from app.services.currency_switch import switched_off
 
 __all__ = ["FED_CURRENCIES", "STALE_AFTER", "OfficialRateService", "current_ceilings"]
 
@@ -47,7 +48,16 @@ class RateFeed(Protocol):
 
 
 async def current_ceilings(db: AsyncSession, now: datetime) -> dict[str, Decimal]:
-    """Naira per 1 unit, per foreign currency, that no rate may exceed right now."""
+    """Naira per 1 unit, per foreign currency, that no rate may exceed right now.
+
+    A currency switched off (ADR-106) has none: its offers leave the market and can't be
+    taken, queued for or re-priced; deals already matched don't use this and finish.
+    """
+    off = await switched_off(db)
+    return {c: v for c, v in (await _ceilings(db, now)).items() if c not in off}
+
+
+async def _ceilings(db: AsyncSession, now: datetime) -> dict[str, Decimal]:
     fed_ever = await db.scalar(select(OfficialRate.id).limit(1))
     if not fed_ever:
         return dict(OFFICIAL_RATE)
