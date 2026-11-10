@@ -679,7 +679,8 @@ Prepared for owner decisions. Nothing in them is chosen or built.
 - `docs/13-governance/HOSTING_OPTIONS_2026-11.md`: what Xspeeria needs from a host. Covers the **CBN circular of 15 June 2026** (payment data stored in Nigeria from 1 January 2027), a Nigerian cloud vs the AWS Lagos Local Zone vs own servers, and the questions to ask providers and the lawyer.
 - `docs/13-governance/FRAUD_OPTIONS_2026-11.md`: seven checks that could replace the removed 24-hour payout hold (FX-03), with a suggested starting set.
 - `docs/13-governance/DELETE_ACCOUNT_RULE.md`: what Delete account keeps and for how long. **Approved (DEC-106, 3 Nov 2026):** identity, payout and deal records 5 years from closing, Compliance-only; audit log and deal events 7 years. The rest of the rule is a suggestion awaiting the owner; not built.
-- `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040).
+- `docs/07-security/PENETRATION_TEST_BRIEF.md`: scope, priorities, rules and deliverables for the independent test (SEC-040). Updated 2026-11-10: new corridors and currency switches, the no-login "Need help?" thread, the redo identity check in PIN reset, trusted proxies and daily reconciliation; open decision on escrow in a hosted test environment.
+- `docs/10-infrastructure/BACKUP_AND_RESTORE_GUIDE.md`: backups and restores (SEC-030, C-4). Covers the database and its backups in Nigeria, encrypted daily backups with point-in-time recovery, keys backed up separately, a restore to a new database with checks, and the quarterly restore test. Not yet run: no hosting.
 - `docs/13-governance/GITHUB_MAIN_PROTECTION.md`: the exact ruleset for `main` once the GitHub plan is upgraded (SEC-031).
 
 ---
