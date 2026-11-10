@@ -381,7 +381,7 @@
  "Enter the naira amount as a number, e.g. 1000000.00.": "أدخل مبلغ النايرا كرقم، مثل 1000000.00.",
  "Enter the phone number on your Xspeeria account. We will text you a code.": "أدخل رقم الهاتف المسجل في حسابك على Xspeeria. سنرسل إليك رمزًا برسالة نصية.",
  "Enter the phone number with its country code, for example +2348012345678.": "أدخل رقم الهاتف مع رمز الدولة، مثل +2348012345678.",
- "Enter the rate as a number with up to 6 decimal places.": "أدخل السعر كرقم بستة منازل عشرية كحد أقصى.",
+ "Enter the rate as a number with up to 3 decimal places.": "أدخل السعر كرقم بثلاث منازل عشرية كحد أقصى.",
  "Enter your 11-digit BVN.": "أدخل رقم BVN المكوّن من 11 رقمًا.",
  "Enter your current password": "أدخل كلمة المرور الحالية",
  "Enter your e-mail address": "أدخل عنوان بريدك الإلكتروني",

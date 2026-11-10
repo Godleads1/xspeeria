@@ -26,7 +26,7 @@ export const SERVER_MESSAGES: readonly string[] = [
   k("Enter the amount as a number, e.g. 1000.00."),
   k("Enter the bank name."),
   k("Enter the phone number with its country code, for example +2348012345678."),
-  k("Enter the rate as a number with up to 6 decimal places."),
+  k("Enter the rate as a number with up to 3 decimal places."),
   k("Enter your 11-digit BVN."),
   k("Enter a valid IBAN."),
   k("Please use a permanent email address. Temporary email services aren't accepted."),

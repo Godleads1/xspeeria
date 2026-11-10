@@ -26,7 +26,7 @@ describe('history data', () => {
     // Buyers receive the foreign currency; sellers receive NGN (ADR-015).
     for (const h of HISTORY.filter((x) => x.status === 'completed')) {
       const sum = h.payouts.reduce((a, p) => a + p.amountMinor, 0);
-      expect(sum).toBe(h.side === 'buy' ? h.amountMinor : quoteMinor(h.amountMinor, h.rateHundredths));
+      expect(sum).toBe(h.side === 'buy' ? h.amountMinor : quoteMinor(h.amountMinor, h.rateMilli));
     }
   });
 

@@ -17,7 +17,7 @@ import { Icon } from "../../components/icons";
 import { PrimaryButton } from "../../components/primitives";
 import { brandWeight, color, space, themed, typography } from "../../theme";
 import type { Side } from "../market/MarketScreen";
-import { formatHundredths } from "../market/money";
+import { formatHundredths, formatRate } from "../market/money";
 import { planTotals, type FillPlan } from "./fillPlan";
 import { FUNDING_WINDOW_MS, tradeStore, useTrades } from "./tradeStore";
 import { COORDINATION_FEE_LABEL } from "../history/data";
@@ -111,7 +111,7 @@ export function ConfirmTradeSheet({
                 <Row
                   key={p.listing.id}
                   label={`${i + 1}. ${formatHundredths(p.amountMinor)} ${cur}`}
-                  value={`NGN ${formatHundredths(p.listing.rateHundredths)}/${cur}`}
+                  value={`NGN ${p.listing.rateLabel ?? formatRate(p.listing.rateMilli)}/${cur}`}
                 />
               ))}
             </View>
@@ -126,7 +126,7 @@ export function ConfirmTradeSheet({
             {several ? null : (
               <Row
                 label={tr("Rate")}
-                value={`NGN ${formatHundredths(parts[0]?.listing.rateHundredths ?? 0)}/${cur}`}
+                value={`NGN ${parts[0]?.listing.rateLabel ?? formatRate(parts[0]?.listing.rateMilli ?? 0)}/${cur}`}
               />
             )}
             {side === "buy" ? (

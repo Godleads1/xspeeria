@@ -35,7 +35,7 @@ export interface HistoryItem {
   /** Foreign currency bought or sold. */
   readonly currency: string;
   readonly amountMinor: number;
-  readonly rateHundredths: number;
+  readonly rateMilli: number;
   /** ISO date `YYYY-MM-DD`; compared as a string, never parsed to a float. */
   readonly date: string;
   readonly status: TradeStatus;
@@ -95,7 +95,7 @@ const DONE = ['12:09 PM', '12:10 PM', '12:21 PM', '12:34 PM', '12:36 PM', '12:41
 
 export const HISTORY: readonly HistoryItem[] = [
   {
-    id: 'h1', side: 'buy', currency: 'USD', amountMinor: 50000, rateHundredths: 125700,
+    id: 'h1', side: 'buy', currency: 'USD', amountMinor: 50000, rateMilli: 1257000,
     date: '2025-05-12', status: 'completed', reference: '27Y3UNDUEU',
     payouts: [
       { name: 'Peter Alabi Seun', bank: 'Capital One Bank', last4: '9633', amountMinor: 23000 },
@@ -104,31 +104,31 @@ export const HISTORY: readonly HistoryItem[] = [
     progress: steps(7, DONE),
   },
   {
-    id: 'h2', side: 'buy', currency: 'CAD', amountMinor: 50000, rateHundredths: 92000,
+    id: 'h2', side: 'buy', currency: 'CAD', amountMinor: 50000, rateMilli: 920000,
     date: '2025-05-12', status: 'pending', reference: '27Y3UNDQ8K',
     payouts: [],
     progress: steps(4, DONE),
   },
   {
-    id: 'h3', side: 'sell', currency: 'USD', amountMinor: 50000, rateHundredths: 125700,
+    id: 'h3', side: 'sell', currency: 'USD', amountMinor: 50000, rateMilli: 1257000,
     date: '2025-05-10', status: 'completed', reference: '27Y3UNC2LP',
     payouts: [{ name: 'David Peters', bank: 'Access Bank', last4: '4417', amountMinor: 62850000 }],
     progress: steps(7, DONE),
   },
   {
-    id: 'h4', side: 'buy', currency: 'CAD', amountMinor: 50000, rateHundredths: 92000,
+    id: 'h4', side: 'buy', currency: 'CAD', amountMinor: 50000, rateMilli: 920000,
     date: '2025-05-08', status: 'failed', reference: '27Y3UNB7RT',
     payouts: [],
     progress: steps(2, DONE),
   },
   {
-    id: 'h5', side: 'buy', currency: 'USD', amountMinor: 50000, rateHundredths: 125700,
+    id: 'h5', side: 'buy', currency: 'USD', amountMinor: 50000, rateMilli: 1257000,
     date: '2025-05-03', status: 'completed', reference: '27Y3UNA1ZX',
     payouts: [{ name: 'Peter Alabi Seun', bank: 'Capital One Bank', last4: '9633', amountMinor: 50000 }],
     progress: steps(7, DONE),
   },
   {
-    id: 'h6', side: 'buy', currency: 'EUR', amountMinor: 30000, rateHundredths: 176500,
+    id: 'h6', side: 'buy', currency: 'EUR', amountMinor: 30000, rateMilli: 1765000,
     date: '2025-04-28', status: 'completed', reference: '27Y3UMZ9QE',
     payouts: [{ name: 'Peter Alabi Seun', bank: 'Deutsche Bank', last4: '2210', amountMinor: 30000 }],
     progress: steps(7, DONE),

@@ -33,9 +33,9 @@ describe('market money helpers (integers only)', () => {
   });
 
   it('computes the amount to pay exactly (Figma: 799 USD at 1,644 = 1,313,556.00 NGN)', () => {
-    expect(quoteMinor(79900, 164400)).toBe(131355600);
+    expect(quoteMinor(79900, 1644000)).toBe(131355600);
     // Half-up rounding at the last kobo: 0.01 USD at 1,644.55 = 16.4455 NGN -> 16.45
-    expect(quoteMinor(1, 164455)).toBe(1645);
+    expect(quoteMinor(1, 1644550)).toBe(1645);
   });
 
   it('keeps match potential within 0–100 and directional by side', () => {
@@ -71,7 +71,7 @@ describe('Market screen (ADR-005)', () => {
       side: 'buy',
       currency: 'USD',
       amountMinor: 79900,
-      rateHundredths: 132000,
+      rateMilli: 1320000,
     });
   });
 
@@ -100,7 +100,7 @@ describe('Market screen (ADR-005)', () => {
 });
 
 describe('Select Match (Figma 106:1150)', () => {
-  const request = { side: 'buy' as const, currency: 'USD', amountMinor: 79900, rateHundredths: 164400 };
+  const request = { side: 'buy' as const, currency: 'USD', amountMinor: 79900, rateMilli: 1644000 };
 
   it('summarises the request with the exact amount to pay', async () => {
     await render(

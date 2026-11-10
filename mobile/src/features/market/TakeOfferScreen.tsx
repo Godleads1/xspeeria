@@ -19,17 +19,21 @@ import { Icon } from "../../components/icons";
 import { ErrorState, LoadingState, PrimaryButton, Screen } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { FieldInput, OutlinedField } from "./controls";
-import { divRoundHalfEven, formatHundredths, parseToHundredths } from "./money";
+import { amountText, divRoundHalfEven, formatAmount, formatHundredths, parseAmount, parseToHundredths } from "./money";
 import type { FeeQuote } from "../../api/feesApi";
 import { foreignMinorFor, groupedRate, type TakeSource } from "./serverOffers";
 import { tr } from "../../i18n";
 
-/** "500.00" → 50000 (exact) or null. */
+/** Server amount text, "500.00" → 50000 or "500000" (whole units) → 50000000, exact; else null. */
 function minorOf(text: string): number | null {
   return /^[0-9]+(\.[0-9]{1,2})?$/.test(text) ? parseToHundredths(text) : null;
 }
 
-/** NGN kobo for `amountMinor` at a rate with up to 6 decimals; half-even (ADR-002 §4.4). */
+/**
+ * NGN kobo for `amountMinor` (hundredths of the foreign unit) at a rate the server shows.
+ * Read to 6 decimals so a rate stored before the 3-decimal rule stays exact; half-even
+ * (ADR-002 §4.4).
+ */
 export function ngnMinorFor(amountMinor: number, rate: string): number | null {
   const m = /^([0-9]+)(?:\.([0-9]{1,6}))?$/.exec(rate);
   if (!m) return null;
@@ -82,15 +86,16 @@ export function TakeOfferScreen({
   const request = offer?.source_currency === "NGN";
   const code = offer ? (request ? offer.target_currency : offer.source_currency) : "";
   const leftMinor = offer ? minorOf(offer.remaining_amount) : null;
-  const remaining = offer && leftMinor !== null ? (request ? foreignMinorFor(leftMinor, offer.desired_rate) : leftMinor) : null;
-  const amountMinor = parseToHundredths(amount);
+  const remaining = offer && leftMinor !== null ? (request ? foreignMinorFor(leftMinor, offer.desired_rate, code) : leftMinor) : null;
+  // A whole-unit currency (CFA franc, Ugandan shilling) is typed without decimals.
+  const amountMinor = offer ? parseAmount(code, amount) : null;
   const ngnFor = amountMinor !== null && offer ? ngnMinorFor(amountMinor, offer.desired_rate) : null;
   const tooMuch =
     amountMinor !== null &&
     remaining !== null &&
     (request ? ngnFor === null || leftMinor === null || ngnFor > leftMinor : amountMinor > remaining);
   const ngn = offer && amountMinor !== null && !tooMuch ? ngnFor : null;
-  const remainingText = remaining !== null ? formatHundredths(remaining).replace(/,/g, "") : "";
+  const remainingText = remaining !== null ? amountText(code, remaining) : "";
   const ready = offer !== null && amountMinor !== null && !tooMuch && !busy;
   // ADR-059 Decision 5: a request in several currencies is taken whole, never in part.
   const whole = offer?.whole_only === true;
@@ -108,7 +113,7 @@ export function TakeOfferScreen({
     setQuote(null);
     if (!source.feeQuote || !sendCurrency || sendMinor === null || sendMinor <= 0) return;
     const ask = source.feeQuote;
-    const text = formatHundredths(sendMinor).replace(/,/g, "");
+    const text = amountText(sendCurrency, sendMinor);
     let live = true;
     const t = setTimeout(() => {
       ask(sendCurrency, text).then((q) => live && setQuote(q), () => undefined);
@@ -131,7 +136,7 @@ export function TakeOfferScreen({
     setError(null);
     try {
       key.current ??= source.newKey();
-      const values = { amount: formatHundredths(amountMinor), currency: code, rate: groupedRate(offer.desired_rate) };
+      const values = { amount: formatAmount(code, amountMinor), currency: code, rate: groupedRate(offer.desired_rate) };
       approval.current ??= await source.approve(
         request ? tr("Sell {{amount}} {{currency}} at NGN {{rate}}", values) : tr("Take {{amount}} {{currency}} at NGN {{rate}}", values),
       );
@@ -143,7 +148,7 @@ export function TakeOfferScreen({
           : ngn !== null
             ? formatHundredths(ngn).replace(/,/g, "")
             : null
-        : formatHundredths(amountMinor).replace(/,/g, "");
+        : amountText(code, amountMinor);
       if (sent === null) return;
       // The rate on screen is the one the taker agrees to; the server refuses it if it changed.
       const m = await source.accept(offer.offer_id, sent, offer.desired_rate, key.current, approval.current);

@@ -27,7 +27,7 @@ import {
   themed,
 } from "../../theme";
 import type { Currency, Listing } from "./data";
-import { formatCompact, formatHundredths } from "./money";
+import { formatAmount, formatCompact, formatRateCompact, formatRate } from "./money";
 import { tr } from "../../i18n";
 
 /* ------------------------------------------------------------ Outlined field */
@@ -403,7 +403,7 @@ export function ListingRow({
             {tr("Rate: ")}
             <Text style={styles.listingMuted}>{tr("NGN")}{' '}</Text>
             <Text style={styles.listingRate}>
-              {listing.rateLabel ?? formatCompact(listing.rateHundredths)}
+              {listing.rateLabel ?? formatRateCompact(listing.rateMilli)}
             </Text>
             <Text style={styles.listingMuted}>{` /${listing.currency}`}</Text>
           </Text>
@@ -418,7 +418,7 @@ export function ListingRow({
         <Text style={styles.listingMeta}>{listing.meta}</Text>
         {selected ? (
           <Text testID={`listing-${listing.id}-taking`} style={styles.listingTaking}>
-            {tr("Taking {{takingMinor}} {{currency}}", { takingMinor: formatHundredths(takingMinor), currency: listing.currency })}
+            {tr("Taking {{takingMinor}} {{currency}}", { takingMinor: formatAmount(listing.currency, takingMinor), currency: listing.currency })}
           </Text>
         ) : null}
       </View>
@@ -427,8 +427,8 @@ export function ListingRow({
         accessibilityRole="button"
         accessibilityLabel={
           selected
-            ? tr("Remove {{takingMinor}} {{currency}} at {{rateHundredths}} NGN from your selection", { takingMinor: formatHundredths(takingMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatHundredths(listing.rateHundredths) })
-            : tr("{{action}} {{availableMinor}} {{currency}} at {{rateHundredths}} NGN", { action, availableMinor: formatHundredths(availableMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatHundredths(listing.rateHundredths) })
+            ? tr("Remove {{takingMinor}} {{currency}} at {{rateHundredths}} NGN from your selection", { takingMinor: formatAmount(listing.currency, takingMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatRate(listing.rateMilli) })
+            : tr("{{action}} {{availableMinor}} {{currency}} at {{rateHundredths}} NGN", { action, availableMinor: formatAmount(listing.currency, availableMinor), currency: listing.currency, rateHundredths: listing.rateLabel ?? formatRate(listing.rateMilli) })
         }
         accessibilityState={{ selected, disabled: taken }}
         disabled={taken}

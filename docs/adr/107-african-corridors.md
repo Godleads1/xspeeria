@@ -42,6 +42,16 @@
 - **Payout accounts:** the ten currencies join the payout-account tabs (still hidden when the server switches a currency off). Each African currency has a *Bank account* form (bank name, account number or IBAN, optional bank or branch code). Where mobile money is common it also has a *Mobile money* form (provider, wallet phone number). US dollars add *Bank account in Zimbabwe* and *Mobile money in Zimbabwe* beside the US form.
 - **Not yet in the app:** the Market's currency list and "Find a deal". These need 3-decimal rates and whole-unit amounts, which come in part 3.
 
+## App (part 3, step 2) — rates and amounts in the app
+
+- **Rates:** the app holds them in thousandths. Every place a rate is typed takes up to 3 decimals and refuses a 4th:
+  - Market, Take offer, My Offers edits, the multi-currency request and search filters.
+  - Rates show 2 decimals, plus a 3rd when it isn't 0 (1,320.50; 2.273).
+- **Older rates:** a rate stored before the rule keeps its exact text. In History it is cut to 3 decimals for display, so the deal still shows.
+- **Whole-unit currencies:** UGX and XOF amounts are typed without decimals, and shown and sent without ".00". A request's foreign amount is rounded half to even to whole units, as on the server.
+- **Still hidden:** the African currencies stay out of the Market's currency list until step 4.
+- **Evidence:** `mobile/__tests__/money-currency.test.ts` and `market-units.test.tsx`. The earlier `units.ts` helpers (unused) were folded into `money.ts`.
+
 ## Not verified / owner actions
 
 - **Legality and partner banks:** UNKNOWN — NOT VERIFIED for every one of the eleven. Egypt, Ethiopia, Morocco and Zimbabwe tightly control foreign exchange.

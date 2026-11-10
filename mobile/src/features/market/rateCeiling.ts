@@ -21,12 +21,12 @@
  * 944.70. The server derives the same figure; the app shows it with its own wording.
  */
 
-/** NGN per 1 unit, ×100. CBN official rate snapshot (see above). */
+/** NGN per 1 unit, ×1000 (3 decimals). CBN official rate snapshot (see above). */
 export const OFFICIAL_RATE: Readonly<Record<string, number>> = {
-  USD: 133326,
-  GBP: 176511,
-  EUR: 149120,
-  CAD: 94470, // derived, ADR-101
+  USD: 1333260,
+  GBP: 1765110,
+  EUR: 1491200,
+  CAD: 944700, // derived, ADR-101
 };
 
 /** Currencies whose ceiling is derived, not published by the CBN (ADR-101). */
@@ -35,7 +35,7 @@ export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD', 'CNY']);
 /** Date of the snapshot, shown beside the rate. */
 export const OFFICIAL_RATE_AS_OF = '17 Oct 2026';
 
-/** NGN per 1 unit, ×100, per currency: what the server says is in force (ADR-102). */
+/** NGN per 1 unit, ×1000, per currency: what the server says is in force (ADR-102). */
 export type Ceilings = Readonly<Record<string, number>>;
 
 /**
@@ -48,13 +48,16 @@ export function officialRateFor(currency: string, live?: Ceilings | null): numbe
   return Number.isSafeInteger(v) && v > 0 ? v : null;
 }
 
-/** The server's ceilings as whole hundredths; a figure with more decimals is rounded DOWN. */
+/**
+ * The server's ceilings in thousandths. The server sends at most 3 decimals; a figure with
+ * more is rounded DOWN, so the app never allows a rate above the server's limit.
+ */
 export function ceilingsFromServer(items: readonly { currency: string; max_rate: string }[]): Ceilings {
   const out: Record<string, number> = {};
   for (const { currency, max_rate } of items) {
     const m = /^(\d{1,6})(?:\.(\d{1,6}))?$/.exec(max_rate);
     if (!m) continue;
-    out[currency] = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0').slice(0, 2));
+    out[currency] = Number(m[1]) * 1000 + Number((m[2] ?? '').padEnd(3, '0').slice(0, 3));
   }
   return out;
 }
@@ -62,9 +65,9 @@ export function ceilingsFromServer(items: readonly { currency: string; max_rate:
 export type RateProblem = 'not-positive' | 'above-official' | 'official-unavailable';
 
 /** Positivity first, then the ceiling (API contract §3.3: the two are disjoint). */
-export function rateProblem(currency: string, rateHundredths: number, live?: Ceilings | null): RateProblem | null {
-  if (!Number.isSafeInteger(rateHundredths) || rateHundredths <= 0) return 'not-positive';
+export function rateProblem(currency: string, rateMilli: number, live?: Ceilings | null): RateProblem | null {
+  if (!Number.isSafeInteger(rateMilli) || rateMilli <= 0) return 'not-positive';
   const ceiling = officialRateFor(currency, live);
   if (ceiling === null) return 'official-unavailable';
-  return rateHundredths > ceiling ? 'above-official' : null;
+  return rateMilli > ceiling ? 'above-official' : null;
 }

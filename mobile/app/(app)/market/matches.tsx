@@ -49,7 +49,7 @@ function parseParams(
         side,
         currency: currency as string,
         amountMinor: amount,
-        rateHundredths: rate,
+        rateMilli: rate,
       }
     : null;
 }

@@ -54,7 +54,7 @@ export interface Trade {
   readonly currency: string;
   /** Foreign amount, minor units of `currency`. */
   readonly amountMinor: number;
-  readonly rateHundredths: number;
+  readonly rateMilli: number;
   /** What the user transfers into escrow, minor units of `payCurrency`, fee included. */
   readonly transferMinor: number;
   readonly payCurrency: string;
@@ -85,8 +85,8 @@ function reference(random: RandomBytes): string {
 }
 
 /** NGN amount for a foreign amount at a rate (kobo). */
-export function ngnFor(amountMinor: number, rateHundredths: number): number {
-  return quoteMinor(amountMinor, rateHundredths);
+export function ngnFor(amountMinor: number, rateMilli: number): number {
+  return quoteMinor(amountMinor, rateMilli);
 }
 
 /** A trade id not already in use (a repeat is astronomically unlikely, but never trusted). */
@@ -99,8 +99,8 @@ function uniqueId(random: RandomBytes): string {
 }
 
 /** What the user receives from escrow: the foreign amount when buying, NGN when selling. */
-export function receiveFor(side: Side, amountMinor: number, rateHundredths: number): number {
-  return side === 'buy' ? amountMinor : ngnFor(amountMinor, rateHundredths);
+export function receiveFor(side: Side, amountMinor: number, rateMilli: number): number {
+  return side === 'buy' ? amountMinor : ngnFor(amountMinor, rateMilli);
 }
 
 /** Event text for one payout, with the amount when the money was split. */
@@ -121,9 +121,9 @@ export function transferFor(
   side: Side,
   currency: string,
   amountMinor: number,
-  rateHundredths: number,
+  rateMilli: number,
 ): { minor: number; currency: string; feeMinor: number } {
-  const sent = side === 'buy' ? ngnFor(amountMinor, rateHundredths) : amountMinor;
+  const sent = side === 'buy' ? ngnFor(amountMinor, rateMilli) : amountMinor;
   const feeMinor = coordinationFeeMinor(sent);
   const minor = sent + feeMinor;
   if (!Number.isSafeInteger(minor)) throw new Error('Amount to pay is out of range');
@@ -176,10 +176,10 @@ export const tradeStore = {
     // (Standing Standards §7.1: original = matched + remaining).
     if (amountMinor > tradeStore.remainingMinor(listing)) throw new Error('Amount is more than this listing has available');
     // Re-checked at acceptance: a listing above the official rate cannot be taken (§7.2).
-    if (rateProblem(listing.currency, listing.rateHundredths) !== null) throw new Error('This rate is above the official rate');
-    const t = transferFor(side, listing.currency, amountMinor, listing.rateHundredths);
+    if (rateProblem(listing.currency, listing.rateMilli) !== null) throw new Error('This rate is above the official rate');
+    const t = transferFor(side, listing.currency, amountMinor, listing.rateMilli);
     // What the user receives: the foreign amount when buying, the NGN amount when selling.
-    const receiveMinor = receiveFor(side, amountMinor, listing.rateHundredths);
+    const receiveMinor = receiveFor(side, amountMinor, listing.rateMilli);
     const payouts: readonly PayoutShare[] =
       input.payouts ?? (payout ? [{ ...payout, amountMinor: receiveMinor }] : []);
     if (splitProblem(receiveMinor, payouts) !== null) throw new Error('Payout accounts must add up to the amount received');
@@ -191,7 +191,7 @@ export const tradeStore = {
       ...(orderId ? { orderId } : {}),
       currency: listing.currency,
       amountMinor,
-      rateHundredths: listing.rateHundredths,
+      rateMilli: listing.rateMilli,
       transferMinor: t.minor,
       payCurrency: t.currency,
       feeMinor: t.feeMinor,
@@ -349,7 +349,7 @@ export function toHistoryItem(t: Trade): HistoryItem {
     side: t.side,
     currency: t.currency,
     amountMinor: t.amountMinor,
-    rateHundredths: t.rateHundredths,
+    rateMilli: t.rateMilli,
     date: iso,
     status: t.phase === 'completed' ? 'completed' : t.phase === 'expired' || t.phase === 'cancelled' ? 'failed' : 'pending',
     reference: t.reference,

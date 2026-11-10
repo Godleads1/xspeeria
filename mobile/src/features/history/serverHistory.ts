@@ -19,6 +19,17 @@ export function toMinor(text: string, scale = 2): number {
   return n;
 }
 
+/**
+ * NGN per 1 unit in thousandths (3 decimals, owner: "3 decimal not 6"). A rate stored before
+ * that rule may have more decimals; for display only, it is cut to 3 rather than dropping
+ * the deal from History. Amounts are always worked out by the server.
+ */
+export function rateMilliOf(text: string): number {
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec(text.trim());
+  if (!m) throw new Error(`not a decimal rate: ${text}`);
+  return toMinor(`${m[1]}.${(m[2] ?? '').slice(0, 3)}`.replace(/\.$/, ''), 3);
+}
+
 const DONE = new Set(['COMPLETED']);
 const FAILED = new Set(['CANCELLED', 'CLOSED_UNWOUND', 'CLOSED_WITH_LOSS', 'CLOSED_RECOVERED']);
 
@@ -41,7 +52,7 @@ export function dealToHistory(m: ServerMatch): HistoryItem | null {
       side: (m.you_receive_currency ?? '') === 'NGN' ? 'sell' : 'buy',
       currency,
       amountMinor: toMinor(foreignText),
-      rateHundredths: toMinor(m.agreed_rate),
+      rateMilli: rateMilliOf(m.agreed_rate),
       date: m.accepted_at.slice(0, 10),
       status: dealStatus(m),
       reference: m.match_id.slice(0, 8).toUpperCase(),
@@ -107,7 +118,7 @@ export function bestRates(offers: readonly ServerOffer[], currencies: readonly s
       .filter((o) => o.source_currency === c && o.target_currency === 'NGN' && !o.is_own)
       .map((o) => o.desired_rate);
     if (rates.length === 0) return [];
-    const best = rates.reduce((a, b) => (toMinor(b) < toMinor(a) ? b : a));
+    const best = rates.reduce((a, b) => (toMinor(b, 6) < toMinor(a, 6) ? b : a));
     return [{ id: `ngn-${c.toLowerCase()}`, base: 'NGN', quote: c, rate: best }];
   });
 }

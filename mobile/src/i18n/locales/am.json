@@ -381,7 +381,7 @@
  "Enter the naira amount as a number, e.g. 1000000.00.": "የናይራውን መጠን እንደ ቁጥር ያስገቡ፣ ለምሳሌ 1000000.00።",
  "Enter the phone number on your Xspeeria account. We will text you a code.": "በXspeeria ሂሳብዎ ላይ ያለውን ስልክ ቁጥር ያስገቡ። ኮድ በመልእክት እንልክልዎታለን።",
  "Enter the phone number with its country code, for example +2348012345678.": "ስልክ ቁጥሩን ከአገር ኮዱ ጋር ያስገቡ፣ ለምሳሌ +2348012345678።",
- "Enter the rate as a number with up to 6 decimal places.": "ተመኑን እስከ 6 የአስርዮሽ ቦታዎች ባለው ቁጥር ያስገቡ።",
+ "Enter the rate as a number with up to 3 decimal places.": "ተመኑን እስከ 3 የአስርዮሽ ቦታዎች ባለው ቁጥር ያስገቡ።",
  "Enter your 11-digit BVN.": "ባለ 11 አሃዝ BVNዎን ያስገቡ።",
  "Enter your current password": "የአሁኑን የይለፍ ቃልዎን ያስገቡ",
  "Enter your e-mail address": "የኢሜል አድራሻዎን ያስገቡ",

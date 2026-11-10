@@ -22,7 +22,7 @@ import { brandWeight, color, space, typography, themed } from "../../theme";
 import { SectionLabel } from "../home/SectionLabel";
 import { ListingRow, RoundButton } from "./controls";
 import { listingsFor, type Listing } from "./data";
-import { formatCompact, formatHundredths, quoteMinor } from "./money";
+import { formatAmount, formatCompact, formatHundredths, formatRateCompact, quoteMinor } from "./money";
 import type { Side, TradeRequest } from "./MarketScreen";
 import { tr } from "../../i18n";
 
@@ -47,7 +47,7 @@ export function SelectMatchScreen({
   remainingOf?: (listing: Listing) => number;
 }): ReactElement {
   const insets = useSafeAreaInsets();
-  const payMinor = quoteMinor(request.amountMinor, request.rateHundredths);
+  const payMinor = quoteMinor(request.amountMinor, request.rateMilli);
   const matches = listingsFor(request.side, request.currency);
   const isBuy = request.side === "buy";
   const selected = plannedMinor(plan);
@@ -93,7 +93,7 @@ export function SelectMatchScreen({
             {tr("Rate: ")}
             <Text style={styles.summaryMuted}>{tr("NGN")}{' '}</Text>
             <Text style={styles.summaryStrong}>
-              {formatCompact(request.rateHundredths)}
+              {formatRateCompact(request.rateMilli)}
             </Text>
             <Text style={styles.summaryMuted}>{` /${request.currency}`}</Text>
           </Text>
@@ -141,7 +141,7 @@ export function SelectMatchScreen({
           <View style={styles.selection}>
             <Text testID="select-match-selected" style={styles.selectionText}>
               {(() => {
-                const v = { selected: formatHundredths(selected), amountMinor: formatHundredths(request.amountMinor), currency: request.currency, count: plan.length };
+                const v = { selected: formatAmount(request.currency, selected), amountMinor: formatAmount(request.currency, request.amountMinor), currency: request.currency, count: plan.length };
                 if (plan.length === 1) return isBuy ? tr("Selected {{selected}} of {{amountMinor}} {{currency}} from 1 offer", v) : tr("Selected {{selected}} of {{amountMinor}} {{currency}} from 1 request", v);
                 return isBuy ? tr("Selected {{selected}} of {{amountMinor}} {{currency}} from {{count}} offers", v) : tr("Selected {{selected}} of {{amountMinor}} {{currency}} from {{count}} requests", v);
               })()}

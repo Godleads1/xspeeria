@@ -16,7 +16,7 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton, Screen } from '../../components/primitives';
 import { tr } from '../../i18n';
 import { brandWeight, color, numericTextStyle, space, themed, typography } from '../../theme';
-import { formatHundredths, parseToHundredths } from './money';
+import { formatAmount, parseRate, parseToHundredths, rateText } from './money';
 import { foreignMinorFor } from './serverOffers';
 
 /** Owner, 2026-10-21: up to 5; only currencies with an official rate (ADR-020). */
@@ -30,7 +30,7 @@ export interface GroupLine {
 }
 
 export interface MultiRequestSource {
-  publish(nairaMinor: number, lines: readonly { currency: string; rateHundredths: number }[], key: string): Promise<unknown>;
+  publish(nairaMinor: number, lines: readonly { currency: string; rateMilli: number }[], key: string): Promise<unknown>;
   newKey(): string;
 }
 
@@ -40,16 +40,16 @@ export function groupProblem(naira: string, lines: readonly GroupLine[]): string
   if (lines.length < GROUP_MIN) return tr('Add at least 2 currencies.');
   if (lines.length > GROUP_MAX) return tr('You can add up to 5 currencies.');
   if (new Set(lines.map((l) => l.currency)).size !== lines.length) return tr('Each currency can be chosen once.');
-  if (lines.some((l) => parseToHundredths(l.rate) === null)) return tr('Enter each rate as a number, e.g. 1320.50.');
+  if (lines.some((l) => parseRate(l.rate) === null)) return tr('Enter each rate as a number, e.g. 1320.50.');
   return null;
 }
 
 /** "You get 757.58 USD" for a line, or null when it can't be worked out yet. */
-export function youGet(naira: string, rate: string): number | null {
+export function youGet(naira: string, rate: string, currency = ''): number | null {
   const n = parseToHundredths(naira);
-  const r = parseToHundredths(rate);
+  const r = parseRate(rate);
   if (n === null || r === null) return null;
-  return foreignMinorFor(n, formatHundredths(r).replace(/,/g, ''));
+  return foreignMinorFor(n, rateText(r), currency);
 }
 
 export function MultiRequestScreen({
@@ -87,7 +87,7 @@ export function MultiRequestScreen({
     try {
       await source.publish(
         nairaMinor,
-        lines.map((l) => ({ currency: l.currency, rateHundredths: parseToHundredths(l.rate) ?? 0 })),
+        lines.map((l) => ({ currency: l.currency, rateMilli: parseRate(l.rate) ?? 0 })),
         key.current,
       );
       onDone();
@@ -134,7 +134,7 @@ export function MultiRequestScreen({
         <Text style={styles.small}>{tr('{{count}} of {{max}}', { count: lines.length, max: Math.min(GROUP_MAX, GROUP_CURRENCIES.length) })}</Text>
       </View>
       {lines.map((line, i) => {
-        const got = youGet(naira, line.rate);
+        const got = youGet(naira, line.rate, line.currency);
         return (
           <View key={line.currency} testID={`multi-line-${line.currency}`} style={styles.line}>
             <View style={styles.code}>
@@ -157,7 +157,7 @@ export function MultiRequestScreen({
                 <Text style={styles.small}>{`/ ${line.currency}`}</Text>
               </View>
               <Text style={styles.small}>
-                {got === null ? ' ' : tr('You get {{amount}} {{currency}}', { amount: formatHundredths(got), currency: line.currency })}
+                {got === null ? ' ' : tr('You get {{amount}} {{currency}}', { amount: formatAmount(line.currency, got), currency: line.currency })}
               </Text>
             </View>
             {lines.length > GROUP_MIN ? (

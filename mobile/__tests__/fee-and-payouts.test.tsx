@@ -24,8 +24,8 @@ describe('1% coordination fee', () => {
   });
 
   it('buyer pays it in NGN, seller in the foreign currency, on top of the amount', () => {
-    expect(transferFor('buy', 'USD', 20000, 132500)).toEqual({ minor: 26500000 + 265000, currency: 'NGN', feeMinor: 265000 });
-    expect(transferFor('sell', 'GBP', 30000, 176000)).toEqual({ minor: 30300, currency: 'GBP', feeMinor: 300 });
+    expect(transferFor('buy', 'USD', 20000, 1325000)).toEqual({ minor: 26500000 + 265000, currency: 'NGN', feeMinor: 265000 });
+    expect(transferFor('sell', 'GBP', 30000, 1760000)).toEqual({ minor: 30300, currency: 'GBP', feeMinor: 300 });
   });
 
   it('each trade of a multi-offer order has its own fee and its own 5-minute window', () => {

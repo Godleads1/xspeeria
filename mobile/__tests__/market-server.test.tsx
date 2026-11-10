@@ -43,14 +43,19 @@ const flush = () => act(async () => { await Promise.resolve(); });
 describe('server offer → Market row', () => {
   it('converts strings to exact integers', () => {
     const row = toListing(offer(), NOW, true);
-    expect(row).toMatchObject({ id: 'a1', currency: 'USD', availableMinor: 50000, rateHundredths: 132050, best: true });
+    expect(row).toMatchObject({ id: 'a1', currency: 'USD', availableMinor: 50000, rateMilli: 1320500, best: true });
     expect(row?.meta).toBe('Offer time: 5 mins ago');
     expect(row?.rateLabel).toBeUndefined();
   });
 
-  it('keeps a rate with more than two decimals as exact text', () => {
-    const row = toListing(offer({ desired_rate: '1320.125' }), NOW, false);
-    expect(row?.rateLabel).toBe('1,320.125');
+  it('reads a 3-decimal rate exactly, and keeps an older longer one as exact text', () => {
+    // Owner 2026-11-10: "3 decimal not 6".
+    expect(toListing(offer({ desired_rate: '1320.125' }), NOW, false)).toMatchObject({ rateMilli: 1320125 });
+    expect(toListing(offer({ desired_rate: '1320.125' }), NOW, false)?.rateLabel).toBeUndefined();
+    // Stored before the rule: shown exactly; the integer is only a sort key, rounded down.
+    const row = toListing(offer({ desired_rate: '1320.1255' }), NOW, false);
+    expect(row?.rateLabel).toBe('1,320.1255');
+    expect(row?.rateMilli).toBe(1320125);
   });
 
   it('marks own offers and drops rows it cannot show exactly', () => {
@@ -87,7 +92,7 @@ function fakeServer(rows: ServerOffer[] = [offer()], requests: ServerOffer[] = [
 describe('Market screen with a server (ADR-030)', () => {
   it('shows and checks the ceiling the server enforces now (ADR-102)', async () => {
     const server = fakeServer();
-    server.ceilings = jest.fn(async () => ({ USD: 134729, GBP: 180296, EUR: 150354, CAD: 95464 }));
+    server.ceilings = jest.fn(async () => ({ USD: 1347290, GBP: 1802960, EUR: 1503540, CAD: 954640 }));
     await render(<MarketScreen server={server} />);
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
@@ -102,7 +107,7 @@ describe('Market screen with a server (ADR-030)', () => {
 
   it('takes no rate in a currency the server has no current ceiling for', async () => {
     const server = fakeServer();
-    server.ceilings = jest.fn(async () => ({ GBP: 180296, EUR: 150354 })); // USD over 3 days old
+    server.ceilings = jest.fn(async () => ({ GBP: 1802960, EUR: 1503540 })); // USD over 3 days old
     await render(<MarketScreen server={server} />);
     await fireEvent.press(screen.getByTestId('market-currency'));
     await fireEvent.press(screen.getByTestId('currency-USD'));
@@ -188,8 +193,8 @@ describe('Market screen with a server (ADR-030)', () => {
     await fireEvent.press(screen.getByTestId('market-create'));
     await flush();
     expect(server.publishSell).toHaveBeenCalledTimes(2);
-    expect(server.publishSell).toHaveBeenNthCalledWith(1, 'USD', 50000, 132050, 'key-1');
-    expect(server.publishSell).toHaveBeenNthCalledWith(2, 'USD', 50000, 132050, 'key-1');
+    expect(server.publishSell).toHaveBeenNthCalledWith(1, 'USD', 50000, 1320500, 'key-1');
+    expect(server.publishSell).toHaveBeenNthCalledWith(2, 'USD', 50000, 1320500, 'key-1');
     expect(server.newKey).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('market-notice')).toHaveTextContent(/is\ live/);
   });
@@ -236,7 +241,7 @@ describe('Market screen with a server (ADR-030)', () => {
     await flush();
     await fireEvent.press(screen.getByTestId('market-create'));
     await flush();
-    expect(server.publishBuy).toHaveBeenCalledWith('USD', 100000, 133000, 'key-1');
+    expect(server.publishBuy).toHaveBeenCalledWith('USD', 100000, 1330000, 'key-1');
     expect(screen.getByTestId('market-notice')).toHaveTextContent(/request to buy 1,000\.00 USD/);
     await fireEvent.press(screen.getByTestId('market-sell'));
     await flush();
@@ -261,7 +266,7 @@ describe('buy requests as offers paying naira (ADR-056)', () => {
 
   it('publishBuy needs a signed-in session and sends nothing without one', async () => {
     const publish = jest.spyOn(offersApi, 'publish');
-    await expect(marketServer.publishBuy('USD', 100001, 133055, 'k-1')).rejects.toBeInstanceOf(ApiError);
+    await expect(marketServer.publishBuy('USD', 100001, 1330550, 'k-1')).rejects.toBeInstanceOf(ApiError);
     expect(publish).not.toHaveBeenCalled();
     publish.mockRestore();
   });

@@ -15,7 +15,7 @@ import { RoundFlag } from '../../components/flags';
 import { Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { ActionSheet, RoundButton } from '../market/controls';
-import { formatCompact } from '../market/money';
+import { formatCompact, formatRateCompact } from '../market/money';
 import {
   HISTORY,
   displayDate,
@@ -80,7 +80,7 @@ export function HistoryRow({
       testID={`history-${item.id}`}
       accessibilityRole="button"
       accessibilityLabel={(() => {
-        const v = { amount, rateHundredths: formatCompact(item.rateHundredths), currency: item.currency, date: displayDate(item.date), status };
+        const v = { amount, rateHundredths: formatRateCompact(item.rateMilli), currency: item.currency, date: displayDate(item.date), status };
         return bought
           ? tr("You bought {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v)
           : tr("You sold {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v);
@@ -98,7 +98,7 @@ export function HistoryRow({
             : trRich("You sold <1>{{amount}}</1>", { amount }, { 1: (s) => <Text style={styles.rowAmount}>{s}</Text> })}
         </Text>
         <Text style={styles.rowRate}>
-          {tr("Rate - NGN {{rateHundredths}}/{{currency}}", { rateHundredths: formatCompact(item.rateHundredths), currency: item.currency })}
+          {tr("Rate - NGN {{rateHundredths}}/{{currency}}", { rateHundredths: formatRateCompact(item.rateMilli), currency: item.currency })}
           {status ? <Text style={item.status === 'failed' ? styles.failed : styles.pending}>{status}</Text> : null}
         </Text>
       </View>

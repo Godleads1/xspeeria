@@ -23,7 +23,7 @@ import { tr } from '../../i18n';
 import { brandWeight, color, numericTextStyle, radius, space, themed, typography } from '../../theme';
 import { GhostButton } from '../auth/ui';
 import type { Listing } from '../market/data';
-import { formatHundredths } from '../market/money';
+import { formatHundredths, formatRate } from '../market/money';
 import {
   activeChips,
   DEFAULT_SEARCH,
@@ -286,7 +286,7 @@ export function SearchScreen({
 }
 
 function rateText(row: Listing): string {
-  return `NGN ${row.rateLabel ?? formatHundredths(row.rateHundredths)} / ${row.currency}`;
+  return `NGN ${row.rateLabel ?? formatRate(row.rateMilli)} / ${row.currency}`;
 }
 
 function OfferCard({

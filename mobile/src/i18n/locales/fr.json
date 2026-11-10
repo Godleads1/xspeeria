@@ -381,7 +381,7 @@
  "Enter the naira amount as a number, e.g. 1000000.00.": "Saisissez le montant en naira en chiffres, par ex. 1000000.00.",
  "Enter the phone number on your Xspeeria account. We will text you a code.": "Saisissez le numéro de téléphone de votre compte Xspeeria. Nous vous enverrons un code par SMS.",
  "Enter the phone number with its country code, for example +2348012345678.": "Saisissez le numéro avec l'indicatif du pays, par exemple +2348012345678.",
- "Enter the rate as a number with up to 6 decimal places.": "Saisissez le taux en chiffres, avec 6 décimales au maximum.",
+ "Enter the rate as a number with up to 3 decimal places.": "Saisissez le taux en chiffres, avec 3 décimales au maximum.",
  "Enter your 11-digit BVN.": "Saisissez votre BVN à 11 chiffres.",
  "Enter your current password": "Saisissez votre mot de passe actuel",
  "Enter your e-mail address": "Saisissez votre adresse e-mail",

@@ -18,10 +18,10 @@ import { serverAuth } from '../auth/serverAuth';
 import { countryHeaders, viewerCountry } from '../location/viewerCountry';
 import { confirmIdentity } from '../security/serverConfirm';
 import type { Listing } from './data';
-import { divRoundHalfEven, formatHundredths, parseToHundredths, quoteMinorOrNull } from './money';
+import { amountDecimals, amountText, divRoundHalfEven, exactRate, formatHundredths, parseToHundredths, quoteMinorOrNull, rateText } from './money';
 import { tr } from "../../i18n";
 
-/** Server text such as "1320.50" or "1320.125" → hundredths, only when exact. */
+/** Server amount text such as "1320.50" or "500000" → hundredths, only when exact. */
 export function exactHundredths(text: string): number | null {
   if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(text)) return null;
   return parseToHundredths(text);
@@ -48,15 +48,20 @@ function minutesAgo(iso: string, now: number): string {
 
 /**
  * ADR-056: a buy request is an offer that pays naira. Its foreign amount for display is the
- * naira left ÷ the rate (NGN per 1 unit, up to 6 decimals), half to even — the same rule the
- * server uses when it is taken (ADR-019). Null when the inputs are not exact decimal text.
+ * naira left ÷ the rate (NGN per 1 unit; read to 6 decimals so an older stored rate stays
+ * exact), half to even in the currency's own unit — whole units for UGX and XOF — the same
+ * rule the server uses when it is taken (ADR-019). Returned in hundredths. Null when the
+ * inputs are not exact decimal text.
  */
-export function foreignMinorFor(ngnMinor: number, rate: string): number | null {
+export function foreignMinorFor(ngnMinor: number, rate: string, currency = ''): number | null {
   const m = /^([0-9]+)(?:\.([0-9]{1,6}))?$/.exec(rate);
   if (!m || !Number.isSafeInteger(ngnMinor) || ngnMinor < 0) return null;
   const micro = BigInt(m[1]) * 1_000_000n + BigInt((m[2] ?? '').padEnd(6, '0'));
   if (micro <= 0n) return null;
-  const n = Number(divRoundHalfEven(BigInt(ngnMinor) * 1_000_000n, micro));
+  // kobo ÷ rate = hundredths of the foreign unit; for a whole-unit currency, ÷ 100 first.
+  const whole = amountDecimals(currency) === 0;
+  const own = divRoundHalfEven(BigInt(ngnMinor) * 1_000_000n, whole ? micro * 100n : micro);
+  const n = Number(whole ? own * 100n : own);
   return Number.isSafeInteger(n) ? n : null;
 }
 
@@ -67,17 +72,17 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
   // ADR-059 Decision 4: a waiting offer shows what may come back (the amount being paid for).
   const waiting = offer.waiting === true;
   const yourTurn = offer.your_turn === true;
-  const amountText = waiting && !yourTurn && offer.waiting_amount ? offer.waiting_amount : offer.remaining_amount;
-  const left = exactHundredths(amountText);
+  const shownAmount = waiting && !yourTurn && offer.waiting_amount ? offer.waiting_amount : offer.remaining_amount;
+  const left = exactHundredths(shownAmount);
   if (left === null || !/^[0-9]+(\.[0-9]{1,6})?$/.test(offer.desired_rate)) return null;
   // A buy request shows how much foreign currency it still wants (ADR-056).
-  const remaining = request ? foreignMinorFor(left, offer.desired_rate) : left;
+  const remaining = request ? foreignMinorFor(left, offer.desired_rate, foreign) : left;
   if (remaining === null) return null;
-  const rate = exactHundredths(offer.desired_rate);
-  // A rate with more than two decimals keeps its exact text for display; the integer is
-  // then only a sort key, never used for an amount (taking offers is not built yet).
+  const rate = exactRate(offer.desired_rate);
+  // A rate stored before the 3-decimal rule (more decimals) keeps its exact text for
+  // display; the integer is then only a sort key (rounded down), never used for an amount.
   const [whole, frac = ''] = offer.desired_rate.split('.');
-  const sortKey = rate ?? Number(whole) * 100 + Number(frac.slice(0, 2).padEnd(2, '0'));
+  const sortKey = rate ?? Number(whole) * 1000 + Number(frac.slice(0, 3).padEnd(3, '0'));
   const queueLength = Math.max(0, Math.min(3, Math.trunc(offer.queue_length ?? 0)));
   const meta = offer.is_own
     ? request
@@ -94,7 +99,7 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
     id: offer.offer_id,
     currency: foreign,
     availableMinor: remaining,
-    rateHundredths: sortKey,
+    rateMilli: sortKey,
     ...(rate === null ? { rateLabel: groupedRate(offer.desired_rate) } : {}),
     meta,
     ...(best && !waiting ? { best: true } : {}),
@@ -115,12 +120,12 @@ export interface MarketServer {
   /** Buy requests for `foreign` (offers paying naira, ADR-056), best (highest) rate first. */
   requestsFor(foreign: string, now: number): Promise<Listing[]>;
   /** Publish an offer to sell `foreign` for naira. Safe to retry with the same key. */
-  publishSell(foreign: string, amountMinor: number, rateHundredths: number, key: string): Promise<ServerOffer>;
+  publishSell(foreign: string, amountMinor: number, rateMilli: number, key: string): Promise<ServerOffer>;
   /**
    * ADR-056: publish a request to buy `amountMinor` of `foreign`, saved as an offer paying
    * amount × rate in naira (half to even). Safe to retry with the same key.
    */
-  publishBuy(foreign: string, amountMinor: number, rateHundredths: number, key: string): Promise<ServerOffer>;
+  publishBuy(foreign: string, amountMinor: number, rateMilli: number, key: string): Promise<ServerOffer>;
   newKey(): string;
   /** ADR-102: the rate ceilings in force now. Optional so older test doubles still work. */
   ceilings?(): Promise<Ceilings>;
@@ -160,8 +165,8 @@ export const marketServer: MarketServer = {
     });
     return rows;
   },
-  async publishBuy(foreign, amountMinor, rateHundredths, key) {
-    const naira = quoteMinorOrNull(amountMinor, rateHundredths);
+  async publishBuy(foreign, amountMinor, rateMilli, key) {
+    const naira = quoteMinorOrNull(amountMinor, rateMilli);
     if (naira === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
     return offersApi.publish(
       token(),
@@ -169,20 +174,20 @@ export const marketServer: MarketServer = {
         source_currency: 'NGN',
         target_currency: foreign,
         source_amount: formatHundredths(naira).replace(/,/g, ''),
-        desired_rate: formatHundredths(rateHundredths).replace(/,/g, ''),
+        desired_rate: rateText(rateMilli),
       },
       key,
       serverAuth.apiOptions(),
     );
   },
-  async publishSell(foreign, amountMinor, rateHundredths, key) {
+  async publishSell(foreign, amountMinor, rateMilli, key) {
     return offersApi.publish(
       token(),
       {
         source_currency: foreign,
         target_currency: 'NGN',
-        source_amount: formatHundredths(amountMinor).replace(/,/g, ''),
-        desired_rate: formatHundredths(rateHundredths).replace(/,/g, ''),
+        source_amount: amountText(foreign, amountMinor),
+        desired_rate: rateText(rateMilli),
       },
       key,
       serverAuth.apiOptions(),
@@ -200,19 +205,19 @@ export const myOffers = {
    * naira, so its amount becomes amount × rate, half to even (as when publishing, ADR-056).
    * The server checks everything again and refuses once anyone has taken part of it.
    */
-  edit: async (offer: ServerOffer, amountMinor: number, rateHundredths: number) => {
-    const desired_rate = formatHundredths(rateHundredths).replace(/,/g, '');
+  edit: async (offer: ServerOffer, amountMinor: number, rateMilli: number) => {
+    const desired_rate = rateText(rateMilli);
     // ADR-059 Decision 5: every currency of a request pays the same naira; only the rate changes.
     if (offer.group_id) return offersApi.edit(token(), offer.offer_id, { desired_rate }, serverAuth.apiOptions());
     const request = offer.source_currency === 'NGN';
-    const own = request ? quoteMinorOrNull(amountMinor, rateHundredths) : amountMinor;
+    const own = request ? quoteMinorOrNull(amountMinor, rateMilli) : amountMinor;
     if (own === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
     return offersApi.edit(
       token(),
       offer.offer_id,
       {
-        source_amount: formatHundredths(own).replace(/,/g, ''),
-        desired_rate: formatHundredths(rateHundredths).replace(/,/g, ''),
+        source_amount: amountText(offer.source_currency, own),
+        desired_rate: rateText(rateMilli),
       },
       serverAuth.apiOptions(),
     );
@@ -256,12 +261,12 @@ export const queueServer = {
 
 /** ADR-059 Decision 5: post one naira amount for any one of 2–5 currencies (repeat-safe). */
 export const multiRequestServer = {
-  publish: async (nairaMinor: number, lines: readonly { currency: string; rateHundredths: number }[], key: string) =>
+  publish: async (nairaMinor: number, lines: readonly { currency: string; rateMilli: number }[], key: string) =>
     offersApi.publishGroup(
       token(),
       {
         source_amount: formatHundredths(nairaMinor).replace(/,/g, ''),
-        currencies: lines.map((l) => ({ currency: l.currency, desired_rate: formatHundredths(l.rateHundredths).replace(/,/g, '') })),
+        currencies: lines.map((l) => ({ currency: l.currency, desired_rate: rateText(l.rateMilli) })),
       },
       key,
       serverAuth.apiOptions(),
