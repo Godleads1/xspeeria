@@ -60,15 +60,18 @@ async def test_a_zimbabwean_pays_dollars_through_a_zimbabwe_escrow(
 
 
 async def test_shillings_without_cents_are_whole_amounts(owner: Party, taker: Party) -> None:
-    # A Ugandan shilling is about ₦0.31: rates to 6 decimals, amounts in whole shillings.
-    r = await owner.publish(
-        source_currency="UGX", source_amount="500000.50", desired_rate="0.300000"
-    )
+    # A Ugandan shilling is about ₦0.31: rates to 3 decimals, amounts in whole shillings.
+    r = await owner.publish(source_currency="UGX", source_amount="500000.50", desired_rate="0.300")
     assert r.status_code == 422, r.text
+    # A fourth decimal is refused, never rounded.
+    r = await owner.publish(source_currency="UGX", source_amount="500000", desired_rate="0.3055")
+    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
     r = await owner.publish(source_currency="UGX", source_amount="500000", desired_rate="0.305")
     assert r.status_code == 201, r.text
-    # Above the official limit (≈ ₦0.3069 per shilling): refused.
-    r = await owner.publish(source_currency="UGX", source_amount="500000", desired_rate="0.31")
+    # The limit is ₦0.306 (0.30690… rounded down): ₦0.306 is allowed, ₦0.307 is refused.
+    r = await owner.publish(source_currency="UGX", source_amount="500000", desired_rate="0.306")
+    assert r.status_code == 201, r.text
+    r = await owner.publish(source_currency="UGX", source_amount="500000", desired_rate="0.307")
     assert r.status_code == 422 and r.json()["error"]["code"] == "VAL_422_RATE_ABOVE_CEILING"
     # A Kenyan bank account and a Ugandan mobile-money wallet.
     r = await taker.add_account(

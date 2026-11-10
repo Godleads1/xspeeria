@@ -38,34 +38,40 @@ describe('amounts in each currency’s own decimals', () => {
   });
 });
 
-describe('rates to 6 decimals', () => {
+describe('rates to 3 decimals (owner: "3 decimal not 6")', () => {
   it('parses and formats', () => {
-    expect(parseRateMicros('0.306904')).toBe(306904);
+    expect(parseRateMicros('0.307')).toBe(307000);
+    expect(parseRateMicros('2.273')).toBe(2273000);
     expect(parseRateMicros('1,320.5')).toBe(1320500000);
-    expect(parseRateMicros('0.3069041')).toBeNull(); // 7 decimals
+    expect(parseRateMicros('0.3069')).toBeNull(); // 4 decimals: refused, never rounded
+    expect(parseRateMicros('0.306904')).toBeNull();
     expect(parseRateMicros('0')).toBeNull();
     expect(parseRateMicros('1000000')).toBeNull(); // above 999,999.999999
     expect(formatRateMicros(1320500000)).toBe('1,320.50');
+    expect(formatRateMicros(307000)).toBe('0.307');
+    expect(formatRateMicros(2273000)).toBe('2.273');
+    // Server text is read exactly, so a rate stored before the rule still shows its figure.
     expect(formatRateMicros(306904)).toBe('0.306904');
-    expect(formatRateMicros(2273320)).toBe('2.27332');
     expect(rateMicrosToText(1320500000)).toBe('1320.50');
+    expect(rateMicrosToText(307000)).toBe('0.307');
     expect(rateTextToMicros('0.306904')).toBe(306904);
     expect(rateTextToMicros('1333.26')).toBe(1333260000);
-    expect(ceilingsMicrosFromServer([{ currency: 'UGX', max_rate: '0.306904' }, { currency: 'X', max_rate: 'bad' }])).toEqual({ UGX: 306904 });
+    expect(ceilingsMicrosFromServer([{ currency: 'UGX', max_rate: '0.306' }, { currency: 'X', max_rate: 'bad' }])).toEqual({ UGX: 306000 });
   });
 });
 
 describe('conversions, half to even like the server', () => {
   it('naira for a foreign amount', () => {
     expect(nairaFor(20000, 'USD', 1320500000)).toBe(26410000); // $200 at ₦1,320.50 = ₦264,100.00
-    expect(nairaFor(500000, 'UGX', 306904)).toBe(15345200); // 500,000 UGX at ₦0.306904 = ₦153,452.00
+    expect(nairaFor(500000, 'UGX', 306000)).toBe(15300000); // 500,000 UGX at ₦0.306 = ₦153,000.00
+    expect(nairaFor(1_000_000, 'XOF', 2273000)).toBe(227300000); // 1,000,000 XOF at ₦2.273 = ₦2,273,000.00
     expect(nairaFor(1, 'UGX', 305000)).toBe(30); // 0.305 → 30.5 kobo → 30 (half to even)
     expect(nairaFor(1, 'UGX', 315000)).toBe(32); // 31.5 kobo → 32
   });
 
   it('a foreign amount for naira', () => {
     expect(foreignFor(26410000, 'USD', 1320500000)).toBe(20000);
-    expect(foreignFor(15345200, 'UGX', 306904)).toBe(500000);
+    expect(foreignFor(15300000, 'UGX', 306000)).toBe(500000);
     expect(foreignFor(100, 'UGX', 0)).toBeNull();
   });
 
