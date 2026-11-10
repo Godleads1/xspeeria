@@ -150,7 +150,7 @@ async def test_unverified_users_cannot_start(didit_env: tuple[Env, FakeDidit]) -
 @pytest.mark.parametrize(
     "body",
     [
-        {**ADDRESS, "country": "FR"},
+        {**ADDRESS, "country": "JP"},
         {**ADDRESS, "line1": "x"},
         {**ADDRESS, "city": "y" * 61},
         {**ADDRESS, "extra": "field"},

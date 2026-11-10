@@ -1088,5 +1088,9 @@
  "Yes, Ask": "نعم، اطلب",
  "Yes, Cancel It": "نعم، ألغِ",
  "{{name}} is back to the face check.": "عاد {{name}} إلى التحقق بالوجه.",
- "{{name}} will take a new identity check at the next log-in on a new phone.": "سيجري {{name}} تحققًا جديدًا من الهوية عند تسجيل الدخول التالي على هاتف جديد."
+ "{{name}} will take a new identity check at the next log-in on a new phone.": "سيجري {{name}} تحققًا جديدًا من الهوية عند تسجيل الدخول التالي على هاتف جديد.",
+ "Germany": "ألمانيا",
+ "France": "فرنسا",
+ "China": "الصين",
+ "New identity check on a different ID": "تحقق جديد بوثيقة هوية مختلفة"
 }

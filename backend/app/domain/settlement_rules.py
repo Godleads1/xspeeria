@@ -15,6 +15,7 @@ __all__ = [
     "DISPATCH_MAX_ATTEMPTS",
     "FUNDING_EXTENSION",
     "FUNDING_WINDOW",
+    "EURO_COUNTRIES",
     "JURISDICTION",
     "LEG_STATES",
     "LEG_TRANSITIONS",
@@ -39,9 +40,13 @@ REPLAY_WINDOW = timedelta(minutes=5)
 #: hold (ADR-001 §6c says "N").
 DISPATCH_MAX_ATTEMPTS = 5
 
-#: Each leg is domestic (F-8): its currency fixes its jurisdiction. EUR has no single
-#: jurisdiction or approved payout form, so EUR deals cannot settle yet (fail closed).
-JURISDICTION: dict[str, str] = {"NGN": "NG", "USD": "US", "GBP": "GB", "CAD": "CA"}
+#: Each leg is domestic (F-8): its currency fixes its jurisdiction. EUR is shared, so a euro
+#: leg's jurisdiction is the euro country its payer is verified in (ADR-105, owner
+#: 2026-11-10: "User's verified country"); see ``EURO_COUNTRIES`` / ``euro_country``.
+JURISDICTION: dict[str, str] = {"NGN": "NG", "USD": "US", "GBP": "GB", "CAD": "CA", "CNY": "CN"}
+#: ADR-105: the euro countries Xspeeria serves, in the order a payer verified in several is
+#: assigned (the first one they were approved in wins; see ``euro_country``).
+EURO_COUNTRIES = ("DE", "FR")
 
 #: ADR-001 §4 — 9 leg states and their only allowed transitions.
 LEG_STATES = (

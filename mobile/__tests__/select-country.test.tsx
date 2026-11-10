@@ -5,15 +5,16 @@ import { DESTINATION_COUNTRIES, searchCountries } from '../src/features/profile/
 
 describe('destination countries', () => {
   it('lists the launch corridor countries (ADR-043, ADR-100)', () => {
-    expect(DESTINATION_COUNTRIES.map((c) => c.currency).sort()).toEqual(['CAD', 'GBP', 'NGN', 'USD']);
-    expect(DESTINATION_COUNTRIES.filter((c) => c.available).map((c) => c.currency).sort()).toEqual(['CAD', 'GBP', 'NGN', 'USD']);
+    expect(DESTINATION_COUNTRIES.map((c) => c.currency).sort()).toEqual(['CAD', 'EUR', 'GBP', 'NGN', 'USD']);
+    expect(DESTINATION_COUNTRIES.filter((c) => c.available).map((c) => c.currency).sort()).toEqual(['CAD', 'EUR', 'GBP', 'NGN', 'USD']);
   });
 
   it('searches by name or currency code', () => {
     expect(searchCountries(DESTINATION_COUNTRIES, 'kingdom').map((c) => c.currency)).toEqual(['GBP']);
     expect(searchCountries(DESTINATION_COUNTRIES, 'ngn').map((c) => c.name)).toEqual(['Nigeria']);
     expect(searchCountries(DESTINATION_COUNTRIES, 'canada').map((c) => c.currency)).toEqual(['CAD']);
-    expect(searchCountries(DESTINATION_COUNTRIES, '  ')).toHaveLength(4);
+    expect(searchCountries(DESTINATION_COUNTRIES, '  ')).toHaveLength(5);
+    expect(searchCountries(DESTINATION_COUNTRIES, 'france').map((c) => c.currency)).toEqual(['EUR']);
     expect(searchCountries(DESTINATION_COUNTRIES, 'Afghanistan')).toHaveLength(0);
   });
 });

@@ -1088,5 +1088,9 @@
  "Yes, Ask": "Oui, demander",
  "Yes, Cancel It": "Oui, annuler",
  "{{name}} is back to the face check.": "{{name}} repasse à la vérification faciale.",
- "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} passera une nouvelle vérification d’identité à la prochaine connexion sur un nouveau téléphone."
+ "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} passera une nouvelle vérification d’identité à la prochaine connexion sur un nouveau téléphone.",
+ "Germany": "Allemagne",
+ "France": "France",
+ "China": "Chine",
+ "New identity check on a different ID": "Nouvelle vérification avec une autre pièce d’identité"
 }

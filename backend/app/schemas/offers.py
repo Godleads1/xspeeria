@@ -164,7 +164,8 @@ class AddPayoutAccountRequest(_Strict):
     currency: str = Field(pattern=r"^[A-Za-z]{3}$")
     bank_name: str = Field(min_length=1, max_length=60)
     #: Never logged, never returned; only the last 4 characters are kept readable.
-    #: Up to 17 digits, or an IBAN for EUR (34 characters, plus spaces between groups of 4).
+    #: Up to 19 digits (CNY bank card or account), or an IBAN for EUR (34 characters, plus
+    #: spaces between groups of 4).
     account_number: str = Field(min_length=1, max_length=42, repr=False)
     routing_number: str | None = Field(default=None, max_length=9)
     sort_code: str | None = Field(default=None, max_length=6)
@@ -172,6 +173,8 @@ class AddPayoutAccountRequest(_Strict):
     #: CAD only (ADR-100): 3-digit institution and 5-digit transit (branch) numbers.
     institution_number: str | None = Field(default=None, max_length=3)
     transit_number: str | None = Field(default=None, max_length=5)
+    #: CNY only (ADR-105): the 12-digit CNAPS code of the bank branch.
+    cnaps_code: str | None = Field(default=None, max_length=12)
 
 
 class PayoutAccountResponse(BaseModel):

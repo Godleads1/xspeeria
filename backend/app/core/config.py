@@ -246,6 +246,9 @@ class Settings(BaseSettings):
     #: snapshot in offer_rules. Once a rate has been stored, ceilings come from the stored
     #: rates, and a currency with none fetched in 3 days takes no new offers.
     official_rate_feed: Literal["off", "frankfurter"] = "off"
+    #: ADR-105 (owner 2026-11-10: "Build it anyway"): China (CNY, identity checks for China)
+    #: stays off until the lawyer confirms person-to-person yuan exchange is allowed.
+    china_enabled: bool = False
     #: ADR-102: how often the rates are fetched (seconds). The CBN publishes once a business day.
     official_rate_seconds: int = Field(default=3600, ge=60)
 

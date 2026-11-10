@@ -5,20 +5,44 @@ import { k } from "../i18n";
 
 export type KycStatus = 'not_started' | 'pending_documents' | 'under_review' | 'approved' | 'rejected' | 'expired';
 
-/** ADR-042, ADR-100: the countries a user can be verified in. */
-export type KycCountry = 'NG' | 'GB' | 'US' | 'CA';
-export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US', 'CA'];
+/**
+ * ADR-042, ADR-100, ADR-105: the countries a user can be verified in. China is shown only
+ * when the server lists it (it stays switched off until legal clearance).
+ */
+export type KycCountry = 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN';
+export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN'];
 export const COUNTRY_NAME: Record<KycCountry, string> = {
   NG: 'Nigeria',
   GB: k("the United Kingdom"),
   US: k("the United States"),
   CA: k("Canada"),
+  DE: k("Germany"),
+  FR: k("France"),
+  CN: k("China"),
 };
-/** Currency code for the round flag. */
-export const COUNTRY_FLAG: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD', CA: 'CAD' };
+/** Code for the round flag (a currency, or the country where several share the euro). */
+export const COUNTRY_FLAG: Record<KycCountry, string> = {
+  NG: 'NGN',
+  GB: 'GBP',
+  US: 'USD',
+  CA: 'CAD',
+  DE: 'DE',
+  FR: 'FR',
+  CN: 'CNY',
+};
+/** The currency each country pays in. Germany and France both pay euros (ADR-105). */
+export const COUNTRY_CURRENCY: Record<KycCountry, string> = {
+  NG: 'NGN',
+  GB: 'GBP',
+  US: 'USD',
+  CA: 'CAD',
+  DE: 'EUR',
+  FR: 'EUR',
+  CN: 'CNY',
+};
 
 export function isKycCountry(v: unknown): v is KycCountry {
-  return v === 'NG' || v === 'GB' || v === 'US' || v === 'CA';
+  return typeof v === 'string' && (KYC_COUNTRIES as readonly string[]).includes(v);
 }
 
 export interface ServerRegions {

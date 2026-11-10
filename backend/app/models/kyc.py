@@ -57,7 +57,9 @@ class KycCase(Base):
             unique=True,
             postgresql_where=text("status IN ('pending_documents', 'under_review')"),
         ),
-        CheckConstraint("country IN ('NG', 'GB', 'US', 'CA')", name="country_allowed"),
+        CheckConstraint(
+            "country IN ('NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN')", name="country_allowed"
+        ),
         Index("ix_kyc_cases_user_created", "user_id", "created_at"),
         CheckConstraint(
             "review_reason IS NULL OR review_reason IN "

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { messageFor } from '../../api/client';
-import { COUNTRY_FLAG, KYC_COUNTRIES, type KycCountry, type KycStatus, type ServerRegions } from '../../api/kycApi';
+import { COUNTRY_CURRENCY, COUNTRY_FLAG, KYC_COUNTRIES, type KycCountry, type KycStatus, type ServerRegions } from '../../api/kycApi';
 import { RoundFlag } from '../../components/flags';
 import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState, Screen, type StatusTone } from '../../components/primitives';
@@ -28,8 +28,11 @@ export const COUNTRY_LABEL: Record<KycCountry, string> = {
   GB: k('United Kingdom'),
   US: k('United States'),
   CA: k('Canada'),
+  DE: k('Germany'),
+  FR: k('France'),
+  CN: k('China'),
 };
-const CURRENCY: Record<KycCountry, string> = { NG: 'NGN', GB: 'GBP', US: 'USD', CA: 'CAD' };
+const CURRENCY = COUNTRY_CURRENCY;
 
 export const STATUS_WORD: Record<KycStatus, { label: string; tone: StatusTone }> = {
   approved: { label: k('Verified'), tone: 'success' },
@@ -84,7 +87,8 @@ export function ChooseCountryScreen({
         <LoadingState label={tr('Loading your identity checks')} />
       ) : (
         <View style={styles.list}>
-          {KYC_COUNTRIES.map((c) => {
+          {/* China only when the server lists it (it stays switched off until then, ADR-105). */}
+          {KYC_COUNTRIES.filter((c) => c !== 'CN' || regions.regions.some((r) => r.country === c)).map((c) => {
             const s = STATUS_WORD[statusOf(c)];
             const done = statusOf(c) === 'approved';
             return (

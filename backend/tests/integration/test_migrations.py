@@ -125,7 +125,7 @@ APPROVED_TABLES = {
 # security notice emails with a "this wasn't me" link (ADR-084) -> "0041";
 # the app role's missing grant on idempotency_records (ADR-094) -> "0042";
 # delete account with 14 days to undo (ADR-095) -> "0043".
-EXPECTED_HEAD = "0048"
+EXPECTED_HEAD = "0049"
 
 
 def _config(database_url: str) -> Config:

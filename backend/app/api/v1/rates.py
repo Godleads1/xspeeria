@@ -16,7 +16,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session, limit_by_account
-from app.domain.offer_rules import CAD_PER_USD
+from app.api.deps import get_app_settings
+from app.core.config import Settings
+from app.domain.offer_rules import CAD_PER_USD, CNY_PER_USD
 from app.services.auth import AuthRuntime
 from app.services.official_rates import current_ceilings
 
@@ -25,7 +27,7 @@ __all__ = ["router"]
 router = APIRouter(prefix="/api/v1/rates", tags=["rates"], dependencies=[Depends(limit_by_account)])
 
 #: Worked out from another ceiling, not published by the CBN (ADR-101).
-DERIVED = frozenset({"CAD"})
+DERIVED = frozenset({"CAD", "CNY"})
 
 
 class Ceiling(BaseModel):
@@ -39,6 +41,9 @@ class Ceilings(BaseModel):
     items: list[Ceiling]
     #: CAD per 1 USD used for the derived CAD ceiling (Bank of Canada, ADR-101).
     cad_per_usd: str
+    #: CNY per 1 USD for the derived CNY ceiling (PBOC central parity, ADR-105); None while
+    #: China is switched off.
+    cny_per_usd: str | None = None
 
 
 def _exact(v: Decimal) -> str:
@@ -51,12 +56,17 @@ async def official(
     _: CurrentPrincipal,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> Ceilings:
     ceilings = await current_ceilings(db, runtime.clock())
+    china = settings.china_enabled
     return Ceilings(
         items=[
             Ceiling(currency=c, max_rate=_exact(v), derived=c in DERIVED)
             for c, v in sorted(ceilings.items())
+            # ADR-105: the app shows China only when the server offers the yuan.
+            if china or c != "CNY"
         ],
         cad_per_usd=str(CAD_PER_USD),
+        cny_per_usd=str(CNY_PER_USD) if china else None,
     )

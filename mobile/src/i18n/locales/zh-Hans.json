@@ -1479,5 +1479,14 @@
  "I’ve finished the identity check": "我已完成身份验证",
  "Start identity check": "开始身份验证",
  "Open the identity check again": "再次打开身份验证",
- "Confirm it’s you with your ID": "使用证件确认是您本人"
+ "Confirm it’s you with your ID": "使用证件确认是您本人",
+ "CNAPS Code": "CNAPS 联行号",
+ "Card or Account Number": "银行卡号或账号",
+ "China": "中国",
+ "Chinese Yuan": "人民币",
+ "Chinese bank card and account numbers are 16 to 19 digits": "中国银行卡号和账号为 16 至 19 位数字",
+ "France": "法国",
+ "Germany": "德国",
+ "The CNAPS code is 12 digits": "CNAPS 联行号为 12 位数字",
+ "Germany and France": "德国和法国"
 }

@@ -586,7 +586,12 @@ export function MarketScreen({
             ? tr("Currencies you can buy")
             : tr("Currencies you are licensed to receive")
         }
-        currencies={side === "buy" ? BUYABLE : RECEIVABLE}
+        currencies={
+          side === "buy"
+            ? // ADR-105: the yuan only when the server's ceilings include it.
+              BUYABLE.filter((c) => c.code !== "CNY" || (live !== null && "CNY" in live))
+            : RECEIVABLE
+        }
         onClose={() => setSheet(false)}
         onSelect={(c) => {
           if (side === "buy") {

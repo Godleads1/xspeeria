@@ -1088,5 +1088,9 @@
  "Yes, Ask": "是的，要求",
  "Yes, Cancel It": "是的，取消",
  "{{name}} is back to the face check.": "{{name}} 已恢复为人脸验证。",
- "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} 将在下次于新手机登录时重新进行身份验证。"
+ "{{name}} will take a new identity check at the next log-in on a new phone.": "{{name}} 将在下次于新手机登录时重新进行身份验证。",
+ "Germany": "德国",
+ "France": "法国",
+ "China": "中国",
+ "New identity check on a different ID": "使用不同证件的重新身份验证"
 }

@@ -27,12 +27,16 @@ from app.core.api_metrics import track_outside
 
 __all__ = ["LegCommand", "PartnerError", "PayInInstructions", "PayoutLine", "PretendBank", "sign"]
 
-#: Pretend partner per currency: (code, display name). Seeded by `app.cli.pretend_bank`.
-PRETEND_PARTNERS: dict[str, tuple[str, str]] = {
-    "NGN": ("pretend-ng", "Pretend Bank Nigeria"),
-    "USD": ("pretend-us", "Pretend Bank USA"),
-    "GBP": ("pretend-gb", "Pretend Bank UK"),
-    "CAD": ("pretend-ca", "Pretend Bank Canada"),  # ADR-100; simulation only
+#: Pretend partner per (currency, country): (code, display name). Seeded by
+#: `app.cli.pretend_bank`. The euro has one per served euro country (ADR-105).
+PRETEND_PARTNERS: dict[tuple[str, str], tuple[str, str]] = {
+    ("NGN", "NG"): ("pretend-ng", "Pretend Bank Nigeria"),
+    ("USD", "US"): ("pretend-us", "Pretend Bank USA"),
+    ("GBP", "GB"): ("pretend-gb", "Pretend Bank UK"),
+    ("CAD", "CA"): ("pretend-ca", "Pretend Bank Canada"),  # ADR-100; simulation only
+    ("EUR", "DE"): ("pretend-de", "Pretend Bank Germany"),  # ADR-105
+    ("EUR", "FR"): ("pretend-fr", "Pretend Bank France"),  # ADR-105
+    ("CNY", "CN"): ("pretend-cn", "Pretend Bank China"),  # ADR-105; behind CHINA_ENABLED
 }
 
 

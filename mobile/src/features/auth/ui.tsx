@@ -95,18 +95,25 @@ export function GhostButton({ label, onPress, testID }: { label: string; onPress
  * The US and Canada share +1 (owner, 2026-11-09: sign-up with +1 numbers). The server checks
  * the full number again (E.164).
  */
-export type PhoneCountry = 'NG' | 'GB' | 'US' | 'CA';
+export type PhoneCountry = 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN';
 export const PHONE_COUNTRIES: readonly { key: PhoneCountry; label: string; code: string; flag: string }[] = [
   { key: 'NG', label: 'Nigeria', code: '+234', flag: 'NGN' },
   { key: 'GB', label: k('United Kingdom'), code: '+44', flag: 'GBP' },
   { key: 'US', label: k('United States'), code: '+1', flag: 'USD' },
   { key: 'CA', label: k('Canada'), code: '+1', flag: 'CAD' },
+  // ADR-105 (owner, 2026-11-10): Germany, France and China.
+  { key: 'DE', label: k('Germany'), code: '+49', flag: 'DE' },
+  { key: 'FR', label: k('France'), code: '+33', flag: 'FR' },
+  { key: 'CN', label: k('China'), code: '+86', flag: 'CNY' },
 ];
 const DIAL: Record<PhoneCountry, { code: string; flag: string }> = {
   NG: { code: '+234', flag: 'NGN' },
   GB: { code: '+44', flag: 'GBP' },
   US: { code: '+1', flag: 'USD' },
   CA: { code: '+1', flag: 'CAD' },
+  DE: { code: '+49', flag: 'DE' },
+  FR: { code: '+33', flag: 'FR' },
+  CN: { code: '+86', flag: 'CNY' },
 };
 
 /** The country and local part of a saved full number (+1 is shown as the US). */
@@ -114,6 +121,9 @@ export function splitPhone(full: string): { country: PhoneCountry; local: string
   if (full.startsWith('+234')) return { country: 'NG', local: full.slice(4) };
   if (full.startsWith('+44')) return { country: 'GB', local: full.slice(3) };
   if (full.startsWith('+1')) return { country: 'US', local: full.slice(2) };
+  if (full.startsWith('+49')) return { country: 'DE', local: full.slice(3) };
+  if (full.startsWith('+33')) return { country: 'FR', local: full.slice(3) };
+  if (full.startsWith('+86')) return { country: 'CN', local: full.slice(3) };
   return { country: 'NG', local: full.replace(/^\+/, '') };
 }
 

@@ -49,6 +49,15 @@ const STATE: Record<string, string> = {
   in_review: k('Being checked. We’ll update this soon.'),
 };
 
+const ADDRESS_COUNTRY = {
+  NG: k('Nigeria'),
+  GB: k('United Kingdom'),
+  US: k('United States'),
+  CA: k('Canada'),
+  DE: k('Germany'),
+  FR: k('France'),
+} as const;
+
 export function UpgradeTierScreen({ source, onBack }: { source: UpgradeSource; onBack: () => void }): ReactElement {
   const [view, setView] = useState<TierChecksView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -150,7 +159,7 @@ export function UpgradeTierScreen({ source, onBack }: { source: UpgradeSource; o
                 <Field testID="upgrade-state" label={tr('State or region')} value={address.state} onChange={(v) => setAddress({ ...address, state: v })} />
                 <Field testID="upgrade-postcode" label={tr('Postcode (if any)')} value={address.postcode ?? ''} onChange={(v) => setAddress({ ...address, postcode: v })} />
                 <View style={styles.chips}>
-                  {(['NG', 'GB', 'US', 'CA'] as const).map((c) => (
+                  {(['NG', 'GB', 'US', 'CA', 'DE', 'FR'] as const).map((c) => (
                     <Pressable
                       key={c}
                       testID={`upgrade-country-${c}`}
@@ -160,7 +169,7 @@ export function UpgradeTierScreen({ source, onBack }: { source: UpgradeSource; o
                       style={[styles.chip, address.country === c ? styles.chipOn : null]}
                     >
                       <Text style={[styles.chipText, address.country === c ? styles.chipTextOn : null]}>
-                        {c === 'NG' ? tr('Nigeria') : c === 'GB' ? tr('United Kingdom') : c === 'US' ? tr('United States') : tr('Canada')}
+                        {tr(ADDRESS_COUNTRY[c])}
                       </Text>
                     </Pressable>
                   ))}

@@ -37,7 +37,7 @@ class FeeQuote(BaseModel):
 @router.get("/quote", response_model=FeeQuote, summary="The fee one side pays on an amount")
 async def quote(
     _: CurrentPrincipal,
-    currency: Literal["NGN", "USD", "GBP", "EUR", "CAD"],
+    currency: Literal["NGN", "USD", "GBP", "EUR", "CAD", "CNY"],
     amount: str = Query(pattern=_AMOUNT),
 ) -> FeeQuote:
     whole, _dot, frac = amount.partition(".")
