@@ -374,6 +374,7 @@ class TestPackageRegistration:
             "official_rates",
             "help_requests",
             "help_messages",
+            "currency_switches",
             "ops_alerts",
             "deal_pauses",
             "rate_limit_hits",
@@ -428,7 +429,7 @@ class TestPackageRegistration:
         # 4.1B plus the AUTH-1 identity tables (ADR-025).
         assert result.stdout.strip() == (
             "['adverts', 'api_metrics', 'auth_refresh_tokens', 'auth_sessions', 'beneficiaries', "
-            "'currency_definitions', 'customer_activity', 'deal_pauses', "
+            "'currency_definitions', 'currency_switches', 'customer_activity', 'deal_pauses', "
             "'dispute_categories', 'dispute_messages', 'disputes', "
             "'fraud_alerts', 'help_messages', 'help_requests', "
             "'idempotency_records', 'job_status', "
@@ -535,4 +536,5 @@ class TestPackageRegistration:
             "0047_help_requests.py",  # Need-help thread (ADR-103)
             "0048_identity_redo.py",  # Redo identity check (ADR-104)
             "0049_germany_france_china.py",  # Germany, France, China (ADR-105)
+            "0050_currency_switches.py",  # Currency on/off switches (ADR-106)
         ]

@@ -29,6 +29,7 @@ Layering rule: api -> services -> domain + repositories + providers.
 from app.models.activity import CustomerActivity
 from app.models.adverts import Advert
 from app.models.currency_definition import CurrencyDefinition
+from app.models.currency_switch import CurrencySwitch
 from app.models.deal_pauses import DealPause
 from app.models.disputes import Dispute, DisputeCategory, DisputeMessage
 from app.models.fraud import FraudAlert
@@ -120,6 +121,7 @@ __all__ = [
     "AuthSession",
     "Beneficiary",
     "CurrencyDefinition",
+    "CurrencySwitch",
     "IdempotencyRecord",
     "Match",
     "MatchPayoutSelection",

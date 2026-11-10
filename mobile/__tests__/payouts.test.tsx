@@ -144,6 +144,16 @@ describe('Add payout account', () => {
     });
   });
 
+  it('ADR-106: a currency the server switched off has no tab (naira always does)', async () => {
+    await render(
+      <AddPayoutAccountScreen source={fake()} onBack={jest.fn()} onAdded={jest.fn()} confirmWith={confirm} offered={async () => ['USD', 'GBP', 'CAD']} />,
+    );
+    await act(async () => undefined);
+    expect(screen.getByTestId('add-payout-currency-NGN')).toBeTruthy();
+    expect(screen.getByTestId('add-payout-currency-USD')).toBeTruthy();
+    expect(screen.queryByTestId('add-payout-currency-EUR')).toBeNull();
+  });
+
   it('checks the format, then confirms it’s you and sends the details', async () => {
     const src = fake();
     const onAdded = jest.fn();

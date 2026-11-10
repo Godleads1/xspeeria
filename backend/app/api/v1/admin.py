@@ -30,6 +30,7 @@ from app.core.exceptions import AppError
 from app.services.activity_admin import ActivityAdminService
 from app.services.adverts import AdvertService
 from app.services.auth import AuthRuntime
+from app.services.currency_switch import CurrencySwitchService
 from app.services.customers import CustomerAction, CustomerAdminService
 from app.services.dashboard import DashboardService, Period
 from app.services.deal_pause import DealPauseService
@@ -916,6 +917,45 @@ async def close_help_request(
 ) -> Response:
     await service.close(staff, info, request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- ADR-106: currency on/off switches (Super Admin) ------------------------------------
+
+
+def _switches(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> CurrencySwitchService:
+    return CurrencySwitchService(db, runtime.clock, settings.china_enabled)
+
+
+Switches = Annotated[CurrencySwitchService, Depends(_switches)]
+
+
+class SwitchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+    reason: str = Field(min_length=1, max_length=300)
+
+
+@router.get("/currencies", summary="Built-in currencies and whether each is on (any staff)")
+async def list_currencies(staff: Staff, service: Switches) -> dict[str, Any]:
+    return {"items": await service.list(staff)}
+
+
+@router.post(
+    "/currencies/{currency}",
+    summary="Switch a currency on or off (Super Admin; ADR-106)",
+)
+async def switch_currency(
+    currency: Annotated[str, Path(pattern=r"^[A-Za-z]{3}$")],
+    body: SwitchBody,
+    staff: Staff,
+    service: Switches,
+    info: Info,
+) -> dict[str, Any]:
+    return await service.set(staff, info, currency, body.enabled, body.reason)
 
 
 @router.post(

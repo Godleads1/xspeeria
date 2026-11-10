@@ -19,6 +19,8 @@ export function SettingsScreen(): ReactElement {
     { href: '/roles', label: tr('Role Setup'), show: can('roles.read') },
     { href: '/settings/dispute-categories', label: tr('Dispute category Setup'), show: can('disputes.read') },
     { href: '/settings/adverts', label: tr('Advert Placement Setup'), show: can('adverts.read') },
+    // ADR-106: every staff member may look; only a Super Admin switches.
+    { href: '/settings/currencies', label: tr('Currencies'), show: true },
   ].filter((i) => i.show);
   return (
     <>

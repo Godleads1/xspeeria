@@ -208,6 +208,15 @@ async def test_with_china_on_the_yuan_ceiling_is_worked_out_from_usd(
         env = Env(client, clock, runtime.sms)  # type: ignore[arg-type]
         body = await env.sign_up(phone=OWNER[0], email=OWNER[1])
         h = {"Authorization": f"Bearer {body['access_token']}"}
+        # ADR-106: CHINA_ENABLED alone isn't enough; a Super Admin switches the yuan on too.
+        ceilings = (await client.get("/api/v1/rates/official", headers=h)).json()
+        assert "CNY" not in {i["currency"] for i in ceilings["items"]}
+        await _sql(
+            db_settings,
+            "INSERT INTO currency_switches (currency, enabled, reason, changed_at, "
+            "changed_by_staff_id) VALUES ('CNY', true, 'Lawyer said yes', now(), "
+            "gen_random_uuid())",
+        )
         ceilings = (await client.get("/api/v1/rates/official", headers=h)).json()
         cny = next(i for i in ceilings["items"] if i["currency"] == "CNY")
         expected = (OFFICIAL_RATE["USD"] / CNY_PER_USD).quantize(Decimal("0.01"))

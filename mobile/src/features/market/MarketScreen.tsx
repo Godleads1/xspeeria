@@ -588,7 +588,9 @@ export function MarketScreen({
         }
         currencies={
           side === "buy"
-            ? // ADR-105: the yuan only when the server's ceilings include it.
+            ? // ADR-105: the yuan only when the server's ceilings include it. Another currency
+              // without one (stale feed, ADR-102, or switched off, ADR-106) stays listed but
+              // takes no rate, so the person sees why.
               BUYABLE.filter((c) => c.code !== "CNY" || (live !== null && "CNY" in live))
             : RECEIVABLE
         }

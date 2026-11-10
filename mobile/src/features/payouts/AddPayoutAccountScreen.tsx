@@ -67,8 +67,9 @@ export function AddPayoutAccountScreen({
     let on = true;
     offered().then(
       (codes) => {
-        const extra = SWITCHED_CURRENCIES.filter((c) => codes.includes(c));
-        if (on && extra.length) setCurrencies([...PAYOUT_CURRENCIES, ...extra]);
+        // ADR-106: only currencies the server offers now (naira is always on).
+        const all: readonly string[] = [...PAYOUT_CURRENCIES, ...SWITCHED_CURRENCIES];
+        if (on) setCurrencies(all.filter((c) => c === 'NGN' || codes.includes(c)));
       },
       () => undefined, // not offered: keep the usual list
     );

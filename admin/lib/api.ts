@@ -398,6 +398,16 @@ export interface HelpRequestDetail extends HelpRequestRow {
   thread: { message_id: string; author: 'customer' | 'staff'; staff_id: string | null; body: string; created_at: string }[];
 }
 
+/** ADR-106: a built-in currency and whether it is on. */
+export interface CurrencySwitchRow {
+  currency: string;
+  enabled: boolean;
+  /** `naira`: can't be switched; `china`: the yuan also needs CHINA_ENABLED on the server. */
+  locked: 'naira' | 'china' | null;
+  reason: string | null;
+  changed_at: string | null;
+}
+
 export type FraudRule = 'pin_lockout' | 'code_lockout' | 'disputes_against' | 'payout_name_mismatch' | 'staff_report' | 'customer_reported_not_me';
 export type FraudStatus = 'open' | 'in_progress' | 'resolved';
 export type FraudSeverity = 'low' | 'medium' | 'high';
@@ -954,6 +964,9 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     updateRole: (id: string, changes: { description?: string; permissions?: string[] }) =>
       call<RoleView>('PATCH', `/roles/${encodeURIComponent(id)}`, changes),
     deleteRole: (id: string) => call<void>('DELETE', `/roles/${encodeURIComponent(id)}`),
+    currencies: () => call<{ items: CurrencySwitchRow[] }>('GET', '/currencies').then((r) => r.items),
+    switchCurrency: (currency: string, enabled: boolean, reason: string) =>
+      call<{ currency: string; enabled: boolean }>('POST', `/currencies/${encodeURIComponent(currency)}`, { enabled, reason }),
     helpRequests: (status?: 'open' | 'closed') =>
       call<{ items: HelpRequestRow[] }>('GET', `/help-requests${status ? `?status=${status}` : ''}`).then((r) => r.items),
     helpRequest: (id: string) => call<HelpRequestDetail>('GET', `/help-requests/${encodeURIComponent(id)}`),
