@@ -537,4 +537,5 @@ class TestPackageRegistration:
             "0048_identity_redo.py",  # Redo identity check (ADR-104)
             "0049_germany_france_china.py",  # Germany, France, China (ADR-105)
             "0050_currency_switches.py",  # Currency on/off switches (ADR-106)
+            "0051_africa.py",  # Eleven African countries (ADR-107)
         ]

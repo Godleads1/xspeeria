@@ -35,7 +35,11 @@ webhooks_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 256 * 1024
 
 
-Country = Literal["NG", "GB", "US", "CA", "DE", "FR", "CN"]  # ADR-100, ADR-105
+# ADR-100, ADR-105, ADR-107
+Country = Literal[
+    "NG", "GB", "US", "CA", "DE", "FR", "CN",
+    "EG", "ZA", "MA", "ET", "KE", "SN", "GH", "ZW", "UG", "ZM", "TZ",
+]  # fmt: skip
 
 
 class StartCheckRequest(BaseModel):

@@ -84,6 +84,7 @@ class PayoutAccountService:
         institution_number: str | None = None,
         transit_number: str | None = None,
         cnaps_code: str | None = None,
+        branch_code: str | None = None,
     ) -> dict[str, Any]:
         if self._box is None:
             raise _err(
@@ -102,6 +103,7 @@ class PayoutAccountService:
                 institution_number,
                 transit_number,
                 cnaps_code,
+                branch_code,
             )
         except OfferInputError as e:
             raise _err(e.code, e.message, status.HTTP_422_UNPROCESSABLE_CONTENT) from None

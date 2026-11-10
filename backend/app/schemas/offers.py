@@ -175,6 +175,8 @@ class AddPayoutAccountRequest(_Strict):
     transit_number: str | None = Field(default=None, max_length=5)
     #: CNY only (ADR-105): the 12-digit CNAPS code of the bank branch.
     cnaps_code: str | None = Field(default=None, max_length=12)
+    #: African bank accounts (ADR-107): an optional bank or branch code.
+    branch_code: str | None = Field(default=None, max_length=11)
 
 
 class PayoutAccountResponse(BaseModel):

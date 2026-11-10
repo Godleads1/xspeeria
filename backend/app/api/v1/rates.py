@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session, limit_by_account
 from app.api.deps import get_app_settings
 from app.core.config import Settings
-from app.domain.offer_rules import CAD_PER_USD, CNY_PER_USD
+from app.domain.offer_rules import AFRICAN, CAD_PER_USD, CNY_PER_USD
 from app.services.auth import AuthRuntime
 from app.services.official_rates import current_ceilings
 
@@ -27,7 +27,7 @@ __all__ = ["router"]
 router = APIRouter(prefix="/api/v1/rates", tags=["rates"], dependencies=[Depends(limit_by_account)])
 
 #: Worked out from another ceiling, not published by the CBN (ADR-101).
-DERIVED = frozenset({"CAD", "CNY"})
+DERIVED = frozenset({"CAD", "CNY"}) | AFRICAN  # ADR-101, ADR-105, ADR-107
 
 
 class Ceiling(BaseModel):

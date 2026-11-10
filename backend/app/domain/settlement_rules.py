@@ -17,6 +17,7 @@ __all__ = [
     "FUNDING_WINDOW",
     "EURO_COUNTRIES",
     "JURISDICTION",
+    "SHARED_CURRENCIES",
     "LEG_STATES",
     "LEG_TRANSITIONS",
     "MONEY_FACTS",
@@ -43,10 +44,30 @@ DISPATCH_MAX_ATTEMPTS = 5
 #: Each leg is domestic (F-8): its currency fixes its jurisdiction. EUR is shared, so a euro
 #: leg's jurisdiction is the euro country its payer is verified in (ADR-105, owner
 #: 2026-11-10: "User's verified country"); see ``EURO_COUNTRIES`` / ``euro_country``.
-JURISDICTION: dict[str, str] = {"NGN": "NG", "USD": "US", "GBP": "GB", "CAD": "CA", "CNY": "CN"}
-#: ADR-105: the euro countries Xspeeria serves, in the order a payer verified in several is
-#: assigned (the first one they were approved in wins; see ``euro_country``).
+JURISDICTION: dict[str, str] = {
+    "NGN": "NG",
+    "USD": "US",
+    "GBP": "GB",
+    "CAD": "CA",
+    "CNY": "CN",
+    # ADR-107
+    "EGP": "EG",
+    "ZAR": "ZA",
+    "MAD": "MA",
+    "ETB": "ET",
+    "KES": "KE",
+    "XOF": "SN",
+    "GHS": "GH",
+    "UGX": "UG",
+    "ZMW": "ZM",
+    "TZS": "TZ",
+}
+#: ADR-105: the euro countries Xspeeria serves.
 EURO_COUNTRIES = ("DE", "FR")
+#: Currencies paid from more than one country: the payer's verified one decides the leg's
+#: country (the first approved wins). The euro (ADR-105); the US dollar, which Zimbabwe pays
+#: in too (ADR-107, owner 2026-11-10: "US dollars").
+SHARED_CURRENCIES: dict[str, tuple[str, ...]] = {"EUR": EURO_COUNTRIES, "USD": ("US", "ZW")}
 
 #: ADR-001 §4 — 9 leg states and their only allowed transitions.
 LEG_STATES = (

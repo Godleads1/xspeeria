@@ -114,7 +114,8 @@ async def partners(db_settings: Settings, clean: None) -> None:
     try:
         async with engine.begin() as conn:
             # NG, GB, US, CA (ADR-100); DE, FR (euro) and CN (ADR-105)
-            assert len(await ensure_pretend_partners(conn)) == 7
+            # ADR-107: eleven African countries (Zimbabwe in US dollars).
+            assert len(await ensure_pretend_partners(conn)) == 18
             assert await ensure_pretend_partners(conn) == []  # insert-only, repeat-safe
     finally:
         await engine.dispose()

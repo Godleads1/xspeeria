@@ -1,0 +1,46 @@
+# ADR-107 — Eleven African Countries Join the Corridors (Server)
+
+| Attribute | Value |
+|---|---|
+| **Status** | **IMPLEMENTED (server)** — 2026-11-10. App screens follow in separate changes. |
+| **Decision ID** | DEC-119 |
+| **Authority** | Owner, 2026-11-10: add Egypt, South Africa, Morocco, Ethiopia, Kenya, Senegal, Ghana, Zimbabwe, Uganda, Zambia and Tanzania. Answers: **"build all now and switch it on"**; payouts **"Bank and mobile money"**; Zimbabwe **"US dollars"**; small rates **"Allow up to 6 decimals"**; at launch **"On for testing, off when live"**. |
+| **Builds on** | ADR-042, ADR-101, ADR-105, ADR-106. |
+
+## Decision
+
+1. **Countries.** Identity checks for EG, ZA, MA, ET, KE, SN, GH, ZW, UG, ZM and TZ need an ID issued by that country (ADR-042). Migration **0051** widens the country check.
+2. **Currencies and decimals.**
+   - EGP, ZAR, MAD, ETB, KES, XOF, GHS, UGX, ZMW and TZS, using ISO 4217 decimals.
+   - The **CFA franc (XOF)** and the **Ugandan shilling** have no cents, so their amounts are whole numbers.
+   - **Zimbabwe pays in US dollars.** The dollar is now paid from two countries, like the euro: a dollar side's escrow follows the payer's verified country (the US or Zimbabwe; first approved wins). Paying dollars needs a US or Zimbabwe check. A dollar payer verified in neither keeps the US escrow (the home country), while the euro still fails closed.
+3. **Rate limits.**
+   - **Most currencies:** the USD limit ÷ the currency's units per dollar, to **6 decimals**, because a shilling is worth well under a naira. The units per dollar come from the **Kenya Revenue Authority's official rates for 2–8 Nov 2026** (KES 129.95 per USD), crossed through the dollar.
+   - **Zambia:** ZMW 20.332 comes from Frankfurter's blended central-bank rate, because it isn't on the KRA list.
+   - **Senegal:** the CFA franc's limit is the **EUR limit ÷ 655.957**, its fixed euro rate.
+   - **Check before live:** every figure must be checked against the issuing central bank before the live server switches the currency on.
+4. **Payout accounts** (owner: "Bank and mobile money"):
+   - **Bank** (`account_type="bank"`): bank name, an account number or IBAN of 5–34 letters and digits, and an optional bank or branch code of 2–11 letters and digits.
+   - **Mobile money** (`account_type="mobile_money"`): the provider's name and the wallet's phone number in that country. Available in Kenya (+254), Ghana (+233), Uganda (+256), Tanzania (+255), Zambia (+260), Senegal (+221) and Zimbabwe's US dollars (+263).
+   - The holder's name comes from the bank's own check, as for every currency.
+5. **On for testing, off when live.** On local and test servers the ten currencies are on. On the live server (`APP_ENV=production`) each starts **off** until a Super Admin switches it on (ADR-106).
+6. **Minimum:** 10 units, as for every foreign currency (ADR-029). That is small for the shillings; a higher minimum is a product decision.
+7. **Pretend banks** (local testing) for all eleven countries, including Zimbabwe for US dollars.
+
+## Not verified / owner actions
+
+- **Legality and partner banks:** UNKNOWN — NOT VERIFIED for every one of the eleven. Egypt, Ethiopia, Morocco and Zimbabwe tightly control foreign exchange.
+- **Rate figures:** come from the KRA list and Frankfurter, not each country's central bank.
+- **Didit:** support for these countries' IDs is not checked.
+- **Mobile-money payouts:** a partner bank must be able to pay wallets; not confirmed.
+- **Cross-country payouts:** a dollar account in another country than the escrow (for example a US account from the Zimbabwe escrow) assumes the partner bank can pay it. Not confirmed.
+
+## Evidence
+
+- `backend/tests/unit/test_africa_rules.py`: countries; currencies by country; the dollar shared; the rate-limit formulas (6 decimals; XOF from the euro); whole units for UGX and XOF; on for testing, off on the live server.
+- `backend/tests/unit/test_payout_rules.py` `TestAfrica`: bank and mobile-money forms, including Zimbabwe's dollar wallet; the refused forms.
+- `backend/tests/integration/test_africa_corridors.py`:
+  - a Zimbabwean's dollars go through the Zimbabwe escrow;
+  - Ugandan shillings take whole amounts and 6-decimal rates under the limit;
+  - Kenyan bank and Ugandan wallet accounts are accepted;
+  - paying dollars needs a US or Zimbabwe check.

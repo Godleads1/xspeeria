@@ -19,10 +19,14 @@ __all__ = [
     "MARKET_REQUESTS_PER_MINUTE",
     "MINIMUM_MINOR",
     "OFFICIAL_RATE",
+    "XOF_PER_EUR",
     "OFFICIAL_RATE_AS_OF",
     "with_derived",
     "CAD_PER_USD",
     "CAD_PER_USD_AS_OF",
+    "AFRICAN",
+    "AFRICA_PER_USD",
+    "AFRICA_PER_USD_AS_OF",
     "CNY_PER_USD",
     "CNY_PER_USD_AS_OF",
     "RATE_PLACES",
@@ -40,11 +44,32 @@ __all__ = [
 #: `app.cli.currency_definitions` command; permanent under CD3).
 CURRENCY_DEF_VERSION = "iso4217-v1"
 #: ISO 4217 minor units for the launch currencies.
-SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2, "CNY": 2}
+SCALE: dict[str, int] = {
+    "NGN": 2,
+    "USD": 2,
+    "GBP": 2,
+    "EUR": 2,
+    "CAD": 2,
+    "CNY": 2,
+    # ADR-107 (owner 2026-11-10): ISO 4217 minor units. The CFA franc and the Ugandan shilling
+    # have none, so their amounts are whole numbers.
+    "EGP": 2,
+    "ZAR": 2,
+    "MAD": 2,
+    "ETB": 2,
+    "KES": 2,
+    "XOF": 0,
+    "GHS": 2,
+    "UGX": 0,
+    "ZMW": 2,
+    "TZS": 2,
+}
 #: CAD: Canada joins the MVP corridors (ADR-100); its ceiling is derived from the USD one (ADR-101).
 #: CNY: China joins the corridors behind a switch (ADR-105, ``CHINA_ENABLED``, off until legal
 #: clearance); its ceiling is derived from the USD one too.
-FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD", "CNY"})
+#: ADR-107: ten African currencies (Zimbabwe pays in US dollars, so it adds none).
+AFRICAN = frozenset({"EGP", "ZAR", "MAD", "ETB", "KES", "XOF", "GHS", "UGX", "ZMW", "TZS"})
+FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD", "CNY"}) | AFRICAN
 
 #: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate. ADR-102: used
 #: until the automatic feed has stored its first rate (``services.official_rates``).
@@ -66,18 +91,48 @@ CAD_PER_USD_AS_OF = "2026-11-06"
 #: before China is switched on.
 CNY_PER_USD = Decimal("6.7167")
 CNY_PER_USD_AS_OF = "2026-11-10"
+#: ADR-107 (owner 2026-11-10): each African currency's ceiling = the USD ceiling ÷ its units
+#: per 1 USD, to 6 decimals (a shilling is worth well under a naira). Source: the Kenya Revenue
+#: Authority's official exchange rates for 2–8 November 2026 (KES 129.95 per USD), crossed
+#: through the US dollar; ZMW from Frankfurter's blended central-bank rate (not on the KRA
+#: list). Check each against its central bank before the live server switches it on.
+AFRICA_PER_USD: dict[str, Decimal] = {
+    "KES": Decimal("129.9500"),
+    "EGP": Decimal("55.3214"),
+    "ZAR": Decimal("16.6603"),
+    "MAD": Decimal("9.8097"),
+    "ETB": Decimal("163.4180"),
+    "GHS": Decimal("11.6046"),
+    "UGX": Decimal("4344.2285"),
+    "TZS": Decimal("2640.5840"),
+    "ZMW": Decimal("20.3320"),
+}
+AFRICA_PER_USD_AS_OF = "2026-11-02"
+#: The CFA franc (BCEAO) is fixed to the euro: 655.957 XOF per 1 EUR, so its ceiling comes
+#: from the EUR one.
+XOF_PER_EUR = Decimal("655.957")
+_SIX = Decimal("0.000001")
 
 
 def with_derived(fed: dict[str, Decimal]) -> dict[str, Decimal]:
-    """Add the ceilings worked out from others: CAD (ADR-101) and CNY (ADR-105) from USD.
-    No USD, no CAD or CNY."""
+    """Add the ceilings worked out from others: CAD (ADR-101) and CNY (ADR-105) from USD, the
+    African currencies from USD and XOF from EUR (ADR-107). No base ceiling, none derived."""
     out = dict(fed)
-    usd = out.get("USD")
+    usd, eur = out.get("USD"), out.get("EUR")
     for currency, per_usd in (("CAD", CAD_PER_USD), ("CNY", CNY_PER_USD)):
         if usd is not None:
             out[currency] = (usd / per_usd).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
         else:
             out.pop(currency, None)
+    for currency, per_usd in AFRICA_PER_USD.items():
+        if usd is not None:
+            out[currency] = (usd / per_usd).quantize(_SIX, rounding=ROUND_HALF_EVEN)
+        else:
+            out.pop(currency, None)
+    if eur is not None:
+        out["XOF"] = (eur / XOF_PER_EUR).quantize(_SIX, rounding=ROUND_HALF_EVEN)
+    else:
+        out.pop("XOF", None)
     return out
 
 
@@ -91,6 +146,8 @@ MINIMUM_MINOR: dict[str, int] = {
     "EUR": 1_000,
     "CAD": 1_000,
     "CNY": 1_000,
+    # ADR-107: 10 units too (whole units where there are no cents).
+    **{c: 10 * 10**s for c, s in SCALE.items() if c in AFRICAN},
 }
 
 #: ADR-031 — offer and marketplace requests per signed-in user per minute (product owner,

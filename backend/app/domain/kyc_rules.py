@@ -79,6 +79,18 @@ COUNTRIES: dict[str, tuple[str, str]] = {
     "DE": ("DEU", "Germany"),
     "FR": ("FRA", "France"),
     "CN": ("CHN", "China"),
+    # ADR-107 (owner, 2026-11-10): eleven African countries.
+    "EG": ("EGY", "Egypt"),
+    "ZA": ("ZAF", "South Africa"),
+    "MA": ("MAR", "Morocco"),
+    "ET": ("ETH", "Ethiopia"),
+    "KE": ("KEN", "Kenya"),
+    "SN": ("SEN", "Senegal"),
+    "GH": ("GHA", "Ghana"),
+    "ZW": ("ZWE", "Zimbabwe"),
+    "UG": ("UGA", "Uganda"),
+    "ZM": ("ZMB", "Zambia"),
+    "TZ": ("TZA", "Tanzania"),
 }
 
 #: Didit status → our status, for statuses that need no decision to interpret.

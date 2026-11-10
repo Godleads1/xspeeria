@@ -58,7 +58,9 @@ class KycCase(Base):
             postgresql_where=text("status IN ('pending_documents', 'under_review')"),
         ),
         CheckConstraint(
-            "country IN ('NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN')", name="country_allowed"
+            "country IN ('NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN', 'EG', 'ZA', 'MA', 'ET', 'KE', "
+            "'SN', 'GH', 'ZW', 'UG', 'ZM', 'TZ')",
+            name="country_allowed",
         ),
         Index("ix_kyc_cases_user_created", "user_id", "created_at"),
         CheckConstraint(

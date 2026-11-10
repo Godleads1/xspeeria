@@ -192,7 +192,9 @@ async def test_china_is_refused_everywhere_while_switched_off(
     assert "CNY" not in {i["currency"] for i in ceilings["items"]}
     assert ceilings["cny_per_usd"] is None
     regions = (await strict.client.get("/api/v1/kyc/regions", headers=h)).json()["regions"]
-    assert {r["country"] for r in regions} == {"NG", "GB", "US", "CA", "DE", "FR"}
+    assert {r["country"] for r in regions} == {"NG", "GB", "US", "CA", "DE", "FR"} | {
+        "EG", "ZA", "MA", "ET", "KE", "SN", "GH", "ZW", "UG", "ZM", "TZ"
+    }  # fmt: skip
 
 
 async def test_with_china_on_the_yuan_ceiling_is_worked_out_from_usd(

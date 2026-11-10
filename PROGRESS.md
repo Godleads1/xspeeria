@@ -65,6 +65,7 @@ development and testing only. Money moves only against the **pretend partner ban
 | "Redo identity check": Compliance asks; the next new-phone log-in takes a full identity check instead of the face check (same ID counts at once, a different one waits for two staff) | **Built 9 Nov 2026** | ADR-104 |
 | Germany and France (euro) and China (yuan) in the product: identity checks, phones, payout forms, rate limits; China switched off until legal clearance | **Built 10 Nov 2026** | ADR-105 |
 | Super Admin switches currencies on/off in the console (offers hidden, matched deals finish); Find a deal shows CAD | **Built 10 Nov 2026** | ADR-106 |
+| Eleven African countries on the server: identity checks, currencies, rate limits, bank and mobile-money payouts (on for testing, off when live); app screens next | **Server built 10 Nov 2026** | ADR-107 |
 | Readiness check for the load balancer (`/health/ready`) | **Built 3 Nov 2026** | ADR-088 |
 | Production container images (API + worker, admin console), built in CI | **Built 3 Nov 2026** | ADR-089 |
 | App Store / Google Play release settings and store listing draft (release builds still blocked, ADR-090) | **Built 3 Nov 2026** | ADR-090 |
