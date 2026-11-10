@@ -40,6 +40,7 @@ from tests.integration.test_escrow_api import (  # noqa: F401
     taker,
 )
 from tests.integration.test_matches_api import OWNER
+from tests.integration.test_offers_api import currencies  # noqa: F401  (autouse: CD3 rows)
 from tests.integration.test_payouts_api import Party
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
