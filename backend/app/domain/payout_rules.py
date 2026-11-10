@@ -39,7 +39,10 @@ PREPARATION_STATES = ("awaiting_payout_accounts", "funding_ready", "expired")
 
 #: Account formats the app collects (ADR-022, `BANK_FORMS`). EUR: the IBAN only, no BIC
 #: (owner, 2026-11-08, ADR-099).
-PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR", "CAD"})
+#: CNY (ADR-105, owner 2026-11-10): bank name, the 16–19 digit card or account number and the
+#: branch's 12-digit CNAPS code; the holder's name comes from the bank's own check, as for
+#: every currency.
+PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR", "CAD", "CNY"})
 _ACCOUNT_TYPES = frozenset({"Checking", "Savings"})
 
 
@@ -98,12 +101,15 @@ def parse_account_details(
     account_type: str | None,
     institution_number: str | None = None,
     transit_number: str | None = None,
+    cnaps_code: str | None = None,
 ) -> AccountDetails:
     c = currency.upper()
     if c not in PAYOUT_CURRENCIES:
-        raise _bad("Payout accounts can be in NGN, USD, GBP, EUR or CAD for now.")
+        raise _bad("Payout accounts can be in NGN, USD, GBP, EUR, CAD or CNY for now.")
     if c != "CAD" and (institution_number or transit_number):
         raise _bad("Institution and transit numbers are only used for CAD.")
+    if c != "CNY" and cnaps_code:
+        raise _bad("A CNAPS code is only used for CNY.")
     name = bank_name.strip()
     if not 2 <= len(name) <= 60 or not re.fullmatch(r"[A-Za-z0-9 .,&'()\-]+", name):
         raise _bad("Enter the bank name.")
@@ -142,6 +148,14 @@ def parse_account_details(
                 "Only the bank name, institution, transit and account numbers are needed for CAD."
             )
         return AccountDetails(c, name, account_number, institution_number + transit_number, None)
+    if c == "CNY":
+        if not re.fullmatch(r"[0-9]{16,19}", account_number):
+            raise _bad("Chinese bank card and account numbers are 16 to 19 digits.")
+        if not cnaps_code or not re.fullmatch(r"[0-9]{12}", cnaps_code):
+            raise _bad("The CNAPS code is 12 digits.")
+        if routing_number or sort_code or account_type:
+            raise _bad("Only the bank name, account number and CNAPS code are needed for CNY.")
+        return AccountDetails(c, name, account_number, cnaps_code, None)
     # USD
     if not re.fullmatch(r"[0-9]{4,17}", account_number):
         raise _bad("Enter a valid account number.")

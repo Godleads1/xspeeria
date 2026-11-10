@@ -52,6 +52,7 @@ class TestAmount:
             "GBP": 1_000,
             "EUR": 1_000,
             "CAD": 1_000,
+            "CNY": 1_000,
         }
         assert _code(parse_amount_minor, "9999.99", "NGN") == "VAL_422_AMOUNT_BELOW_MINIMUM"
         assert _code(parse_amount_minor, "9.99", "EUR") == "VAL_422_AMOUNT_BELOW_MINIMUM"

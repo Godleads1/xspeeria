@@ -26,6 +26,7 @@ from app.api.auth_deps import (
     get_auth_service,
     get_db_session,
 )
+from app.api.china import refuse_china_if_off
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
@@ -53,6 +54,7 @@ from app.services.auth import AuthRuntime, AuthService, Principal
 from app.services.kyc import KycService
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
+from app.services.pay_country import pay_country
 from app.services.payouts import PayoutAccountService
 from app.services.queue import QueueService
 
@@ -111,6 +113,18 @@ async def require_pay_country(
     """ADR-042: paying in a currency needs an approved check in that currency's country."""
     if settings.kyc_dev_bypass and settings.app_env == "local":
         return
+    if currency.upper() == "EUR":
+        # ADR-105: the euro is paid from Germany or France, whichever the user is verified in.
+        if await pay_country(db, principal.user_id, "EUR") is not None:
+            await db.rollback()
+            return
+        await db.rollback()
+        raise AppError(
+            "AUTH_403_KYC_REQUIRED",
+            "Verify your identity for Germany or France to pay in EUR.",
+            status_code=status.HTTP_403_FORBIDDEN,
+            details={"country": "DE"},
+        )
     country = JURISDICTION.get(currency.upper())
     if country is not None and country in COUNTRIES:
         ok = await KycService(db, runtime.clock, runtime.kyc_provider).is_approved(
@@ -185,6 +199,7 @@ async def create_offer(
     runtime: Runtime,
     db: Db,
 ) -> Any:
+    refuse_china_if_off(settings, body.source_currency, body.target_currency)  # ADR-105
     # The maker pays the source currency (ADR-042).
     await require_pay_country(principal, body.source_currency, settings, runtime, db)
     result = await service.create(
@@ -214,6 +229,7 @@ async def create_group(
     db: Db,
 ) -> Any:
     """ADR-059 Decision 5. The maker pays naira, so the Nigeria identity check applies."""
+    refuse_china_if_off(settings, *(c.currency for c in body.currencies))  # ADR-105
     await require_pay_country(principal, "NGN", settings, runtime, db)
     result = await service.create_group(
         principal,
@@ -447,8 +463,11 @@ async def add_payout_account(
     principal: Verified,
     accounts: PayoutAccounts,
     auth: Auth,
+    settings: Settings_,
     step_up_token: StepUpToken = None,
 ) -> Any:
+    refuse_china_if_off(settings, body.currency)  # ADR-105
+
     async def confirm() -> None:
         await auth.consume_step_up(principal, "beneficiary.add", step_up_token)
 
@@ -460,6 +479,7 @@ async def add_payout_account(
         routing_number=body.routing_number,
         institution_number=body.institution_number,
         transit_number=body.transit_number,
+        cnaps_code=body.cnaps_code,
         sort_code=body.sort_code,
         account_type=body.account_type,
         confirm_step_up=confirm,

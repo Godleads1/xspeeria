@@ -30,6 +30,8 @@ export interface NewPayoutAccount {
   /** CAD only (ADR-100). */
   institution_number?: string;
   transit_number?: string;
+  /** CNY only (ADR-105): the 12-digit CNAPS code of the bank branch. */
+  cnaps_code?: string;
 }
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;

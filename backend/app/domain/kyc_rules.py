@@ -75,6 +75,10 @@ COUNTRIES: dict[str, tuple[str, str]] = {
     "GB": ("GBR", "the United Kingdom"),
     "US": ("USA", "the United States"),
     "CA": ("CAN", "Canada"),  # ADR-100
+    # ADR-105 (owner, 2026-11-10): Germany and France (euro), China (yuan, behind a switch).
+    "DE": ("DEU", "Germany"),
+    "FR": ("FRA", "France"),
+    "CN": ("CHN", "China"),
 }
 
 #: Didit status → our status, for statuses that need no decision to interpret.

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session
+from app.api.china import refuse_china_if_off
 from app.api.deps import get_app_settings
 from app.core.config import Settings
 from app.core.exceptions import AppError
@@ -34,7 +35,7 @@ webhooks_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 256 * 1024
 
 
-Country = Literal["NG", "GB", "US", "CA"]
+Country = Literal["NG", "GB", "US", "CA", "DE", "FR", "CN"]  # ADR-100, ADR-105
 
 
 class StartCheckRequest(BaseModel):
@@ -103,9 +104,14 @@ Me = Annotated[Principal, Depends(limited)]
     summary="Start or continue my identity check (Didit)",
 )
 async def start_check(
-    principal: Me, kyc: Kyc, body: Annotated[StartCheckRequest | None, Body()] = None
+    principal: Me,
+    kyc: Kyc,
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    body: Annotated[StartCheckRequest | None, Body()] = None,
 ) -> Any:
-    return await kyc.start(principal, (body or StartCheckRequest()).country)
+    country = (body or StartCheckRequest()).country
+    refuse_china_if_off(settings, country)  # ADR-105
+    return await kyc.start(principal, country)
 
 
 @router.get("/cases/current", response_model=KycCaseResponse, summary="My identity check")
@@ -124,7 +130,12 @@ async def my_regions(
     if settings.client_country_header:
         raw = request.headers.get(settings.client_country_header, "")[:8].strip().upper()
         seen = raw if len(raw) == 2 and raw.isalpha() else None
-    return await kyc.regions(principal, seen)
+    view = await kyc.regions(principal, seen)
+    if not settings.china_enabled:  # ADR-105: China is hidden while it's switched off
+        view["regions"] = [r for r in view["regions"] if r["country"] != "CN"]
+        if view.get("suggested_country") == "CN":
+            view["suggested_country"] = None
+    return view
 
 
 @webhooks_router.post("/didit", summary="Didit results (signed)", include_in_schema=False)

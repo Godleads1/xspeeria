@@ -55,7 +55,6 @@ from app.domain.settlement_rules import (
     DISPATCH_MAX_ATTEMPTS,
     FUNDING_EXTENSION,
     FUNDING_WINDOW,
-    JURISDICTION,
     LEG_TRANSITIONS,
     PARTNER_VOCABULARY,
     REPLAY_WINDOW,
@@ -84,6 +83,7 @@ from app.services.deal_pause import deals_paused, refuse_if_paused
 from app.services.groups import complete_group
 from app.services.notifications import notify, notify_settlement
 from app.services.offers import money_text
+from app.services.pay_country import pay_country
 from app.services.queue import on_capacity_returned
 
 __all__ = ["IngestResult", "SettlementService", "settlement_view"]
@@ -328,8 +328,9 @@ class SettlementService:
             ),
         ]
         partners: dict[str, Partner] = {}
-        for _, _, _, currency, _ in plan:
-            jurisdiction = JURISDICTION.get(currency)
+        for _, funder, _, currency, _ in plan:
+            # ADR-105: the euro leg goes to the bank of the euro country its payer is verified in.
+            jurisdiction = await pay_country(self._db, funder, currency)
             partner = (
                 await self._db.scalar(
                     select(Partner).where(

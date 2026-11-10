@@ -127,6 +127,23 @@ describe('Add payout account', () => {
     });
   });
 
+  it('ADR-105: the CNY tab appears only when the server offers the yuan', async () => {
+    await render(<AddPayoutAccountScreen source={fake()} onBack={jest.fn()} onAdded={jest.fn()} confirmWith={confirm} />);
+    expect(screen.queryByTestId('add-payout-currency-CNY')).toBeNull();
+    await render(
+      <AddPayoutAccountScreen source={fake()} onBack={jest.fn()} onAdded={jest.fn()} confirmWith={confirm} offered={async () => ['USD', 'CNY']} />,
+    );
+    await act(async () => undefined);
+    await fireEvent.press(screen.getByTestId('add-payout-currency-CNY'));
+    expect(screen.getByTestId('field-cnapsCode')).toBeTruthy();
+    expect(toNewAccount('CNY', { cnapsCode: '104100000004', bankName: 'Bank of China', accountNumber: '6217000010012345678' })).toEqual({
+      currency: 'CNY',
+      bank_name: 'Bank of China',
+      account_number: '6217000010012345678',
+      cnaps_code: '104100000004',
+    });
+  });
+
   it('checks the format, then confirms it’s you and sends the details', async () => {
     const src = fake();
     const onAdded = jest.fn();
@@ -288,5 +305,14 @@ describe('Choose payout accounts for a deal', () => {
   it('shows the outcome once the deal is ready or expired', async () => {
     await open(fake([acct()], deal({ preparation_state: 'expired' })));
     expect(screen.getByTestId('choose-status')).toHaveTextContent(/cancelled/);
+  });
+});
+
+describe('ADR-105: yuan payout accounts', () => {
+  it('the CNY form needs a 12-digit CNAPS code and a 16–19 digit number', () => {
+    const { validateBankForm } = jest.requireActual('../src/features/profile/data');
+    expect(validateBankForm('CNY', { cnapsCode: '104100000004', bankName: 'Bank of China', accountNumber: '6217000010012345678' })).toEqual({});
+    const bad = validateBankForm('CNY', { cnapsCode: '1041', bankName: 'Bank of China', accountNumber: '621700001001234' });
+    expect(Object.keys(bad).sort()).toEqual(['accountNumber', 'cnapsCode']);
   });
 });

@@ -534,4 +534,5 @@ class TestPackageRegistration:
             "0046_official_rates.py",  # automatic CBN rates (ADR-102)
             "0047_help_requests.py",  # Need-help thread (ADR-103)
             "0048_identity_redo.py",  # Redo identity check (ADR-104)
+            "0049_germany_france_china.py",  # Germany, France, China (ADR-105)
         ]

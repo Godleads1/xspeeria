@@ -39,6 +39,18 @@ describe('choose a country to verify', () => {
     expect(screen.getByText('Needed to pay in USD')).toBeTruthy();
   });
 
+  it('ADR-105: shows Germany and France; China only when the server lists it', async () => {
+    await render(<ChooseCountryScreen source={{ get: async () => REGIONS }} onBack={jest.fn()} onChoose={jest.fn()} />);
+    await flush();
+    expect(screen.getByLabelText('Germany, pay in EUR: Not verified')).toBeTruthy();
+    expect(screen.getByLabelText('France, pay in EUR: Not verified')).toBeTruthy();
+    expect(screen.queryByTestId('country-CN')).toBeNull();
+    const withChina: ServerRegions = { ...REGIONS, regions: [...REGIONS.regions, { country: 'CN', status: 'not_started' }] };
+    await render(<ChooseCountryScreen source={{ get: async () => withChina }} onBack={jest.fn()} onChoose={jest.fn()} />);
+    await flush();
+    expect(screen.getByLabelText('China, pay in CNY: Not verified')).toBeTruthy();
+  });
+
   it('opens the chosen country’s check', async () => {
     const onChoose = jest.fn();
     await render(<ChooseCountryScreen source={{ get: async () => REGIONS }} onBack={jest.fn()} onChoose={onChoose} />);

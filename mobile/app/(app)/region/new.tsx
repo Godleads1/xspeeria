@@ -14,6 +14,9 @@ const PLACE = {
   GB: { name: k("United Kingdom"), currency: 'GBP' },
   US: { name: k("United States of America"), currency: 'USD' },
   CA: { name: k("Canada"), currency: 'CAD' },
+  DE: { name: k("Germany"), currency: 'EUR' },
+  FR: { name: k("France"), currency: 'EUR' },
+  CN: { name: k("China"), currency: 'CNY' },
 } as const;
 
 /**

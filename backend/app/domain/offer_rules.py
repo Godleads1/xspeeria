@@ -23,6 +23,8 @@ __all__ = [
     "with_derived",
     "CAD_PER_USD",
     "CAD_PER_USD_AS_OF",
+    "CNY_PER_USD",
+    "CNY_PER_USD_AS_OF",
     "RATE_PLACES",
     "SCALE",
     "OfferInputError",
@@ -38,9 +40,11 @@ __all__ = [
 #: `app.cli.currency_definitions` command; permanent under CD3).
 CURRENCY_DEF_VERSION = "iso4217-v1"
 #: ISO 4217 minor units for the launch currencies.
-SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2}
+SCALE: dict[str, int] = {"NGN": 2, "USD": 2, "GBP": 2, "EUR": 2, "CAD": 2, "CNY": 2}
 #: CAD: Canada joins the MVP corridors (ADR-100); its ceiling is derived from the USD one (ADR-101).
-FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD"})
+#: CNY: China joins the corridors behind a switch (ADR-105, ``CHINA_ENABLED``, off until legal
+#: clearance); its ceiling is derived from the USD one too.
+FOREIGN = frozenset({"USD", "GBP", "EUR", "CAD", "CNY"})
 
 #: ADR-020 — CBN official rate snapshot, 17 Oct 2026: the maximum allowed rate. ADR-102: used
 #: until the automatic feed has stored its first rate (``services.official_rates``).
@@ -56,16 +60,24 @@ OFFICIAL_RATE_AS_OF = "2026-10-17"
 #: half to even to the kobo. Refreshing the USD ceiling or this rate changes CAD with it.
 CAD_PER_USD = Decimal("1.4113")
 CAD_PER_USD_AS_OF = "2026-11-06"
+#: ADR-105 (owner, 2026-11-10: "Work out from USD"): the CNY ceiling = the USD ceiling ÷ the
+#: People's Bank of China USD/CNY central parity (CNY per 1 USD), rounded half to even.
+#: 6.7167 was the 10 Nov 2026 fixing as reported by FXStreet; check it against PBOC/CFETS
+#: before China is switched on.
+CNY_PER_USD = Decimal("6.7167")
+CNY_PER_USD_AS_OF = "2026-11-10"
 
 
 def with_derived(fed: dict[str, Decimal]) -> dict[str, Decimal]:
-    """Add the ceilings worked out from others: CAD from USD (ADR-101). No USD, no CAD."""
+    """Add the ceilings worked out from others: CAD (ADR-101) and CNY (ADR-105) from USD.
+    No USD, no CAD or CNY."""
     out = dict(fed)
     usd = out.get("USD")
-    if usd is not None:
-        out["CAD"] = (usd / CAD_PER_USD).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
-    else:
-        out.pop("CAD", None)
+    for currency, per_usd in (("CAD", CAD_PER_USD), ("CNY", CNY_PER_USD)):
+        if usd is not None:
+            out[currency] = (usd / per_usd).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        else:
+            out.pop(currency, None)
     return out
 
 
@@ -78,6 +90,7 @@ MINIMUM_MINOR: dict[str, int] = {
     "GBP": 1_000,
     "EUR": 1_000,
     "CAD": 1_000,
+    "CNY": 1_000,
 }
 
 #: ADR-031 — offer and marketplace requests per signed-in user per minute (product owner,
@@ -118,11 +131,12 @@ class Pair:
 
 
 def parse_pair(source: str, target: str) -> Pair:
-    """NGN with one of USD/GBP/EUR, in either direction."""
+    """NGN with one of the foreign currencies, in either direction."""
     s, t = source.upper(), target.upper()
     if s == t or "NGN" not in (s, t) or (s if t == "NGN" else t) not in FOREIGN:
         raise OfferInputError(
-            FORMAT_ERROR, "Offers exchange naira with US dollars, pounds or euros."
+            FORMAT_ERROR,
+            "Offers exchange naira with US dollars, pounds, euros, Canadian dollars or yuan.",
         )
     return Pair(s, t)
 

@@ -648,13 +648,13 @@ export interface StaffWorkFeed {
 }
 
 export type KycQueue = 'held' | 'in_didit' | 'decided';
-export type KycReviewReason = 'DUPLICATE_IDENTITY' | 'IDENTITY_MISMATCH' | 'CHECKS_INCOMPLETE';
+export type KycReviewReason = 'DUPLICATE_IDENTITY' | 'IDENTITY_MISMATCH' | 'CHECKS_INCOMPLETE' | 'REDO_NEW_DOCUMENT';
 export interface KycRow {
   id: string;
   ref: string;
   customer: string;
   customer_email: string;
-  country: 'NG' | 'GB' | 'US' | 'CA';
+  country: 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN';
   status: 'under_review' | 'approved' | 'rejected';
   review_reason: KycReviewReason | null;
   awaiting_second: boolean;

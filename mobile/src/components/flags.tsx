@@ -25,6 +25,12 @@ const FLAG = {
   ghGold: '#FCD116',
   ghGreen: '#006B3F',
   black: '#000000',
+  deRed: '#DD0000',
+  deGold: '#FFCE00',
+  frBlue: '#002395',
+  frRed: '#ED2939',
+  cnRed: '#EE1C25',
+  cnYellow: '#FFFF00',
 } as const;
 
 function UsStripes(): ReactElement {
@@ -114,6 +120,33 @@ function art(code: string): ReactElement {
           <Rect y={8} width={24} height={8} fill={FLAG.ghGold} />
           <Rect y={16} width={24} height={8} fill={FLAG.ghGreen} />
           <Path d="M12 8.4l.95 2.9h3.05l-2.45 1.8.95 2.9L12 14.2 9.5 16l.95-2.9L8 11.3h3.05z" fill={FLAG.black} />
+        </>
+      );
+    // ADR-105: Germany and France (both pay euros) and China (yuan).
+    case 'DE':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.black} />
+          <Rect y={8} width={24} height={8} fill={FLAG.deRed} />
+          <Rect y={16} width={24} height={8} fill={FLAG.deGold} />
+        </>
+      );
+    case 'FR':
+      return (
+        <>
+          <Rect width={8} height={24} fill={FLAG.frBlue} />
+          <Rect x={8} width={8} height={24} fill={FLAG.white} />
+          <Rect x={16} width={8} height={24} fill={FLAG.frRed} />
+        </>
+      );
+    case 'CNY':
+      return (
+        <>
+          <Rect width={24} height={24} fill={FLAG.cnRed} />
+          <Path d="M7 4.5l1.1 3.3h3.5l-2.8 2 1.1 3.3L7 11.1l-2.9 2 1.1-3.3-2.8-2h3.5z" fill={FLAG.cnYellow} />
+          {[[13, 4], [15, 6.5], [15, 10], [13, 12.5]].map(([x, y]) => (
+            <Circle key={`${x}-${y}`} cx={x} cy={y} r={0.9} fill={FLAG.cnYellow} />
+          ))}
         </>
       );
     default:

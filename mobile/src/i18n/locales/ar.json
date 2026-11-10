@@ -1479,5 +1479,14 @@
  "I’ve finished the identity check": "أنهيت التحقق من الهوية",
  "Start identity check": "بدء التحقق من الهوية",
  "Open the identity check again": "افتح التحقق من الهوية مرة أخرى",
- "Confirm it’s you with your ID": "أكّد أنك أنت باستخدام هويتك"
+ "Confirm it’s you with your ID": "أكّد أنك أنت باستخدام هويتك",
+ "CNAPS Code": "رمز CNAPS",
+ "Card or Account Number": "رقم البطاقة أو الحساب",
+ "China": "الصين",
+ "Chinese Yuan": "اليوان الصيني",
+ "Chinese bank card and account numbers are 16 to 19 digits": "أرقام البطاقات والحسابات المصرفية الصينية من 16 إلى 19 رقمًا",
+ "France": "فرنسا",
+ "Germany": "ألمانيا",
+ "The CNAPS code is 12 digits": "رمز CNAPS مكوّن من 12 رقمًا",
+ "Germany and France": "ألمانيا وفرنسا"
 }

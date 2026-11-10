@@ -10,7 +10,7 @@
  * straight back out.
  */
 
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { messageFor } from '../../api/client';
@@ -26,6 +26,8 @@ import { tr } from "../../i18n";
 
 /** Currencies with an approved account form: EUR by IBAN (ADR-099), CAD (ADR-100). */
 export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD'] as const;
+/** ADR-105: shown only when the server offers them (China is switched off until then). */
+export const SWITCHED_CURRENCIES = ['CNY'] as const;
 
 export function toNewAccount(currency: string, v: BankFormValues): NewPayoutAccount {
   const out: NewPayoutAccount = {
@@ -38,6 +40,7 @@ export function toNewAccount(currency: string, v: BankFormValues): NewPayoutAcco
   if (v.accountType) out.account_type = v.accountType;
   if (v.institutionNumber) out.institution_number = v.institutionNumber.trim();
   if (v.transitNumber) out.transit_number = v.transitNumber.trim();
+  if (v.cnapsCode) out.cnaps_code = v.cnapsCode.trim();
   return out;
 }
 
@@ -47,6 +50,7 @@ export function AddPayoutAccountScreen({
   onBack,
   onAdded,
   confirmWith = confirmIdentity,
+  offered,
 }: {
   source: PayoutSource;
   /** Tests inject this. */
@@ -54,7 +58,24 @@ export function AddPayoutAccountScreen({
   initialCurrency?: string;
   onBack: () => void;
   onAdded: () => void;
+  /** The currencies the server offers now (its rate limits); adds the switched ones it lists. */
+  offered?: () => Promise<readonly string[]>;
 }): ReactElement {
+  const [currencies, setCurrencies] = useState<readonly string[]>(PAYOUT_CURRENCIES);
+  useEffect(() => {
+    if (!offered) return undefined;
+    let on = true;
+    offered().then(
+      (codes) => {
+        const extra = SWITCHED_CURRENCIES.filter((c) => codes.includes(c));
+        if (on && extra.length) setCurrencies([...PAYOUT_CURRENCIES, ...extra]);
+      },
+      () => undefined, // not offered: keep the usual list
+    );
+    return () => {
+      on = false;
+    };
+  }, [offered]);
   const [currency, setCurrency] = useState<string>(
     (PAYOUT_CURRENCIES as readonly string[]).includes(initialCurrency) ? initialCurrency : 'NGN',
   );
@@ -194,7 +215,7 @@ export function AddPayoutAccountScreen({
       <Text style={styles.intro}>{tr("It can be your own account or someone else’s, for example a school’s. Your bank confirms the account holder’s name. Only the last 4 digits are kept visible.")}</Text>
 
       <View style={styles.tabs} accessibilityRole="tablist">
-        {PAYOUT_CURRENCIES.map((c) => (
+        {currencies.map((c) => (
           <Pressable
             key={c}
             testID={`add-payout-currency-${c}`}

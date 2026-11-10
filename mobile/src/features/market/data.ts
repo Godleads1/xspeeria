@@ -22,6 +22,8 @@ export const BUYABLE: readonly Currency[] = [
   { code: 'GBP', name: k("British Pound"), flag: '🇬🇧' },
   { code: 'CAD', name: k("Canadian Dollar"), flag: '🇨🇦' },
   { code: 'EUR', name: k("Euro"), flag: '🇪🇺' },
+  // ADR-105: shown only when the server offers the yuan (China is switched off until then).
+  { code: 'CNY', name: k("Chinese Yuan"), flag: '🇨🇳' },
   { code: 'AUD', name: k("Australian Dollar"), flag: '🇦🇺' },
 ];
 

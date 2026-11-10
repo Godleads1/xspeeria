@@ -589,7 +589,9 @@ async def test_uk_check_with_a_uk_id_is_added_to_the_same_account(k: K) -> None:
             {"country": "NG", "status": "approved"},
             {"country": "GB", "status": "approved"},
             {"country": "US", "status": "not_started"},
-            {"country": "CA", "status": "not_started"},  # ADR-100
+            {"country": "CA", "status": "not_started"},
+            {"country": "DE", "status": "not_started"},
+            {"country": "FR", "status": "not_started"},  # ADR-100
         ],
         "suggested_country": None,
     }
@@ -637,10 +639,10 @@ async def test_one_open_check_at_a_time_across_countries(k: K) -> None:
 async def test_country_input_is_checked(k: K) -> None:
     token, _ = await _user(k)
     h = {"Authorization": f"Bearer {token}"}
-    for body in ({"country": "FR"}, {"country": "gb"}, {"country": "GB", "user_id": "x"}):
+    for body in ({"country": "JP"}, {"country": "gb"}, {"country": "GB", "user_id": "x"}):
         r = await k.env.client.post("/api/v1/kyc/cases", json=body, headers=h)
         assert r.status_code == 422, body
-    r = await k.env.client.get("/api/v1/kyc/cases/current?country=FR", headers=h)
+    r = await k.env.client.get("/api/v1/kyc/cases/current?country=JP", headers=h)
     assert r.status_code == 422
 
 
@@ -662,7 +664,8 @@ async def test_new_country_is_only_suggested(db_settings: Settings, clean: None)
         assert await _suggested(x, token, "GB") == "GB"
         assert await _suggested(x, token, "gb") == "GB"
         assert await _suggested(x, token, "NG") is None  # already verified there
-        assert await _suggested(x, token, "FR") is None  # not a supported country
+        assert await _suggested(x, token, "JP") is None  # not a supported country
+        assert await _suggested(x, token, "CN") is None  # China is switched off (ADR-105)
         assert await _suggested(x, token, "XXX") is None
         assert await _suggested(x, token, None) is None
         # A suggestion grants nothing and stores nothing.

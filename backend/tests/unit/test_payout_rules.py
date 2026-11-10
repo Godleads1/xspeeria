@@ -151,3 +151,42 @@ class TestCanadianAccount:
             parse_account_details("CAD", "RBC", "1234567", "021000021", None, None, "003", "12345")
         with pytest.raises(OfferInputError):
             parse_account_details("NGN", "GTBank", "0123456789", None, None, None, "003", None)
+
+
+class TestCny:
+    """ADR-105 (owner 2026-11-10): bank name, 16–19 digit card/account number, 12-digit CNAPS."""
+
+    def test_valid(self) -> None:
+        d = parse_account_details(
+            "cny", "Bank of China", "6217000010012345678", None, None, None,
+            cnaps_code="104100000004",
+        )  # fmt: skip
+        assert (d.currency, d.bank_code, d.last4) == ("CNY", "104100000004", "5678")
+
+    @pytest.mark.parametrize(
+        ("number", "cnaps", "extra"),
+        [
+            ("621700001001234", "104100000004", {}),  # 15 digits
+            ("62170000100123456789", "104100000004", {}),  # 20 digits
+            ("6217000010012345678", None, {}),
+            ("6217000010012345678", "10410000000", {}),  # 11-digit CNAPS
+            ("6217000010012345678", "104100000004", {"sort_code": "123456"}),
+        ],
+    )
+    def test_refused(self, number: str, cnaps: str | None, extra: dict[str, str]) -> None:
+        with pytest.raises(OfferInputError):
+            parse_account_details(
+                "CNY",
+                "Bank of China",
+                number,
+                None,
+                extra.get("sort_code"),
+                None,
+                cnaps_code=cnaps,
+            )
+
+    def test_cnaps_only_for_cny(self) -> None:
+        with pytest.raises(OfferInputError):
+            parse_account_details(
+                "NGN", "Zenith Bank", "0123456789", None, None, None, cnaps_code="104100000004"
+            )

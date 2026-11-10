@@ -30,7 +30,7 @@ export const OFFICIAL_RATE: Readonly<Record<string, number>> = {
 };
 
 /** Currencies whose ceiling is derived, not published by the CBN (ADR-101). */
-export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD']);
+export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD', 'CNY']);
 
 /** Date of the snapshot, shown beside the rate. */
 export const OFFICIAL_RATE_AS_OF = '17 Oct 2026';

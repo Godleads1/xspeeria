@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.core.config import get_settings
 from app.db.session import build_engine
-from app.domain.settlement_rules import JURISDICTION
 from app.providers.pretend_bank import PRETEND_PARTNERS
 
 __all__ = ["ensure_pretend_partners"]
@@ -26,7 +25,7 @@ __all__ = ["ensure_pretend_partners"]
 async def ensure_pretend_partners(conn: AsyncConnection) -> list[str]:
     """Insert missing pretend partners; return the codes added."""
     added: list[str] = []
-    for currency, (code, name) in sorted(PRETEND_PARTNERS.items()):
+    for (currency, jurisdiction), (code, name) in sorted(PRETEND_PARTNERS.items()):
         exists = await conn.scalar(text("SELECT 1 FROM partners WHERE code = :c"), {"c": code})
         if exists is None:
             await conn.execute(
@@ -38,7 +37,7 @@ async def ensure_pretend_partners(conn: AsyncConnection) -> list[str]:
                     "id": uuid.uuid4(),
                     "code": code,
                     "name": name,
-                    "j": JURISDICTION[currency],
+                    "j": jurisdiction,
                     "cur": currency,
                 },
             )

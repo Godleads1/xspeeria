@@ -4,7 +4,15 @@ import { COUNTRY_FLAG, type ServerRegions } from '../../api/kycApi';
 import type { KycRegion } from '../profile/data';
 import { k } from "../../i18n";
 
-const NAME = { NG: 'Nigeria', GB: k("United Kingdom"), US: k("United States"), CA: k("Canada") } as const;
+const NAME = {
+  NG: 'Nigeria',
+  GB: k("United Kingdom"),
+  US: k("United States"),
+  CA: k("Canada"),
+  DE: k("Germany"),
+  FR: k("France"),
+  CN: k("China"),
+} as const;
 
 /** Approved and in-progress countries (ADR-042); refused, expired and untouched ones are not listed. */
 export function regionsFromServer(r: ServerRegions): KycRegion[] {

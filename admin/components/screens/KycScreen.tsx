@@ -38,8 +38,19 @@ export const REVIEW_REASON: Record<KycReviewReason, string> = {
   DUPLICATE_IDENTITY: 'Same person on another account',
   IDENTITY_MISMATCH: 'Doesn’t match the account’s identity',
   CHECKS_INCOMPLETE: 'Checks incomplete',
+  // ADR-104: a redo identity check on a different ID document than the approved one.
+  REDO_NEW_DOCUMENT: 'New identity check on a different ID',
 };
-export const COUNTRY_NAME: Record<string, string> = { NG: 'Nigeria', GB: 'United Kingdom', US: 'United States', CA: 'Canada' };
+export const COUNTRY_NAME: Record<string, string> = {
+  NG: 'Nigeria',
+  GB: 'United Kingdom',
+  US: 'United States',
+  CA: 'Canada',
+  // ADR-105
+  DE: 'Germany',
+  FR: 'France',
+  CN: 'China',
+};
 
 export function KycStatusChip({ row }: { row: Pick<KycRow, 'status' | 'review_reason' | 'awaiting_second'> }): ReactElement {
   if (row.status === 'approved') return <StatusChip label={tr('Approved')} tone="success" />;

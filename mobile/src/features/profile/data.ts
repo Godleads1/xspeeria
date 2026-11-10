@@ -148,6 +148,8 @@ export const DESTINATION_COUNTRIES: readonly DestinationCountry[] = [
   { name: k("United Kingdom"), currency: 'GBP', available: true },
   { name: k("United States"), currency: 'USD', available: true },
   { name: k("Canada"), currency: 'CAD', available: true },
+  // ADR-105: Germany and France both take euro accounts (IBAN), so one row.
+  { name: k("Germany and France"), currency: 'EUR', available: true },
 ];
 
 export function searchCountries(list: readonly DestinationCountry[], query: string): DestinationCountry[] {
@@ -163,6 +165,7 @@ export type BankFieldKey =
   | 'sortCode'
   | 'institutionNumber'
   | 'transitNumber'
+  | 'cnapsCode'
   | 'bankName'
   | 'accountNumber'
   | 'accountType';
@@ -207,6 +210,12 @@ export const BANK_FORMS: Readonly<Record<string, readonly BankField[]>> = {
     { key: 'transitNumber', label: k("Transit Number"), kind: 'digits', maxLength: 5 },
     { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
     { key: 'accountNumber', label: k("Account Number"), kind: 'digits', maxLength: 17 },
+  ],
+  // ADR-105 (owner, 2026-11-10): bank name, 16–19 digit card or account number, CNAPS code.
+  CNY: [
+    { key: 'cnapsCode', label: k("CNAPS Code"), kind: 'digits', maxLength: 12 },
+    { key: 'bankName', label: k("Bank Name"), kind: 'text', maxLength: 60 },
+    { key: 'accountNumber', label: k("Card or Account Number"), kind: 'digits', maxLength: 19 },
   ],
 };
 
@@ -265,6 +274,7 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
     if (f.key === 'sortCode' && !/^\d{6}$/.test(value)) errors.sortCode = tr("Sort code is 6 digits");
     if (f.key === 'institutionNumber' && !/^\d{3}$/.test(value)) errors.institutionNumber = tr("Institution number is 3 digits");
     if (f.key === 'transitNumber' && !/^\d{5}$/.test(value)) errors.transitNumber = tr("Transit number is 5 digits");
+    if (f.key === 'cnapsCode' && !/^\d{12}$/.test(value)) errors.cnapsCode = tr("The CNAPS code is 12 digits");
     if (f.key === 'accountType' && !(ACCOUNT_TYPES as readonly string[]).includes(value)) errors.accountType = tr("Choose an account type");
     if (f.key === 'accountNumber') {
       if (currency === 'NGN' && !/^\d{10}$/.test(value)) errors.accountNumber = tr("Nigerian account numbers are 10 digits");
@@ -272,6 +282,7 @@ export function validateBankForm(currency: string, v: BankFormValues): Partial<R
       if (currency === 'USD' && !/^\d{4,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
       if (currency === 'EUR' && !isValidIban(normalizeIban(value))) errors.accountNumber = tr("Enter a valid IBAN");
       if (currency === 'CAD' && !/^\d{1,17}$/.test(value)) errors.accountNumber = tr("Enter a valid account number");
+      if (currency === 'CNY' && !/^\d{16,19}$/.test(value)) errors.accountNumber = tr("Chinese bank card and account numbers are 16 to 19 digits");
     }
   }
   return errors;

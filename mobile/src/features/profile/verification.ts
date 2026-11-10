@@ -29,6 +29,9 @@ export function normalisePhone(input: string): string | null {
   if (compact.startsWith('+234') && compact.length !== 14) return null; // NG: +234 + 10 digits
   if (compact.startsWith('+44') && compact.length !== 13) return null; // UK: +44 + 10 digits
   if (compact.startsWith('+1') && !/^\+1[2-9]\d{9}$/.test(compact)) return null; // US, Canada: +1 + 10 digits
+  if (compact.startsWith('+33') && !/^\+33[1-9]\d{8}$/.test(compact)) return null; // France: +33 + 9 digits
+  if (compact.startsWith('+86') && !/^\+861\d{10}$/.test(compact)) return null; // China mobile: +86 1 + 10 digits
+  if (compact.startsWith('+49') && !/^\+49[1-9]\d{6,12}$/.test(compact)) return null; // Germany: 7 to 13 digits
   return compact;
 }
 
