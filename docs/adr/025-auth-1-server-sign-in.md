@@ -65,10 +65,11 @@ passkeys, PIN reset, email verification, KYC, RLS, Redis, a real SMS provider, a
 
 ## 4. Known limits (to close before production)
 
-- The rate limiter is in-process: correct for one server instance only. Redis (or an
-  equivalent shared store) is required before running more than one instance.
-- Client network address is taken from the direct connection; behind a proxy, a trusted-proxy
-  rule must be configured or every user shares one address.
+- ~~The rate limiter is in-process.~~ Closed by ADR-080: counts are kept in PostgreSQL, shared
+  by every server.
+- ~~Client network address is taken from the direct connection.~~ Closed by ADR-109: behind a
+  proxy listed in `TRUSTED_PROXIES`, its `X-Forwarded-For` is read from the right; otherwise
+  the direct connection, as before.
 - `AUTH_400_EMAIL_TAKEN` reveals that an email is registered (contract behaviour), limited by
   the request limits.
 - The JWT signing key comes from configuration (`JWT_SECRET_KEY`, at least 32 characters); a

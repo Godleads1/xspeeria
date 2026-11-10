@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth_deps import get_auth_runtime, get_db_session
 from app.api.v1.offers import Verified
+from app.core.client_address import client_address
 from app.core.exceptions import AppError
 from app.schemas.settlement import SettlementResponse
 from app.services.auth import AuthRuntime
@@ -74,7 +75,7 @@ async def partner_webhook(
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> Any:
     # Unsigned traffic is still kept as evidence, so bound how fast anyone can add it.
-    address = request.client.host if request.client else "unknown"
+    address = client_address(request)  # ADR-109: behind a trusted proxy, the sender
     if not await runtime.user_limiter.hit(f"webhook:{address}", runtime.clock()):
         raise AppError("AUTH_429_RATE_LIMITED", "Too many requests.", status_code=429)
     declared = request.headers.get("content-length")

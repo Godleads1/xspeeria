@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth_deps import CurrentPrincipal, get_auth_runtime, get_db_session
 from app.api.china import refuse_china_if_off
 from app.api.deps import get_app_settings
+from app.core.client_address import client_address
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.services.auth import AuthRuntime, Principal
@@ -148,7 +149,7 @@ async def didit_webhook(
     kyc: Kyc,
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
 ) -> Any:
-    address = request.client.host if request.client else "unknown"
+    address = client_address(request)  # ADR-109: behind a trusted proxy, the sender
     if not await runtime.user_limiter.hit(f"kyc-webhook:{address}", runtime.clock()):
         raise AppError("AUTH_429_RATE_LIMITED", "Too many requests.", status_code=429)
     declared = request.headers.get("content-length")
