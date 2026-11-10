@@ -1512,5 +1512,16 @@
  "Wallet Phone Number": "Número de telefone da carteira",
  "Zambia": "Zâmbia",
  "Zimbabwe": "Zimbabué",
- "{{kind}} in Zimbabwe": "{{kind}} no Zimbabué"
+ "{{kind}} in Zimbabwe": "{{kind}} no Zimbabué",
+ "Egyptian Pound": "Libra egípcia",
+ "South African Rand": "Rand sul-africano",
+ "Moroccan Dirham": "Dirham marroquino",
+ "Ethiopian Birr": "Birr etíope",
+ "Kenyan Shilling": "Xelim queniano",
+ "West African CFA Franc": "Franco CFA da África Ocidental",
+ "Ghanaian Cedi": "Cedi ganês",
+ "Ugandan Shilling": "Xelim ugandense",
+ "Zambian Kwacha": "Kwacha zambiano",
+ "Tanzanian Shilling": "Xelim tanzaniano",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "Taxa máxima: NGN {{official}} por {{code}}, calculada a partir de uma taxa do CBN e de uma taxa de câmbio publicada. A sua taxa deve ser esta ou inferior."
 }

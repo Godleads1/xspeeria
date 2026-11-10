@@ -30,7 +30,11 @@ export const OFFICIAL_RATE: Readonly<Record<string, number>> = {
 };
 
 /** Currencies whose ceiling is derived, not published by the CBN (ADR-101). */
-export const DERIVED_CEILING: ReadonlySet<string> = new Set(['CAD', 'CNY']);
+export const DERIVED_CEILING: ReadonlySet<string> = new Set([
+  'CAD', 'CNY',
+  // ADR-107: the USD limit ÷ units per dollar (KRA rates), XOF from the euro's fixed rate.
+  'EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS',
+]);
 
 /** Date of the snapshot, shown beside the rate. */
 export const OFFICIAL_RATE_AS_OF = '17 Oct 2026';

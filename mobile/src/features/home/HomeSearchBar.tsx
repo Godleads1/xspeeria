@@ -4,7 +4,7 @@
  */
 
 import { useState, type ReactElement } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '../../components/icons';
 import { tr } from '../../i18n';
@@ -41,7 +41,7 @@ export function HomeSearchBar({
             onChangeText={(t) => setQuery(t.slice(0, 40))}
             onSubmitEditing={() => onSearch({ query })}
             returnKeyType="search"
-            placeholder={tr('Search {{currencies}} offers', { currencies: chips.join(', ') })}
+            placeholder={tr('Search {{currencies}} offers', { currencies: chips.length > 4 ? `${chips.slice(0, 4).join(', ')}…` : chips.join(', ') })}
             placeholderTextColor={color.text.secondary}
             autoCorrect={false}
             autoCapitalize="none"
@@ -58,7 +58,8 @@ export function HomeSearchBar({
           <Icon name="sort" color={color.text.onFill} size={22} />
         </Pressable>
       </View>
-      <View style={styles.chips}>
+      {/* Up to 15 currencies (ADR-107): the chips scroll sideways rather than run off screen. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="home-search-chips" contentContainerStyle={styles.chips}>
         {chips.map((c) => (
           <Pressable
             key={c}
@@ -71,7 +72,7 @@ export function HomeSearchBar({
             <Text style={styles.chipText}>{c}</Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }

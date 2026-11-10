@@ -1512,5 +1512,16 @@
  "Wallet Phone Number": "Número de teléfono de la billetera",
  "Zambia": "Zambia",
  "Zimbabwe": "Zimbabue",
- "{{kind}} in Zimbabwe": "{{kind}} en Zimbabue"
+ "{{kind}} in Zimbabwe": "{{kind}} en Zimbabue",
+ "Egyptian Pound": "Libra egipcia",
+ "South African Rand": "Rand sudafricano",
+ "Moroccan Dirham": "Dírham marroquí",
+ "Ethiopian Birr": "Birr etíope",
+ "Kenyan Shilling": "Chelín keniano",
+ "West African CFA Franc": "Franco CFA de África Occidental",
+ "Ghanaian Cedi": "Cedi ghanés",
+ "Ugandan Shilling": "Chelín ugandés",
+ "Zambian Kwacha": "Kwacha zambiano",
+ "Tanzanian Shilling": "Chelín tanzano",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "Tipo máximo: {{official}} NGN por {{code}}, calculado a partir de un tipo del CBN y un tipo de cambio publicado. Tu tipo debe ser este o inferior."
 }

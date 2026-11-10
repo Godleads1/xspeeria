@@ -1512,5 +1512,16 @@
  "Wallet Phone Number": "የዋሌት ስልክ ቁጥር",
  "Zambia": "ዛምቢያ",
  "Zimbabwe": "ዚምባብዌ",
- "{{kind}} in Zimbabwe": "{{kind}} በዚምባብዌ"
+ "{{kind}} in Zimbabwe": "{{kind}} በዚምባብዌ",
+ "Egyptian Pound": "የግብፅ ፓውንድ",
+ "South African Rand": "የደቡብ አፍሪካ ራንድ",
+ "Moroccan Dirham": "የሞሮኮ ዲርሃም",
+ "Ethiopian Birr": "የኢትዮጵያ ብር",
+ "Kenyan Shilling": "የኬንያ ሽልንግ",
+ "West African CFA Franc": "የምዕራብ አፍሪካ ሴፋ ፍራንክ",
+ "Ghanaian Cedi": "የጋና ሴዲ",
+ "Ugandan Shilling": "የኡጋንዳ ሽልንግ",
+ "Zambian Kwacha": "የዛምቢያ ክዋቻ",
+ "Tanzanian Shilling": "የታንዛኒያ ሽልንግ",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "ከፍተኛ ተመን፦ NGN {{official}} በ{{code}}፣ ከCBN ተመንና ከታተመ የምንዛሬ ተመን የተሰላ። የእርስዎ ተመን ይህ ወይም ከዚህ ያነሰ መሆን አለበት።"
 }

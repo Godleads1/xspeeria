@@ -159,6 +159,7 @@ function art(code: string): ReactElement {
           ))}
         </>
       );
+    case 'EGP':
     case 'EG':
       return (
         <>
@@ -167,6 +168,7 @@ function art(code: string): ReactElement {
           <Rect y={16} width={24} height={8} fill={FLAG.black} />
         </>
       );
+    case 'ZAR':
     case 'ZA':
       return (
         <>
@@ -178,6 +180,7 @@ function art(code: string): ReactElement {
           <Path d="M0 7.5 L6 12 L0 16.5 Z" fill={FLAG.black} />
         </>
       );
+    case 'MAD':
     case 'MA':
       return (
         <>
@@ -194,6 +197,7 @@ function art(code: string): ReactElement {
           <Circle cx={12} cy={12} r={5} fill={FLAG.afBlue} />
         </>
       );
+    case 'KES':
     case 'KE':
       return (
         <>
@@ -204,6 +208,8 @@ function art(code: string): ReactElement {
           <Path d="M12 4.5 C15 8 15 16 12 19.5 C9 16 9 8 12 4.5 Z" fill={FLAG.afRed} stroke={FLAG.black} strokeWidth={0.6} />
         </>
       );
+  // West African CFA franc: Senegal is the Xspeeria corridor (ADR-107).
+    case 'XOF':
     case 'SN':
       return (
         <>
@@ -231,6 +237,7 @@ function art(code: string): ReactElement {
           <Path d="M0 0 L11 12 L0 24 Z" fill={FLAG.white} stroke={FLAG.black} strokeWidth={0.6} />
         </>
       );
+    case 'UGX':
     case 'UG':
       return (
         <>
@@ -240,6 +247,7 @@ function art(code: string): ReactElement {
           <Circle cx={12} cy={12} r={4} fill={FLAG.white} />
         </>
       );
+    case 'ZMW':
     case 'ZM':
       return (
         <>
@@ -249,6 +257,7 @@ function art(code: string): ReactElement {
           <Rect x={20.5} y={10} width={3.5} height={14} fill={FLAG.zmOrange} />
         </>
       );
+    case 'TZS':
     case 'TZ':
       return (
         <>

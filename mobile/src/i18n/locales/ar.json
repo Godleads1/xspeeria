@@ -1512,5 +1512,16 @@
  "Wallet Phone Number": "رقم هاتف المحفظة",
  "Zambia": "زامبيا",
  "Zimbabwe": "زيمبابوي",
- "{{kind}} in Zimbabwe": "{{kind}} في زيمبابوي"
+ "{{kind}} in Zimbabwe": "{{kind}} في زيمبابوي",
+ "Egyptian Pound": "الجنيه المصري",
+ "South African Rand": "الراند الجنوب أفريقي",
+ "Moroccan Dirham": "الدرهم المغربي",
+ "Ethiopian Birr": "البير الإثيوبي",
+ "Kenyan Shilling": "الشلن الكيني",
+ "West African CFA Franc": "فرنك غرب أفريقيا (CFA)",
+ "Ghanaian Cedi": "السيدي الغاني",
+ "Ugandan Shilling": "الشلن الأوغندي",
+ "Zambian Kwacha": "الكواشا الزامبية",
+ "Tanzanian Shilling": "الشلن التنزاني",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "الحد الأقصى للسعر: {{official}} نيرة لكل {{code}}، محسوب من سعر البنك المركزي النيجيري وسعر صرف منشور. يجب أن يكون سعرك هذا أو أقل."
 }

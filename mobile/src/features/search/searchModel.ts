@@ -12,12 +12,18 @@ import { k, tr } from '../../i18n';
 /**
  * Currencies with an official rate limit (ADR-020). CAD has one since ADR-101 (owner
  * 2026-11-10: "Show CAD, and CNY when on", replacing the 2026-10-21 "no CAD chip"); the yuan
- * only when the server offers it (ADR-105). See `shownSearchCurrencies`.
+ * (ADR-105) and the African currencies (ADR-107) only when the server offers them. See
+ * `shownSearchCurrencies`.
  */
-export const SEARCH_CURRENCIES = ['USD', 'GBP', 'EUR', 'CAD', 'CNY'] as const;
+export const SEARCH_CURRENCIES = [
+  'USD', 'GBP', 'EUR', 'CAD', 'CNY',
+  'EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS',
+] as const;
 export type SearchCurrency = (typeof SEARCH_CURRENCIES)[number];
 /** Shown only when the server lists them (switched off until then). */
-const SWITCHED: ReadonlySet<string> = new Set(['CNY']);
+const SWITCHED: ReadonlySet<string> = new Set([
+  'CNY', 'EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS',
+]);
 
 /**
  * The chips to show. `offered`: the currencies with a rate limit on the server now (server
