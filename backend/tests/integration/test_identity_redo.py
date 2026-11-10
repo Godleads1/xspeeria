@@ -236,3 +236,71 @@ async def test_the_purpose_of_a_check_cannot_be_changed(
             "UPDATE kyc_cases SET purpose = 'redo' WHERE user_id = CAST(:u AS uuid)",
             u=uid,
         )
+
+
+# --- Forgot PIN (owner 2026-11-10: "Redo check, same ID") ----------------------------------
+
+
+async def _pin_reset_check(k: K, phone: str = OWNER[0]) -> dict[str, Any]:
+    k.env.clock.advance(seconds=61)
+    assert (await k.env.post("/auth/pin-reset/start", {"phone": phone})).status_code == 202
+    r = await k.env.post(
+        "/auth/pin-reset/verify", {"phone": phone, "code": k.env.sms.last_code_for(phone)}
+    )
+    assert r.status_code == 200, r.text
+    body: dict[str, Any] = r.json()
+    return body
+
+
+async def test_forgot_pin_uses_the_redo_check_and_the_same_id_resets_the_pin(
+    db_settings: Settings, k: K, boss: AsyncClient
+) -> None:
+    _, uid = await _ready(k, boss)
+    check = await _pin_reset_check(k)
+    assert (check["purpose"], check["method"], check["email_hint"]) == ("pin_reset", "kyc", None)
+    cid = check["check_id"]
+    # Not finished yet: no new PIN.
+    r = await k.env.post("/auth/pin-reset/confirm", {"check_id": cid, "new_pin": "736195"})
+    assert (r.status_code, _code(r)) == (409, "AUTH_409_FACE_CHECK_NOT_STARTED")
+    assert (await k.env.post(f"/auth/checks/{cid}/kyc")).status_code == 200
+    r = await k.env.post("/auth/pin-reset/confirm", {"check_id": cid, "new_pin": "736195"})
+    assert (r.status_code, _code(r)) == (409, "AUTH_409_FACE_CHECK_PENDING")
+    # Same passport: it counts at once, and the new PIN is saved.
+    r = await k.post_webhook(_approved(k.didit.sessions[uid], uid))
+    assert r.json()["verdict"] == "APPLIED"
+    r = await k.env.post("/auth/pin-reset/confirm", {"check_id": cid, "new_pin": "736195"})
+    assert r.status_code == 204, r.text
+    assert await _cases(db_settings, uid) == "standard:expired,redo:approved"
+    assert await _sql(
+        db_settings,
+        "SELECT identity_redo_requested_at IS NULL FROM users WHERE id = CAST(:u AS uuid)",
+        u=uid,
+    )
+    # The new PIN works; the next reset is back to the face check.
+    assert (await k.env.login(OWNER[0], pin="736195", trusted=False)).status_code == 200
+    assert (await _pin_reset_check(k))["method"] == "face"
+
+
+async def test_forgot_pin_with_another_id_waits_for_two_staff(
+    db_settings: Settings, k: K, boss: AsyncClient
+) -> None:
+    _, uid = await _ready(k, boss)
+    cid = (await _pin_reset_check(k))["check_id"]
+    assert (await k.env.post(f"/auth/checks/{cid}/kyc")).status_code == 200
+    r = await k.post_webhook(_approved(k.didit.sessions[uid], uid, document="B99999999"))
+    assert r.json()["verdict"] == "APPLIED"
+    r = await k.env.post("/auth/pin-reset/confirm", {"check_id": cid, "new_pin": "736195"})
+    assert (r.status_code, _code(r)) == (409, "AUTH_409_KYC_IN_REVIEW")
+    # The PIN is unchanged until two staff approve.
+    assert (await k.env.login(OWNER[0], pin="736195", trusted=False)).status_code == 401
+
+
+async def test_without_a_redo_request_forgot_pin_stays_on_the_face_check(
+    k: K, boss: AsyncClient
+) -> None:
+    await _verify(k, OWNER)
+    check = await _pin_reset_check(k)
+    assert check["method"] == "face"
+    # The redo check can't be opened for it.
+    r = await k.env.post(f"/auth/checks/{check['check_id']}/kyc")
+    assert _code(r) == "AUTH_401_INVALID_OTP"

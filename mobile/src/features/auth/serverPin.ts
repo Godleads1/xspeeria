@@ -21,6 +21,11 @@ export interface PinSource {
   /** The SMS code → the second check: an email code, or a face check after the identity check. */
   resetVerify(phone: string, smsCode: string): Promise<Check>;
   resetFaceStart(checkId: string): Promise<string | null>;
+  /**
+   * ADR-104 (owner 2026-11-10, "Redo check, same ID"): when our team asked for a new identity
+   * check, the reset uses it instead of the face check. Optional so older test doubles work.
+   */
+  resetKycStart?(checkId: string): Promise<string | null>;
   /** The email code (none for a face check) and the new PIN. */
   resetConfirm(checkId: string, newPin: string, emailCode: string | null): Promise<void>;
 }
@@ -37,6 +42,9 @@ export const serverPin: PinSource = {
   },
   async resetFaceStart(checkId) {
     return (await authApi.faceStart(checkId, serverAuth.apiOptions())).url;
+  },
+  async resetKycStart(checkId) {
+    return (await authApi.kycStart(checkId, serverAuth.apiOptions())).url;
   },
   async resetConfirm(checkId, newPin, emailCode) {
     await authApi.pinResetConfirm(
