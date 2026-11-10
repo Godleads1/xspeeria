@@ -72,8 +72,8 @@ export function planTotals(side: Side, plan: FillPlan): PlanTotals {
   let transfer = 0;
   let fee = 0;
   for (const p of plan) {
-    ngn += ngnFor(p.amountMinor, p.listing.rateHundredths);
-    const t = transferFor(side, currency, p.amountMinor, p.listing.rateHundredths);
+    ngn += ngnFor(p.amountMinor, p.listing.rateMilli);
+    const t = transferFor(side, currency, p.amountMinor, p.listing.rateMilli);
     transfer += t.minor;
     fee += t.feeMinor;
   }

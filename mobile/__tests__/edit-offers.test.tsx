@@ -52,7 +52,7 @@ it('edits an offer and shows the new values', async () => {
   await fireEvent.changeText(screen.getByTestId('my-offer-a1-rate'), '1321');
   await fireEvent.press(screen.getByTestId('my-offer-a1-save'));
   await flush();
-  expect(edit).toHaveBeenCalledWith(expect.objectContaining({ offer_id: 'a1' }), 75000, 132100);
+  expect(edit).toHaveBeenCalledWith(expect.objectContaining({ offer_id: 'a1' }), 75000, 1321000);
   expect(screen.getByTestId('my-offers-notice').props.children).toBe('Offer updated.');
   expect(screen.queryByTestId('my-offer-a1-form')).toBeNull();
   expect(screen.getByText('Rate: NGN 1,321.00 /USD')).toBeTruthy();
@@ -104,14 +104,14 @@ describe('server call', () => {
 
   it('sends the offer amount as typed for a sell offer', async () => {
     const spy = jest.spyOn(offersApi, 'edit').mockResolvedValue(offer());
-    await myOffers.edit(offer(), 75050, 132100);
+    await myOffers.edit(offer(), 75050, 1321000);
     expect(spy).toHaveBeenCalledWith('t', 'a1', { source_amount: '750.50', desired_rate: '1321.00' }, expect.anything());
   });
 
   it('turns a buy request amount into naira (amount × rate)', async () => {
     const spy = jest.spyOn(offersApi, 'edit').mockResolvedValue(offer());
     const request = offer({ source_currency: 'NGN', target_currency: 'USD', source_amount: '660000.00' });
-    await myOffers.edit(request, 100000, 133000); // 1,000.00 USD at 1,330.00
+    await myOffers.edit(request, 100000, 1330000); // 1,000.00 USD at 1,330.00
     expect(spy).toHaveBeenCalledWith('t', 'a1', { source_amount: '1330000.00', desired_rate: '1330.00' }, expect.anything());
   });
 });

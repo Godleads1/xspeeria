@@ -17,7 +17,7 @@ import { RoundFlag } from "../../components/flags";
 import { Icon } from "../../components/icons";
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { SectionLabel } from "../home/SectionLabel";
-import { formatCompact, formatHundredths, quoteMinor } from "../market/money";
+import { formatCompact, formatHundredths, formatRateCompact, quoteMinor } from "../market/money";
 import {
   COORDINATION_FEE_LABEL,
   coordinationFeeMinor,
@@ -106,7 +106,7 @@ export function ReceiptScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const isBuy = item.side === "buy";
-  const ngnMinor = quoteMinor(item.amountMinor, item.rateHundredths);
+  const ngnMinor = quoteMinor(item.amountMinor, item.rateMilli);
   // Recorded figures win (FIN-02); older mock items fall back to the computed ones.
   const sentMinor = isBuy ? ngnMinor : item.amountMinor;
   const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeMinor(sentMinor);
@@ -119,7 +119,7 @@ export function ReceiptScreen({
   const receivedLabel = failed ? tr("Amount (not received)") : done && isBuy ? tr("Amount Received") : tr("Amount to receive");
   const paidLabel = failed ? tr("Amount (not paid)") : done && isBuy ? tr("Amount Paid") : tr("Amount to pay");
   const foreign = `${formatHundredths(item.amountMinor)} ${item.currency}`;
-  const rate = `NGN ${formatCompact(item.rateHundredths)}/${item.currency}`;
+  const rate = `NGN ${formatRateCompact(item.rateMilli)}/${item.currency}`;
   const [fromCode, toCode] = isBuy
     ? ["NGN", item.currency]
     : [item.currency, "NGN"];

@@ -62,9 +62,9 @@ describe('screen', () => {
     expect(s.publish).toHaveBeenCalledWith(
       100000000,
       [
-        { currency: 'USD', rateHundredths: 132000 },
-        { currency: 'GBP', rateHundredths: 175050 },
-        { currency: 'EUR', rateHundredths: 148000 },
+        { currency: 'USD', rateMilli: 1320000 },
+        { currency: 'GBP', rateMilli: 1750500 },
+        { currency: 'EUR', rateMilli: 1480000 },
       ],
       'k-1',
     );
@@ -107,7 +107,7 @@ describe('server calls', () => {
 
   it('sends decimal text for the amount and each rate', async () => {
     const spy = jest.spyOn(offersApi, 'publishGroup').mockResolvedValue({ group_id: 'g', offers: [] });
-    await multiRequestServer.publish(100000000, [{ currency: 'USD', rateHundredths: 132050 }, { currency: 'GBP', rateHundredths: 175000 }], 'k');
+    await multiRequestServer.publish(100000000, [{ currency: 'USD', rateMilli: 1320500 }, { currency: 'GBP', rateMilli: 1750000 }], 'k');
     expect(spy).toHaveBeenCalledWith(
       't',
       { source_amount: '1000000.00', currencies: [{ currency: 'USD', desired_rate: '1320.50' }, { currency: 'GBP', desired_rate: '1750.00' }] },
@@ -119,7 +119,7 @@ describe('server calls', () => {
   it('edits only the rate of a request in several currencies', async () => {
     const spy = jest.spyOn(offersApi, 'edit').mockResolvedValue({} as ServerOffer);
     const grouped = { offer_id: 'o1', source_currency: 'NGN', target_currency: 'USD', group_id: 'g1' } as ServerOffer;
-    await myOffers.edit(grouped, 100000, 132100);
+    await myOffers.edit(grouped, 100000, 1321000);
     expect(spy).toHaveBeenCalledWith('t', 'o1', { desired_rate: '1321.00' }, expect.anything());
   });
 });

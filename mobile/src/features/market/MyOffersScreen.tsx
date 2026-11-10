@@ -15,7 +15,7 @@ import type { ServerOffer } from "../../api/offersApi";
 import { Icon } from "../../components/icons";
 import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTone } from "../../components/primitives";
 import { brandWeight, color, space, typography, themed } from "../../theme";
-import { formatHundredths, parseToHundredths } from "./money";
+import { formatAmount, parseAmount, parseRate } from "./money";
 import { exactHundredths, foreignMinorFor, groupedRate } from "./serverOffers";
 import { tr, k } from "../../i18n";
 
@@ -23,7 +23,7 @@ export interface MyOffersSource {
   list(): Promise<ServerOffer[]>;
   withdraw(offerId: string): Promise<ServerOffer>;
   /** ADR-059 Decision 3: new amount (foreign currency, hundredths) and rate (hundredths). */
-  edit?(offer: ServerOffer, amountMinor: number, rateHundredths: number): Promise<ServerOffer>;
+  edit?(offer: ServerOffer, amountMinor: number, rateMilli: number): Promise<ServerOffer>;
 }
 
 /** Editable only while nobody has taken any of it (ADR-059 Decision 3). */
@@ -93,16 +93,17 @@ export function MyOffersScreen({
 
   const save = async (o: ServerOffer): Promise<void> => {
     if (!editing || !source.edit) return;
-    const amountMinor = parseToHundredths(editing.amount);
-    const rateHundredths = parseToHundredths(editing.rate);
-    if (amountMinor === null || rateHundredths === null) {
+    const foreign = o.source_currency === "NGN" ? o.target_currency : o.source_currency;
+    const amountMinor = parseAmount(foreign, editing.amount);
+    const rateMilli = parseRate(editing.rate);
+    if (amountMinor === null || rateMilli === null) {
       setNotice(tr("Enter the amount and the rate as numbers, e.g. 1000.00."));
       return;
     }
     setWorking(o.offer_id);
     setNotice(null);
     try {
-      const updated = await source.edit(o, amountMinor, rateHundredths);
+      const updated = await source.edit(o, amountMinor, rateMilli);
       setOffers((list) => (list ?? []).map((x) => (x.offer_id === o.offer_id ? updated : x)));
       setEditing(null);
       setNotice(updated.source_currency === "NGN" ? tr("Request updated.") : tr("Offer updated."));
@@ -153,8 +154,8 @@ export function MyOffersScreen({
             const foreign = request ? o.target_currency : o.source_currency;
             const inForeign = (text: string): string => {
               const naira = exactHundredths(text);
-              const minor = naira === null ? null : foreignMinorFor(naira, o.desired_rate);
-              return minor === null ? "" : formatHundredths(minor);
+              const minor = naira === null ? null : foreignMinorFor(naira, o.desired_rate, foreign);
+              return minor === null ? "" : formatAmount(foreign, minor);
             };
             const status = STATUS[o.status];
             const active = ACTIVE.has(o.status);

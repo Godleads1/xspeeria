@@ -39,7 +39,7 @@ import {
   type Currency,
   type Listing,
 } from "./data";
-import { formatHundredths, matchPotential, parseToHundredths, quoteMinorOrNull } from "./money";
+import { formatAmount, formatRate, matchPotential, parseAmount, parseRate, quoteMinorOrNull } from "./money";
 import { DERIVED_CEILING, OFFICIAL_RATE_AS_OF, officialRateFor, rateProblem, type Ceilings } from "./rateCeiling";
 import type { MarketServer } from "./serverOffers";
 import { ApiError, messageFor } from "../../api/client";
@@ -54,7 +54,7 @@ export interface TradeRequest {
   /** Foreign currency code (what the buyer receives / the seller gives). */
   readonly currency: string;
   readonly amountMinor: number;
-  readonly rateHundredths: number;
+  readonly rateMilli: number;
 }
 
 const SELL_CURRENCY = BUYABLE[0]; // Figma Sell frame: USD.
@@ -152,19 +152,20 @@ export function MarketScreen({
   }, [server, refreshSignal]);
   const foreign = side === "buy" ? buyCurrency : SELL_CURRENCY;
   const band = foreign ? MARKET_BAND[foreign.code] : undefined;
-  const amountMinor = parseToHundredths(amount);
-  const rateHundredths = parseToHundredths(rate);
+  // A whole-unit currency (CFA franc, Ugandan shilling) takes no decimals; rates take up to 3.
+  const amountMinor = foreign ? parseAmount(foreign.code, amount) : null;
+  const rateMilli = parseRate(rate);
   const potential =
-    band && rateHundredths !== null && (!foreign || rateProblem(foreign.code, rateHundredths, live) === null)
-      ? matchPotential(side, rateHundredths, band)
+    band && rateMilli !== null && (!foreign || rateProblem(foreign.code, rateMilli, live) === null)
+      ? matchPotential(side, rateMilli, band)
       : null;
   // The official rate is the maximum (rateCeiling.ts, Standing Standards §7.2).
   const official = foreign ? officialRateFor(foreign.code, live) : null;
   const problem =
-    foreign && rateHundredths !== null ? rateProblem(foreign.code, rateHundredths, live) : null;
+    foreign && rateMilli !== null ? rateProblem(foreign.code, rateMilli, live) : null;
   const rateError =
     problem === "above-official" && foreign && official !== null
-      ? tr("Your rate can’t be above the official rate of NGN {{official}} per {{code}}.", { official: formatHundredths(official), code: foreign.code })
+      ? tr("Your rate can’t be above the official rate of NGN {{official}} per {{code}}.", { official: formatRate(official), code: foreign.code })
       : problem === "official-unavailable"
         ? tr("There’s no official rate for {{value}} yet, so you can’t trade it for now.", { value: foreign?.code ?? tr("this currency") })
         : null;
@@ -172,9 +173,9 @@ export function MarketScreen({
   const ready =
     foreign !== null &&
     amountMinor !== null &&
-    rateHundredths !== null &&
+    rateMilli !== null &&
     problem === null &&
-    quoteMinorOrNull(amountMinor, rateHundredths) !== null;
+    quoteMinorOrNull(amountMinor, rateMilli) !== null;
 
   const foreignCode = foreign?.code ?? null;
   useEffect(() => {
@@ -235,7 +236,7 @@ export function MarketScreen({
       pendingKey.current = null;
       setAmount("");
       setRate("");
-      const values = { amt: formatHundredths(amt), code, rt: formatHundredths(rt) };
+      const values = { amt: formatAmount(code, amt), code, rt: formatRate(rt) };
       setNotice({
         ok: true,
         text: buying
@@ -253,13 +254,13 @@ export function MarketScreen({
   };
 
   const create = (): void => {
-    if (!ready || !foreign || amountMinor === null || rateHundredths === null)
+    if (!ready || !foreign || amountMinor === null || rateMilli === null)
       return;
     if (server) {
-      void publish(foreign.code, amountMinor, rateHundredths);
+      void publish(foreign.code, amountMinor, rateMilli);
       return;
     }
-    onCreate?.({ side, currency: foreign.code, amountMinor, rateHundredths });
+    onCreate?.({ side, currency: foreign.code, amountMinor, rateMilli });
   };
 
   const take = (listing: Listing): void => {
@@ -285,7 +286,7 @@ export function MarketScreen({
 
   const trendText =
     band && foreign
-      ? tr("Current Market Trend:  {{low}} - {{high}} NGN = 1 {{code}}", { low: formatHundredths(band.low), high: formatHundredths(band.high), code: foreign.code })
+      ? tr("Current Market Trend:  {{low}} - {{high}} NGN = 1 {{code}}", { low: formatRate(band.low), high: formatRate(band.high), code: foreign.code })
       : tr("Current Market Trend:  -----------");
 
   const amountField = (
@@ -428,10 +429,10 @@ export function MarketScreen({
         {foreign && official !== null ? (
           <Text testID="market-official" style={styles.official}>
             {DERIVED_CEILING.has(foreign.code)
-              ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.", { official: formatHundredths(official), code: foreign.code })
+              ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
               : live
-                ? tr("Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.", { official: formatHundredths(official), code: foreign.code })
-                : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatHundredths(official), code: foreign.code })}
+                ? tr("Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
+                : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatRate(official), code: foreign.code })}
           </Text>
         ) : null}
         {rateError ? (

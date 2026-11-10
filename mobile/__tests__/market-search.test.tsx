@@ -36,7 +36,7 @@ const NOW = Date.UTC(2026, 9, 26, 12, 0, 0);
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
 function row(over: Partial<Listing> = {}): Listing {
-  return { id: 'o1', currency: 'USD', availableMinor: 150000, rateHundredths: 132050, meta: 'Offer time: 8 mins ago', best: true, ...over };
+  return { id: 'o1', currency: 'USD', availableMinor: 150000, rateMilli: 1320500, meta: 'Offer time: 8 mins ago', best: true, ...over };
 }
 
 function fake(result: Awaited<ReturnType<SearchSource['run']>> = { kind: 'offers', rows: [row()] }) {
@@ -91,7 +91,7 @@ describe('search model', () => {
     expect(filterProblem(DEFAULT_SEARCH)).toBeNull();
     expect(filterProblem({ ...DEFAULT_SEARCH, minRate: '1300', maxRate: '1350.5' })).toBeNull();
     expect(filterProblem({ ...DEFAULT_SEARCH, minRate: '1350', maxRate: '1300' })).toMatch(/lowest rate/);
-    expect(filterProblem({ ...DEFAULT_SEARCH, minRate: '1.2.3' })).toMatch(/up to 6 decimal/);
+    expect(filterProblem({ ...DEFAULT_SEARCH, minRate: '1.2.3' })).toMatch(/up to 3 decimal/);
     expect(filterProblem({ ...DEFAULT_SEARCH, maxRate: '0' })).toMatch(/more than zero/);
     expect(filterProblem({ ...DEFAULT_SEARCH, minAmount: '10.001' })).toMatch(/as a number/);
     expect(filterProblem({ ...DEFAULT_SEARCH, minAmount: '900', maxAmount: '100' })).toMatch(/smallest amount/);

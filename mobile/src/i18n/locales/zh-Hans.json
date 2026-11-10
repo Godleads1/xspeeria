@@ -381,7 +381,7 @@
  "Enter the naira amount as a number, e.g. 1000000.00.": "请用数字输入奈拉金额，例如 1000000.00。",
  "Enter the phone number on your Xspeeria account. We will text you a code.": "请输入您 Xspeeria 账户的手机号码。我们会通过短信发送验证码。",
  "Enter the phone number with its country code, for example +2348012345678.": "请输入带国家代码的手机号码，例如 +2348012345678。",
- "Enter the rate as a number with up to 6 decimal places.": "请以数字输入汇率，最多 6 位小数。",
+ "Enter the rate as a number with up to 3 decimal places.": "请以数字输入汇率，最多 3 位小数。",
  "Enter your 11-digit BVN.": "请输入你的 11 位 BVN。",
  "Enter your current password": "请输入当前密码",
  "Enter your e-mail address": "请输入您的电子邮箱",

@@ -225,19 +225,19 @@ describe('FIN-07 / FIN-17 / QA-05 / FIN-06: strict amount parsing and no overflo
   ])('route param %p', (input, expected) => expect(parsePositiveInt(input)).toBe(expected));
 
   it('half to even at exactly .5 (FIN-01 decision), and negatives are refused', () => {
-    expect(quoteMinor(1, 50)).toBe(0); // 0.5 → 0
-    expect(quoteMinor(3, 50)).toBe(2); // 1.5 → 2
-    expect(quoteMinor(5, 50)).toBe(2); // 2.5 → 2
-    expect(quoteMinor(1, 150)).toBe(2); // 1.5 → 2
-    expect(quoteMinor(1, 51)).toBe(1); // above half rounds up
-    expect(quoteMinor(1, 49)).toBe(0);
-    expect(quoteMinor(1, 189250)).toBe(1892); // the reviewer's example: 1892.5 → 1892
+    expect(quoteMinor(1, 500)).toBe(0); // 0.5 → 0
+    expect(quoteMinor(3, 500)).toBe(2); // 1.5 → 2
+    expect(quoteMinor(5, 500)).toBe(2); // 2.5 → 2
+    expect(quoteMinor(1, 1500)).toBe(2); // 1.5 → 2
+    expect(quoteMinor(1, 510)).toBe(1); // above half rounds up
+    expect(quoteMinor(1, 490)).toBe(0);
+    expect(quoteMinor(1, 1892500)).toBe(1892); // the reviewer's example: 1892.5 → 1892
     expect(() => quoteMinor(-150, 100)).toThrow();
   });
 
   it('an out-of-range quote is null, not a thrown render error', () => {
-    expect(quoteMinorOrNull(Number.MAX_SAFE_INTEGER, 189300)).toBeNull();
-    expect(quoteMinorOrNull(20000, 189300)).toBe(37860000);
+    expect(quoteMinorOrNull(Number.MAX_SAFE_INTEGER, 1893000)).toBeNull();
+    expect(quoteMinorOrNull(20000, 1893000)).toBe(37860000);
   });
 });
 

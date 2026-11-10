@@ -18,11 +18,11 @@ const rnd = (n: number): Uint8Array => Uint8Array.from({ length: n }, () => (see
 const PAYOUT = { id: 'b3', name: 'David Peters', bank: 'Chase', last4: '4410' };
 
 // Four sellers with 250.00 USD each, at slightly different rates.
-const SELLERS: readonly Listing[] = [132500, 132700, 133000, 133326].map((rate, i) => ({
+const SELLERS: readonly Listing[] = [1325000, 1327000, 1330000, 1333260].map((rate, i) => ({
   id: `s${i + 1}`,
   currency: 'USD',
   availableMinor: 25000,
-  rateHundredths: rate,
+  rateMilli: rate,
   meta: `User ${i + 1}`,
 }));
 const remaining = (l: Listing): number => tradeStore.remainingMinor(l);
@@ -72,7 +72,7 @@ describe('fill plan', () => {
 });
 
 describe('Select Match with a selection', () => {
-  const request = { side: 'buy' as const, currency: 'USD', amountMinor: 100000, rateHundredths: 133000 };
+  const request = { side: 'buy' as const, currency: 'USD', amountMinor: 100000, rateMilli: 1330000 };
 
   it('shows what is taken from each listing and the progress', async () => {
     const plan: FillPlan = [{ listing: { ...SELLERS[0], id: 'o1' }, amountMinor: 20000 }];

@@ -22,7 +22,7 @@ export interface PlacedOrder {
 
 /** What the user receives for the whole order, minor units of `receiveCurrency(draft)`. */
 export function orderReceiveMinor(draft: OrderDraft): number {
-  return draft.parts.reduce((sum, p) => sum + receiveFor(draft.side, p.amountMinor, p.listing.rateHundredths), 0);
+  return draft.parts.reduce((sum, p) => sum + receiveFor(draft.side, p.amountMinor, p.listing.rateMilli), 0);
 }
 
 export function receiveCurrency(draft: OrderDraft): string {
@@ -52,7 +52,7 @@ export function placeOrder(input: {
     ...(r.isNew ? { isNew: true } : {}),
   }));
   const perTrade = allocatePayouts(
-    draft.parts.map((p) => receiveFor(draft.side, p.amountMinor, p.listing.rateHundredths)),
+    draft.parts.map((p) => receiveFor(draft.side, p.amountMinor, p.listing.rateMilli)),
     shares,
   );
   const orderId = draft.parts.length > 1 ? `o-${hex(random, 6)}` : undefined;

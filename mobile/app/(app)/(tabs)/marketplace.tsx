@@ -93,7 +93,7 @@ export default function MarketplaceRoute(): ReactElement {
         if (amount <= 0) return;
         router.push({
           pathname: '/market/matches',
-          params: { side, currency: listing.currency, amount: String(amount), rate: String(listing.rateHundredths) },
+          params: { side, currency: listing.currency, amount: String(amount), rate: String(listing.rateMilli) },
         });
       }}
       onCreate={(req) =>
@@ -103,7 +103,7 @@ export default function MarketplaceRoute(): ReactElement {
             side: req.side,
             currency: req.currency,
             amount: String(req.amountMinor),
-            rate: String(req.rateHundredths),
+            rate: String(req.rateMilli),
           },
         })
       }

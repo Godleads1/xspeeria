@@ -49,7 +49,7 @@ describe('History rows', () => {
       side: 'buy',
       currency: 'USD',
       amountMinor: 20000,
-      rateHundredths: 132050,
+      rateMilli: 1320500,
       date: '2026-10-19',
       status: 'completed',
     });

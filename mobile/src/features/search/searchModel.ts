@@ -107,11 +107,12 @@ export function scaled(text: string, places: number): bigint | null {
 
 /** A message for the first thing wrong with the filters, or null when they can be sent. */
 export function filterProblem(s: SearchState): string | null {
-  const rate = (t: string) => (t ? scaled(t, 6) : 0n);
+  // Owner 2026-11-10: "3 decimal not 6" (the server refuses a 4th decimal).
+  const rate = (t: string) => (t ? scaled(t, 3) : 0n);
   const amount = (t: string) => (t ? scaled(t, 2) : 0n);
   const lowRate = rate(s.minRate);
   const highRate = rate(s.maxRate);
-  if (lowRate === null || highRate === null) return tr('Enter the rate as a number with up to 6 decimal places.');
+  if (lowRate === null || highRate === null) return tr('Enter the rate as a number with up to 3 decimal places.');
   if ((s.minRate && lowRate === 0n) || (s.maxRate && highRate === 0n)) return tr('The rate must be more than zero.');
   if (s.minRate && s.maxRate && lowRate > highRate) return tr('The lowest rate can’t be above the highest rate.');
   const low = amount(s.minAmount);

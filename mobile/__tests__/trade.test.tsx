@@ -33,9 +33,9 @@ const make = (side: 'buy' | 'sell' = 'buy', amountMinor = 20000) =>
 
 describe('trade money (integers only)', () => {
   it('each side transfers its amount plus a 1% fee in its own currency (ADR-021)', () => {
-    expect(ngnFor(20000, 189300)).toBe(37860000); // 200.00 USD × 1,893.00 = 378,600.00 NGN (pure arithmetic)
-    expect(transferFor('buy', 'USD', 20000, 189300)).toEqual({ minor: 37860000 + 378600, currency: 'NGN', feeMinor: 378600 }); // + 1%
-    expect(transferFor('sell', 'USD', 20000, 189300)).toEqual({ minor: 20200, currency: 'USD', feeMinor: 200 });
+    expect(ngnFor(20000, 1893000)).toBe(37860000); // 200.00 USD × 1,893.00 = 378,600.00 NGN (pure arithmetic)
+    expect(transferFor('buy', 'USD', 20000, 1893000)).toEqual({ minor: 37860000 + 378600, currency: 'NGN', feeMinor: 378600 }); // + 1%
+    expect(transferFor('sell', 'USD', 20000, 1893000)).toEqual({ minor: 20200, currency: 'USD', feeMinor: 200 });
   });
 
   it('never resizes an amount silently and refuses bad amounts', () => {
