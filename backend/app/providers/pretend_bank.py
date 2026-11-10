@@ -37,6 +37,18 @@ PRETEND_PARTNERS: dict[tuple[str, str], tuple[str, str]] = {
     ("EUR", "DE"): ("pretend-de", "Pretend Bank Germany"),  # ADR-105
     ("EUR", "FR"): ("pretend-fr", "Pretend Bank France"),  # ADR-105
     ("CNY", "CN"): ("pretend-cn", "Pretend Bank China"),  # ADR-105; behind CHINA_ENABLED
+    # ADR-107: eleven African countries; Zimbabwe pays in US dollars.
+    ("EGP", "EG"): ("pretend-eg", "Pretend Bank Egypt"),
+    ("ZAR", "ZA"): ("pretend-za", "Pretend Bank South Africa"),
+    ("MAD", "MA"): ("pretend-ma", "Pretend Bank Morocco"),
+    ("ETB", "ET"): ("pretend-et", "Pretend Bank Ethiopia"),
+    ("KES", "KE"): ("pretend-ke", "Pretend Bank Kenya"),
+    ("XOF", "SN"): ("pretend-sn", "Pretend Bank Senegal"),
+    ("GHS", "GH"): ("pretend-gh", "Pretend Bank Ghana"),
+    ("USD", "ZW"): ("pretend-zw", "Pretend Bank Zimbabwe"),
+    ("UGX", "UG"): ("pretend-ug", "Pretend Bank Uganda"),
+    ("ZMW", "ZM"): ("pretend-zm", "Pretend Bank Zambia"),
+    ("TZS", "TZ"): ("pretend-tz", "Pretend Bank Tanzania"),
 }
 
 

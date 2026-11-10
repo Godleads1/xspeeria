@@ -591,7 +591,18 @@ async def test_uk_check_with_a_uk_id_is_added_to_the_same_account(k: K) -> None:
             {"country": "US", "status": "not_started"},
             {"country": "CA", "status": "not_started"},
             {"country": "DE", "status": "not_started"},
-            {"country": "FR", "status": "not_started"},  # ADR-100
+            {"country": "FR", "status": "not_started"},
+            {"country": "EG", "status": "not_started"},
+            {"country": "ZA", "status": "not_started"},
+            {"country": "MA", "status": "not_started"},
+            {"country": "ET", "status": "not_started"},
+            {"country": "KE", "status": "not_started"},
+            {"country": "SN", "status": "not_started"},
+            {"country": "GH", "status": "not_started"},
+            {"country": "ZW", "status": "not_started"},
+            {"country": "UG", "status": "not_started"},
+            {"country": "ZM", "status": "not_started"},
+            {"country": "TZ", "status": "not_started"},  # ADR-100
         ],
         "suggested_country": None,
     }

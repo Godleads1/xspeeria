@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.db.session import build_engine
-from app.domain.offer_rules import OFFICIAL_RATE
+from app.domain.offer_rules import AFRICAN, OFFICIAL_RATE
 from app.providers.frankfurter import RateFeedError, RateQuote
 from app.services.official_rates import OfficialRateService, current_ceilings
 from tests.integration.test_auth_api import Env, _code, _sql, clean, migrated  # noqa: F401
@@ -140,13 +140,18 @@ async def test_the_app_reads_the_ceilings_signed_in(env: Env, db: AsyncSession) 
     assert (await _rates(env, None)).status_code == 401
     david = await _user(env)
     body = (await _rates(env, david)).json()
-    assert {i["currency"]: i["max_rate"] for i in body["items"]} == {
+    items = {i["currency"]: i["max_rate"] for i in body["items"]}
+    assert {c: items[c] for c in ("CAD", "EUR", "GBP", "USD")} == {
         "CAD": "944.70",
         "EUR": "1491.20",
         "GBP": "1765.11",
         "USD": "1333.26",
     }
-    assert [i["currency"] for i in body["items"] if i["derived"]] == ["CAD"]
+    # ADR-107: the African ceilings are worked out to 6 decimals (USD ÷ units per USD; XOF
+    # from the euro's fixed rate). The yuan is off by default (ADR-106).
+    assert items["UGX"] == "0.306904" and items["XOF"] == "2.27332"
+    assert "CNY" not in items
+    assert sorted(i["currency"] for i in body["items"] if i["derived"]) == sorted({"CAD"} | AFRICAN)
     assert body["cad_per_usd"] == "1.4113"
     await OfficialRateService(db, env.clock, FakeFeed(FED)).refresh()
     body = (await _rates(env, david)).json()

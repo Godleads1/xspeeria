@@ -21,27 +21,39 @@ from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.exceptions import AppError
-from app.domain.offer_rules import FOREIGN
+from app.domain.offer_rules import AFRICAN, FOREIGN
 from app.models.currency_switch import CurrencySwitch
 from app.models.staff import StaffAuditEntry
 from app.services.staff import RequestInfo, StaffPrincipal
 
-__all__ = ["DEFAULT_OFF", "CurrencySwitchService", "refuse_if_switched_off", "switched_off"]
+__all__ = [
+    "DEFAULT_OFF",
+    "CurrencySwitchService",
+    "default_off",
+    "refuse_if_switched_off",
+    "switched_off",
+]
 
 #: Off until a Super Admin switches them on (and, for the yuan, CHINA_ENABLED is on).
 DEFAULT_OFF = frozenset({"CNY"})
 
 
+def default_off() -> frozenset[str]:
+    """ADR-107 (owner 2026-11-10: "On for testing, off when live"): on the live server the
+    African currencies also start off, until a Super Admin switches each one on."""
+    if get_settings().app_env == "production":
+        return DEFAULT_OFF | AFRICAN
+    return DEFAULT_OFF
+
+
 async def switched_off(db: AsyncSession) -> frozenset[str]:
     """The built-in foreign currencies that are off right now."""
-    rows = {
-        c: on
-        for c, on in (
-            await db.execute(select(CurrencySwitch.currency, CurrencySwitch.enabled))
-        ).all()
-    }
-    return frozenset(c for c in FOREIGN if not rows.get(c, c not in DEFAULT_OFF))
+    result = await db.execute(select(CurrencySwitch.currency, CurrencySwitch.enabled))
+    rows = {c: on for c, on in result.all()}
+    off = default_off()
+    return frozenset(c for c in FOREIGN if not rows.get(c, c not in off))
 
 
 async def refuse_if_switched_off(db: AsyncSession, *codes: str | None) -> None:

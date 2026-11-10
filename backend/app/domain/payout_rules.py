@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
-from app.domain.offer_rules import FORMAT_ERROR, OfferInputError
+from app.domain.offer_rules import AFRICAN, FORMAT_ERROR, OfferInputError
 
 __all__ = [
     "PAYOUT_CURRENCIES",
@@ -42,8 +42,24 @@ PREPARATION_STATES = ("awaiting_payout_accounts", "funding_ready", "expired")
 #: CNY (ADR-105, owner 2026-11-10): bank name, the 16–19 digit card or account number and the
 #: branch's 12-digit CNAPS code; the holder's name comes from the bank's own check, as for
 #: every currency.
-PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR", "CAD", "CNY"})
+#: ADR-107 (owner 2026-11-10: "Bank and mobile money"): the African currencies take a bank
+#: account (``account_type="bank"``: bank name, account number or IBAN of 5–34 letters and
+#: digits, optional bank/branch code) or, where mobile money is common, a mobile-money wallet
+#: (``account_type="mobile_money"``: the provider's name and the wallet's phone number in
+#: that country). A Zimbabwean US-dollar account uses the same two forms.
+PAYOUT_CURRENCIES = frozenset({"NGN", "USD", "GBP", "EUR", "CAD", "CNY"}) | AFRICAN
 _ACCOUNT_TYPES = frozenset({"Checking", "Savings"})
+#: Mobile money: the wallet phone's country calling code per currency (ADR-107).
+MOBILE_MONEY_PREFIX: dict[str, str] = {
+    "KES": "254",  # Kenya
+    "GHS": "233",  # Ghana
+    "UGX": "256",  # Uganda
+    "TZS": "255",  # Tanzania
+    "ZMW": "260",  # Zambia
+    "XOF": "221",  # Senegal
+    "USD": "263",  # Zimbabwe (US dollars)
+}
+_GENERIC_KINDS = frozenset({"bank", "mobile_money"})
 
 
 @dataclass(frozen=True)
@@ -102,10 +118,13 @@ def parse_account_details(
     institution_number: str | None = None,
     transit_number: str | None = None,
     cnaps_code: str | None = None,
+    branch_code: str | None = None,
 ) -> AccountDetails:
     c = currency.upper()
     if c not in PAYOUT_CURRENCIES:
-        raise _bad("Payout accounts can be in NGN, USD, GBP, EUR, CAD or CNY for now.")
+        raise _bad("Payout accounts can't be in that currency yet.")
+    if branch_code and account_type != "bank":
+        raise _bad("A branch code is only used for a bank account in Africa.")
     if c != "CAD" and (institution_number or transit_number):
         raise _bad("Institution and transit numbers are only used for CAD.")
     if c != "CNY" and cnaps_code:
@@ -113,6 +132,10 @@ def parse_account_details(
     name = bank_name.strip()
     if not 2 <= len(name) <= 60 or not re.fullmatch(r"[A-Za-z0-9 .,&'()\-]+", name):
         raise _bad("Enter the bank name.")
+    if c in AFRICAN or (c == "USD" and account_type in _GENERIC_KINDS):
+        return _african(
+            c, name, account_number, routing_number, sort_code, account_type, branch_code
+        )
     if c == "NGN":
         if not re.fullmatch(r"[0-9]{10}", account_number):
             raise _bad("Nigerian account numbers are 10 digits.")
@@ -166,6 +189,37 @@ def parse_account_details(
     if sort_code:
         raise _bad("A sort code is not used for USD.")
     return AccountDetails(c, name, account_number, routing_number, account_type)
+
+
+def _african(
+    c: str,
+    name: str,
+    account_number: str,
+    routing_number: str | None,
+    sort_code: str | None,
+    kind: str | None,
+    branch_code: str | None,
+) -> AccountDetails:
+    """ADR-107: a bank account or a mobile-money wallet (see ``PAYOUT_CURRENCIES``)."""
+    if routing_number or sort_code:
+        raise _bad("Routing numbers and sort codes aren't used here.")
+    if kind == "mobile_money":
+        prefix = MOBILE_MONEY_PREFIX.get(c)
+        if prefix is None:
+            raise _bad("Mobile money isn't available for this currency; add a bank account.")
+        phone = re.sub(r"[\s\-]", "", account_number).removeprefix("+")
+        if not re.fullmatch(rf"{prefix}[1-9][0-9]{{7,9}}", phone):
+            raise _bad(f"Enter the wallet's phone number, starting +{prefix}.")
+        return AccountDetails(c, name, phone, None, "mobile_money")
+    if kind != "bank":
+        raise _bad("Choose a bank account or mobile money.")
+    number = re.sub(r"[\s\-]", "", account_number).upper()
+    if not re.fullmatch(r"[A-Z0-9]{5,34}", number):
+        raise _bad("Enter the account number (5 to 34 letters and digits).")
+    code = (branch_code or "").strip().upper() or None
+    if code is not None and not re.fullmatch(r"[A-Z0-9]{2,11}", code):
+        raise _bad("The bank or branch code is 2 to 11 letters and digits.")
+    return AccountDetails(c, name, number, code, "bank")
 
 
 def _half_even_div(numerator: int, divisor: int) -> int:

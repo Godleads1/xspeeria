@@ -190,3 +190,59 @@ class TestCny:
             parse_account_details(
                 "NGN", "Zenith Bank", "0123456789", None, None, None, cnaps_code="104100000004"
             )
+
+
+class TestAfrica:
+    """ADR-107 (owner 2026-11-10: "Bank and mobile money")."""
+
+    def test_bank_account(self) -> None:
+        d = parse_account_details(
+            "KES", "Equity Bank", "0123 4567 8901", None, None, "bank", branch_code="068"
+        )
+        assert (d.currency, d.account_number, d.bank_code, d.account_type) == (
+            "KES", "012345678901", "068", "bank",
+        )  # fmt: skip
+        # An Egyptian IBAN is letters and digits too.
+        d = parse_account_details("EGP", "CIB", "EG380019000500000000263180002", None, None, "bank")
+        assert d.bank_code is None and d.last4 == "0002"
+
+    def test_mobile_money(self) -> None:
+        d = parse_account_details("GHS", "MTN MoMo", "+233 24 123 4567", None, None, "mobile_money")
+        assert (d.account_number, d.account_type, d.bank_code) == (
+            "233241234567",
+            "mobile_money",
+            None,
+        )
+        # Zimbabwe pays in US dollars: a Zimbabwean wallet is a USD payout account.
+        d = parse_account_details("USD", "EcoCash", "+263771234567", None, None, "mobile_money")
+        assert d.currency == "USD" and d.account_number == "263771234567"
+
+    @pytest.mark.parametrize(
+        ("currency", "number", "kind", "extra"),
+        [
+            ("GHS", "+254712345678", "mobile_money", {}),  # a Kenyan number for Ghana
+            ("EGP", "+201001234567", "mobile_money", {}),  # no mobile money for EGP
+            ("KES", "12", "bank", {}),  # too short
+            ("KES", "0123456789", None, {}),  # must choose bank or mobile money
+            ("KES", "0123456789", "bank", {"branch_code": "0"}),  # code too short
+            ("ZAR", "1234567890", "bank", {"sort_code": "123456"}),
+            ("KES", "+254712345678", "mobile_money", {"branch_code": "068"}),
+        ],
+    )
+    def test_refused(
+        self, currency: str, number: str, kind: str | None, extra: dict[str, str]
+    ) -> None:
+        with pytest.raises(OfferInputError):
+            parse_account_details(
+                currency,
+                "Some Bank",
+                number,
+                None,
+                extra.get("sort_code"),
+                kind,
+                branch_code=extra.get("branch_code"),
+            )
+
+    def test_us_accounts_unchanged(self) -> None:
+        d = parse_account_details("USD", "Chase", "123456789012", "021000021", None, "Checking")
+        assert d.account_type == "Checking"

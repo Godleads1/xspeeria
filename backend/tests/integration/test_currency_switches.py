@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.db.session import build_engine
+from app.domain.offer_rules import FOREIGN
 from app.domain.staff_rules import SUPER_ADMIN
 from app.services.currency_switch import CurrencySwitchService
 from app.services.official_rates import current_ceilings
@@ -84,7 +85,7 @@ async def test_the_list_shows_naira_locked_and_the_yuan_off(boss: AsyncClient) -
         i["currency"]: i
         for i in (await boss.get("/api/v1/admin/currencies", headers=H)).json()["items"]
     }
-    assert list(items) == ["NGN", "CAD", "CNY", "EUR", "GBP", "USD"]
+    assert list(items) == ["NGN", *sorted(FOREIGN)]
     assert (items["NGN"]["enabled"], items["NGN"]["locked"]) == (True, "naira")
     assert (items["CNY"]["enabled"], items["CNY"]["locked"]) == (False, "china")
     assert all(items[c]["enabled"] for c in ("USD", "GBP", "EUR", "CAD"))

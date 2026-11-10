@@ -53,6 +53,10 @@ class TestAmount:
             "EUR": 1_000,
             "CAD": 1_000,
             "CNY": 1_000,
+            # ADR-107: 10 units; whole units where there are no cents.
+            **{c: 1_000 for c in ("EGP", "ZAR", "MAD", "ETB", "KES", "GHS", "ZMW", "TZS")},
+            "XOF": 10,
+            "UGX": 10,
         }
         assert _code(parse_amount_minor, "9999.99", "NGN") == "VAL_422_AMOUNT_BELOW_MINIMUM"
         assert _code(parse_amount_minor, "9.99", "EUR") == "VAL_422_AMOUNT_BELOW_MINIMUM"

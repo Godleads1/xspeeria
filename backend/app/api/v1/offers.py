@@ -34,7 +34,7 @@ from app.domain.kyc_rules import COUNTRIES
 from app.domain.location_rules import currency_of, device_country
 from app.domain.offer_rules import OfferInputError, parse_pair
 from app.domain.search_rules import parse_search
-from app.domain.settlement_rules import JURISDICTION
+from app.domain.settlement_rules import JURISDICTION, SHARED_CURRENCIES
 from app.models.marketplace import Offer
 from app.schemas.offers import (
     AcceptRequest,
@@ -114,17 +114,20 @@ async def require_pay_country(
     """ADR-042: paying in a currency needs an approved check in that currency's country."""
     if settings.kyc_dev_bypass and settings.app_env == "local":
         return
-    if currency.upper() == "EUR":
-        # ADR-105: the euro is paid from Germany or France, whichever the user is verified in.
-        if await pay_country(db, principal.user_id, "EUR") is not None:
+    shared = SHARED_CURRENCIES.get(currency.upper())
+    if shared is not None:
+        # ADR-105/107: the euro is paid from Germany or France, the dollar from the US or
+        # Zimbabwe — whichever the user is verified in.
+        if await pay_country(db, principal.user_id, currency, verified_only=True) is not None:
             await db.rollback()
             return
         await db.rollback()
+        names = " or ".join(COUNTRIES[c][1] for c in shared)
         raise AppError(
             "AUTH_403_KYC_REQUIRED",
-            "Verify your identity for Germany or France to pay in EUR.",
+            f"Verify your identity for {names} to pay in {currency.upper()}.",
             status_code=status.HTTP_403_FORBIDDEN,
-            details={"country": "DE"},
+            details={"country": shared[0]},
         )
     country = JURISDICTION.get(currency.upper())
     if country is not None and country in COUNTRIES:
@@ -485,6 +488,7 @@ async def add_payout_account(
         institution_number=body.institution_number,
         transit_number=body.transit_number,
         cnaps_code=body.cnaps_code,
+        branch_code=body.branch_code,
         sort_code=body.sort_code,
         account_type=body.account_type,
         confirm_step_up=confirm,

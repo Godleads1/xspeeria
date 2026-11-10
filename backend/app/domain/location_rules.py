@@ -21,7 +21,25 @@ EURO_AREA = frozenset(
     }
 )  # fmt: skip
 
-_OWN: dict[str, str] = {"NG": "NGN", "US": "USD", "GB": "GBP", "CA": "CAD", "CN": "CNY"}
+_OWN: dict[str, str] = {
+    "NG": "NGN",
+    "US": "USD",
+    "GB": "GBP",
+    "CA": "CAD",
+    "CN": "CNY",
+    # ADR-107: Zimbabwe pays in US dollars.
+    "EG": "EGP",
+    "ZA": "ZAR",
+    "MA": "MAD",
+    "ET": "ETB",
+    "KE": "KES",
+    "SN": "XOF",
+    "GH": "GHS",
+    "ZW": "USD",
+    "UG": "UGX",
+    "ZM": "ZMW",
+    "TZ": "TZS",
+}
 
 
 def currency_of(country: str | None) -> str | None:
