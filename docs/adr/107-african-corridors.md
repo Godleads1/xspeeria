@@ -52,6 +52,15 @@
 - **Still hidden:** the African currencies stay out of the Market's currency list until step 4.
 - **Evidence:** `mobile/__tests__/money-currency.test.ts` and `market-units.test.tsx`. The earlier `units.ts` helpers (unused) were folded into `money.ts`.
 
+## App (part 3, step 3): deals, payouts and receipts
+
+- **Whole-unit amounts:** UGX and XOF amounts show without ".00" on these screens:
+  - My Deals, the trade screen, choosing payout accounts, the payout destination, the confirm sheet, receipts, deal totals and search.
+- **Sending to the server:** whole units, such as `"500000"`. A split with cents is refused.
+- **1% fee:** in these currencies it is worked out in whole units, half to even, the same rule as the server's `coordination_fee_minor` (`coordinationFeeIn`).
+- **No silent cutting:** a whole-unit amount that somehow has a fraction is shown with the fraction, never silently cut.
+- **Evidence:** `mobile/__tests__/deal-units.test.tsx` and the shilling cases in `payouts.test.tsx`.
+
 ## Not verified / owner actions
 
 - **Legality and partner banks:** UNKNOWN — NOT VERIFIED for every one of the eleven. Egypt, Ethiopia, Morocco and Zimbabwe tightly control foreign exchange.

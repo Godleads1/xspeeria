@@ -8,7 +8,7 @@
  * Amounts are integer minor units; rates are integer hundredths of NGN per 1 unit.
  */
 
-import { divRoundHalfEven } from '../market/money';
+import { amountDecimals, divRoundHalfEven } from '../market/money';
 import { k } from "../../i18n";
 
 export type TradeSide = 'buy' | 'sell';
@@ -68,6 +68,16 @@ export const COORDINATION_FEE_BPS = 100;
 export function coordinationFeeMinor(sentMinor: number): number {
   if (!Number.isSafeInteger(sentMinor) || sentMinor < 0) throw new Error('amount must be a non-negative integer (minor units)');
   return Number(divRoundHalfEven(BigInt(sentMinor) * BigInt(COORDINATION_FEE_BPS), 10000n));
+}
+
+/**
+ * The fee in the currency it is paid in. A whole-unit currency (CFA franc, Ugandan shilling)
+ * is charged in whole units, half to even, as on the server (`coordination_fee_minor` on
+ * whole units); amounts here are hundredths.
+ */
+export function coordinationFeeIn(currency: string, sentMinor: number): number {
+  if (amountDecimals(currency) === 2) return coordinationFeeMinor(sentMinor);
+  return coordinationFeeMinor(Number(divRoundHalfEven(BigInt(sentMinor), 100n))) * 100;
 }
 
 /** "1%" for labels, from the basis points (never a float). */

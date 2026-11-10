@@ -17,10 +17,10 @@ import { RoundFlag } from "../../components/flags";
 import { Icon } from "../../components/icons";
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { SectionLabel } from "../home/SectionLabel";
-import { formatCompact, formatHundredths, formatRateCompact, quoteMinor } from "../market/money";
+import { formatAmount, formatCompact, formatHundredths, formatRateCompact, quoteMinor } from "../market/money";
 import {
   COORDINATION_FEE_LABEL,
-  coordinationFeeMinor,
+  coordinationFeeIn,
   type HistoryItem,
 } from "./data";
 import { tr, k } from "../../i18n";
@@ -109,7 +109,7 @@ export function ReceiptScreen({
   const ngnMinor = quoteMinor(item.amountMinor, item.rateMilli);
   // Recorded figures win (FIN-02); older mock items fall back to the computed ones.
   const sentMinor = isBuy ? ngnMinor : item.amountMinor;
-  const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeMinor(sentMinor);
+  const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeIn(isBuy ? "NGN" : item.currency, sentMinor);
   const paidMinor = item.recorded ? item.recorded.transferMinor : sentMinor + feeMinor;
   // Labels follow the status (FIN-03): nothing is "paid" or "received" on a failed trade.
   const done = item.status === "completed";
@@ -118,7 +118,7 @@ export function ReceiptScreen({
   // receive"/"to pay" throughout, so that wording stays for sells.
   const receivedLabel = failed ? tr("Amount (not received)") : done && isBuy ? tr("Amount Received") : tr("Amount to receive");
   const paidLabel = failed ? tr("Amount (not paid)") : done && isBuy ? tr("Amount Paid") : tr("Amount to pay");
-  const foreign = `${formatHundredths(item.amountMinor)} ${item.currency}`;
+  const foreign = `${formatAmount(item.currency, item.amountMinor)} ${item.currency}`;
   const rate = `NGN ${formatRateCompact(item.rateMilli)}/${item.currency}`;
   const [fromCode, toCode] = isBuy
     ? ["NGN", item.currency]
@@ -224,11 +224,11 @@ export function ReceiptScreen({
                 {/* Figma sell receipt: fee and amount to pay in the currency the seller sends. */}
                 <Line
                   label={tr("Transaction fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
-                  value={`${formatHundredths(feeMinor)} ${item.currency}`}
+                  value={`${formatAmount(item.currency, feeMinor)} ${item.currency}`}
                 />
                 <Line
                   label={paidLabel}
-                  value={`${formatHundredths(paidMinor)} ${item.currency}`}
+                  value={`${formatAmount(item.currency, paidMinor)} ${item.currency}`}
                   strong
                   tone="sell"
                 />

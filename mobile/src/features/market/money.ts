@@ -186,10 +186,13 @@ export function parseAmount(currency: string, input: string): number | null {
   return parseToHundredths(input);
 }
 
-/** Hundredths → `"1,644.00"`, or `"500,000"` for a whole-unit currency. */
+/**
+ * Hundredths → `"1,644.00"`, or `"500,000"` for a whole-unit currency. A whole-unit amount
+ * that somehow has a fraction is shown with it, never silently cut.
+ */
 export function formatAmount(currency: string, minor: number): string {
   const full = formatHundredths(minor);
-  return amountDecimals(currency) === 0 ? full.slice(0, -3) : full;
+  return amountDecimals(currency) === 0 && minor % 100 === 0 ? full.slice(0, -3) : full;
 }
 
 /** Hundredths → the plain text the server takes: `"1644.00"`, or `"500000"` for UGX. */

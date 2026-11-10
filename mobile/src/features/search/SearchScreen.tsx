@@ -23,7 +23,7 @@ import { tr } from '../../i18n';
 import { brandWeight, color, numericTextStyle, radius, space, themed, typography } from '../../theme';
 import { GhostButton } from '../auth/ui';
 import type { Listing } from '../market/data';
-import { formatHundredths, formatRate } from '../market/money';
+import { formatAmount, formatRate } from '../market/money';
 import {
   activeChips,
   DEFAULT_SEARCH,
@@ -300,7 +300,7 @@ function OfferCard({
   onTake: (l: Listing) => void;
   onQueue?: (l: Listing) => void;
 }): ReactElement {
-  const amount = `${formatHundredths(row.availableMinor)} ${row.currency}`;
+  const amount = `${formatAmount(row.currency, row.availableMinor)} ${row.currency}`;
   // ADR-059 Decision 4: someone is paying for it; you may wait in its queue.
   const queued = row.waiting !== undefined && !row.waiting.yourTurn;
   return (
@@ -358,7 +358,7 @@ function TradeCard({ row }: { row: TradeRow }): ReactElement {
         </View>
       </View>
       <View style={styles.row}>
-        <Text style={styles.amount}>{`${formatHundredths(row.amountMinor)} ${row.currency}`}</Text>
+        <Text style={styles.amount}>{`${formatAmount(row.currency, row.amountMinor)} ${row.currency}`}</Text>
         <Text style={styles.meta}>{row.when}</Text>
       </View>
     </View>

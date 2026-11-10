@@ -326,3 +326,31 @@ describe('ADR-105: yuan payout accounts', () => {
     expect(Object.keys(bad).sort()).toEqual(['accountNumber', 'cnapsCode']);
   });
 });
+
+describe('Choose payout accounts in Ugandan shillings (no cents, ADR-107)', () => {
+  const ugx = (over: Partial<ServerPayoutAccount> = {}) => acct({ currency: 'UGX', bank_name: 'MTN MoMo', account_type: 'mobile_money', ...over });
+  const ugxDeal = deal({ currency: 'UGX', allocated_amount: '500000', agreed_rate: '0.306', you_receive_currency: 'UGX', you_receive_amount: '500000', counter_currency: 'NGN', counter_amount: '153000.00' });
+
+  it('shows and sends whole shillings, never ".00"', async () => {
+    const src = fake([ugx()], ugxDeal);
+    await render(<ChoosePayoutScreen matchId="m1" source={src} onBack={jest.fn()} onAddAccount={jest.fn()} now={() => NOW} confirmWith={confirm} />);
+    await flush();
+    expect(screen.getByTestId('choose-summary')).toHaveTextContent(/You receive 500,000 UGX/);
+    await fireEvent.press(screen.getByTestId('choose-confirm'));
+    await fireEvent.press(screen.getByTestId('choose-review-ok'));
+    await flush();
+    expect(confirm).toHaveBeenCalledWith('payout.confirm', 'Choose where 500,000 UGX is paid.');
+    expect(src.choose).toHaveBeenCalledWith('m1', [{ payout_account_id: 'a1', amount: '500000' }], 'approval-1');
+  });
+
+  it('refuses cents in a split', async () => {
+    const src = fake([ugx(), ugx({ payout_account_id: 'a2', account_last4: '2222' })], ugxDeal);
+    await render(<ChoosePayoutScreen matchId="m1" source={src} onBack={jest.fn()} onAddAccount={jest.fn()} now={() => NOW} confirmWith={confirm} />);
+    await flush();
+    await fireEvent.changeText(screen.getByTestId('choose-amount-a1'), '400000');
+    await fireEvent.changeText(screen.getByTestId('choose-amount-a2'), '100000.50');
+    expect(screen.getByTestId('choose-confirm')).toBeDisabled();
+    await fireEvent.changeText(screen.getByTestId('choose-amount-a2'), '100000');
+    expect(screen.getByTestId('choose-left')).toHaveTextContent('All assigned.');
+  });
+});

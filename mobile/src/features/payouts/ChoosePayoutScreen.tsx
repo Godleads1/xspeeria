@@ -20,7 +20,7 @@ import { Icon } from '../../components/icons';
 import { ErrorState, LoadingState, PrimaryButton, Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { FieldInput, OutlinedField } from '../market/controls';
-import { formatHundredths, parseToHundredths } from '../market/money';
+import { amountDecimals, amountText, formatAmount, parseToHundredths } from '../market/money';
 import { confirmIdentity, type ConfirmIdentity } from '../security/serverConfirm';
 import type { PayoutSource } from './serverPayouts';
 import { tr } from "../../i18n";
@@ -107,7 +107,8 @@ export function ChoosePayoutScreen({
   void tick; // re-render every 15 s so the time left stays current
   const left = timeLeft(deal.preparation_deadline, now());
   const lines = Object.entries(amounts).filter(([, v]) => v.trim() !== '');
-  const parsed = lines.map(([id, v]) => [id, exactMinor(v.trim())] as const);
+  // A whole-unit currency (CFA franc, Ugandan shilling) takes no decimals.
+  const parsed = lines.map(([id, v]) => [id, amountDecimals(currency) === 0 && v.includes('.') ? null : exactMinor(v.trim())] as const);
   const malformed = parsed.some(([, m]) => m === null || m === 0);
   const assigned = parsed.reduce((sum, [, m]) => sum + (m ?? 0), 0);
   const leftToAssign = due - assigned;
@@ -133,11 +134,11 @@ export function ChoosePayoutScreen({
     setBusy(true);
     setError(null);
     try {
-      const approval = await confirmWith('payout.confirm', tr("Choose where {{due}} {{currency}} is paid.", { due: formatHundredths(due), currency }));
+      const approval = await confirmWith('payout.confirm', tr("Choose where {{due}} {{currency}} is paid.", { due: formatAmount(currency, due), currency }));
       if (!approval) return;
       const m = await source.choose(
         matchId,
-        parsed.map(([id, minor]) => ({ payout_account_id: id, amount: formatHundredths(minor ?? 0).replace(/,/g, '') })),
+        parsed.map(([id, minor]) => ({ payout_account_id: id, amount: amountText(currency, minor ?? 0) })),
         approval,
       );
       setDeal(m);
@@ -167,7 +168,7 @@ export function ChoosePayoutScreen({
               <View key={account.payout_account_id} testID={`choose-review-${account.payout_account_id}`} style={styles.row}>
                 <Text style={styles.strong}>{account.account_name ?? tr("Name not confirmed yet")}</Text>
                 <Text style={styles.line}>{`${account.bank_name} •••• ${account.account_last4}`}</Text>
-                <Text style={styles.strong}>{`${formatHundredths(minor)} ${currency}`}</Text>
+                <Text style={styles.strong}>{`${formatAmount(currency, minor)} ${currency}`}</Text>
               </View>
             ) : null,
           )}
@@ -189,7 +190,7 @@ export function ChoosePayoutScreen({
     <Screen testID="choose-payout-screen">
       {header}
       <View testID="choose-summary" style={styles.card}>
-        <Text style={styles.big}>{tr("You receive {{due}} {{currency}}", { due: formatHundredths(due), currency })}</Text>
+        <Text style={styles.big}>{tr("You receive {{due}} {{currency}}", { due: formatAmount(currency, due), currency })}</Text>
         <Text style={styles.line}>
           {left ? tr("Choose where it is paid — {{left}}.", { left }) : tr("Time is up for this deal.")}
         </Text>
@@ -231,9 +232,9 @@ export function ChoosePayoutScreen({
           {malformed
             ? tr("Enter amounts like 1000.00.")
             : leftToAssign > 0
-              ? tr("Left to assign: {{leftToAssign}} {{currency}}", { leftToAssign: formatHundredths(leftToAssign), currency })
+              ? tr("Left to assign: {{leftToAssign}} {{currency}}", { leftToAssign: formatAmount(currency, leftToAssign), currency })
               : leftToAssign < 0
-                ? tr("{{leftToAssign}} {{currency}} more than you receive", { leftToAssign: formatHundredths(-leftToAssign), currency })
+                ? tr("{{leftToAssign}} {{currency}} more than you receive", { leftToAssign: formatAmount(currency, -leftToAssign), currency })
                 : tr("All assigned.")}
         </Text>
       ) : null}
