@@ -1512,5 +1512,16 @@
  "Wallet Phone Number": "钱包电话号码",
  "Zambia": "赞比亚",
  "Zimbabwe": "津巴布韦",
- "{{kind}} in Zimbabwe": "津巴布韦{{kind}}"
+ "{{kind}} in Zimbabwe": "津巴布韦{{kind}}",
+ "Egyptian Pound": "埃及镑",
+ "South African Rand": "南非兰特",
+ "Moroccan Dirham": "摩洛哥迪拉姆",
+ "Ethiopian Birr": "埃塞俄比亚比尔",
+ "Kenyan Shilling": "肯尼亚先令",
+ "West African CFA Franc": "西非法郎",
+ "Ghanaian Cedi": "加纳塞地",
+ "Ugandan Shilling": "乌干达先令",
+ "Zambian Kwacha": "赞比亚克瓦查",
+ "Tanzanian Shilling": "坦桑尼亚先令",
+ "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "最高汇率：每 {{code}} {{official}} NGN，根据尼日利亚央行汇率和公布的汇率计算。您的汇率必须等于或低于此值。"
 }

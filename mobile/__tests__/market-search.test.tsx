@@ -66,8 +66,14 @@ async function renderSearch(over: Partial<Parameters<typeof SearchScreen>[0]> = 
 
 describe('search model', () => {
   it('offers the currencies with an official rate; the yuan only when the server offers it', () => {
-    expect(SEARCH_CURRENCIES).toEqual(['USD', 'GBP', 'EUR', 'CAD', 'CNY']);
+    expect(SEARCH_CURRENCIES).toEqual([
+      'USD', 'GBP', 'EUR', 'CAD', 'CNY',
+      'EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS',
+    ]);
+    // Demo builds and before the server answers: the yuan and the African currencies are hidden.
     expect(shownSearchCurrencies()).toEqual(['USD', 'GBP', 'EUR', 'CAD']);
+    // ADR-107: the African currencies show when the server offers them (on for testing).
+    expect(shownSearchCurrencies(new Set(['USD', 'KES', 'UGX']))).toEqual(['USD', 'KES', 'UGX']);
     expect(shownSearchCurrencies(new Set(['USD', 'GBP', 'EUR', 'CAD', 'CNY']))).toEqual(['USD', 'GBP', 'EUR', 'CAD', 'CNY']);
     // A currency switched off on the server has no rate limit there, so it isn't shown.
     expect(shownSearchCurrencies(new Set(['USD', 'GBP']))).toEqual(['USD', 'GBP']);

@@ -25,7 +25,33 @@ export const BUYABLE: readonly Currency[] = [
   // ADR-105: shown only when the server offers the yuan (China is switched off until then).
   { code: 'CNY', name: k("Chinese Yuan"), flag: '🇨🇳' },
   { code: 'AUD', name: k("Australian Dollar"), flag: '🇦🇺' },
+  // ADR-107 part 3, step 4: the African corridors, each shown only while the server offers
+  // it (`SWITCHED_CURRENCIES`). On for testing; off on the live server until switched on.
+  { code: 'EGP', name: k("Egyptian Pound"), flag: '🇪🇬' },
+  { code: 'ZAR', name: k("South African Rand"), flag: '🇿🇦' },
+  { code: 'MAD', name: k("Moroccan Dirham"), flag: '🇲🇦' },
+  { code: 'ETB', name: k("Ethiopian Birr"), flag: '🇪🇹' },
+  { code: 'KES', name: k("Kenyan Shilling"), flag: '🇰🇪' },
+  { code: 'XOF', name: k("West African CFA Franc"), flag: '🇸🇳' },
+  { code: 'GHS', name: k("Ghanaian Cedi"), flag: '🇬🇭' },
+  { code: 'UGX', name: k("Ugandan Shilling"), flag: '🇺🇬' },
+  { code: 'ZMW', name: k("Zambian Kwacha"), flag: '🇿🇲' },
+  { code: 'TZS', name: k("Tanzanian Shilling"), flag: '🇹🇿' },
 ];
+
+/**
+ * Currencies listed only while the server offers them (its rate limits include them): the
+ * yuan (ADR-105, China switched off) and the African currencies (ADR-107, off on the live
+ * server until a Super Admin switches them on, ADR-106). A demo build never shows them.
+ */
+export const SWITCHED_CURRENCIES: ReadonlySet<string> = new Set([
+  'CNY', 'EGP', 'ZAR', 'MAD', 'ETB', 'KES', 'XOF', 'GHS', 'UGX', 'ZMW', 'TZS',
+]);
+
+/** The buyable list for the picker: switched currencies only when `live` (the server's limits) has them. */
+export function buyableNow(live: Readonly<Record<string, number>> | null): readonly Currency[] {
+  return BUYABLE.filter((c) => !SWITCHED_CURRENCIES.has(c.code) || (live !== null && c.code in live));
+}
 
 /** Currencies a seller can receive. Figma: "Currencies you are licensed to sell". */
 export const RECEIVABLE: readonly Currency[] = [NGN];

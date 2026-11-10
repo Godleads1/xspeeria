@@ -32,6 +32,7 @@ import {
 } from "./controls";
 import {
   BUYABLE,
+  buyableNow,
   MARKET_BAND,
   NGN,
   RECEIVABLE,
@@ -428,11 +429,13 @@ export function MarketScreen({
         </OutlinedField>
         {foreign && official !== null ? (
           <Text testID="market-official" style={styles.official}>
-            {DERIVED_CEILING.has(foreign.code)
+            {foreign.code === "CAD"
               ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from the CBN dollar rate and the Bank of Canada rate. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
-              : live
-                ? tr("Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
-                : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatRate(official), code: foreign.code })}
+              : DERIVED_CEILING.has(foreign.code)
+                ? tr("Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
+                : live
+                  ? tr("Official rate (CBN, latest): NGN {{official}} per {{code}}. Your rate must be this or lower.", { official: formatRate(official), code: foreign.code })
+                  : tr("Official rate (CBN, {{OFFICIAL_RATE_AS_OF}}): NGN {{official}} per {{code}}. Your rate must be this or lower.", { OFFICIAL_RATE_AS_OF, official: formatRate(official), code: foreign.code })}
           </Text>
         ) : null}
         {rateError ? (
@@ -589,10 +592,10 @@ export function MarketScreen({
         }
         currencies={
           side === "buy"
-            ? // ADR-105: the yuan only when the server's ceilings include it. Another currency
-              // without one (stale feed, ADR-102, or switched off, ADR-106) stays listed but
-              // takes no rate, so the person sees why.
-              BUYABLE.filter((c) => c.code !== "CNY" || (live !== null && "CNY" in live))
+            ? // ADR-105/107: the yuan and the African currencies only when the server's
+              // ceilings include them. Another currency without one (stale feed, ADR-102, or
+              // switched off, ADR-106) stays listed but takes no rate, so the person sees why.
+              buyableNow(live)
             : RECEIVABLE
         }
         onClose={() => setSheet(false)}

@@ -40,7 +40,7 @@
 
 - **Countries and phones:** the eleven countries appear in "Which country will you pay from?", the regions list and the phone picker (+20, +27, +212, +251, +254, +221, +233, +263, +256, +260, +255), each with a simplified round flag.
 - **Payout accounts:** the ten currencies join the payout-account tabs (still hidden when the server switches a currency off). Each African currency has a *Bank account* form (bank name, account number or IBAN, optional bank or branch code). Where mobile money is common it also has a *Mobile money* form (provider, wallet phone number). US dollars add *Bank account in Zimbabwe* and *Mobile money in Zimbabwe* beside the US form.
-- **Not yet in the app:** the Market's currency list and "Find a deal". These need 3-decimal rates and whole-unit amounts, which come in part 3.
+- **In the app since part 3 (step 4):** the Market's currency list and "Find a deal" (see below).
 
 ## App (part 3, step 2) — rates and amounts in the app
 
@@ -60,6 +60,17 @@
 - **1% fee:** in these currencies it is worked out in whole units, half to even, the same rule as the server's `coordination_fee_minor` (`coordinationFeeIn`).
 - **No silent cutting:** a whole-unit amount that somehow has a fraction is shown with the fraction, never silently cut.
 - **Evidence:** `mobile/__tests__/deal-units.test.tsx` and the shilling cases in `payouts.test.tsx`.
+
+## App (part 3, step 4): African currencies in the Market and "Find a deal"
+
+- **Where they appear:** the ten currencies are in the Market's "Currencies you can buy" list and the "Find a deal" chips.
+- **When they appear:** only while the server offers them, meaning its rate limits include them. That is on for testing, and off on the live server until a Super Admin switches each one on (ADR-106). A demo build never shows them.
+- **Same rule as the yuan:** each currency is listed only when the server has a limit for it. USD, GBP, EUR and CAD stay listed without a limit, so a stale feed is visible (ADR-102).
+- **Limit line:** the derived limits read "worked out from a CBN rate and a published exchange rate". CAD keeps its Bank of Canada wording, and the yuan now uses the general wording too.
+- **Flags:** each currency shows its country's flag; the CFA franc shows Senegal's, the corridor's country.
+- **"Find a deal":** the chips scroll sideways, and the search hint lists the first four currencies.
+- **Translations:** the currency names and the new sentence are in all seven translated languages. They are drafts, like the rest (M-6).
+- **Evidence:** `mobile/__tests__/africa-market.test.tsx`, plus the African cases in `market-search.test.tsx`.
 
 ## Not verified / owner actions
 
