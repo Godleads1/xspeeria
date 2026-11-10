@@ -65,7 +65,7 @@ from app.models.activity import CustomerActivity
 from app.models.fraud import FraudAlert
 from app.models.marketplace import Match
 from app.models.ops_alerts import OpsAlert
-from app.models.settlement import Settlement
+from app.models.settlement import ReconciliationException, Settlement
 from app.models.staff import StaffAccount, StaffAuditEntry, StaffRole
 from app.providers.email import EmailSender
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
@@ -100,6 +100,7 @@ RULES: dict[str, str] = {
     "outside_failing": "P2",
     "job_failing": "P2",
     "escrow_stalled": "P1",
+    "books_mismatch": "P1",
 }
 
 #: English titles for the email subject. The console shows its own translated text.
@@ -117,6 +118,7 @@ TITLES: dict[str, str] = {
     "outside_failing": "An outside service is failing",
     "job_failing": "A background job is failing",
     "escrow_stalled": "Escrow processing has stopped",
+    "books_mismatch": "A deal's money in and out don't match",
 }
 
 #: ADR-072 warning codes that become alerts (red ones only; amber stays on the page).
@@ -415,6 +417,24 @@ class OpsAlertService:
                     "high_fraud_alert",
                     f"fraud:{fraud_id}",
                     {"fraud_alert_id": str(fraud_id), "fraud_rule": fraud_rule},
+                )
+            )
+
+        # ADR-110: the daily check found a deal whose money in and out don't match.
+        for exc_id, settlement_id in (
+            await self._db.execute(
+                select(ReconciliationException.id, ReconciliationException.settlement_id).where(
+                    ReconciliationException.status == "OPEN",
+                    ReconciliationException.detail.startswith("Daily check: "),
+                    ReconciliationException.opened_at >= now - EVENT_LOOKBACK,
+                )
+            )
+        ).all():
+            new.append(
+                await self._event(
+                    "books_mismatch",
+                    f"reconciliation:{exc_id}",
+                    {"settlement_id": str(settlement_id)},
                 )
             )
 

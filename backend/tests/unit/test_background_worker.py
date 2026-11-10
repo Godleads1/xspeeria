@@ -25,6 +25,7 @@ DB = "postgresql+asyncpg://u:p@localhost:5432/x"
 JOBS = {
     "deal expiry, queues, fraud scan",
     "retention and clean-up",
+    "deal reconciliation",
     "security emails",
 }
 EVERYWHERE = {"metrics", "alert rules"}

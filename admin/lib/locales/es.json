@@ -1116,5 +1116,6 @@
  "Yes, Switch Off": "Sí, desactivar",
  "Yes, Switch On": "Sí, activar",
  "{{c}} is off.": "{{c}} está desactivada.",
- "{{c}} is on.": "{{c}} está activada."
+ "{{c}} is on.": "{{c}} está activada.",
+ "The daily check found a deal whose money in and out don’t match": "La comprobación diaria encontró un acuerdo cuyo dinero de entrada y salida no coincide"
 }

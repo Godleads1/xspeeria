@@ -1116,5 +1116,6 @@
  "Yes, Switch Off": "نعم، عطّل",
  "Yes, Switch On": "نعم، فعّل",
  "{{c}} is off.": "{{c}} معطّلة.",
- "{{c}} is on.": "{{c}} مفعّلة."
+ "{{c}} is on.": "{{c}} مفعّلة.",
+ "The daily check found a deal whose money in and out don’t match": "وجد الفحص اليومي صفقة لا تتطابق أموالها الواردة والصادرة"
 }
