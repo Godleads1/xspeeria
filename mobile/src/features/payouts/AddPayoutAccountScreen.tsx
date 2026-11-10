@@ -19,22 +19,35 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton, Screen } from '../../components/primitives';
 import { brandWeight, color, space, typography, themed } from '../../theme';
 import { BankAccountFields } from '../profile/BankAccountFields';
-import { validateBankForm, type BankFormValues } from '../profile/data';
+import { AFRICAN_CURRENCIES, payoutKinds, validateBankForm, type BankFormValues, type PayoutKind } from '../profile/data';
 import { confirmIdentity, type ConfirmIdentity } from '../security/serverConfirm';
 import type { PayoutSource } from './serverPayouts';
-import { tr } from "../../i18n";
+import { k, tr } from "../../i18n";
 
 /** Currencies with an approved account form: EUR by IBAN (ADR-099), CAD (ADR-100). */
-export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD'] as const;
+export const PAYOUT_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD', ...AFRICAN_CURRENCIES] as const;
 /** ADR-105: shown only when the server offers them (China is switched off until then). */
 export const SWITCHED_CURRENCIES = ['CNY'] as const;
 
-export function toNewAccount(currency: string, v: BankFormValues): NewPayoutAccount {
+/** ADR-107: how each kind is named on its tab. */
+const KIND_LABEL: Record<PayoutKind, string> = {
+  standard: k('US bank account'),
+  bank: k('Bank account'),
+  mobile_money: k('Mobile money'),
+};
+
+export function toNewAccount(currency: string, v: BankFormValues, kind: PayoutKind = 'standard'): NewPayoutAccount {
   const out: NewPayoutAccount = {
     currency,
     bank_name: (v.bankName ?? '').trim(),
     account_number: (v.accountNumber ?? '').trim(),
   };
+  if (kind !== 'standard') {
+    // ADR-107: a bank in Africa or a mobile-money wallet (Zimbabwe's US dollars too).
+    out.account_type = kind;
+    if (kind === 'bank' && v.branchCode?.trim()) out.branch_code = v.branchCode.trim();
+    return out;
+  }
   if (v.routingNumber) out.routing_number = v.routingNumber.trim();
   if (v.sortCode) out.sort_code = v.sortCode.trim();
   if (v.accountType) out.account_type = v.accountType;
@@ -88,7 +101,9 @@ export function AddPayoutAccountScreen({
   const [step, setStep] = useState<'form' | 'review' | 'name'>('form');
   const [added, setAdded] = useState<ServerPayoutAccount | null>(null);
 
-  const errors = validateBankForm(currency, values);
+  const kinds = payoutKinds(currency);
+  const [kind, setKind] = useState<PayoutKind>(kinds[0] ?? 'standard');
+  const errors = validateBankForm(currency, values, kind);
   const valid = Object.keys(errors).length === 0;
 
   const review = (): void => {
@@ -104,7 +119,7 @@ export function AddPayoutAccountScreen({
     try {
       const approval = await confirmWith('beneficiary.add', tr("Add a {{currency}} payout account.", { currency }));
       if (!approval) return;
-      const account = await source.add(toNewAccount(currency, values), approval);
+      const account = await source.add(toNewAccount(currency, values, kind), approval);
       setValues({}); // the full number leaves memory as soon as it is sent
       setAdded(account);
       setStep('name');
@@ -147,6 +162,8 @@ export function AddPayoutAccountScreen({
     if (values.routingNumber) rows.push([tr("Routing number"), values.routingNumber.trim()]);
     if (values.sortCode) rows.push([tr("Sort code"), values.sortCode.trim()]);
     if (values.accountType) rows.push([tr("Account type"), values.accountType]);
+    if (values.branchCode?.trim()) rows.push([tr("Bank or branch code"), values.branchCode.trim()]);
+    if (kind === 'mobile_money') rows[1] = [tr("Mobile money provider"), (values.bankName ?? '').trim()];
     return (
       <Screen testID="add-payout-review">
         <Text accessibilityRole="header" style={styles.title}>{tr("Check the account")}</Text>
@@ -224,6 +241,7 @@ export function AddPayoutAccountScreen({
             accessibilityState={{ selected: c === currency }}
             onPress={() => {
               setCurrency(c);
+              setKind(payoutKinds(c)[0] ?? 'standard');
               setValues({});
               setShown(false);
             }}
@@ -234,8 +252,32 @@ export function AddPayoutAccountScreen({
         ))}
       </View>
 
+      {kinds.length > 1 ? (
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {kinds.map((kk) => (
+            <Pressable
+              key={kk}
+              testID={`add-payout-kind-${kk}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: kk === kind }}
+              onPress={() => {
+                setKind(kk);
+                setValues({});
+                setShown(false);
+              }}
+              style={[styles.tab, kk === kind ? styles.tabOn : null]}
+            >
+              <Text style={[styles.tabText, kk === kind ? styles.tabTextOn : null]}>
+                {currency === 'USD' && kk !== 'standard' ? tr('{{kind}} in Zimbabwe', { kind: tr(KIND_LABEL[kk]) }) : tr(KIND_LABEL[kk])}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       <BankAccountFields
         currency={currency}
+        kind={kind}
         values={values}
         errors={shown ? errors : {}}
         onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
@@ -261,7 +303,7 @@ const styles = themed(() => ({
   spacer: { width: 24 },
   title: { ...brandWeight('700'), fontSize: 20, color: color.text.primary },
   intro: { ...typography.caption, fontSize: 13, color: color.text.secondary },
-  tabs: { flexDirection: 'row', gap: space.xs },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   tab: {
     paddingHorizontal: space.sm,
     minHeight: 40,

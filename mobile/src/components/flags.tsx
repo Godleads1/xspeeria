@@ -31,6 +31,16 @@ const FLAG = {
   frRed: '#ED2939',
   cnRed: '#EE1C25',
   cnYellow: '#FFFF00',
+  // ADR-107: simplified African flags (a 24-px round badge, not a full flag).
+  afGreen: '#009A44',
+  afRed: '#CE1126',
+  afYellow: '#FCD116',
+  afBlue: '#0F47AF',
+  zaBlue: '#002395',
+  zaGreen: '#007A4D',
+  zaGold: '#FFB612',
+  zmOrange: '#EF7D00',
+  tzBlue: '#00A3DD',
 } as const;
 
 function UsStripes(): ReactElement {
@@ -147,6 +157,105 @@ function art(code: string): ReactElement {
           {[[13, 4], [15, 6.5], [15, 10], [13, 12.5]].map(([x, y]) => (
             <Circle key={`${x}-${y}`} cx={x} cy={y} r={0.9} fill={FLAG.cnYellow} />
           ))}
+        </>
+      );
+    case 'EG':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.afRed} />
+          <Rect y={8} width={24} height={8} fill={FLAG.white} />
+          <Rect y={16} width={24} height={8} fill={FLAG.black} />
+        </>
+      );
+    case 'ZA':
+      return (
+        <>
+          <Rect width={24} height={12} fill={FLAG.afRed} />
+          <Rect y={12} width={24} height={12} fill={FLAG.zaBlue} />
+          <Path d="M0 0 L12 9 H24 V15 H12 L0 24 Z" fill={FLAG.white} />
+          <Path d="M0 2.5 L10.5 10 H24 V14 H10.5 L0 21.5 Z" fill={FLAG.zaGreen} />
+          <Path d="M0 5.5 L8.5 12 L0 18.5 Z" fill={FLAG.zaGold} />
+          <Path d="M0 7.5 L6 12 L0 16.5 Z" fill={FLAG.black} />
+        </>
+      );
+    case 'MA':
+      return (
+        <>
+          <Rect width={24} height={24} fill={FLAG.afRed} />
+          <Path d="M12 6.5l1.6 4.9h5.1l-4.1 3 1.6 4.9-4.2-3-4.2 3 1.6-4.9-4.1-3h5.1z" fill="none" stroke={FLAG.afGreen} strokeWidth={1.1} />
+        </>
+      );
+    case 'ET':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.afGreen} />
+          <Rect y={8} width={24} height={8} fill={FLAG.afYellow} />
+          <Rect y={16} width={24} height={8} fill={FLAG.afRed} />
+          <Circle cx={12} cy={12} r={5} fill={FLAG.afBlue} />
+        </>
+      );
+    case 'KE':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.black} />
+          <Rect y={8} width={24} height={8} fill={FLAG.white} />
+          <Rect y={9.2} width={24} height={5.6} fill={FLAG.afRed} />
+          <Rect y={16} width={24} height={8} fill={FLAG.afGreen} />
+          <Path d="M12 4.5 C15 8 15 16 12 19.5 C9 16 9 8 12 4.5 Z" fill={FLAG.afRed} stroke={FLAG.black} strokeWidth={0.6} />
+        </>
+      );
+    case 'SN':
+      return (
+        <>
+          <Rect width={8} height={24} fill={FLAG.afGreen} />
+          <Rect x={8} width={8} height={24} fill={FLAG.afYellow} />
+          <Rect x={16} width={8} height={24} fill={FLAG.afRed} />
+          <Circle cx={12} cy={12} r={2.2} fill={FLAG.afGreen} />
+        </>
+      );
+    case 'GH':
+      return (
+        <>
+          <Rect width={24} height={8} fill={FLAG.afRed} />
+          <Rect y={8} width={24} height={8} fill={FLAG.afYellow} />
+          <Rect y={16} width={24} height={8} fill={FLAG.afGreen} />
+          <Path d="M12 8.6l1 3h3.2l-2.6 1.9 1 3-2.6-1.9-2.6 1.9 1-3-2.6-1.9H11z" fill={FLAG.black} />
+        </>
+      );
+    case 'ZW':
+      return (
+        <>
+          {[FLAG.afGreen, FLAG.afYellow, FLAG.afRed, FLAG.black, FLAG.afRed, FLAG.afYellow, FLAG.afGreen].map((c, i) => (
+            <Rect key={i} y={(24 / 7) * i} width={24} height={24 / 7 + 0.1} fill={c} />
+          ))}
+          <Path d="M0 0 L11 12 L0 24 Z" fill={FLAG.white} stroke={FLAG.black} strokeWidth={0.6} />
+        </>
+      );
+    case 'UG':
+      return (
+        <>
+          {[FLAG.black, FLAG.afYellow, FLAG.afRed, FLAG.black, FLAG.afYellow, FLAG.afRed].map((c, i) => (
+            <Rect key={i} y={4 * i} width={24} height={4} fill={c} />
+          ))}
+          <Circle cx={12} cy={12} r={4} fill={FLAG.white} />
+        </>
+      );
+    case 'ZM':
+      return (
+        <>
+          <Rect width={24} height={24} fill={FLAG.afGreen} />
+          <Rect x={13.5} y={10} width={3.5} height={14} fill={FLAG.afRed} />
+          <Rect x={17} y={10} width={3.5} height={14} fill={FLAG.black} />
+          <Rect x={20.5} y={10} width={3.5} height={14} fill={FLAG.zmOrange} />
+        </>
+      );
+    case 'TZ':
+      return (
+        <>
+          <Path d="M0 0 H24 L0 24 Z" fill={FLAG.afGreen} />
+          <Path d="M24 0 V24 H0 Z" fill={FLAG.tzBlue} />
+          <Path d="M0 24 L24 0" stroke={FLAG.afYellow} strokeWidth={8} />
+          <Path d="M0 24 L24 0" stroke={FLAG.black} strokeWidth={5} />
         </>
       );
     default:

@@ -32,6 +32,8 @@ export interface NewPayoutAccount {
   transit_number?: string;
   /** CNY only (ADR-105): the 12-digit CNAPS code of the bank branch. */
   cnaps_code?: string;
+  /** ADR-107: a bank in Africa may also need its bank or branch code. */
+  branch_code?: string;
 }
 
 type Extra = Pick<RequestOptions, 'fetchImpl' | 'baseUrl'>;

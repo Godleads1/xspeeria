@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED (server)** — 2026-11-10. App screens follow in separate changes. |
+| **Status** | **IMPLEMENTED (server, app part 2)** — 2026-11-10. Part 3 (6-decimal rates and whole-unit amounts in the app's Market and search) follows. |
 | **Decision ID** | DEC-119 |
 | **Authority** | Owner, 2026-11-10: add Egypt, South Africa, Morocco, Ethiopia, Kenya, Senegal, Ghana, Zimbabwe, Uganda, Zambia and Tanzania. Answers: **"build all now and switch it on"**; payouts **"Bank and mobile money"**; Zimbabwe **"US dollars"**; small rates **"Allow up to 6 decimals"**; at launch **"On for testing, off when live"**. |
 | **Builds on** | ADR-042, ADR-101, ADR-105, ADR-106. |
@@ -27,6 +27,12 @@
 6. **Minimum:** 10 units, as for every foreign currency (ADR-029). That is small for the shillings; a higher minimum is a product decision.
 7. **Pretend banks** (local testing) for all eleven countries, including Zimbabwe for US dollars.
 
+## App (part 2)
+
+- **Countries and phones:** the eleven countries appear in "Which country will you pay from?", the regions list and the phone picker (+20, +27, +212, +251, +254, +221, +233, +263, +256, +260, +255), each with a simplified round flag.
+- **Payout accounts:** the ten currencies join the payout-account tabs (still hidden when the server switches a currency off). Each African currency has a *Bank account* form (bank name, account number or IBAN, optional bank or branch code). Where mobile money is common it also has a *Mobile money* form (provider, wallet phone number). US dollars add *Bank account in Zimbabwe* and *Mobile money in Zimbabwe* beside the US form.
+- **Not yet in the app:** the Market's currency list and "Find a deal". These need 6-decimal rates and whole-unit amounts, which come in part 3.
+
 ## Not verified / owner actions
 
 - **Legality and partner banks:** UNKNOWN — NOT VERIFIED for every one of the eleven. Egypt, Ethiopia, Morocco and Zimbabwe tightly control foreign exchange.
@@ -36,6 +42,8 @@
 - **Cross-country payouts:** a dollar account in another country than the escrow (for example a US account from the Zimbabwe escrow) assumes the partner bank can pay it. Not confirmed.
 
 ## Evidence
+
+- `mobile/__tests__/africa-app.test.tsx`: countries (Zimbabwe in US dollars), phone numbers, the bank and mobile-money forms and requests, and the add-account screen's tabs.
 
 - `backend/tests/unit/test_africa_rules.py`: countries; currencies by country; the dollar shared; the rate-limit formulas (6 decimals; XOF from the euro); whole units for UGX and XOF; on for testing, off on the live server.
 - `backend/tests/unit/test_payout_rules.py` `TestAfrica`: bank and mobile-money forms, including Zimbabwe's dollar wallet; the refused forms.

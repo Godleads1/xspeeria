@@ -9,8 +9,14 @@ export type KycStatus = 'not_started' | 'pending_documents' | 'under_review' | '
  * ADR-042, ADR-100, ADR-105: the countries a user can be verified in. China is shown only
  * when the server lists it (it stays switched off until legal clearance).
  */
-export type KycCountry = 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN';
-export const KYC_COUNTRIES: readonly KycCountry[] = ['NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN'];
+export type KycCountry =
+  | 'NG' | 'GB' | 'US' | 'CA' | 'DE' | 'FR' | 'CN'
+  | 'EG' | 'ZA' | 'MA' | 'ET' | 'KE' | 'SN' | 'GH' | 'ZW' | 'UG' | 'ZM' | 'TZ';
+export const KYC_COUNTRIES: readonly KycCountry[] = [
+  'NG', 'GB', 'US', 'CA', 'DE', 'FR', 'CN',
+  // ADR-107 (owner, 2026-11-10): eleven African countries.
+  'EG', 'ZA', 'MA', 'ET', 'KE', 'SN', 'GH', 'ZW', 'UG', 'ZM', 'TZ',
+];
 export const COUNTRY_NAME: Record<KycCountry, string> = {
   NG: 'Nigeria',
   GB: k("the United Kingdom"),
@@ -19,6 +25,17 @@ export const COUNTRY_NAME: Record<KycCountry, string> = {
   DE: k("Germany"),
   FR: k("France"),
   CN: k("China"),
+  EG: k("Egypt"),
+  ZA: k("South Africa"),
+  MA: k("Morocco"),
+  ET: k("Ethiopia"),
+  KE: k("Kenya"),
+  SN: k("Senegal"),
+  GH: k("Ghana"),
+  ZW: k("Zimbabwe"),
+  UG: k("Uganda"),
+  ZM: k("Zambia"),
+  TZ: k("Tanzania"),
 };
 /** Code for the round flag (a currency, or the country where several share the euro). */
 export const COUNTRY_FLAG: Record<KycCountry, string> = {
@@ -29,6 +46,17 @@ export const COUNTRY_FLAG: Record<KycCountry, string> = {
   DE: 'DE',
   FR: 'FR',
   CN: 'CNY',
+  EG: 'EG',
+  ZA: 'ZA',
+  MA: 'MA',
+  ET: 'ET',
+  KE: 'KE',
+  SN: 'SN',
+  GH: 'GH',
+  ZW: 'ZW',
+  UG: 'UG',
+  ZM: 'ZM',
+  TZ: 'TZ',
 };
 /** The currency each country pays in. Germany and France both pay euros (ADR-105). */
 export const COUNTRY_CURRENCY: Record<KycCountry, string> = {
@@ -39,6 +67,18 @@ export const COUNTRY_CURRENCY: Record<KycCountry, string> = {
   DE: 'EUR',
   FR: 'EUR',
   CN: 'CNY',
+  // ADR-107: Zimbabwe pays in US dollars.
+  EG: 'EGP',
+  ZA: 'ZAR',
+  MA: 'MAD',
+  ET: 'ETB',
+  KE: 'KES',
+  SN: 'XOF',
+  GH: 'GHS',
+  ZW: 'USD',
+  UG: 'UGX',
+  ZM: 'ZMW',
+  TZ: 'TZS',
 };
 
 export function isKycCountry(v: unknown): v is KycCountry {

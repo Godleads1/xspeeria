@@ -12,25 +12,37 @@ import { Pressable, Text, View } from 'react-native';
 import { Icon } from '../../components/icons';
 import { color, typography, themed } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField } from '../market/controls';
-import { ACCOUNT_TYPES, BANK_FORMS, normalizeIban, type BankField, type BankFieldKey, type BankFormValues } from './data';
+import { ACCOUNT_TYPES, BANK_FORMS, bankFormKey, normalizeIban, type BankField, type BankFieldKey, type BankFormValues, type PayoutKind } from './data';
 import { tr } from "../../i18n";
 
 export function BankAccountFields({
   currency,
+  kind = 'standard',
   values,
   errors,
   onChange,
 }: {
   currency: string;
+  /** ADR-107: a bank in Africa or a mobile-money wallet instead of the currency's own form. */
+  kind?: PayoutKind;
   values: BankFormValues;
   errors: Partial<Record<BankFieldKey, string>>;
   onChange: (key: BankFieldKey, value: string) => void;
 }): ReactElement {
-  const fields = BANK_FORMS[currency] ?? [];
+  const fields = BANK_FORMS[bankFormKey(currency, kind)] ?? [];
   const [typeSheet, setTypeSheet] = useState(false);
 
   const set = (f: BankField, raw: string): void => {
-    onChange(f.key, f.kind === 'digits' ? raw.replace(/\D/g, '') : f.kind === 'iban' ? normalizeIban(raw) : raw);
+    onChange(
+      f.key,
+      f.kind === 'digits'
+        ? raw.replace(/\D/g, '')
+        : f.kind === 'phone'
+          ? raw.replace(/[^\d+]/g, '')
+          : f.kind === 'iban'
+            ? normalizeIban(raw)
+            : raw,
+    );
   };
 
   return (
@@ -39,7 +51,7 @@ export function BankAccountFields({
         const error = errors[f.key];
         return (
           <View key={f.key} style={styles.fieldWrap}>
-            <OutlinedField label={`${tr(f.label)} *`} invalid={Boolean(error)}>
+            <OutlinedField label={f.optional ? tr(f.label) : `${tr(f.label)} *`} invalid={Boolean(error)}>
               {f.kind === 'select' ? (
                 <Pressable
                   testID={`field-${f.key}`}
@@ -57,7 +69,7 @@ export function BankAccountFields({
                   accessibilityLabel={tr(f.label)}
                   value={values[f.key] ?? ''}
                   onChangeText={(t) => set(f, t)}
-                  keyboardType={f.kind === 'digits' ? 'number-pad' : 'default'}
+                  keyboardType={f.kind === 'digits' ? 'number-pad' : f.kind === 'phone' ? 'phone-pad' : 'default'}
                   inputMode={f.kind === 'digits' ? 'numeric' : 'text'}
                   maxLength={f.maxLength}
                 />
