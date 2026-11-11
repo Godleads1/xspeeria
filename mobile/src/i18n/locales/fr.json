@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Saisissez le montant en nombre entier et le taux en chiffres, par ex. 1000 et 0.306.",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "Votre taux ne peut pas dépasser {{official}} {{quote}} par {{base}}.",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "Il n’y a pas de taux maximum pour {{base}} et {{quote}} pour le moment : vous ne pouvez pas échanger cette paire pour l’instant.",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Votre demande d’achat de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes demandes.",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Votre offre de vente de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes offres.",
  "You pay in {{code}}": "Vous payez en {{code}}",
  "Change the currency you pay with": "Changer la devise avec laquelle vous payez",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Vendre {{amount}} {{currency}} à {{rate}} {{quote}} par {{base}}",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Prendre {{amount}} {{currency}} à {{rate}} {{quote}} par {{base}}",
  "Rate: {{quote}} {{rate}} /{{base}}": "Taux : {{rate}} {{quote}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "Soit {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "Soit {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "Vous avez acheté {{amount}} à {{rate}} {{quote}} par {{base}}, {{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "Taux - {{rate}} {{quote}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Votre demande d’achat de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes offres.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Votre offre de vente de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes demandes.",
+ " for {{amount}} {{currency}}": " contre {{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "Taux ({{quote}} par {{base}})",
+ "You pay {{pay}} and get {{currency}}.": "Vous payez en {{pay}} et recevez des {{currency}}.",
+ "RATE RANGE ({{quote}} PER {{base}})": "FOURCHETTE DE TAUX ({{quote}} PAR {{base}})",
+ "From {{quote}} {{low}}": "À partir de {{low}} {{quote}}",
+ "Up to {{quote}} {{high}}": "Jusqu’à {{high}} {{quote}}"
 }

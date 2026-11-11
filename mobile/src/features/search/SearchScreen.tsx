@@ -30,7 +30,8 @@ import {
   filterProblem,
   pairFor,
   readQuery,
-  shownSearchCurrencies,
+  searchCurrencies,
+  searchQuote,
   SORTS,
   STATUSES,
   type SearchState,
@@ -50,7 +51,10 @@ export function SearchScreen({
   onPostRequest,
   onQueue,
   offered,
+  pay = null,
 }: {
+  /** ADR-111: the currency you pay with, detected (server builds); null: naira, as before. */
+  pay?: string | null;
   /** The currencies the server offers now (server builds); see `shownSearchCurrencies`. */
   offered?: ReadonlySet<string> | null;
   /** ADR-059 Decision 4: join or leave the queue of a waiting offer; resolves with a note. */
@@ -65,7 +69,17 @@ export function SearchScreen({
   onPostRequest: () => void;
 }): ReactElement {
   const insets = useSafeAreaInsets();
-  const [state, setState] = useState<SearchState>(initial);
+  // ADR-111: paying with another currency, the search is for offers selling the one you want
+  // for it; you can't search for your own (it's what you pay with).
+  const other = pay !== null && pay !== 'NGN';
+  const [state, setState] = useState<SearchState>(() =>
+    other ? { ...initial, pay, side: 'buy', currency: initial.currency === pay ? 'NGN' : initial.currency } : initial,
+  );
+  useEffect(() => {
+    if (!other) return;
+    setState((s) => (s.pay === pay ? s : { ...s, pay, side: 'buy', currency: s.currency === pay ? 'NGN' : s.currency }));
+  }, [other, pay]);
+  const { base, quote } = searchQuote(state);
   const [query, setQuery] = useState(initialQuery);
   const [sheet, setSheet] = useState(openFilters);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
@@ -132,7 +146,9 @@ export function SearchScreen({
   const explain =
     state.status === 'success'
       ? tr('Paid and finished. These can’t be taken. Shown to help you judge today’s rates.')
-      : state.side === 'buy'
+      : other
+        ? tr('You pay {{pay}} and get {{currency}}.', { pay: state.pay ?? '', currency: state.currency })
+        : state.side === 'buy'
         ? tr('You pay naira and get {{currency}}.', { currency: state.currency })
         : tr('You send {{currency}} and get naira.', { currency: state.currency });
 
@@ -166,7 +182,7 @@ export function SearchScreen({
       </View>
 
       <View style={styles.sides} accessibilityRole="tablist">
-        {(['buy', 'sell'] as const).map((side) => {
+        {(other ? (['buy'] as const) : (['buy', 'sell'] as const)).map((side) => {
           const on = state.side === side;
           const off = hiddenPairs.includes(pairFor({ ...state, side }));
           return (
@@ -268,7 +284,7 @@ export function SearchScreen({
               />
             ))
           : null}
-        {load.status === 'ready' && load.result.kind === 'trades' ? load.result.rows.map((row) => <TradeCard key={row.key} row={row} />) : null}
+        {load.status === 'ready' && load.result.kind === 'trades' ? load.result.rows.map((row) => <TradeCard key={row.key} row={row} quote={quote} base={base} />) : null}
       </ScrollView>
 
       <FilterSheet
@@ -286,7 +302,7 @@ export function SearchScreen({
 }
 
 function rateText(row: Listing): string {
-  return `NGN ${row.rateLabel ?? formatRate(row.rateMilli)} / ${row.currency}`;
+  return `${row.rateQuote ?? 'NGN'} ${row.rateLabel ?? formatRate(row.rateMilli)} / ${row.rateBase ?? row.currency}`;
 }
 
 function OfferCard({
@@ -348,11 +364,11 @@ function OfferCard({
   );
 }
 
-function TradeCard({ row }: { row: TradeRow }): ReactElement {
+function TradeCard({ row, quote, base }: { row: TradeRow; quote: string; base: string }): ReactElement {
   return (
     <View testID="search-trade" style={[styles.card, styles.tradeCard]}>
       <View style={styles.row}>
-        <Text style={styles.rate}>{`NGN ${row.rateLabel} / ${row.currency}`}</Text>
+        <Text style={styles.rate}>{quote === 'NGN' ? `NGN ${row.rateLabel} / ${row.currency}` : `${quote} ${row.rateLabel} / ${base}`}</Text>
         <View style={styles.tag}>
           <Text style={styles.tagText}>{tr('Success')}</Text>
         </View>
@@ -420,12 +436,16 @@ export function FilterSheet({
 
           <Text style={styles.label}>{tr('CURRENCY')}</Text>
           <View style={styles.chipRow}>
-            {shownSearchCurrencies(offered).map((c) => (
+            {searchCurrencies(draft.pay, offered).map((c) => (
               <Chip key={c} testID={`filter-currency-${c}`} label={c} on={draft.currency === c} onPress={() => set({ currency: c })} />
             ))}
           </View>
 
-          <Text style={styles.label}>{tr('RATE RANGE (NGN PER {{currency}})', { currency: draft.currency })}</Text>
+          <Text style={styles.label}>
+            {searchQuote(draft).quote === 'NGN'
+              ? tr('RATE RANGE (NGN PER {{currency}})', { currency: searchQuote(draft).base })
+              : tr('RATE RANGE ({{quote}} PER {{base}})', { ...searchQuote(draft) })}
+          </Text>
           <View style={styles.pair}>
             <Field testID="filter-min-rate" label={tr('Lowest')} value={draft.minRate} onChange={(t) => set({ minRate: numeric(t) })} />
             <Text style={styles.dash}>–</Text>

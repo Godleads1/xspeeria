@@ -20,6 +20,7 @@ import { useProfile } from '../../../src/features/profile/profileStore';
 import { useUnreadCount } from '../../../src/features/notifications/unread';
 import { useThemeMode } from '../../../src/theme';
 import { useOfferedCurrencies } from '../../../src/features/market/offeredCurrencies';
+import { usePayCurrency } from '../../../src/features/market/payCurrency';
 import { tr } from "../../../src/i18n";
 
 const loadDeals = () => serverDeals.deals();
@@ -61,6 +62,7 @@ export default function HomeRoute(): ReactElement {
   // ADR-066: a failed notice request shows nothing; it never blocks Home.
   const notices = useServerData(SERVER_MODE ? loadNotices : null);
   const offered = useOfferedCurrencies();
+  const pay = usePayCurrency();
   const rates = useMemo(() => bestRates(offers.data ?? [], ['USD', 'GBP']), [offers.data]);
   const approved = kyc.data?.status === 'approved';
   // ADR-055: once the identity check is approved, show the name from the ID.
@@ -82,6 +84,7 @@ export default function HomeRoute(): ReactElement {
         showReadiness
         notices={notices.data ?? []}
         offered={offered}
+        pay={pay}
         onSearch={({ query, currency, filters }) =>
           router.push({
             pathname: '/market/search',

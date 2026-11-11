@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "أدخل المبلغ كرقم صحيح والسعر كرقم، مثلاً 1000 و0.306.",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "لا يمكن أن يتجاوز سعرك {{official}} {{quote}} لكل {{base}}.",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "لا يوجد حد أقصى للسعر بين {{base}} و{{quote}} حاليًا، لذا لا يمكنك تداول هذا الزوج الآن.",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "طلبك لشراء {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} متاح الآن. تجده في ⋮ › طلباتي.",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "عرضك لبيع {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} نشط الآن. اطّلع عليه في ⋮ › عروضي.",
  "You pay in {{code}}": "تدفع بعملة {{code}}",
  "Change the currency you pay with": "تغيير العملة التي تدفع بها",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "بيع {{amount}} {{currency}} بسعر {{rate}} {{quote}} لكل {{base}}",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "أخذ {{amount}} {{currency}} بسعر {{rate}} {{quote}} لكل {{base}}",
  "Rate: {{quote}} {{rate}} /{{base}}": "السعر: {{rate}} {{quote}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "ما يعادل {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "ما يعادل {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "اشتريت {{amount}} بسعر {{rate}} {{quote}} لكل {{base}}، {{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "السعر - {{rate}} {{quote}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "طلبك لشراء {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} متاح الآن. تجده في ⋮ › عروضي.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "عرضك لبيع {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} نشط الآن. اطّلع عليه في ⋮ › طلباتي.",
+ " for {{amount}} {{currency}}": " مقابل {{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "السعر ({{quote}} لكل {{base}})",
+ "You pay {{pay}} and get {{currency}}.": "تدفع بعملة {{pay}} وتحصل على {{currency}}.",
+ "RATE RANGE ({{quote}} PER {{base}})": "نطاق السعر ({{quote}} لكل {{base}})",
+ "From {{quote}} {{low}}": "من {{low}} {{quote}}",
+ "Up to {{quote}} {{high}}": "حتى {{high}} {{quote}}"
 }

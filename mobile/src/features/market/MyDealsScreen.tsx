@@ -18,6 +18,7 @@ import { brandWeight, color, space, typography, themed } from "../../theme";
 import { formatHundredths, parseToHundredths } from "./money";
 import { groupedRate } from "./serverOffers";
 import { ngnMinorFor } from "./TakeOfferScreen";
+import { quoteOf } from "./pairs";
 import { dayMonthYear, tr } from "../../i18n";
 
 export interface MyDealsSource {
@@ -43,9 +44,23 @@ export function dealHeadline(m: ServerMatch): string {
   const amount = `${grouped(m.allocated_amount)} ${m.currency}`;
   const minor = /^[0-9]+(\.[0-9]{1,2})?$/.test(m.allocated_amount) ? parseToHundredths(m.allocated_amount) : null;
   // The NGN total is exact only when the deal is in the foreign currency (NGN per 1 unit).
-  const ngn = m.currency !== "NGN" && minor !== null ? ngnMinorFor(minor, m.agreed_rate) : null;
-  const other = ngn !== null ? tr(" for NGN {{ngn}}", { ngn: formatHundredths(ngn) }) : "";
+  const ngn = m.currency !== "NGN" && m.counter_currency === "NGN" && minor !== null ? ngnMinorFor(minor, m.agreed_rate) : null;
+  // ADR-111: between two other currencies, the other side is the server's counter amount.
+  const cross = m.currency !== "NGN" && m.counter_currency !== "NGN" && m.counter_amount;
+  const other = cross
+    ? tr(" for {{amount}} {{currency}}", { amount: grouped(m.counter_amount ?? ""), currency: m.counter_currency })
+    : ngn !== null
+      ? tr(" for NGN {{ngn}}", { ngn: formatHundredths(ngn) })
+      : "";
   return m.your_role === "taker" ? tr("You get {{amount}}{{other}}", { amount, other }) : tr("You give {{amount}}{{other}}", { amount, other });
+}
+
+/** The agreed rate as the pair reads it: NGN per unit, or quote per base (ADR-111). */
+export function dealRate(m: ServerMatch): string {
+  const q = quoteOf(m.currency, m.counter_currency);
+  return q.quote === "NGN"
+    ? tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(m.agreed_rate), currency: q.base })
+    : tr("Rate: {{quote}} {{rate}} /{{base}}", { quote: q.quote, rate: groupedRate(m.agreed_rate), base: q.base });
 }
 
 /** Where the deal stands: the 30-minute payout-account step (ADR-035/036), then escrow (ADR-037). */
@@ -119,7 +134,7 @@ export function MyDealsScreen({
                 <Text style={styles.strong}>{dealHeadline(m)}</Text>
                 <StatusChip label={tr("Recorded")} tone="success" />
               </View>
-              <Text style={styles.line}>{tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(m.agreed_rate), currency: m.currency === "NGN" ? m.counter_currency : m.currency })}</Text>
+              <Text style={styles.line}>{dealRate(m)}</Text>
               <Text style={styles.line}>
                 {`${m.your_role === "taker" ? tr("You took an offer") : tr("Someone took your offer")} · ${when(m.accepted_at)}`}
               </Text>

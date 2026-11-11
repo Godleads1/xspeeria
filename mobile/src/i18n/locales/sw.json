@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Weka kiasi kama nambari kamili na kiwango kama nambari, k.m. 1000 na 0.306.",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "Kiwango chako hakiwezi kuzidi {{quote}} {{official}} kwa kila {{base}}.",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "Hakuna kiwango cha juu kwa {{base}} na {{quote}} kwa sasa, kwa hivyo huwezi kubadilisha jozi hii kwa sasa.",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Ombi lako la kununua {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} liko hewani. Lione chini ya ⋮ › Maombi Yangu.",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Ofa yako ya kuuza {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} iko hewani. Ione chini ya ⋮ › Ofa Zangu.",
  "You pay in {{code}}": "Unalipa kwa {{code}}",
  "Change the currency you pay with": "Badilisha sarafu unayolipa nayo",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Uza {{amount}} {{currency}} kwa {{quote}} {{rate}} kwa kila {{base}}",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Chukua {{amount}} {{currency}} kwa {{quote}} {{rate}} kwa kila {{base}}",
  "Rate: {{quote}} {{rate}} /{{base}}": "Kiwango: {{quote}} {{rate}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "Ni sawa na {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "Ni sawa na {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "Ulinunua {{amount}} kwa {{quote}} {{rate}} kwa kila {{base}}, {{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "Kiwango - {{quote}} {{rate}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Ombi lako la kununua {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} liko hewani. Lione chini ya ⋮ › Ofa Zangu.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Ofa yako ya kuuza {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} iko hewani. Ione chini ya ⋮ › Maombi Yangu.",
+ " for {{amount}} {{currency}}": " kwa {{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "Kiwango ({{quote}} kwa kila {{base}})",
+ "You pay {{pay}} and get {{currency}}.": "Unalipa kwa {{pay}} na kupata {{currency}}.",
+ "RATE RANGE ({{quote}} PER {{base}})": "KIWANGO ({{quote}} KWA KILA {{base}})",
+ "From {{quote}} {{low}}": "Kuanzia {{quote}} {{low}}",
+ "Up to {{quote}} {{high}}": "Hadi {{quote}} {{high}}"
 }

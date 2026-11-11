@@ -106,10 +106,14 @@ export function ReceiptScreen({
 }): ReactElement {
   const insets = useSafeAreaInsets();
   const isBuy = item.side === "buy";
-  const ngnMinor = quoteMinor(item.amountMinor, item.rateMilli);
+  // ADR-111: a deal with no naira side pays the server's recorded other amount, in its
+  // currency; a naira deal's other side is NGN at the rate, as before.
+  const payCode = item.cross?.payCurrency ?? "NGN";
+  const ngnMinor = item.cross ? item.cross.payMinor : quoteMinor(item.amountMinor, item.rateMilli);
+  const paid = (minor: number): string => `${formatAmount(payCode, minor)} ${payCode}`;
   // Recorded figures win (FIN-02); older mock items fall back to the computed ones.
   const sentMinor = isBuy ? ngnMinor : item.amountMinor;
-  const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeIn(isBuy ? "NGN" : item.currency, sentMinor);
+  const feeMinor = item.recorded ? item.recorded.feeMinor : coordinationFeeIn(isBuy ? payCode : item.currency, sentMinor);
   const paidMinor = item.recorded ? item.recorded.transferMinor : sentMinor + feeMinor;
   // Labels follow the status (FIN-03): nothing is "paid" or "received" on a failed trade.
   const done = item.status === "completed";
@@ -119,9 +123,11 @@ export function ReceiptScreen({
   const receivedLabel = failed ? tr("Amount (not received)") : done && isBuy ? tr("Amount Received") : tr("Amount to receive");
   const paidLabel = failed ? tr("Amount (not paid)") : done && isBuy ? tr("Amount Paid") : tr("Amount to pay");
   const foreign = `${formatAmount(item.currency, item.amountMinor)} ${item.currency}`;
-  const rate = `NGN ${formatRateCompact(item.rateMilli)}/${item.currency}`;
+  const rate = item.cross
+    ? `${item.cross.quote} ${formatRateCompact(item.rateMilli)}/${item.cross.base}`
+    : `NGN ${formatRateCompact(item.rateMilli)}/${item.currency}`;
   const [fromCode, toCode] = isBuy
-    ? ["NGN", item.currency]
+    ? [payCode, item.currency]
     : [item.currency, "NGN"];
   // Payouts are in the currency received: foreign when buying, NGN when selling.
   const payoutCurrency = isBuy ? item.currency : "NGN";
@@ -202,17 +208,17 @@ export function ReceiptScreen({
             <Text style={styles.detailsTitle}>{tr("Transaction details")}</Text>
             <Line
               label={tr("Transaction Amount")}
-              value={isBuy ? `${formatHundredths(ngnMinor)} NGN` : foreign}
+              value={isBuy ? paid(ngnMinor) : foreign}
             />
             {isBuy ? (
               <>
                 <Line
                   label={tr("Coordination Fee ({{COORDINATION_FEE_LABEL}})", { COORDINATION_FEE_LABEL })}
-                  value={`${formatHundredths(feeMinor)} NGN`}
+                  value={paid(feeMinor)}
                 />
                 <Line
                   label={paidLabel}
-                  value={`${formatHundredths(paidMinor)} NGN`}
+                  value={paid(paidMinor)}
                   strong
                 />
                 <Text style={styles.note}>

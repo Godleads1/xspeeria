@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED (server, step 1; app Market and Take offer, step 3)** — 2026-11-11. Other app screens follow in step 4. |
+| **Status** | **IMPLEMENTED (server, step 1; app, steps 3–4)** — 2026-11-11. The admin console follows in step 5. |
 | **Decision ID** | DEC-123 |
 | **Authority** | Owner, 2026-11-11: "i want us citizen can decide to buy ghana currency or any other currencies, but can not buy us dollars. same for other countrie." … "if i am in nigeria, i will not see order from fellow nigerians trying to sell naira to buy other currencies." Answers: **"Verified country"**, **"Pay with either"**, **"Work out via official rates"**, **"Build and switch on"**. Then: the pay currency "should be detected already" from verification, so there is no "I pay" choice. |
 | **Changes** | ADR-020 and ADR-029: a pair no longer needs naira. Everything else (escrow, fees, identity, limits) is unchanged. |
@@ -41,7 +41,14 @@
    - **Rates:** limits and rates read quote per base ("GHS 11.604 per USD"). Naira wording is unchanged.
    - **Before verification and in demo builds:** behaviour is as before (Buy pays naira; Sell sells dollars for naira). The server asks for the check when it is needed.
    - **Evidence:** `mobile/__tests__/cross-market.test.tsx`.
-4. **App:** search, "Find a deal", My Offers, My Deals, receipts and History.
+4. **App:** the other screens (implemented):
+   - **Search:** paying with another currency, Search lists offers selling the chosen currency for yours. It has no Sell side, since paying your currency for another is the same deal from either side. Your own currency is never offered; naira is. Rate filters read quote per base.
+   - **"Find a deal" on Home:** leaves out the chip for the currency you pay with.
+   - **My Offers:** a deal that pays naira is a request, under My Requests (as before). Any other offer, including a buy request paying dollars, is under My Offers, and the Market's notice says which. The rate and the rate field read quote per base.
+   - **My Deals:** shows both sides ("You get 100.00 USD for 1,150.00 GHS") and the pair's rate.
+   - **History and receipts:** a deal with no naira side is a "bought" row from your side. The receipt shows what you paid (the server's recorded counter amount) in its own currency, with the 1% fee in that currency.
+   - **Naira deals:** read exactly as before.
+   - **Evidence:** `mobile/__tests__/cross-screens.test.tsx`.
 5. **Admin console and docs.**
 
 ## Evidence (step 1)

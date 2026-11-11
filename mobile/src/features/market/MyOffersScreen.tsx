@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, LoadingState, Screen, StatusChip, type StatusTo
 import { brandWeight, color, space, typography, themed } from "../../theme";
 import { amountDecimals, formatAmount, parseAmount, parseRate } from "./money";
 import { exactHundredths, foreignMinorFor, groupedRate } from "./serverOffers";
+import { quoteOf } from "./pairs";
 import { tr, k } from "../../i18n";
 
 export interface MyOffersSource {
@@ -157,9 +158,15 @@ export function MyOffersScreen({
               const minor = naira === null ? null : foreignMinorFor(naira, o.desired_rate, foreign);
               return minor === null ? "" : formatAmount(foreign, minor);
             };
+            // ADR-111: the rate reads quote per base (NGN per unit for naira pairs, as before).
+            const q = quoteOf(o.source_currency, o.target_currency);
             const status = STATUS[o.status];
             const active = ACTIVE.has(o.status);
             const asking = confirming === o.offer_id;
+            const rateLabel =
+              q.quote === "NGN"
+                ? tr("Rate (NGN per {{currency}})", { currency: q.base })
+                : tr("Rate ({{quote}} per {{base}})", { quote: q.quote, base: q.base });
             return (
               <View key={o.offer_id} testID={`my-offer-${o.offer_id}`} style={styles.row}>
                 <View style={styles.rowTop}>
@@ -170,7 +177,11 @@ export function MyOffersScreen({
                   </Text>
                   <StatusChip label={tr(status.label)} tone={status.tone} />
                 </View>
-                <Text style={styles.line}>{tr("Rate: NGN {{desired_rate}} /{{foreign}}", { desired_rate: groupedRate(o.desired_rate), foreign })}</Text>
+                <Text style={styles.line}>
+                  {q.quote === "NGN"
+                    ? tr("Rate: NGN {{desired_rate}} /{{foreign}}", { desired_rate: groupedRate(o.desired_rate), foreign: q.base })
+                    : tr("Rate: {{quote}} {{rate}} /{{base}}", { quote: q.quote, rate: groupedRate(o.desired_rate), base: q.base })}
+                </Text>
                 <Text style={styles.line}>
                   {active
                     ? tr("Matched: {{matched_amount}} · Left: {{remaining_amount}} {{source_currency}}", {
@@ -201,10 +212,10 @@ export function MyOffersScreen({
                     />
                     </>
                     )}
-                    <Text style={styles.formLabel}>{tr("Rate (NGN per {{currency}})", { currency: foreign })}</Text>
+                    <Text style={styles.formLabel}>{rateLabel}</Text>
                     <TextInput
                       testID={`my-offer-${o.offer_id}-rate`}
-                      accessibilityLabel={tr("Rate (NGN per {{currency}})", { currency: foreign })}
+                      accessibilityLabel={rateLabel}
                       value={editing.rate}
                       onChangeText={(t) => setEditing({ ...editing, rate: t.replace(/[^0-9.,]/g, "").slice(0, 16) })}
                       keyboardType="decimal-pad"

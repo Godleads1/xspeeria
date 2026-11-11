@@ -6,6 +6,7 @@
  * floating point.
  */
 
+import { quoteOf, type Quote } from '../market/pairs';
 import type { SearchParams } from '../../api/offersApi';
 import { k, tr } from '../../i18n';
 
@@ -52,8 +53,15 @@ export const STATUSES: readonly { key: Status; label: string }[] = [
 ];
 
 export interface SearchState {
-  readonly currency: SearchCurrency;
+  /** The other currency; naira too when you pay with something else (ADR-111). */
+  readonly currency: SearchCurrency | 'NGN';
   readonly side: Side;
+  /**
+   * ADR-111: the currency you pay with, detected from your approved checks. Absent or naira:
+   * the naira search as before. Otherwise the search lists offers selling `currency` for it
+   * (paying it for another currency is the same deal from either side, so there is no Sell).
+   */
+  readonly pay?: string;
   readonly sort: Sort;
   readonly status: Status;
   /** Decimal text as typed; empty means "any". */
@@ -131,7 +139,21 @@ export function filterProblem(s: SearchState): string | null {
 
 /** The server pair: offers selling the currency, or buy requests paying naira for it. */
 export function pairFor(s: SearchState): string {
+  const pay = s.pay ?? 'NGN';
+  if (pay !== 'NGN') return `${s.currency}/${pay}`;
   return s.side === 'buy' ? `${s.currency}/NGN` : `NGN/${s.currency}`;
+}
+
+/** How rates read for this search: NGN per unit, or the pair's quote per base (ADR-111). */
+export function searchQuote(s: SearchState): Quote {
+  return quoteOf(s.currency, s.pay ?? 'NGN');
+}
+
+/** The currency chips for a search paying `pay` (naira: as before). */
+export function searchCurrencies(pay: string | undefined, offered?: ReadonlySet<string> | null): readonly (SearchCurrency | 'NGN')[] {
+  const shown = shownSearchCurrencies(offered);
+  if (!pay || pay === 'NGN') return shown;
+  return (['NGN', ...shown] as const).filter((c) => c !== pay);
 }
 
 /** What is sent. Commas are removed; empty filters are left out. */
@@ -157,7 +179,16 @@ function grouped(text: string): string {
 export function activeChips(s: SearchState): string[] {
   const chips = [tr(SORTS.find((x) => x.key === s.sort)?.label ?? 'Best rate'), s.currency];
   if (s.status === 'success') chips.push(tr('Success'));
-  if (s.minRate || s.maxRate) {
+  const { quote } = searchQuote(s);
+  if ((s.minRate || s.maxRate) && quote !== 'NGN') {
+    chips.push(
+      s.minRate && s.maxRate
+        ? `${quote} ${grouped(s.minRate)}–${grouped(s.maxRate)}`
+        : s.minRate
+          ? tr('From {{quote}} {{low}}', { quote, low: grouped(s.minRate) })
+          : tr('Up to {{quote}} {{high}}', { quote, high: grouped(s.maxRate) }),
+    );
+  } else if (s.minRate || s.maxRate) {
     chips.push(
       s.minRate && s.maxRate
         ? tr('NGN {{low}}–{{high}}', { low: grouped(s.minRate), high: grouped(s.maxRate) })
