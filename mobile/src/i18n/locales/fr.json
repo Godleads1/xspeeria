@@ -1527,5 +1527,19 @@
  "Closed requests and their messages are deleted after 12 hours.": "Les demandes clôturées et leurs messages sont supprimés au bout de 12 heures.",
  "Enter a whole amount, for example 250": "Saisissez un montant entier, par exemple 250",
  "Enter whole amounts like 1000.": "Saisissez des montants entiers, comme 1000.",
- "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Saisissez le montant en nombre entier et le taux en chiffres, par ex. 1000 et 0.306."
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Saisissez le montant en nombre entier et le taux en chiffres, par ex. 1000 et 0.306.",
+ "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "Votre taux ne peut pas dépasser {{official}} {{quote}} par {{base}}.",
+ "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "Il n’y a pas de taux maximum pour {{base}} et {{quote}} pour le moment : vous ne pouvez pas échanger cette paire pour l’instant.",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Votre demande d’achat de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes demandes.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Votre offre de vente de {{amt}} {{code}} à {{rt}} {{quote}} par {{base}} est en ligne. Retrouvez-la dans ⋮ › Mes offres.",
+ "You pay in {{code}}": "Vous payez en {{code}}",
+ "Change the currency you pay with": "Changer la devise avec laquelle vous payez",
+ "Rate in {{quote}} per {{base}}": "Taux en {{quote}} par {{base}}",
+ "Maximum rate: {{quote}} {{official}} per {{base}}, worked out from the official naira rates. Your rate must be this or lower.": "Taux maximum : {{official}} {{quote}} par {{base}}, calculé à partir des taux officiels du naira. Votre taux doit être égal ou inférieur.",
+ "Select the currency to receive to see requests": "Choisissez la devise à recevoir pour voir les demandes",
+ "Pay with": "Payer avec",
+ "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Vendre {{amount}} {{currency}} à {{rate}} {{quote}} par {{base}}",
+ "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Prendre {{amount}} {{currency}} à {{rate}} {{quote}} par {{base}}",
+ "Rate: {{quote}} {{rate}} /{{base}}": "Taux : {{rate}} {{quote}} /{{base}}",
+ "Works out to {{amount}} {{currency}}": "Soit {{amount}} {{currency}}"
 }

@@ -18,6 +18,8 @@ import { serverAuth } from '../auth/serverAuth';
 import { countryHeaders, viewerCountry } from '../location/viewerCountry';
 import { confirmIdentity } from '../security/serverConfirm';
 import type { Listing } from './data';
+import { COUNTRY_CURRENCY, kycApi, type KycCountry, type KycStatus } from '../../api/kycApi';
+import { convertAtMilli, convertMinor, quoteOf } from './pairs';
 import { amountDecimals, amountText, divRoundHalfEven, exactRate, formatHundredths, parseToHundredths, quoteMinorOrNull, rateText } from './money';
 import { tr } from "../../i18n";
 
@@ -65,9 +67,49 @@ export function foreignMinorFor(ngnMinor: number, rate: string, currency = ''): 
   return Number.isSafeInteger(n) ? n : null;
 }
 
+/**
+ * ADR-111 (owner 2026-11-11): you pay with the currency of a country where your identity
+ * check is approved, detected — never asked. `currencies` are those, in the server's order;
+ * `here` is the one of the country the phone is in now, when that country is approved.
+ * Only a choice for the screen: the server checks the country again on every offer and take.
+ */
+export interface PayChoice {
+  readonly currencies: readonly string[];
+  readonly here: string | null;
+}
+
+export function payChoiceFrom(
+  regions: readonly { country: KycCountry; status: KycStatus | 'not_started' }[],
+  deviceCountry: string | null,
+): PayChoice {
+  const currencies: string[] = [];
+  let here: string | null = null;
+  for (const r of regions) {
+    if (r.status !== 'approved') continue;
+    const c = COUNTRY_CURRENCY[r.country];
+    if (!c) continue;
+    if (!currencies.includes(c)) currencies.push(c);
+    if (r.country === deviceCountry) here = c;
+  }
+  return { currencies, here };
+}
+
+/** The pay currency: one chosen on the screen, else the country you're in, else the first. */
+export function payCurrencyOf(choice: PayChoice | null, chosen: string | null): string | null {
+  if (!choice) return null;
+  if (chosen && choice.currencies.includes(chosen)) return chosen;
+  return choice.here ?? choice.currencies[0] ?? null;
+}
+
 /** A server offer as a Market row. Returns null for anything the app cannot show exactly. */
-export function toListing(offer: ServerOffer, now: number, best: boolean): Listing | null {
-  const request = offer.source_currency === 'NGN';
+export function toListing(
+  offer: ServerOffer,
+  now: number,
+  best: boolean,
+  request: boolean = offer.source_currency === 'NGN',
+): Listing | null {
+  // A row is about what the viewer would get (an offer: what it sells) or, for a request,
+  // what the viewer would sell to it (what it wants). ADR-111: any two currencies.
   const foreign = request ? offer.target_currency : offer.source_currency;
   // ADR-059 Decision 4: a waiting offer shows what may come back (the amount being paid for).
   const waiting = offer.waiting === true;
@@ -76,7 +118,7 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
   const left = exactHundredths(shownAmount);
   if (left === null || !/^[0-9]+(\.[0-9]{1,6})?$/.test(offer.desired_rate)) return null;
   // A buy request shows how much foreign currency it still wants (ADR-056).
-  const remaining = request ? foreignMinorFor(left, offer.desired_rate, foreign) : left;
+  const remaining = request ? convertMinor(left, offer.source_currency, foreign, offer.desired_rate) : left;
   if (remaining === null) return null;
   const rate = exactRate(offer.desired_rate);
   // A rate stored before the 3-decimal rule (more decimals) keeps its exact text for
@@ -95,9 +137,11 @@ export function toListing(offer: ServerOffer, now: number, best: boolean): Listi
           ? tr("Waiting for payment · You’re in the queue")
           : tr("Waiting for payment · {{count}} of 3 in queue", { count: queueLength })
         : minutesAgo(offer.created_at, now);
+  const { base, quote } = quoteOf(offer.source_currency, offer.target_currency);
   return {
     id: offer.offer_id,
     currency: foreign,
+    ...(quote !== 'NGN' || base !== foreign ? { rateQuote: quote, rateBase: base } : {}),
     availableMinor: remaining,
     rateMilli: sortKey,
     ...(rate === null ? { rateLabel: groupedRate(offer.desired_rate) } : {}),
@@ -115,17 +159,22 @@ function token(): string {
 }
 
 export interface MarketServer {
-  /** Offers selling `foreign` for naira, best (lowest) rate first. */
-  offersFor(foreign: string, now: number): Promise<Listing[]>;
-  /** Buy requests for `foreign` (offers paying naira, ADR-056), best (highest) rate first. */
-  requestsFor(foreign: string, now: number): Promise<Listing[]>;
-  /** Publish an offer to sell `foreign` for naira. Safe to retry with the same key. */
-  publishSell(foreign: string, amountMinor: number, rateMilli: number, key: string): Promise<ServerOffer>;
+  /** Offers selling `foreign` for `paidWith` (naira unless given), in the server's order. */
+  offersFor(foreign: string, now: number, paidWith?: string): Promise<Listing[]>;
+  /**
+   * Buy requests for `foreign`: offers paying `paidWith` (naira unless given) for it
+   * (ADR-056, ADR-111), in the server's order.
+   */
+  requestsFor(foreign: string, now: number, paidWith?: string): Promise<Listing[]>;
+  /** Publish an offer to sell `foreign` for `receive` (naira unless given). Safe to retry. */
+  publishSell(foreign: string, amountMinor: number, rateMilli: number, key: string, receive?: string): Promise<ServerOffer>;
   /**
    * ADR-056: publish a request to buy `amountMinor` of `foreign`, saved as an offer paying
-   * amount × rate in naira (half to even). Safe to retry with the same key.
+   * its value in `pay` (naira unless given) at the rate, half to even. Safe to retry.
    */
-  publishBuy(foreign: string, amountMinor: number, rateMilli: number, key: string): Promise<ServerOffer>;
+  publishBuy(foreign: string, amountMinor: number, rateMilli: number, key: string, pay?: string): Promise<ServerOffer>;
+  /** ADR-111: the currencies the user may pay with (approved checks). Optional for older doubles. */
+  payChoice?(): Promise<PayChoice>;
   newKey(): string;
   /** ADR-102: the rate ceilings in force now. Optional so older test doubles still work. */
   ceilings?(): Promise<Ceilings>;
@@ -147,45 +196,45 @@ export async function locatedPage(pair: string, ask: boolean): Promise<ListingsP
 }
 
 export const marketServer: MarketServer = {
-  async offersFor(foreign, now) {
-    const page = await locatedPage(`${foreign}/NGN`, true);
+  async offersFor(foreign, now, paidWith = 'NGN') {
+    const page = await locatedPage(`${foreign}/${paidWith}`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
-      const row = toListing(o, now, rows.every((r) => r.waiting));
+      const row = toListing(o, now, rows.every((r) => r.waiting), false);
       if (row) rows.push(row);
     });
     return rows;
   },
-  async requestsFor(foreign, now) {
-    const page = await locatedPage(`NGN/${foreign}`, true);
+  async requestsFor(foreign, now, paidWith = 'NGN') {
+    const page = await locatedPage(`${paidWith}/${foreign}`, true);
     const rows: Listing[] = [];
     page.items.forEach((o) => {
-      const row = toListing(o, now, rows.every((r) => r.waiting));
+      const row = toListing(o, now, rows.every((r) => r.waiting), true);
       if (row) rows.push(row);
     });
     return rows;
   },
-  async publishBuy(foreign, amountMinor, rateMilli, key) {
-    const naira = quoteMinorOrNull(amountMinor, rateMilli);
-    if (naira === null) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
+  async publishBuy(foreign, amountMinor, rateMilli, key, pay = 'NGN') {
+    const paid = pay === 'NGN' ? quoteMinorOrNull(amountMinor, rateMilli) : convertAtMilli(amountMinor, foreign, pay, rateMilli);
+    if (paid === null || paid <= 0) throw new ApiError('VAL_422_AMOUNT_INVALID', 422, tr("Enter the amount as a number, e.g. 1000.00."));
     return offersApi.publish(
       token(),
       {
-        source_currency: 'NGN',
+        source_currency: pay,
         target_currency: foreign,
-        source_amount: formatHundredths(naira).replace(/,/g, ''),
+        source_amount: pay === 'NGN' ? formatHundredths(paid).replace(/,/g, '') : amountText(pay, paid),
         desired_rate: rateText(rateMilli),
       },
       key,
       serverAuth.apiOptions(),
     );
   },
-  async publishSell(foreign, amountMinor, rateMilli, key) {
+  async publishSell(foreign, amountMinor, rateMilli, key, receive = 'NGN') {
     return offersApi.publish(
       token(),
       {
         source_currency: foreign,
-        target_currency: 'NGN',
+        target_currency: receive,
         source_amount: amountText(foreign, amountMinor),
         desired_rate: rateText(rateMilli),
       },
@@ -194,7 +243,14 @@ export const marketServer: MarketServer = {
     );
   },
   newKey: () => Crypto.randomUUID(),
-  ceilings: async () => ceilingsFromServer((await ratesApi.official(token(), serverAuth.apiOptions())).items),
+  ceilings: async () => {
+    const r = await ratesApi.official(token(), serverAuth.apiOptions());
+    return ceilingsFromServer(r.items, r.pairs ?? []);
+  },
+  payChoice: async () => {
+    const [r, here] = await Promise.all([kycApi.regions(token(), serverAuth.apiOptions()), viewerCountry.get({ ask: false })]);
+    return payChoiceFrom(r.regions, here);
+  },
 };
 
 export const myOffers = {

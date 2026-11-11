@@ -1527,5 +1527,19 @@
  "Closed requests and their messages are deleted after 12 hours.": "تُحذف الطلبات المغلقة ورسائلها بعد 12 ساعة.",
  "Enter a whole amount, for example 250": "أدخل مبلغًا صحيحًا، مثلاً 250",
  "Enter whole amounts like 1000.": "أدخل مبالغ صحيحة مثل 1000.",
- "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "أدخل المبلغ كرقم صحيح والسعر كرقم، مثلاً 1000 و0.306."
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "أدخل المبلغ كرقم صحيح والسعر كرقم، مثلاً 1000 و0.306.",
+ "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "لا يمكن أن يتجاوز سعرك {{official}} {{quote}} لكل {{base}}.",
+ "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "لا يوجد حد أقصى للسعر بين {{base}} و{{quote}} حاليًا، لذا لا يمكنك تداول هذا الزوج الآن.",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "طلبك لشراء {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} متاح الآن. تجده في ⋮ › طلباتي.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "عرضك لبيع {{amt}} {{code}} بسعر {{rt}} {{quote}} لكل {{base}} نشط الآن. اطّلع عليه في ⋮ › عروضي.",
+ "You pay in {{code}}": "تدفع بعملة {{code}}",
+ "Change the currency you pay with": "تغيير العملة التي تدفع بها",
+ "Rate in {{quote}} per {{base}}": "السعر بـ{{quote}} لكل {{base}}",
+ "Maximum rate: {{quote}} {{official}} per {{base}}, worked out from the official naira rates. Your rate must be this or lower.": "الحد الأقصى للسعر: {{official}} {{quote}} لكل {{base}}، محسوب من أسعار النيرة الرسمية. يجب أن يكون سعرك مساويًا له أو أقل.",
+ "Select the currency to receive to see requests": "اختر العملة التي ستستلمها لرؤية الطلبات",
+ "Pay with": "الدفع بـ",
+ "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "بيع {{amount}} {{currency}} بسعر {{rate}} {{quote}} لكل {{base}}",
+ "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "أخذ {{amount}} {{currency}} بسعر {{rate}} {{quote}} لكل {{base}}",
+ "Rate: {{quote}} {{rate}} /{{base}}": "السعر: {{rate}} {{quote}} /{{base}}",
+ "Works out to {{amount}} {{currency}}": "ما يعادل {{amount}} {{currency}}"
 }

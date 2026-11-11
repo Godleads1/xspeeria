@@ -1527,5 +1527,19 @@
  "Closed requests and their messages are deleted after 12 hours.": "የተዘጉ ጥያቄዎችና መልእክቶቻቸው ከ12 ሰዓት በኋላ ይሰረዛሉ።",
  "Enter a whole amount, for example 250": "ሙሉ መጠን ያስገቡ፣ ለምሳሌ 250",
  "Enter whole amounts like 1000.": "እንደ 1000 ያሉ ሙሉ መጠኖችን ያስገቡ።",
- "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "መጠኑን እንደ ሙሉ ቁጥር ተመኑንም እንደ ቁጥር ያስገቡ፣ ለምሳሌ 1000 እና 0.306።"
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "መጠኑን እንደ ሙሉ ቁጥር ተመኑንም እንደ ቁጥር ያስገቡ፣ ለምሳሌ 1000 እና 0.306።",
+ "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "ተመንዎ ለአንድ {{base}} ከ{{quote}} {{official}} መብለጥ አይችልም።",
+ "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "ለ{{base}} እና {{quote}} አሁን ከፍተኛ ተመን የለም፤ ስለዚህ ይህን ጥንድ ለጊዜው መገበያየት አይችሉም።",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመግዛት ያቀረቡት ጥያቄ ንቁ ነው። በ⋮ › ጥያቄዎቼ ስር ይመልከቱት።",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመሸጥ ያቀረቡት ቅናሽ ንቁ ነው። በ⋮ › ቅናሾቼ ስር ይመልከቱት።",
+ "You pay in {{code}}": "በ{{code}} ይከፍላሉ",
+ "Change the currency you pay with": "የሚከፍሉበትን ገንዘብ ይቀይሩ",
+ "Rate in {{quote}} per {{base}}": "ተመን በ{{quote}} ለአንድ {{base}}",
+ "Maximum rate: {{quote}} {{official}} per {{base}}, worked out from the official naira rates. Your rate must be this or lower.": "ከፍተኛ ተመን፦ ለአንድ {{base}} {{quote}} {{official}}፣ ከኦፊሴላዊ የናይራ ተመኖች የተሰላ። ተመንዎ ይህ ወይም ከዚህ ያነሰ መሆን አለበት።",
+ "Select the currency to receive to see requests": "ጥያቄዎችን ለማየት የሚቀበሉትን ገንዘብ ይምረጡ",
+ "Pay with": "የሚከፍሉበት",
+ "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "{{amount}} {{currency}} ለአንድ {{base}} በ{{quote}} {{rate}} ሽጥ",
+ "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "{{amount}} {{currency}} ለአንድ {{base}} በ{{quote}} {{rate}} ውሰድ",
+ "Rate: {{quote}} {{rate}} /{{base}}": "ተመን፦ {{quote}} {{rate}} /{{base}}",
+ "Works out to {{amount}} {{currency}}": "በድምሩ {{amount}} {{currency}}"
 }

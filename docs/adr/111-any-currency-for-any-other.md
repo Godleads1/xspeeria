@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED (server, step 1 of 5)** — 2026-11-11. The app follows in steps 3–4. |
+| **Status** | **IMPLEMENTED (server, step 1; app Market and Take offer, step 3)** — 2026-11-11. Other app screens follow in step 4. |
 | **Decision ID** | DEC-123 |
 | **Authority** | Owner, 2026-11-11: "i want us citizen can decide to buy ghana currency or any other currencies, but can not buy us dollars. same for other countrie." … "if i am in nigeria, i will not see order from fellow nigerians trying to sell naira to buy other currencies." Answers: **"Verified country"**, **"Pay with either"**, **"Work out via official rates"**, **"Build and switch on"**. Then: the pay currency "should be detected already" from verification, so there is no "I pay" choice. |
 | **Changes** | ADR-020 and ADR-029: a pair no longer needs naira. Everything else (escrow, fees, identity, limits) is unchanged. |
@@ -34,7 +34,13 @@
 
 1. **Server rules** (this record): pairs, quoting, limits, deal sizes, the other side of a deal, rates API `pairs`.
 2. **Escrow on both sides:** already covered here by the end-to-end test. Anything more found later gets its own PR.
-3. **App:** Market and Take offer as "I want ___", with the pay currency detected.
+3. **App:** Market and Take offer, with the pay currency detected (implemented):
+   - **Detection:** the currencies of the approved checks (`GET /kyc/regions`), in the server's order. The app picks the one for the country the phone is in, else the first. "Change" appears only when there are two or more. The server still checks the country on every offer and take; the app's choice is display only.
+   - **Buy:** "Currency to buy" lists every other currency. Switched-off ones (and every pair of a switched-off pay currency) appear only while the server has a limit for the pair. The amount is typed in the currency bought, and the request pays its value in the pay currency, half to even.
+   - **Sell:** sells the pay currency for a chosen one.
+   - **Rates:** limits and rates read quote per base ("GHS 11.604 per USD"). Naira wording is unchanged.
+   - **Before verification and in demo builds:** behaviour is as before (Buy pays naira; Sell sells dollars for naira). The server asks for the check when it is needed.
+   - **Evidence:** `mobile/__tests__/cross-market.test.tsx`.
 4. **App:** search, "Find a deal", My Offers, My Deals, receipts and History.
 5. **Admin console and docs.**
 

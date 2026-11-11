@@ -1527,5 +1527,19 @@
  "Closed requests and their messages are deleted after 12 hours.": "已关闭的请求及其消息将在 12 小时后删除。",
  "Enter a whole amount, for example 250": "请输入整数金额，例如 250",
  "Enter whole amounts like 1000.": "请输入整数金额，例如 1000。",
- "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "请以整数输入金额，以数字输入汇率，例如 1000 和 0.306。"
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "请以整数输入金额，以数字输入汇率，例如 1000 和 0.306。",
+ "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "您的汇率不能高于每 {{base}} {{official}} {{quote}}。",
+ "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "{{base}} 和 {{quote}} 目前没有最高汇率，暂时无法交易这一货币对。",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "您以每 {{base}} {{rt}} {{quote}} 购买 {{amt}} {{code}} 的请求已发布。可在 ⋮ › 我的请求 中查看。",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "您以每 {{base}} {{rt}} {{quote}} 卖出 {{amt}} {{code}} 的报价已发布。可在 ⋮ › 我的报价 中查看。",
+ "You pay in {{code}}": "您用 {{code}} 付款",
+ "Change the currency you pay with": "更改您付款所用的货币",
+ "Rate in {{quote}} per {{base}}": "汇率（每 {{base}} 多少 {{quote}}）",
+ "Maximum rate: {{quote}} {{official}} per {{base}}, worked out from the official naira rates. Your rate must be this or lower.": "最高汇率：每 {{base}} {{official}} {{quote}}，根据奈拉官方汇率计算。您的汇率必须等于或低于此值。",
+ "Select the currency to receive to see requests": "选择要收取的货币以查看请求",
+ "Pay with": "付款货币",
+ "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "以每 {{base}} {{rate}} {{quote}} 的汇率出售 {{amount}} {{currency}}",
+ "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "以每 {{base}} {{rate}} {{quote}} 的汇率接受 {{amount}} {{currency}}",
+ "Rate: {{quote}} {{rate}} /{{base}}": "汇率：{{rate}} {{quote}} /{{base}}",
+ "Works out to {{amount}} {{currency}}": "合计 {{amount}} {{currency}}"
 }

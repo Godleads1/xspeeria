@@ -21,7 +21,8 @@ import { brandWeight, color, space, typography, themed } from "../../theme";
 import { FieldInput, OutlinedField } from "./controls";
 import { amountText, divRoundHalfEven, formatAmount, formatHundredths, parseAmount, parseToHundredths } from "./money";
 import type { FeeQuote } from "../../api/feesApi";
-import { foreignMinorFor, groupedRate, type TakeSource } from "./serverOffers";
+import { groupedRate, type TakeSource } from "./serverOffers";
+import { convertMinor, quoteOf } from "./pairs";
 import { tr } from "../../i18n";
 
 /** Server amount text, "500.00" → 50000 or "500000" (whole units) → 50000000, exact; else null. */
@@ -83,13 +84,17 @@ export function TakeOfferScreen({
 
   // ADR-056: a buy request is an offer paying naira. The taker sells the foreign currency, so
   // the amount is typed in it; the naira equivalent is what the server is sent.
+  // ADR-111: any pair. The amount is typed in what you get from an offer (its source), or for
+  // a buy request in what you sell to it; `other` is the opposite side of the deal.
   const request = offer?.source_currency === "NGN";
   const code = offer ? (request ? offer.target_currency : offer.source_currency) : "";
+  const other = offer ? (request ? offer.source_currency : offer.target_currency) : "";
+  const { base: rateBase, quote: rateQuote } = offer ? quoteOf(offer.source_currency, offer.target_currency) : { base: "", quote: "NGN" };
   const leftMinor = offer ? minorOf(offer.remaining_amount) : null;
-  const remaining = offer && leftMinor !== null ? (request ? foreignMinorFor(leftMinor, offer.desired_rate, code) : leftMinor) : null;
+  const remaining = offer && leftMinor !== null ? (request ? convertMinor(leftMinor, other, code, offer.desired_rate) : leftMinor) : null;
   // A whole-unit currency (CFA franc, Ugandan shilling) is typed without decimals.
   const amountMinor = offer ? parseAmount(code, amount) : null;
-  const ngnFor = amountMinor !== null && offer ? ngnMinorFor(amountMinor, offer.desired_rate) : null;
+  const ngnFor = amountMinor !== null && offer ? convertMinor(amountMinor, code, other, offer.desired_rate) : null;
   const tooMuch =
     amountMinor !== null &&
     remaining !== null &&
@@ -136,9 +141,12 @@ export function TakeOfferScreen({
     setError(null);
     try {
       key.current ??= source.newKey();
-      const values = { amount: formatAmount(code, amountMinor), currency: code, rate: groupedRate(offer.desired_rate) };
+      const values = { amount: formatAmount(code, amountMinor), currency: code, rate: groupedRate(offer.desired_rate), quote: rateQuote, base: rateBase };
+      const classic = rateQuote === "NGN" && rateBase === code;
       approval.current ??= await source.approve(
-        request ? tr("Sell {{amount}} {{currency}} at NGN {{rate}}", values) : tr("Take {{amount}} {{currency}} at NGN {{rate}}", values),
+        classic
+          ? request ? tr("Sell {{amount}} {{currency}} at NGN {{rate}}", values) : tr("Take {{amount}} {{currency}} at NGN {{rate}}", values)
+          : request ? tr("Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}", values) : tr("Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}", values),
       );
       if (!approval.current) return; // cancelled
       // A request is taken in naira: everything left exactly, or amount × rate (half to even).
@@ -146,7 +154,7 @@ export function TakeOfferScreen({
         ? amountMinor === remaining
           ? offer.remaining_amount
           : ngn !== null
-            ? formatHundredths(ngn).replace(/,/g, "")
+            ? amountText(other, ngn)
             : null
         : amountText(code, amountMinor);
       if (sent === null) return;
@@ -175,17 +183,30 @@ export function TakeOfferScreen({
 
   if (match) {
     const naira = match.currency === "NGN";
+    const cross = !naira && match.counter_currency !== "NGN";
     const shown = naira ? `${grouped(match.counter_amount ?? "")} ${match.counter_currency}` : `${grouped(match.allocated_amount)} ${match.currency}`;
     const total = naira ? minorOf(match.allocated_amount) : ngnMinorFor(minorOf(match.allocated_amount) ?? 0, match.agreed_rate);
+    const mq = quoteOf(match.currency, match.counter_currency);
     return (
       <Screen testID="take-done-screen">
         {header}
         <View testID="take-match" style={styles.card}>
           <Text style={styles.big}>{shown}</Text>
+          {cross ? (
+            <>
+              <Text style={styles.line}>{tr("Rate: {{quote}} {{rate}} /{{base}}", { quote: mq.quote, rate: groupedRate(match.agreed_rate), base: mq.base })}</Text>
+              {match.counter_amount ? (
+                <Text style={styles.line}>{tr("Works out to {{amount}} {{currency}}", { amount: grouped(match.counter_amount), currency: match.counter_currency })}</Text>
+              ) : null}
+            </>
+          ) : (
+            <>
           <Text style={styles.line}>{tr("Rate: NGN {{agreed_rate}} /{{currency}}", { agreed_rate: groupedRate(match.agreed_rate), currency: naira ? match.counter_currency : match.currency })}</Text>
           {total !== null ? (
             <Text style={styles.line}>{tr("Works out to NGN {{total}}", { total: formatHundredths(total) })}</Text>
           ) : null}
+            </>
+          )}
         </View>
         <Text style={styles.note}>{tr("The deal is recorded and the rate is fixed. Next you’ll choose your payout account and pay into the partner bank’s escrow account — those steps are coming soon. Xspeeria never holds your money.")}</Text>
         <PrimaryButton testID="take-done" label={tr("Done")} onPress={onDone} />
@@ -214,8 +235,8 @@ export function TakeOfferScreen({
             </Text>
             <Text style={styles.line}>
               {tr("Rate: ")}
-              <Text style={styles.strong}>{`NGN ${groupedRate(offer.desired_rate)}`}</Text>
-              {` /${code}`}
+              <Text style={styles.strong}>{`${rateQuote} ${groupedRate(offer.desired_rate)}`}</Text>
+              {` /${rateBase}`}
             </Text>
           </View>
 
@@ -246,7 +267,11 @@ export function TakeOfferScreen({
               {tr("Only {{remaining_amount}} {{source_currency}} is available.", { remaining_amount: grouped(remainingText), source_currency: code })}
             </Text>
           ) : ngn !== null ? (
-            <Text testID="take-ngn" style={styles.line}>{tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })}</Text>
+            <Text testID="take-ngn" style={styles.line}>
+              {other === "NGN"
+                ? tr("Works out to NGN {{ngn}}", { ngn: formatHundredths(ngn) })
+                : tr("Works out to {{amount}} {{currency}}", { amount: formatAmount(other, ngn), currency: other })}
+            </Text>
           ) : null}
           {quote ? (
             <Text testID="take-fee" style={styles.line}>
