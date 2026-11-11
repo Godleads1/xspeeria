@@ -187,6 +187,8 @@ def _started_before_pin_change(created_at: datetime, user: User) -> bool:
 FACE_START_PURPOSES = frozenset({"login", "pin_reset"})
 STEP_UP_PURPOSE = frozenset({"step_up"})
 PIN_RESET_PURPOSE = frozenset({"pin_reset"})
+#: ADR-104: checks that may use the redo identity check.
+_REDO_PURPOSES = frozenset({"login", "pin_reset"})
 
 
 def sms_unavailable() -> AppError:
@@ -851,11 +853,14 @@ class AuthService:
         if purpose == "signup":
             return "email"
         if (
-            purpose == "login"
+            purpose in ("login", "pin_reset")
             and user.identity_redo_requested_at is not None
             and await self._repo.has_approved_kyc(user.id)
         ):
-            return "kyc"  # ADR-104: Compliance asked for a new identity check
+            # ADR-104: Compliance asked for a new identity check. Owner 2026-11-10 ("Redo
+            # check, same ID"): a forgotten-PIN reset uses it too, for someone whose selfie no
+            # longer matches. Same ID document counts at once; any other goes to two staff.
+            return "kyc"
         if await self._repo.has_approved_kyc(user.id):
             return "face"
         return "sms_email" if purpose == "login" else "email"
@@ -1132,7 +1137,7 @@ class AuthService:
         already finished or being reviewed: the app then asks for the result.
         """
         now = self._now()
-        row, user = await self._open_check(check_id, frozenset({"login"}), now)
+        row, user = await self._open_check(check_id, _REDO_PURPOSES, now)
         if row.method != "kyc" or row.completed_at is not None:
             await self._db.rollback()
             raise _invalid_code()
@@ -1160,6 +1165,18 @@ class AuthService:
         """Finish the log-in once the redo identity check is approved (fails closed)."""
         now = self._now()
         row, user = await self._open_check(check_id, frozenset({"login"}), now)
+        await self._redo_approved(row, user, now)
+        row.completed_at = now
+        user.identity_redo_requested_at, user.identity_redo_reason = None, None
+        self._mfa_success(user)
+        return await self._finish_sign_in(row, user, device, now)
+
+    async def _redo_approved(self, row: VerificationCheck, user: User, now: datetime) -> None:
+        """The redo identity check behind ``row`` is approved, or this raises (fails closed).
+
+        It must be this user's redo, started after Compliance asked; a held check (another ID
+        document, ADR-104) waits for two staff; a refused one counts as a failed try.
+        """
         case = await self._db.get(KycCase, row.kyc_case_id) if row.kyc_case_id is not None else None
         if row.method != "kyc" or case is None:
             await self._db.rollback()
@@ -1202,10 +1219,6 @@ class AuthService:
                     status.HTTP_401_UNAUTHORIZED,
                 ),
             )
-        row.completed_at = now
-        user.identity_redo_requested_at, user.identity_redo_reason = None, None
-        self._mfa_success(user)
-        return await self._finish_sign_in(row, user, device, now)
 
     async def face_finish(self, check_id: uuid.UUID, device: DeviceInfo) -> SignedIn:
         """Log-in on a new phone after the identity check: the face check result."""
@@ -1485,6 +1498,11 @@ class AuthService:
         row, user = await self._open_check(check_id, PIN_RESET_PURPOSE, now)
         if row.method == "face":
             await self._match_face(row, user, now)
+        elif row.method == "kyc":
+            # Owner 2026-11-10: the redo identity check Compliance asked for, same ID.
+            await self._redo_approved(row, user, now)
+            user.identity_redo_requested_at, user.identity_redo_reason = None, None
+            self._mfa_success(user)
         else:
             await self._match_codes(row, user, now, email_code, None)
         row.consumed_at = now

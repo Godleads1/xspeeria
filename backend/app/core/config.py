@@ -21,10 +21,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from app.core.client_address import Network
 
 __all__ = ["Settings", "get_settings", "require_supported_database_url"]
 
@@ -229,6 +232,10 @@ class Settings(BaseSettings):
     #: this folder until the Cloudflare R2 bucket exists (ADR-049). Empty: photos are off.
     local_photo_dir: str = ""
     cors_allowed_origins: str = ""
+    #: ADR-109: the load balancers or proxies in front of the API (addresses or networks,
+    #: comma-separated). Only a request arriving from one of them has its ``X-Forwarded-For``
+    #: believed, for rate limits and audit addresses. Empty (default): the header is ignored.
+    trusted_proxies: str = ""
 
     #: ADR-081: security keys (WebAuthn) are bound to the admin console's web address. The
     #: "relying party" ID is its host name (e.g. ``admin.example.com``); the origin is the full
@@ -277,6 +284,20 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @field_validator("trusted_proxies")
+    @classmethod
+    def _valid_trusted_proxies(cls, value: str) -> str:
+        from app.core.client_address import parse_trusted_proxies
+
+        parse_trusted_proxies(value)  # refuses a typo or "every address" at start-up
+        return value
+
+    @property
+    def trusted_proxy_networks(self) -> tuple[Network, ...]:
+        from app.core.client_address import parse_trusted_proxies
+
+        return parse_trusted_proxies(self.trusted_proxies)
 
     @property
     def cors_origins(self) -> list[str]:

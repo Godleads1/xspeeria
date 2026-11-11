@@ -77,6 +77,24 @@ describe('Forgot PIN (server)', () => {
     expect(screen.getByTestId('forgot-back-login')).toBeTruthy();
   });
 
+  it('when our team asked for a new identity check, the reset opens that check (ADR-104)', async () => {
+    // Owner 2026-11-10: "Redo check, same ID" for someone whose selfie no longer matches.
+    const src = fake('kyc');
+    src.resetKycStart = jest.fn(async (_c: string) => 'https://verify.didit.me/s/redo');
+    const openUrl = jest.fn(async () => undefined);
+    await toCheckStep(src, openUrl);
+    expect(screen.getByTestId('check-text')).toHaveTextContent(/new identity check/);
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await flush();
+    expect(src.resetKycStart).toHaveBeenCalledWith('pr-1');
+    expect(src.resetFaceStart).not.toHaveBeenCalled();
+    expect(openUrl).toHaveBeenCalledWith('https://verify.didit.me/s/redo');
+    await fireEvent.press(screen.getByTestId('check-face'));
+    await flush();
+    expect(src.resetConfirm).toHaveBeenCalledWith('pr-1', '736195', null);
+    expect(screen.getByTestId('forgot-back-login')).toBeTruthy();
+  });
+
   it('checks the form before asking the server, and shows the server refusal', async () => {
     const src = fake();
     await render(<ServerForgotScreen source={src} onBack={jest.fn()} />);

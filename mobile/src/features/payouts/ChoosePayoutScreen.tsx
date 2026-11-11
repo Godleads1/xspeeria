@@ -230,7 +230,7 @@ export function ChoosePayoutScreen({
       {accounts.length > 0 ? (
         <Text testID="choose-left" style={[styles.line, leftToAssign !== 0 || malformed ? styles.warn : null]}>
           {malformed
-            ? tr("Enter amounts like 1000.00.")
+            ? amountDecimals(currency) === 0 ? tr("Enter whole amounts like 1000.") : tr("Enter amounts like 1000.00.")
             : leftToAssign > 0
               ? tr("Left to assign: {{leftToAssign}} {{currency}}", { leftToAssign: formatAmount(currency, leftToAssign), currency })
               : leftToAssign < 0

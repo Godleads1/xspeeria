@@ -193,3 +193,63 @@ async def test_staff_need_the_dispute_permissions(env: Env, db: AsyncSession) ->
         await svc.close(reader, INFO, rid)
     with pytest.raises(AppError):
         await svc.list_requests(_staff(), None)
+
+
+async def test_closed_requests_are_deleted_12_hours_after_closing(
+    env: Env, db: AsyncSession, db_settings: Settings, boss_id: uuid.UUID
+) -> None:
+    """Owner 2026-11-10: "it must be deleted on 12 hours" — phone, email and every message."""
+    closed = (await _open(env)).json()
+    still_open = (await _open(env, email="other@example.com")).json()
+    svc = HelpService(db, env.clock)
+    support = _staff("disputes.read", "disputes.update")
+    await svc.staff_reply(support, INFO, uuid.UUID(closed["request_id"]), "Fixed now.")
+    await svc.close(support, INFO, uuid.UUID(closed["request_id"]))
+
+    env.clock.advance(hours=11, minutes=59)
+    assert await svc.purge_closed() == 0  # not yet
+    assert (await _read(env, closed["request_id"], closed["key"])).status_code == 200
+
+    env.clock.advance(minutes=1)
+    assert await svc.purge_closed() == 1
+    r = await _read(env, closed["request_id"], closed["key"])
+    assert r.status_code == 404  # the same answer as a request that never existed
+    left = await _sql(
+        db_settings,
+        "SELECT count(*)::text FROM help_messages WHERE request_id = :r",
+        r=closed["request_id"],
+    )
+    assert left == "0"  # the messages went with it
+
+    # An open request is never deleted, however old.
+    env.clock.advance(days=400)
+    assert await svc.purge_closed() == 0
+    assert (await _read(env, still_open["request_id"], still_open["key"])).status_code == 200
+    # The audit log still says it existed and who closed it, without its details.
+    assert (
+        await _sql(
+            db_settings,
+            "SELECT string_agg(action, ',' ORDER BY at) FROM staff_audit_log WHERE target_id = :r",
+            r=closed["request_id"],
+        )
+        == "help_replied,help_closed"
+    )
+
+
+async def test_the_database_refuses_to_delete_a_request_early(
+    env: Env, db_settings: Settings
+) -> None:
+    from sqlalchemy.exc import DBAPIError
+
+    rid = (await _open(env)).json()["request_id"]
+    with pytest.raises(DBAPIError, match="12 hours after it is closed"):
+        await _sql(db_settings, "DELETE FROM help_requests WHERE id = :r RETURNING 'x'", r=rid)
+    # Closed only an hour ago: still refused.
+    await _sql(
+        db_settings,
+        "UPDATE help_requests SET status = 'closed', closed_at = now() - interval '1 hour' "
+        "WHERE id = :r",
+        r=rid,
+    )
+    with pytest.raises(DBAPIError, match="12 hours after it is closed"):
+        await _sql(db_settings, "DELETE FROM help_requests WHERE id = :r RETURNING 'x'", r=rid)

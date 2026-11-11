@@ -149,7 +149,11 @@ export function ServerForgotScreen({
               check={check}
               submitLabel={tr("Reset PIN")}
               onCodes={(email) => finish(email)}
-              onFaceStart={() => source.resetFaceStart(check.check_id)}
+              onFaceStart={() =>
+                check.method === 'kyc' && source.resetKycStart
+                  ? source.resetKycStart(check.check_id)
+                  : source.resetFaceStart(check.check_id)
+              }
               onFaceFinish={() => finish(null)}
               openUrl={openUrl}
               onEnded={(message) => {

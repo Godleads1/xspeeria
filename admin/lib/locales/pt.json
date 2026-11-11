@@ -1117,5 +1117,6 @@
  "Yes, Switch On": "Sim, ativar",
  "{{c}} is off.": "{{c}} está desativada.",
  "{{c}} is on.": "{{c}} está ativada.",
- "The daily check found a deal whose money in and out don’t match": "A verificação diária encontrou um negócio cujo dinheiro de entrada e saída não corresponde"
+ "The daily check found a deal whose money in and out don’t match": "A verificação diária encontrou um negócio cujo dinheiro de entrada e saída não corresponde",
+ "A closed request is deleted after 12 hours, with its messages and contact details.": "Um pedido encerrado é eliminado após 12 horas, com as suas mensagens e dados de contacto."
 }

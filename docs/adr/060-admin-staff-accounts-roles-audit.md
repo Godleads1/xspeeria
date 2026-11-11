@@ -90,7 +90,7 @@ Owner: "staff photo or phone should be stored"; then chose **phone required, no 
 - Pixels are not re-encoded (no image library installed); a later image library could re-encode as ADR-049 also suggests.
 - Tests: `test_image_rules.py` (JPEG, PNG and WebP cleaning; non-photos refused), `test_admin_staff.py` (phone rules, who may see/change photos, files on disk, headers), console tests, and a real-browser run uploading a JPEG with a hidden GPS comment (removed; the photo still draws).
 
-**Known limit (decide before going live):** the console forwards requests, so the API sees the **console server's address** for every staff request. The audit log's "Address" column then shows the console server, and the sign-in rate limit (10 a minute per address) is shared by all staff. Fixing it means trusting the console's `X-Forwarded-For` header only from the console server's own address — a change to ADR-025 §4 ("proxy headers are not trusted") that needs a decision when the hosting is chosen.
+**Known limit (decide before going live):** the console forwards requests, so the API sees the **console server's address** for every staff request. The audit log's "Address" column then shows the console server, and the sign-in rate limit (10 a minute per address) is shared by all staff. Fixing it means trusting the console's `X-Forwarded-For` header only from the console server's own address — a change to ADR-025 §4 ("proxy headers are not trusted") that needs a decision when the hosting is chosen. **Since ADR-109:** add the console server's address to `TRUSTED_PROXIES`; whether its forwarding sends `X-Forwarded-For` is to be checked on the hosted console.
 
 ## Console languages, code boxes and toast (built 2026-10-26)
 
