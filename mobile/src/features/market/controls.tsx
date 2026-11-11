@@ -8,6 +8,7 @@ import type { ReactElement, ReactNode } from "react";
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -244,6 +245,8 @@ export function CurrencySheet({
       <View style={styles.sheet}>
         <View style={styles.sheetGroup}>
           <Text style={styles.sheetTitle}>{title}</Text>
+          {/* 16 currencies are taller than a small screen: the list scrolls, the title stays. */}
+          <ScrollView testID="currency-sheet-list" style={styles.sheetScroll}>
           {currencies.map((c) => (
             <Pressable
               key={c.code}
@@ -261,6 +264,7 @@ export function CurrencySheet({
               >{`${tr(c.name)} (${c.code})`}</Text>
             </Pressable>
           ))}
+          </ScrollView>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -531,12 +535,16 @@ const styles = themed(() => ({
     left: 0,
     right: 0,
     bottom: 16,
+    // Never taller than the screen: a long list scrolls inside (the top stays reachable).
+    maxHeight: "90%",
   },
   sheetGroup: {
     backgroundColor: color.bg.canvas,
     borderRadius: 16,
     overflow: "hidden",
+    flexShrink: 1,
   },
+  sheetScroll: { flexGrow: 0 },
   sheetTitle: {
     ...typography.body,
     color: color.text.secondary,
