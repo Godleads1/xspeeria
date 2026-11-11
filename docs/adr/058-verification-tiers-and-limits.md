@@ -33,7 +33,13 @@ Owner decisions on 2026-10-26: count **both sides** (deals I take and deals on m
 - Deals counted: accepted this Lagos month, not expired before payout accounts were chosen, and whose escrow isn't CANCELLED / UNWINDING / CLOSED_UNWOUND.
 - `GET /api/v1/users/me/limits`: tier, limits, used and left (naira text). App: Profile › KYC and limits shows them, with the tier table; the limit refusals are translated with the amount left.
 - **Local development:** the identity bypass counts as Tier 1, so local deals over NGN 500,000 a day are refused like anyone else's.
-- Not built: offers bigger than the owner's limit are not refused at publish (they can be part-taken); staff review above a set amount for Tier 3 (amount still to be chosen).
+- **Posting is held to the limit too (owner 2026-11-11, "Stop it"):**
+  - An offer, a buy request (including one in several currencies) or an edit that raises an offer's size is refused when its whole naira value is more than the owner can still trade today or this month.
+  - The refusal is `TRADE_403_DAILY_LIMIT` / `TRADE_403_MONTHLY_LIMIT` with `details.left` and `details.for = "offer"`. The app words it "This offer is over your daily limit…", in all 7 languages.
+  - Only deals already made count; other open offers don't, because an amount is only ever counted once a deal is made.
+  - So nobody is shown an offer whose owner can't fill it on the day. The take-time check still applies, because a deal made since could have used up the room.
+  - Evidence: `test_tier_limits.py` (`test_an_offer_bigger_than_what_is_left_today_is_refused`, `test_a_request_and_an_edit_are_held_to_the_same_limit`).
+- Not built: staff review above a set amount for Tier 3 (amount still to be chosen).
 
 ## Build notes — Tier 2 and Tier 3 checks (2026-10-26)
 

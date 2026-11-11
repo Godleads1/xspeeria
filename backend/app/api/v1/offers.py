@@ -32,9 +32,10 @@ from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.domain.kyc_rules import COUNTRIES
 from app.domain.location_rules import currency_of, device_country
-from app.domain.offer_rules import OfferInputError, parse_pair
+from app.domain.offer_rules import OfferInputError, parse_amount_minor, parse_pair, parse_rate
 from app.domain.search_rules import parse_search
 from app.domain.settlement_rules import JURISDICTION, SHARED_CURRENCIES
+from app.domain.tier_rules import deal_kobo
 from app.models.marketplace import Offer
 from app.schemas.offers import (
     AcceptRequest,
@@ -53,6 +54,7 @@ from app.schemas.offers import (
 from app.services.auth import AuthRuntime, AuthService, Principal
 from app.services.currency_switch import refuse_if_switched_off
 from app.services.kyc import KycService
+from app.services.limits import check_new_offer
 from app.services.matches import MatchService, PayoutChoice
 from app.services.offers import OfferService
 from app.services.pay_country import pay_country
@@ -207,6 +209,16 @@ async def create_offer(
     await refuse_if_switched_off(db, body.source_currency, body.target_currency)  # ADR-106
     # The maker pays the source currency (ADR-042).
     await require_pay_country(principal, body.source_currency, settings, runtime, db)
+    await _within_limits(
+        principal,
+        body.source_currency,
+        body.target_currency,
+        body.source_amount,
+        body.desired_rate,
+        settings,
+        runtime,
+        db,
+    )
     result = await service.create(
         principal,
         key,
@@ -216,6 +228,28 @@ async def create_offer(
         body.desired_rate,
     )
     return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+async def _within_limits(
+    principal: Principal,
+    source: str,
+    target: str,
+    amount: str,
+    rate: str,
+    settings: Settings,
+    runtime: AuthRuntime,
+    db: AsyncSession,
+) -> None:
+    """Owner 2026-11-11: an offer bigger than its owner can still trade is refused. Input the
+    service would refuse anyway (bad amount, rate or pair) is left to it, for its own message."""
+    try:
+        pair = parse_pair(source, target)
+        value = deal_kobo(
+            pair.source, pair.target, parse_amount_minor(amount, pair.source), parse_rate(rate)
+        )
+    except (OfferInputError, KeyError):
+        return
+    await check_new_offer(db, principal.user_id, value, runtime.clock(), settings)
 
 
 @router.post(
@@ -237,6 +271,13 @@ async def create_group(
     refuse_china_if_off(settings, *(c.currency for c in body.currencies))  # ADR-105
     await refuse_if_switched_off(db, *(c.currency for c in body.currencies))  # ADR-106
     await require_pay_country(principal, "NGN", settings, runtime, db)
+    # Only one currency of the request is ever paid: its value is the naira amount.
+    if body.currencies:
+        first = body.currencies[0]
+        await _within_limits(
+            principal, "NGN", first.currency, body.source_amount, first.desired_rate,
+            settings, runtime, db,
+        )  # fmt: skip
     result = await service.create_group(
         principal,
         key,
@@ -381,8 +422,36 @@ async def get_offer(offer_id: uuid.UUID, principal: Verified, service: Service) 
     summary="Change my offer's rate and/or amount (before anyone takes any of it)",
 )
 async def update_rate(
-    offer_id: uuid.UUID, body: UpdateRateRequest, principal: Verified, service: Service
+    offer_id: uuid.UUID,
+    body: UpdateRateRequest,
+    principal: Verified,
+    service: Service,
+    settings: Settings_,
+    runtime: Runtime,
+    db: Db,
 ) -> Any:
+    # A bigger amount (or a rate that raises its value) must still fit the owner's limits.
+    offer = await db.scalar(
+        select(Offer).where(Offer.id == offer_id, Offer.user_id == principal.user_id)
+    )
+    if offer is not None:
+        try:
+            amount = (
+                parse_amount_minor(body.source_amount, offer.source_currency)
+                if body.source_amount is not None
+                else offer.source_amount_minor
+            )
+            rate = parse_rate(body.desired_rate) if body.desired_rate is not None else None
+        except OfferInputError:
+            amount, rate = -1, None  # the service refuses it with its own message
+        if amount >= 0:
+            value = deal_kobo(
+                offer.source_currency,
+                offer.target_currency,
+                amount,
+                rate if rate is not None else offer.desired_rate,
+            )
+            await check_new_offer(db, principal.user_id, value, runtime.clock(), settings)
     return await service.update_rate(principal, offer_id, body.desired_rate, body.source_amount)
 
 

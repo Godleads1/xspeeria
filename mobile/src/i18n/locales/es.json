@@ -1550,5 +1550,7 @@
  "You pay {{pay}} and get {{currency}}.": "Pagas en {{pay}} y recibes {{currency}}.",
  "RATE RANGE ({{quote}} PER {{base}})": "RANGO DE TIPO ({{quote}} POR {{base}})",
  "From {{quote}} {{low}}": "Desde {{low}} {{quote}}",
- "Up to {{quote}} {{high}}": "Hasta {{high}} {{quote}}"
+ "Up to {{quote}} {{high}}": "Hasta {{high}} {{quote}}",
+ "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "Esta oferta supera tu límite diario. Puedes operar hasta NGN {{amount}} más hoy.",
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Esta oferta supera tu límite mensual. Puedes operar hasta NGN {{amount}} más este mes."
 }

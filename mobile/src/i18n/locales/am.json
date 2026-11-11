@@ -1550,5 +1550,7 @@
  "You pay {{pay}} and get {{currency}}.": "በ{{pay}} ከፍለው {{currency}} ያገኛሉ።",
  "RATE RANGE ({{quote}} PER {{base}})": "የተመን ክልል ({{quote}} ለአንድ {{base}})",
  "From {{quote}} {{low}}": "ከ{{quote}} {{low}} ጀምሮ",
- "Up to {{quote}} {{high}}": "እስከ {{quote}} {{high}}"
+ "Up to {{quote}} {{high}}": "እስከ {{quote}} {{high}}",
+ "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "ይህ ቅናሽ ከዕለታዊ ገደብዎ በላይ ነው። ዛሬ እስከ NGN {{amount}} ተጨማሪ መገበያየት ይችላሉ።",
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "ይህ ቅናሽ ከወርሃዊ ገደብዎ በላይ ነው። በዚህ ወር እስከ NGN {{amount}} ተጨማሪ መገበያየት ይችላሉ።"
 }
