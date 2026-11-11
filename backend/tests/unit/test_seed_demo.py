@@ -38,11 +38,11 @@ def test_demo_values_pass_the_real_rules_and_look_fake() -> None:
             assert "NGN" in currencies and currencies - {"NGN"}
 
 
-def test_robots_are_ben_and_chloe_and_you_play_the_others() -> None:
+def test_robots_are_ben_chloe_and_grace_and_you_play_the_others() -> None:
     from app.services.demo_autopilot import bot_phones
 
     robots = {c.key for c in seed_demo.CUSTOMERS if c.robot}
-    assert robots == {"ben", "chloe"}
+    assert robots == {"ben", "chloe", "grace"}
     assert set(bot_phones()) == {c.phone for c in seed_demo.CUSTOMERS if c.robot}
     # Ada and Dan are for the person testing: no standing offers of their own.
     assert all(not c.offers for c in seed_demo.CUSTOMERS if not c.robot)
@@ -63,3 +63,15 @@ def test_amount_text_keeps_the_currency_scale() -> None:
 
     assert _minor_to_text(10_000_000, 2) == "100000.00"
     assert _minor_to_text(4005, 2) == "40.05"
+
+
+def test_a_demo_pair_without_naira_fits_its_limit() -> None:
+    """ADR-111: Grace's pounds-for-dollars offer is within the worked-out limit."""
+    from decimal import Decimal
+
+    from app.domain.offer_rules import ceiling_key, parse_pair, rate_problem
+
+    grace = next(c for c in seed_demo.CUSTOMERS if c.key == "grace")
+    for source, target, _, rate in grace.offers:
+        pair = parse_pair(source, target)
+        assert rate_problem(Decimal(rate), ceiling_key(pair)) is None

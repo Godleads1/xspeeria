@@ -112,6 +112,35 @@ CUSTOMERS: tuple[DemoCustomer, ...] = (
         offers=(("USD", "NGN", "300", "1320"),),
         robot=True,
     ),
+    # ADR-111 (any currency for any other): Femi pays US dollars, so he can buy pounds (or
+    # naira) but never dollars; Grace, a robot verified in the UK, sells pounds for dollars and
+    # takes Femi's dollar-for-pound offers. Both escrows are pretend banks (US and UK).
+    DemoCustomer(
+        key="femi",
+        phone="+12025550102",
+        email="femi.demo@example.com",
+        checks=(("US", "Femi Bello", date(1991, 8, 21), "M", "passport", "USA"),),
+        accounts=(
+            ("USD", "Chase", "323456781", "021000021"),
+            ("GBP", "Barclays", "32345671", "200000"),
+            ("NGN", "Access Bank", "0123456784", None),
+        ),
+        offers=(),
+    ),
+    DemoCustomer(
+        key="grace",
+        phone="+447700900002",
+        email="grace.demo@example.com",
+        checks=(("GB", "Grace Hill", date(1989, 1, 30), "F", "passport", "GBR"),),
+        accounts=(
+            ("GBP", "Barclays", "42345671", "200000"),
+            ("USD", "Chase", "423456781", "021000021"),
+            ("NGN", "GTBank", "0123456785", None),
+        ),
+        # 1.32 USD per GBP: under the limit worked out from the official naira rates (1.323).
+        offers=(("GBP", "USD", "200", "1.32"),),
+        robot=True,
+    ),
     # Not verified yet: to try sign-in, the Market's "verify first" and the country choice.
     DemoCustomer(
         key="dan",
