@@ -22,18 +22,31 @@ def test_window_is_30_minutes() -> None:
 
 class TestCounterAmount:
     def test_foreign_to_naira_half_even(self) -> None:
-        assert counter_amount_minor(20_000, "USD", Decimal("1320.50")) == 26_410_000
-        assert counter_amount_minor(1, "USD", Decimal("1320.005")) == 1320  # 1320.005 → even
-        assert counter_amount_minor(1, "USD", Decimal("1321.005")) == 1321
-        assert counter_amount_minor(1, "USD", Decimal("1320.500001")) == 1321
+        assert counter_amount_minor(20_000, "USD", Decimal("1320.50"), "NGN") == 26_410_000
+        assert counter_amount_minor(1, "USD", Decimal("1320.005"), "NGN") == 1320  # 1320.005 → even
+        assert counter_amount_minor(1, "USD", Decimal("1321.005"), "NGN") == 1321
+        assert counter_amount_minor(1, "USD", Decimal("1320.500001"), "NGN") == 1321
 
     def test_naira_to_foreign_half_even(self) -> None:
-        assert counter_amount_minor(26_410_000, "NGN", Decimal("1320.50")) == 20_000
-        assert counter_amount_minor(1_000_000, "NGN", Decimal("1333.26")) == 750  # 7.5005… → 750
+        assert counter_amount_minor(26_410_000, "NGN", Decimal("1320.50"), "USD") == 20_000
+        assert counter_amount_minor(1_000_000, "NGN", Decimal("1333.26"), "USD") == 750  # 7.5005… → 750
+
+    def test_currencies_without_cents_use_whole_units(self) -> None:
+        # 1,000 UGX at ₦0.306 = ₦306.00 (30,600 kobo), never ₦3.06.
+        assert counter_amount_minor(1_000, "UGX", Decimal("0.306"), "NGN") == 30_600
+        # ₦306.00 at ₦0.306 = 1,000 UGX, never 100,000.
+        assert counter_amount_minor(30_600, "NGN", Decimal("0.306"), "UGX") == 1_000
+        # ₦100.00 at ₦0.306 = 326.797… UGX → 327 (half to even, whole shillings).
+        assert counter_amount_minor(10_000, "NGN", Decimal("0.306"), "UGX") == 327
+        # 1,000,000 XOF at ₦2.273 = ₦2,273,000.00.
+        assert counter_amount_minor(1_000_000, "XOF", Decimal("2.273"), "NGN") == 227_300_000
+        # Half to even on whole units: 1 UGX at ₦0.005 = 0.5 kobo → 0; at ₦0.015 → 2.
+        assert counter_amount_minor(1, "UGX", Decimal("0.005"), "NGN") == 0
+        assert counter_amount_minor(1, "UGX", Decimal("0.015"), "NGN") == 2
 
     def test_rate_must_be_positive(self) -> None:
         with pytest.raises(ValueError):
-            counter_amount_minor(1, "USD", Decimal("0"))
+            counter_amount_minor(1, "USD", Decimal("0"), "NGN")
 
 
 class TestAccounts:

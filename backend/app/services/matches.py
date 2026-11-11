@@ -46,6 +46,7 @@ from app.db.row_scope import acting_for_service
 from app.domain.offer_rules import (
     IDEMPOTENCY_TTL,
     MINIMUM_MINOR,
+    SCALE,
     STORED_RATE_PLACES,
     OfferInputError,
     below_minimum,
@@ -103,7 +104,7 @@ def receive_side(match: Match, offer: Offer, viewer: uuid.UUID) -> tuple[str, in
     if match.counterparty_user_id == viewer:
         return match.currency, match.allocated_amount_minor
     return offer.target_currency, counter_amount_minor(
-        match.allocated_amount_minor, match.currency, match.agreed_rate
+        match.allocated_amount_minor, match.currency, match.agreed_rate, offer.target_currency
     )
 
 
@@ -123,16 +124,22 @@ def match_view(
         "counter_currency": offer.target_currency,
         "allocated_amount": money_text(match.allocated_amount_minor, match.scale),
         # ADR-045: the other currency's amount, so a deal can be shown without recomputing.
+        # In the counter currency's own minor units (a whole-unit currency has none).
         "counter_amount": money_text(
-            counter_amount_minor(match.allocated_amount_minor, match.currency, match.agreed_rate),
-            match.scale,
+            counter_amount_minor(
+                match.allocated_amount_minor,
+                match.currency,
+                match.agreed_rate,
+                offer.target_currency,
+            ),
+            SCALE[offer.target_currency],
         ),
         "agreed_rate": rate_text(match.agreed_rate),
         "accepted_at": match.accepted_at.isoformat(),
         "server_order_key": str(match.server_order_key),
         "your_role": "taker" if match.counterparty_user_id == viewer else "offer_owner",
         "you_receive_currency": receive_currency,
-        "you_receive_amount": money_text(receive_minor, match.scale),
+        "you_receive_amount": money_text(receive_minor, SCALE[receive_currency]),
         "preparation_state": match.preparation_state,
         "preparation_deadline": (
             match.preparation_deadline.isoformat() if match.preparation_deadline else None
@@ -616,7 +623,9 @@ class MatchService:
             )
 
         currency, due_minor = receive_side(match, offer, principal.user_id)
-        scale = match.scale
+        # The currency this person receives, in its own minor units: the offer's owner gets the
+        # counter currency, whose scale can differ from the match's (UGX 0, NGN 2).
+        scale = SCALE[currency]
         if not 1 <= len(choices) <= MAX_PAYOUT_ACCOUNTS_PER_DEAL:
             await self._db.rollback()
             raise _err(

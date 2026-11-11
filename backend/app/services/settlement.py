@@ -308,7 +308,7 @@ class SettlementService:
         now = self._clock()
         counter_currency = offer.target_currency
         counter_minor = counter_amount_minor(
-            match.allocated_amount_minor, match.currency, match.agreed_rate
+            match.allocated_amount_minor, match.currency, match.agreed_rate, counter_currency
         )
         plan = [
             # (role, funder, payee, currency, amount)
