@@ -1524,5 +1524,8 @@
  "Zambian Kwacha": "الكواشا الزامبية",
  "Tanzanian Shilling": "الشلن التنزاني",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "الحد الأقصى للسعر: {{official}} نيرة لكل {{code}}، محسوب من سعر البنك المركزي النيجيري وسعر صرف منشور. يجب أن يكون سعرك هذا أو أقل.",
- "Closed requests and their messages are deleted after 12 hours.": "تُحذف الطلبات المغلقة ورسائلها بعد 12 ساعة."
+ "Closed requests and their messages are deleted after 12 hours.": "تُحذف الطلبات المغلقة ورسائلها بعد 12 ساعة.",
+ "Enter a whole amount, for example 250": "أدخل مبلغًا صحيحًا، مثلاً 250",
+ "Enter whole amounts like 1000.": "أدخل مبالغ صحيحة مثل 1000.",
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "أدخل المبلغ كرقم صحيح والسعر كرقم، مثلاً 1000 و0.306."
 }

@@ -354,3 +354,14 @@ describe('Choose payout accounts in Ugandan shillings (no cents, ADR-107)', () =
     expect(screen.getByTestId('choose-left')).toHaveTextContent('All assigned.');
   });
 });
+
+describe('whole-unit hint (ADR-107)', () => {
+  it('asks for whole shillings, not cents, when a split is malformed', async () => {
+    const ugxDeal = deal({ currency: 'UGX', allocated_amount: '500000', agreed_rate: '0.306', you_receive_currency: 'UGX', you_receive_amount: '500000', counter_currency: 'NGN', counter_amount: '153000.00' });
+    const src = fake([acct({ currency: 'UGX' }), acct({ payout_account_id: 'a2', currency: 'UGX', account_last4: '2222' })], ugxDeal);
+    await render(<ChoosePayoutScreen matchId="m1" source={src} onBack={jest.fn()} onAddAccount={jest.fn()} now={() => NOW} confirmWith={confirm} />);
+    await flush();
+    await fireEvent.changeText(screen.getByTestId('choose-amount-a1'), '1000.50');
+    expect(screen.getByTestId('choose-left')).toHaveTextContent('Enter whole amounts like 1000.');
+  });
+});

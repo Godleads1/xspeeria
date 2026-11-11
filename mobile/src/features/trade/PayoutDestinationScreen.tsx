@@ -25,7 +25,7 @@ import { Icon } from '../../components/icons';
 import { PrimaryButton } from '../../components/primitives';
 import { brandWeight, color, space, themed, typography } from '../../theme';
 import { ActionSheet, FieldInput, OutlinedField, RoundButton } from '../market/controls';
-import { formatAmount, parseAmount } from '../market/money';
+import { amountDecimals, formatAmount, parseAmount } from '../market/money';
 import { BankAccountFields } from '../profile/BankAccountFields';
 import { BANK_FORMS, validateBankForm, type BankFieldKey, type BankFormValues, type Beneficiary } from '../profile/data';
 import { splitProblem } from './payoutSplit';
@@ -271,7 +271,7 @@ function AmountSheet({
   const [error, setError] = useState<string | null>(null);
   const save = (): void => {
     const m = parseAmount(currency, text);
-    if (m === null) return setError(tr("Enter an amount, for example 250 or 250.50"));
+    if (m === null) return setError(amountDecimals(currency) === 0 ? tr("Enter a whole amount, for example 250") : tr("Enter an amount, for example 250 or 250.50"));
     if (m > maxMinor) return setError(tr("At most {{maxMinor}} {{currency}} is left for this account.", { maxMinor: formatAmount(currency, maxMinor), currency }));
     onSave(m);
   };
@@ -322,7 +322,7 @@ export function NewRecipientSheet({
     const m = full ? leftMinor : parseAmount(currency, amount);
     let amountProblem: string | null = null;
     if (leftMinor === 0) amountProblem = tr("Nothing is left to assign. Change another account’s amount first.");
-    else if (m === null || m <= 0) amountProblem = tr("Enter an amount, for example 250 or 250.50");
+    else if (m === null || m <= 0) amountProblem = amountDecimals(currency) === 0 ? tr("Enter a whole amount, for example 250") : tr("Enter an amount, for example 250 or 250.50");
     else if (m > leftMinor) amountProblem = tr("At most {{leftMinor}} {{currency}} is left to assign.", { leftMinor: formatAmount(currency, leftMinor), currency });
     setAmountError(amountProblem);
     if (Object.keys(found).length > 0 || amountProblem !== null || m === null) return;
