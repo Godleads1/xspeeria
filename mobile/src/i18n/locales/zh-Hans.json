@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "请以整数输入金额，以数字输入汇率，例如 1000 和 0.306。",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "您的汇率不能高于每 {{base}} {{official}} {{quote}}。",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "{{base}} 和 {{quote}} 目前没有最高汇率，暂时无法交易这一货币对。",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "您以每 {{base}} {{rt}} {{quote}} 购买 {{amt}} {{code}} 的请求已发布。可在 ⋮ › 我的请求 中查看。",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "您以每 {{base}} {{rt}} {{quote}} 卖出 {{amt}} {{code}} 的报价已发布。可在 ⋮ › 我的报价 中查看。",
  "You pay in {{code}}": "您用 {{code}} 付款",
  "Change the currency you pay with": "更改您付款所用的货币",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "以每 {{base}} {{rate}} {{quote}} 的汇率出售 {{amount}} {{currency}}",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "以每 {{base}} {{rate}} {{quote}} 的汇率接受 {{amount}} {{currency}}",
  "Rate: {{quote}} {{rate}} /{{base}}": "汇率：{{rate}} {{quote}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "合计 {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "合计 {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "您以每 {{base}} {{rate}} {{quote}} 买入了 {{amount}}，{{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "汇率 - {{rate}} {{quote}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "您以每 {{base}} {{rt}} {{quote}} 购买 {{amt}} {{code}} 的请求已发布。可在 ⋮ › 我的报价 中查看。",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "您以每 {{base}} {{rt}} {{quote}} 卖出 {{amt}} {{code}} 的报价已发布。可在 ⋮ › 我的请求 中查看。",
+ " for {{amount}} {{currency}}": "，换取 {{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "汇率（每 {{base}} 多少 {{quote}}）",
+ "You pay {{pay}} and get {{currency}}.": "您用 {{pay}} 付款，换取 {{currency}}。",
+ "RATE RANGE ({{quote}} PER {{base}})": "汇率范围（每 {{base}} 多少 {{quote}}）",
+ "From {{quote}} {{low}}": "从 {{low}} {{quote}} 起",
+ "Up to {{quote}} {{high}}": "最高 {{high}} {{quote}}"
 }

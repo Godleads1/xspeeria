@@ -81,6 +81,8 @@ export function HistoryRow({
       accessibilityRole="button"
       accessibilityLabel={(() => {
         const v = { amount, rateHundredths: formatRateCompact(item.rateMilli), currency: item.currency, date: displayDate(item.date), status };
+        if (item.cross)
+          return tr("You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}", { ...v, quote: item.cross.quote, rate: formatRateCompact(item.rateMilli), base: item.cross.base });
         return bought
           ? tr("You bought {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v)
           : tr("You sold {{amount}} at {{rateHundredths}} NGN per {{currency}}, {{date}}{{status}}", v);
@@ -98,7 +100,9 @@ export function HistoryRow({
             : trRich("You sold <1>{{amount}}</1>", { amount }, { 1: (s) => <Text style={styles.rowAmount}>{s}</Text> })}
         </Text>
         <Text style={styles.rowRate}>
-          {tr("Rate - NGN {{rateHundredths}}/{{currency}}", { rateHundredths: formatRateCompact(item.rateMilli), currency: item.currency })}
+          {item.cross
+            ? tr("Rate - {{quote}} {{rate}}/{{base}}", { quote: item.cross.quote, rate: formatRateCompact(item.rateMilli), base: item.cross.base })
+            : tr("Rate - NGN {{rateHundredths}}/{{currency}}", { rateHundredths: formatRateCompact(item.rateMilli), currency: item.currency })}
           {status ? <Text style={item.status === 'failed' ? styles.failed : styles.pending}>{status}</Text> : null}
         </Text>
       </View>

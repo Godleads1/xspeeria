@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "መጠኑን እንደ ሙሉ ቁጥር ተመኑንም እንደ ቁጥር ያስገቡ፣ ለምሳሌ 1000 እና 0.306።",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "ተመንዎ ለአንድ {{base}} ከ{{quote}} {{official}} መብለጥ አይችልም።",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "ለ{{base}} እና {{quote}} አሁን ከፍተኛ ተመን የለም፤ ስለዚህ ይህን ጥንድ ለጊዜው መገበያየት አይችሉም።",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመግዛት ያቀረቡት ጥያቄ ንቁ ነው። በ⋮ › ጥያቄዎቼ ስር ይመልከቱት።",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመሸጥ ያቀረቡት ቅናሽ ንቁ ነው። በ⋮ › ቅናሾቼ ስር ይመልከቱት።",
  "You pay in {{code}}": "በ{{code}} ይከፍላሉ",
  "Change the currency you pay with": "የሚከፍሉበትን ገንዘብ ይቀይሩ",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "{{amount}} {{currency}} ለአንድ {{base}} በ{{quote}} {{rate}} ሽጥ",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "{{amount}} {{currency}} ለአንድ {{base}} በ{{quote}} {{rate}} ውሰድ",
  "Rate: {{quote}} {{rate}} /{{base}}": "ተመን፦ {{quote}} {{rate}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "በድምሩ {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "በድምሩ {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "{{amount}} ለአንድ {{base}} በ{{quote}} {{rate}} ገዝተዋል፣ {{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "ተመን - {{quote}} {{rate}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመግዛት ያቀረቡት ጥያቄ ንቁ ነው። በ⋮ › ቅናሾቼ ስር ይመልከቱት።",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "{{amt}} {{code}} ለአንድ {{base}} በ{{quote}} {{rt}} ለመሸጥ ያቀረቡት ቅናሽ ንቁ ነው። በ⋮ › ጥያቄዎቼ ስር ይመልከቱት።",
+ " for {{amount}} {{currency}}": " በ{{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "ተመን ({{quote}} ለአንድ {{base}})",
+ "You pay {{pay}} and get {{currency}}.": "በ{{pay}} ከፍለው {{currency}} ያገኛሉ።",
+ "RATE RANGE ({{quote}} PER {{base}})": "የተመን ክልል ({{quote}} ለአንድ {{base}})",
+ "From {{quote}} {{low}}": "ከ{{quote}} {{low}} ጀምሮ",
+ "Up to {{quote}} {{high}}": "እስከ {{quote}} {{high}}"
 }

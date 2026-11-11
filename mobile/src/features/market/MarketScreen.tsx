@@ -295,10 +295,14 @@ export function MarketScreen({
         text: buying
           ? classic
             ? tr("Your request to buy {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Requests.", values)
-            : tr("Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.", values)
+            : // Paying something other than naira, it is an offer of that currency (ADR-111).
+              tr("Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.", values)
           : classic
             ? tr("Your offer to sell {{amt}} {{code}} at NGN {{rt}} is live. See it under ⋮ › My Offers.", values)
-            : tr("Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.", values),
+            : code === "NGN"
+              ? // Naira offered for another currency is a buy request of it (ADR-056).
+                tr("Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.", values)
+              : tr("Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.", values),
       });
       setReload((n) => n + 1);
     } catch (e) {

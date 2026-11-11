@@ -47,6 +47,17 @@ export interface HistoryItem {
    * Amounts as recorded when the trade was made (FIN-02). A receipt shows these, never a
    * figure recomputed from today's constants. Absent on older mock items only.
    */
+  /**
+   * ADR-111: a deal between two currencies other than naira. Always a "buy" of `currency`;
+   * `payCurrency`/`payMinor` is what was paid for it (the server's figure), and the rate reads
+   * `quote` per 1 `base`. Absent for naira deals, whose other side is NGN at `rateMilli`.
+   */
+  readonly cross?: {
+    readonly payCurrency: string;
+    readonly payMinor: number;
+    readonly quote: string;
+    readonly base: string;
+  };
   readonly recorded?: {
     /** What the user paid into escrow, minor units of `payCurrency`. */
     readonly transferMinor: number;

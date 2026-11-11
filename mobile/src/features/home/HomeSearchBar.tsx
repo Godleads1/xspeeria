@@ -20,13 +20,16 @@ export interface HomeSearch {
 export function HomeSearchBar({
   onSearch,
   offered,
+  pay = null,
 }: {
   onSearch: (s: HomeSearch) => void;
+  /** ADR-111: the currency you pay with; you can't buy it, so it has no chip. */
+  pay?: string | null;
   /** The currencies the server offers now (server builds); see `shownSearchCurrencies`. */
   offered?: ReadonlySet<string> | null;
 }): ReactElement {
   const [query, setQuery] = useState('');
-  const chips = shownSearchCurrencies(offered);
+  const chips = shownSearchCurrencies(offered).filter((c) => c !== pay);
   return (
     <View testID="home-search" style={styles.wrap}>
       <Text nativeID="home-search-label" style={styles.label}>{tr('FIND A DEAL')}</Text>

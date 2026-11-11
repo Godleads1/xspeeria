@@ -1530,7 +1530,6 @@
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Introduce el importe como número entero y el tipo como número, p. ej. 1000 y 0.306.",
  "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "Tu tipo no puede superar {{official}} {{quote}} por {{base}}.",
  "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "No hay un tipo máximo para {{base}} y {{quote}} en este momento, así que por ahora no puedes operar este par.",
- "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Tu solicitud para comprar {{amt}} {{code}} a {{rt}} {{quote}} por {{base}} está publicada. Mírala en ⋮ › Mis solicitudes.",
  "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Tu oferta para vender {{amt}} {{code}} a {{rt}} {{quote}} por {{base}} está publicada. Mírala en ⋮ › Mis ofertas.",
  "You pay in {{code}}": "Pagas en {{code}}",
  "Change the currency you pay with": "Cambiar la moneda con la que pagas",
@@ -1541,5 +1540,15 @@
  "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Vender {{amount}} {{currency}} a {{rate}} {{quote}} por {{base}}",
  "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Tomar {{amount}} {{currency}} a {{rate}} {{quote}} por {{base}}",
  "Rate: {{quote}} {{rate}} /{{base}}": "Tipo: {{rate}} {{quote}} /{{base}}",
- "Works out to {{amount}} {{currency}}": "Equivale a {{amount}} {{currency}}"
+ "Works out to {{amount}} {{currency}}": "Equivale a {{amount}} {{currency}}",
+ "You bought {{amount}} at {{quote}} {{rate}} per {{base}}, {{date}}{{status}}": "Compraste {{amount}} a {{rate}} {{quote}} por {{base}}, {{date}}{{status}}",
+ "Rate - {{quote}} {{rate}}/{{base}}": "Tipo - {{rate}} {{quote}}/{{base}}",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Tu solicitud para comprar {{amt}} {{code}} a {{rt}} {{quote}} por {{base}} está publicada. Mírala en ⋮ › Mis ofertas.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Tu oferta para vender {{amt}} {{code}} a {{rt}} {{quote}} por {{base}} está publicada. Mírala en ⋮ › Mis solicitudes.",
+ " for {{amount}} {{currency}}": " por {{amount}} {{currency}}",
+ "Rate ({{quote}} per {{base}})": "Tipo ({{quote}} por {{base}})",
+ "You pay {{pay}} and get {{currency}}.": "Pagas en {{pay}} y recibes {{currency}}.",
+ "RATE RANGE ({{quote}} PER {{base}})": "RANGO DE TIPO ({{quote}} POR {{base}})",
+ "From {{quote}} {{low}}": "Desde {{low}} {{quote}}",
+ "Up to {{quote}} {{high}}": "Hasta {{high}} {{quote}}"
 }

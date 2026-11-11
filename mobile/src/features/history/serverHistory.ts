@@ -7,6 +7,7 @@ import type { ServerMatch, ServerOffer } from '../../api/offersApi';
 import type { ActivityItem, MarketRate } from '../../fixtures';
 import type { HistoryItem, TradeStatus } from './data';
 import { tr, k } from "../../i18n";
+import { quoteOf } from '../market/pairs';
 
 /** "264100.00" → 26410000 (scale 2). Throws on anything that is not plain decimal text. */
 export function toMinor(text: string, scale = 2): number {
@@ -42,6 +43,7 @@ export function dealStatus(m: Pick<ServerMatch, 'settlement_phase' | 'preparatio
 /** One deal as a History row: the foreign currency side, the naira rate, today's state. */
 export function dealToHistory(m: ServerMatch): HistoryItem | null {
   if (!m.counter_amount) return null;
+  if (m.currency !== 'NGN' && m.counter_currency !== 'NGN') return crossToHistory(m, m.counter_amount);
   const foreignIsMatch = m.currency !== 'NGN';
   const currency = foreignIsMatch ? m.currency : m.counter_currency;
   const foreignText = foreignIsMatch ? m.allocated_amount : m.counter_amount;
@@ -61,6 +63,36 @@ export function dealToHistory(m: ServerMatch): HistoryItem | null {
     };
   } catch {
     return null; // malformed row: skipped rather than shown wrong
+  }
+}
+
+/** ADR-111: a deal with no naira side, as a "bought" row from your side of it. */
+function crossToHistory(m: ServerMatch, counterAmount: string): HistoryItem | null {
+  const receive = m.you_receive_currency;
+  if (receive !== m.currency && receive !== m.counter_currency) return null;
+  const mine = receive === m.currency;
+  const q = quoteOf(m.currency, m.counter_currency);
+  try {
+    return {
+      id: m.match_id,
+      side: 'buy',
+      currency: receive,
+      amountMinor: toMinor(mine ? m.allocated_amount : counterAmount),
+      rateMilli: rateMilliOf(m.agreed_rate),
+      date: m.accepted_at.slice(0, 10),
+      status: dealStatus(m),
+      reference: m.match_id.slice(0, 8).toUpperCase(),
+      payouts: [],
+      progress: [],
+      cross: {
+        payCurrency: mine ? m.counter_currency : m.currency,
+        payMinor: toMinor(mine ? counterAmount : m.allocated_amount),
+        quote: q.quote,
+        base: q.base,
+      },
+    };
+  } catch {
+    return null;
   }
 }
 

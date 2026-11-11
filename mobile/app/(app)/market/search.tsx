@@ -9,6 +9,7 @@ import { queueAction } from '../../../src/features/market/queueActions';
 import { queueServer } from '../../../src/features/market/serverOffers';
 import { useThemeMode } from '../../../src/theme';
 import { useOfferedCurrencies } from '../../../src/features/market/offeredCurrencies';
+import { usePayCurrency } from '../../../src/features/market/payCurrency';
 
 /**
  * Market search (ADR-059 Decision 1). Server builds only. Route params are untrusted: the
@@ -20,6 +21,7 @@ export default function SearchRoute(): ReactElement {
   const router = useRouter();
   const params = useLocalSearchParams<{ q?: string; currency?: string; filters?: string }>();
   const offered = useOfferedCurrencies();
+  const pay = usePayCurrency();
   if (!SERVER_MODE) return <Redirect href="/marketplace" />;
   const query = typeof params.q === 'string' ? params.q.slice(0, 40) : '';
   const read = readQuery(query);
@@ -35,6 +37,7 @@ export default function SearchRoute(): ReactElement {
       onPostRequest={() => router.push('/marketplace')}
       onQueue={(listing) => queueAction(listing, queueServer)}
       offered={offered}
+      pay={pay}
     />
   );
 }

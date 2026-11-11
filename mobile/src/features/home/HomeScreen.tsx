@@ -54,6 +54,7 @@ export function HomeScreen({
   showReadiness = true,
   onSearch,
   offered,
+  pay = null,
   notices = [],
 }: {
   user?: { readonly name: string; readonly initials: string; readonly avatarUri?: string | null };
@@ -78,6 +79,8 @@ export function HomeScreen({
   onSearch?: (s: HomeSearch) => void;
   /** Currencies the server offers now, for the search chips (server builds). */
   offered?: ReadonlySet<string> | null;
+  /** ADR-111: the currency you pay with (detected); its chip is left out of "Find a deal". */
+  pay?: string | null;
   /** ADR-066: outage notices from staff; shown first while they last. Server builds only. */
   notices?: readonly ServiceNotice[];
 }): ReactElement {
@@ -100,7 +103,7 @@ export function HomeScreen({
       {status === 'ready' ? (
         <View style={styles.body}>
           <ServiceNotices notices={notices} />
-          {onSearch ? <HomeSearchBar onSearch={onSearch} offered={offered} /> : null}
+          {onSearch ? <HomeSearchBar onSearch={onSearch} offered={offered} pay={pay} /> : null}
           <View>
             {demoHero ? (
               <View style={styles.hero}>
