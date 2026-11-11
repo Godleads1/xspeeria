@@ -21,6 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_app_settings
+from app.core.client_address import client_address as resolved_client_address
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.db.row_scope import scope_to_user
@@ -50,8 +51,9 @@ def get_auth_runtime(request: Request) -> AuthRuntime:
 
 
 def client_address(request: Request) -> str:
-    """The direct peer address. Proxy headers are NOT trusted (ADR-025 §4)."""
-    return request.client.host if request.client else "unknown"
+    """The customer's address: the direct peer, or behind a proxy listed in
+    ``TRUSTED_PROXIES`` the address it forwarded (ADR-109, amends ADR-025 §4)."""
+    return resolved_client_address(request)
 
 
 async def limit_by_address(
