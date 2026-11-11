@@ -18,6 +18,8 @@ The server refuses every demo switch anywhere else.
 | **Ada Obi — you** | `ada.demo@example.com` or +234 803 000 0001 | Nigeria | NGN, USD, GBP | None (make your own) |
 | Ben Carter — **robot** | `ben.demo@example.com` or +44 7700 900001 | UK and Nigeria | GBP, NGN | Sells £200 for naira at 1,750 |
 | Chloe Adams — **robot** | `chloe.demo@example.com` or +1 202 555 0101 | United States | USD, NGN | Sells $300 for naira at 1,320 |
+| **Femi Bello — you** (ADR-111) | `femi.demo@example.com` or +1 202 555 0102 | United States | USD, GBP, NGN | None (make your own) |
+| Grace Hill — **robot** (ADR-111) | `grace.demo@example.com` or +44 7700 900002 | UK | GBP, USD, NGN | Sells £200 for **US dollars** at 1.32 |
 | Dan — you | `dan.demo@example.com` or +234 803 000 0004 | Not yet | None | — |
 
 **You play Ada (or Dan). The server plays Ben and Chloe**, like playing FIFA against the computer. With `DEMO_AUTOPILOT=true`, every few seconds the robots:
@@ -166,6 +168,14 @@ You only need **one** sign-in (Ada); the robots are the other side. To watch a r
 3. Choose your payout account, then **Simulate my transfer**, as above. The robot does its side.
 
 If you don't pay within 5 minutes, the deal is cancelled. A side that already paid gets everything back, fee included; you can test that too.
+
+### B2. A deal with no naira (you are Femi, ADR-111)
+
+1. Sign in as **Femi**. The Market says **You pay in USD**. Dollars aren't in "Currency to buy", because you can't buy what you pay with.
+2. Market › Buy › choose **GBP**. Grace's offer shows **Rate: USD 1.32 /GBP**. Try a rate of 1.33 in the form: it's refused, because the limit is **USD 1.323 per GBP** (worked out from the official naira rates).
+3. Tap **Buy** on Grace's offer, enter 50, and take it. You'll pay **66.00 USD + 0.66 USD fee** into the **pretend US escrow**, and get **50.00 GBP** from the **pretend UK escrow**.
+4. Choose your GBP payout account, then **Simulate my transfer**, as in B. Grace does her side, and the deal finishes.
+5. Or post your own: **Sell** dollars for **GBP** at 1.32 or lower. Grace takes it.
 
 ### C. Things to try in the app
 

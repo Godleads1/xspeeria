@@ -7,7 +7,7 @@ import { serverAuth } from '../../../src/features/auth/serverAuth';
 import { HomeScreen } from '../../../src/features/home/HomeScreen';
 import { bestRates, dealsToActivity } from '../../../src/features/history/serverHistory';
 import { serverDeals, useServerData } from '../../../src/features/history/serverDeals';
-import { serverKyc } from '../../../src/features/kyc/serverKyc';
+import { serverRegions } from '../../../src/features/kyc/serverKyc';
 import {
   type ReadinessDimension,
   ACTIVITY_ITEMS,
@@ -28,7 +28,8 @@ const loadOffers = async () => [
   ...(await serverDeals.offers('USD/NGN')),
   ...(await serverDeals.offers('GBP/NGN')),
 ];
-const loadKyc = () => serverKyc.current();
+// ADR-042/111: verified in any country counts (a US or UK customer is ready to trade too).
+const loadKyc = () => serverRegions();
 const loadNotices = async () => {
   const t = serverAuth.accessToken();
   return t ? noticesApi.list(t, serverAuth.apiOptions()) : [];
@@ -64,7 +65,7 @@ export default function HomeRoute(): ReactElement {
   const offered = useOfferedCurrencies();
   const pay = usePayCurrency();
   const rates = useMemo(() => bestRates(offers.data ?? [], ['USD', 'GBP']), [offers.data]);
-  const approved = kyc.data?.status === 'approved';
+  const approved = kyc.data?.regions.some((r) => r.status === 'approved') === true;
   // ADR-055: once the identity check is approved, show the name from the ID.
   useEffect(() => {
     if (SERVER_MODE && approved && !profile.fullName) void serverAuth.refreshProfile().catch(() => undefined);
