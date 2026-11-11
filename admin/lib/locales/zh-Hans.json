@@ -1094,7 +1094,6 @@
  "China": "中国",
  "New identity check on a different ID": "使用不同证件的重新身份验证",
  "A currency that is off leaves the market: its offers are hidden and can’t be taken, and no new offers or payout accounts can be made in it. Deals already matched finish as normal.": "已关闭的货币将退出市场：其报价会被隐藏且无法被接受，也不能再用它创建新报价或收款账户。已匹配的交易会照常完成。",
- "Always on: every deal has a naira side.": "始终开启：每笔交易都有奈拉一方。",
  "British pound": "英镑",
  "CURRENCY": "货币",
  "Canadian dollar": "加元",
@@ -1118,5 +1117,7 @@
  "{{c}} is off.": "{{c}} 已关闭。",
  "{{c}} is on.": "{{c}} 已开启。",
  "The daily check found a deal whose money in and out don’t match": "每日检查发现一笔交易的资金流入与流出不一致",
- "A closed request is deleted after 12 hours, with its messages and contact details.": "已关闭的请求将在 12 小时后连同其消息和联系方式一起删除。"
+ "A closed request is deleted after 12 hours, with its messages and contact details.": "已关闭的请求将在 12 小时后连同其消息和联系方式一起删除。",
+ "Always on: naira can’t be switched off.": "始终开启：奈拉不能关闭。",
+ "{{quote}} {{rate}} per {{base}}": "每 {{base}} {{rate}} {{quote}}"
 }

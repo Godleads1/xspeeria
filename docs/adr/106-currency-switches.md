@@ -19,7 +19,7 @@
    - **Nothing new.** New offers, buy requests and payout accounts in it are refused (403 `BUS_403_NOT_AVAILABLE`).
    - **Matched deals carry on** to the end, because nothing after the match uses the rate limits.
    - **Switching back on** lists the waiting offers again.
-3. **Naira can't be switched off**, because every deal has a naira side. The database refuses a naira row too.
+3. **Naira can't be switched off**, because every deal has a naira side. The database refuses a naira row too. *(ADR-111, 2026-11-11: deals no longer always have a naira side. Naira still can't be switched off: the rate limits for every pair are worked out from the naira rates.)*
 4. **China: both must be on.** The yuan is off by default. The switch can't turn it on while the server's `CHINA_ENABLED` legal lock is off (409), and the routes keep refusing the yuan and China checks while that lock is off (ADR-105).
 5. **No row means the built-in default:** every currency on, except the yuan.
 6. **The app** follows the server's rate limits:

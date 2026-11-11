@@ -4,7 +4,7 @@
 
 ## 1. What Xspeeria is
 
-A peer-to-peer currency exchange for verified customers: naira against one other currency per deal.
+A peer-to-peer currency exchange for verified customers. Any two supported currencies can be exchanged in a deal (ADR-111, 2026-11-11), not only naira against another. Each person pays with the currency of a country where their identity check is approved, and never buys that currency.
 
 - **Currencies:** US dollars, pounds, euros, Canadian dollars, and ten African currencies (ADR-107).
 - **Off for now:** the yuan, until legal clearance (ADR-105).
@@ -15,7 +15,7 @@ A peer-to-peer currency exchange for verified customers: naira against one other
   - the CFA franc and the Ugandan shilling have no cents;
   - a 1% fee on each side.
 
-*Updated 2026-11-10 for everything built since the first version (#101).*
+*Updated 2026-11-10 for everything built since the first version (#101), and 2026-11-11 for deals in any pair (ADR-111).*
 
 ## 2. In scope
 
@@ -54,6 +54,12 @@ A peer-to-peer currency exchange for verified customers: naira against one other
    - can a rate above the official limit, a 4th decimal, or cents in a no-cents currency get through?
    - can a switched-off currency still be traded?
    - does the daily reconciliation (ADR-110) catch money in and out that don't match?
+   - **Any pair (ADR-111):**
+     - can a customer pay with a currency of a country where they aren't verified, or buy the currency they pay with?
+     - can they get past a cross limit (for example above GHS 11.604 per USD) by flipping the pair's order or quoting it the other way?
+     - can they see offers selling their own country's currency?
+     - are both sides of a deal with no naira (for example US dollars for cedis) paid in and out through the right country's escrow, with the right fee?
+     - can a deal's tier limit be dodged by trading in a pair without naira?
 4. **Staff console:** sign-in (password, email code, security key), session cookies, CSRF, the pause and sign-everyone-out controls, audit-log tampering.
 5. **Mobile app:** stored secrets, traffic interception, reverse engineering (no secrets should be in the app).
 6. **Usual web risks:** injection, uploads (staff photos, adverts), security headers and CSP, rate limits, information leaks in errors.

@@ -44,7 +44,7 @@ describe('Currencies (ADR-106)', () => {
 
   it('naira has no switch, and the yuan waits for legal clearance', async () => {
     mount('super_admin');
-    expect(await screen.findByText('Always on: every deal has a naira side.')).toBeInTheDocument();
+    expect(await screen.findByText('Always on: naira can’t be switched off.')).toBeInTheDocument();
     expect(screen.queryByTestId('switch-NGN')).toBeNull();
     expect(screen.queryByTestId('switch-CNY')).toBeNull();
     expect(screen.getByText('Waiting for legal clearance')).toBeInTheDocument();
