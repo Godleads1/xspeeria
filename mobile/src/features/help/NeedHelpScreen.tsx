@@ -10,10 +10,10 @@
  * Nothing proves who writes here, so the screen asks for no PIN, code or ID, and says so.
  */
 
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { messageFor } from '../../api/client';
+import { ApiError, messageFor } from '../../api/client';
 import type { HelpThread } from '../../api/helpApi';
 import { ErrorState, LoadingState, PrimaryButton, Screen } from '../../components/primitives';
 import { tr } from '../../i18n';
@@ -160,12 +160,20 @@ function Thread({
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
+  // Kept in a ref so a new `onNew` from the parent doesn't reload the thread.
+  const forget = useRef(onNew);
+  forget.current = onNew;
   const load = useCallback(() => {
     setError(null);
     source
       .read(saved.requestId, saved.key)
       .then(setT)
-      .catch((e: unknown) => setError(messageFor(e)));
+      .catch((e: unknown) => {
+        // ADR-103: a closed request is deleted 12 hours after closing; the phone then forgets
+        // it and shows the form again.
+        if (e instanceof ApiError && e.status === 404) void forget.current();
+        else setError(messageFor(e));
+      });
   }, [saved, source]);
   useEffect(load, [load]);
 
@@ -233,6 +241,9 @@ function Thread({
         <>
           <Text testID="help-closed" style={styles.small}>
             {tr('This request is closed. Send a new one if you still need help.')}
+          </Text>
+          <Text testID="help-deleted-note" style={styles.small}>
+            {tr('Closed requests and their messages are deleted after 12 hours.')}
           </Text>
           <NewLink onNew={onNew} />
         </>

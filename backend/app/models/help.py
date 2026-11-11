@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,6 +28,10 @@ class HelpRequest(Base):
         CheckConstraint("status IN ('open', 'closed')", name="status_allowed"),
         CheckConstraint("length(key_hash) = 64", name="key_hash_sha256"),
         Index("ix_help_requests_status_last", "status", "last_message_at"),
+        # ADR-103: the hourly clean-up finds requests closed 12 hours ago (migration 0052).
+        Index(
+            "ix_help_requests_closed_at", "closed_at", postgresql_where=text("status = 'closed'")
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)

@@ -1524,6 +1524,7 @@
  "Zambian Kwacha": "የዛምቢያ ክዋቻ",
  "Tanzanian Shilling": "የታንዛኒያ ሽልንግ",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "ከፍተኛ ተመን፦ NGN {{official}} በ{{code}}፣ ከCBN ተመንና ከታተመ የምንዛሬ ተመን የተሰላ። የእርስዎ ተመን ይህ ወይም ከዚህ ያነሰ መሆን አለበት።",
+ "Closed requests and their messages are deleted after 12 hours.": "የተዘጉ ጥያቄዎችና መልእክቶቻቸው ከ12 ሰዓት በኋላ ይሰረዛሉ።",
  "Enter a whole amount, for example 250": "ሙሉ መጠን ያስገቡ፣ ለምሳሌ 250",
  "Enter whole amounts like 1000.": "እንደ 1000 ያሉ ሙሉ መጠኖችን ያስገቡ።",
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "መጠኑን እንደ ሙሉ ቁጥር ተመኑንም እንደ ቁጥር ያስገቡ፣ ለምሳሌ 1000 እና 0.306።"

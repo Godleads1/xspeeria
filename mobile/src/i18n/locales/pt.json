@@ -1524,6 +1524,7 @@
  "Zambian Kwacha": "Kwacha zambiano",
  "Tanzanian Shilling": "Xelim tanzaniano",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "Taxa máxima: NGN {{official}} por {{code}}, calculada a partir de uma taxa do CBN e de uma taxa de câmbio publicada. A sua taxa deve ser esta ou inferior.",
+ "Closed requests and their messages are deleted after 12 hours.": "Os pedidos encerrados e as suas mensagens são eliminados após 12 horas.",
  "Enter a whole amount, for example 250": "Digite um valor inteiro, por exemplo 250",
  "Enter whole amounts like 1000.": "Digite valores inteiros, como 1000.",
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Digite o valor como número inteiro e a taxa como número, por ex. 1000 e 0.306."

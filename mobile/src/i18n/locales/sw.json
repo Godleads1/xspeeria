@@ -1524,6 +1524,7 @@
  "Zambian Kwacha": "Kwacha ya Zambia",
  "Tanzanian Shilling": "Shilingi ya Tanzania",
  "Maximum rate: NGN {{official}} per {{code}}, worked out from a CBN rate and a published exchange rate. Your rate must be this or lower.": "Kiwango cha juu: NGN {{official}} kwa {{code}}, kimekokotolewa kutoka kiwango cha CBN na kiwango cha ubadilishaji kilichochapishwa. Kiwango chako lazima kiwe hiki au chini yake.",
+ "Closed requests and their messages are deleted after 12 hours.": "Maombi yaliyofungwa na ujumbe wake hufutwa baada ya saa 12.",
  "Enter a whole amount, for example 250": "Weka kiasi kamili, kwa mfano 250",
  "Enter whole amounts like 1000.": "Weka viasi kamili kama 1000.",
  "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Weka kiasi kama nambari kamili na kiwango kama nambari, k.m. 1000 na 0.306."

@@ -1116,5 +1116,6 @@
  "Yes, Switch Off": "是的，关闭",
  "Yes, Switch On": "是的，开启",
  "{{c}} is off.": "{{c}} 已关闭。",
- "{{c}} is on.": "{{c}} 已开启。"
+ "{{c}} is on.": "{{c}} 已开启。",
+ "A closed request is deleted after 12 hours, with its messages and contact details.": "已关闭的请求将在 12 小时后连同其消息和联系方式一起删除。"
 }

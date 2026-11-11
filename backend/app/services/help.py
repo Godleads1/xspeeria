@@ -22,10 +22,10 @@ import secrets
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
@@ -35,10 +35,14 @@ from app.models.identity import User
 from app.models.staff import StaffAuditEntry
 from app.services.staff import RequestInfo, StaffPrincipal, forbidden
 
-__all__ = ["MAX_UNANSWERED", "HelpService", "HelpThread", "NewHelpRequest"]
+__all__ = ["CLOSED_KEPT_FOR", "MAX_UNANSWERED", "HelpService", "HelpThread", "NewHelpRequest"]
 
 #: Customer messages in a row before staff must answer.
 MAX_UNANSWERED = 5
+
+#: Owner 2026-11-10: "it must be deleted on 12 hours". A closed request (phone, email and every
+#: message) is deleted this long after closing; the database refuses anything sooner (0052).
+CLOSED_KEPT_FOR = timedelta(hours=12)
 
 
 def _err(code: str, message: str, status_code: int) -> AppError:
@@ -235,6 +239,22 @@ class HelpService:
         r.status, r.closed_at, r.closed_by_staff_id = "closed", now, principal.staff_id
         self._audit(principal, info, "help_closed", r.id, now)
         await self._db.commit()
+
+    # --- retention -----------------------------------------------------------------------
+
+    async def purge_closed(self) -> int:
+        """Delete requests closed at least 12 hours ago, with their messages; returns how many.
+
+        Open requests are never deleted, however old. Run by the hourly clean-up job.
+        """
+        cutoff = self._clock() - CLOSED_KEPT_FOR
+        result = await self._db.execute(
+            delete(HelpRequest).where(
+                HelpRequest.status == "closed", HelpRequest.closed_at <= cutoff
+            )
+        )
+        await self._db.commit()
+        return int(getattr(result, "rowcount", 0) or 0)
 
     # --- helpers -------------------------------------------------------------------------
 

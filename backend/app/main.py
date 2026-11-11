@@ -381,12 +381,14 @@ async def _demo_autopilot_loop(settings: Settings, runtime: AuthRuntime) -> None
 async def _activity_retention_loop(settings: Settings) -> None:
     """ADR-073: the customer activity log is kept 5 years; older rows are deleted hourly (the
     database refuses to delete anything younger). ADR-080: and rate-limit attempts after an
-    hour. ADR-095: and the 14-day clean-up of deleted accounts."""
+    hour. ADR-095: and the 14-day clean-up of deleted accounts. ADR-103: and "Need help?"
+    requests 12 hours after they are closed."""
     from sqlalchemy import text
 
     from app.core.rate_limit import prune_rate_limit_hits
     from app.db.session import get_sessionmaker
     from app.services.account_deletion import AccountDeletionService
+    from app.services.help import HelpService
 
     log = get_logger(__name__)
     while True:
@@ -405,6 +407,9 @@ async def _activity_retention_loop(settings: Settings) -> None:
                 # there is no legal reason to keep.
                 with track_job("Account deletion clean-up", 3600):
                     await AccountDeletionService(db, lambda: datetime.now(UTC)).purge_due()
+                # ADR-103 (owner: "it must be deleted on 12 hours"): closed help requests.
+                with track_job("Help request clean-up", 3600):
+                    await HelpService(db, lambda: datetime.now(UTC)).purge_closed()
         except Exception:  # noqa: BLE001 - try again next hour
             log.exception("activity_retention_failed")
 
