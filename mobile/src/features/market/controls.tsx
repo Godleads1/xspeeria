@@ -401,11 +401,11 @@ export function ListingRow({
         <View style={styles.rateRow}>
           <Text style={styles.listingLine}>
             {tr("Rate: ")}
-            <Text style={styles.listingMuted}>{tr("NGN")}{' '}</Text>
+            <Text style={styles.listingMuted}>{listing.rateQuote ?? tr("NGN")}{' '}</Text>
             <Text style={styles.listingRate}>
               {listing.rateLabel ?? formatRateCompact(listing.rateMilli)}
             </Text>
-            <Text style={styles.listingMuted}>{` /${listing.currency}`}</Text>
+            <Text style={styles.listingMuted}>{` /${listing.rateBase ?? listing.currency}`}</Text>
           </Text>
           {listing.best ? (
             <View style={styles.bestPill}>

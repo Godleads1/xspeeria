@@ -53,6 +53,27 @@ export function buyableNow(live: Readonly<Record<string, number>> | null): reado
   return BUYABLE.filter((c) => !SWITCHED_CURRENCIES.has(c.code) || (live !== null && c.code in live));
 }
 
+/** Every currency the app knows, naira first. */
+export const ALL_CURRENCIES: readonly Currency[] = [NGN, ...BUYABLE];
+
+/** The currency for a code, or a plain stand-in showing the code. */
+export function currencyOf(code: string): Currency {
+  return ALL_CURRENCIES.find((c) => c.code === code) ?? { code, name: code, flag: '🏳️' };
+}
+
+/**
+ * ADR-111: what someone paying in `pay` can get — every other currency, the switched ones
+ * (and every pair of a switched pay currency) only while the server has a limit for the pair.
+ * Australian dollars only against naira, as before.
+ */
+export function wantableWith(pay: string, live: Readonly<Record<string, number>> | null, key: (a: string, b: string) => string): readonly Currency[] {
+  return ALL_CURRENCIES.filter((c) => {
+    if (c.code === pay || (c.code === 'AUD' && pay !== 'NGN')) return false;
+    if (!SWITCHED_CURRENCIES.has(c.code) && !SWITCHED_CURRENCIES.has(pay)) return true;
+    return live !== null && key(pay, c.code) in live;
+  });
+}
+
 /** Currencies a seller can receive. Figma: "Currencies you are licensed to sell". */
 export const RECEIVABLE: readonly Currency[] = [NGN];
 
@@ -80,6 +101,12 @@ export interface Listing {
   readonly best?: boolean;
   /** Server offers only: the exact rate text when it has more than three decimals (stored before the 3-decimal rule). */
   readonly rateLabel?: string;
+  /**
+   * ADR-111: how the rate reads when it isn't "NGN per `currency`": the quote and base of the
+   * pair (e.g. GHS per USD, or NGN per USD on a row about naira).
+   */
+  readonly rateQuote?: string;
+  readonly rateBase?: string;
   /** Server offers only: the signed-in user's own offer. */
   readonly own?: boolean;
   /**

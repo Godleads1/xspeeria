@@ -1527,5 +1527,19 @@
  "Closed requests and their messages are deleted after 12 hours.": "Maombi yaliyofungwa na ujumbe wake hufutwa baada ya saa 12.",
  "Enter a whole amount, for example 250": "Weka kiasi kamili, kwa mfano 250",
  "Enter whole amounts like 1000.": "Weka viasi kamili kama 1000.",
- "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Weka kiasi kama nambari kamili na kiwango kama nambari, k.m. 1000 na 0.306."
+ "Enter the amount as a whole number and the rate as a number, e.g. 1000 and 0.306.": "Weka kiasi kama nambari kamili na kiwango kama nambari, k.m. 1000 na 0.306.",
+ "Your rate can’t be above {{quote}} {{official}} per {{base}}.": "Kiwango chako hakiwezi kuzidi {{quote}} {{official}} kwa kila {{base}}.",
+ "There’s no rate limit for {{base}} and {{quote}} right now, so you can’t trade this pair for now.": "Hakuna kiwango cha juu kwa {{base}} na {{quote}} kwa sasa, kwa hivyo huwezi kubadilisha jozi hii kwa sasa.",
+ "Your request to buy {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Requests.": "Ombi lako la kununua {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} liko hewani. Lione chini ya ⋮ › Maombi Yangu.",
+ "Your offer to sell {{amt}} {{code}} at {{quote}} {{rt}} per {{base}} is live. See it under ⋮ › My Offers.": "Ofa yako ya kuuza {{amt}} {{code}} kwa {{quote}} {{rt}} kwa kila {{base}} iko hewani. Ione chini ya ⋮ › Ofa Zangu.",
+ "You pay in {{code}}": "Unalipa kwa {{code}}",
+ "Change the currency you pay with": "Badilisha sarafu unayolipa nayo",
+ "Rate in {{quote}} per {{base}}": "Kiwango kwa {{quote}} kwa kila {{base}}",
+ "Maximum rate: {{quote}} {{official}} per {{base}}, worked out from the official naira rates. Your rate must be this or lower.": "Kiwango cha juu: {{quote}} {{official}} kwa kila {{base}}, kimehesabiwa kutoka viwango rasmi vya naira. Kiwango chako lazima kiwe hiki au chini yake.",
+ "Select the currency to receive to see requests": "Chagua sarafu ya kupokea ili kuona maombi",
+ "Pay with": "Lipa kwa",
+ "Sell {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Uza {{amount}} {{currency}} kwa {{quote}} {{rate}} kwa kila {{base}}",
+ "Take {{amount}} {{currency}} at {{quote}} {{rate}} per {{base}}": "Chukua {{amount}} {{currency}} kwa {{quote}} {{rate}} kwa kila {{base}}",
+ "Rate: {{quote}} {{rate}} /{{base}}": "Kiwango: {{quote}} {{rate}} /{{base}}",
+ "Works out to {{amount}} {{currency}}": "Ni sawa na {{amount}} {{currency}}"
 }
