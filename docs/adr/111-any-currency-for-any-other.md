@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |---|---|
-| **Status** | **IMPLEMENTED (server, step 1; app, steps 3–4)** — 2026-11-11. The admin console follows in step 5. |
+| **Status** | **IMPLEMENTED (all 5 steps)** — 2026-11-11. Not verified: licences (below). |
 | **Decision ID** | DEC-123 |
 | **Authority** | Owner, 2026-11-11: "i want us citizen can decide to buy ghana currency or any other currencies, but can not buy us dollars. same for other countrie." … "if i am in nigeria, i will not see order from fellow nigerians trying to sell naira to buy other currencies." Answers: **"Verified country"**, **"Pay with either"**, **"Work out via official rates"**, **"Build and switch on"**. Then: the pay currency "should be detected already" from verification, so there is no "I pay" choice. |
 | **Changes** | ADR-020 and ADR-029: a pair no longer needs naira. Everything else (escrow, fees, identity, limits) is unchanged. |
@@ -49,7 +49,10 @@
    - **History and receipts:** a deal with no naira side is a "bought" row from your side. The receipt shows what you paid (the server's recorded counter amount) in its own currency, with the 1% fee in that currency.
    - **Naira deals:** read exactly as before.
    - **Evidence:** `mobile/__tests__/cross-screens.test.tsx`.
-5. **Admin console and docs.**
+5. **Admin console and docs** (implemented):
+   - **Transaction timeline:** the rate reads the pair's way ("GHS 11.500000 per USD", "NGN 1320.500000 per USD").
+   - **Currencies page:** no longer says every deal has a naira side. It now says naira can't be switched off.
+   - **Penetration test brief:** asks the tester to try the ADR-111 rules (§3.3). Evidence: `admin/__tests__/activity.test.tsx`.
 
 ## Evidence (step 1)
 

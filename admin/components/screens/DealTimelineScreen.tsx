@@ -17,6 +17,7 @@ import { color } from '../../theme';
 import { PageTitle } from '../forms';
 import { ErrorState, LoadingState, Panel } from '../primitives';
 import { decimalMoney, phaseLabel } from './DealsScreen';
+import { quoteOf } from '../../lib/pairs';
 import { BY_LABEL, OUTCOME_LABEL, eventLabel } from './activityLabels';
 import { when } from './common';
 
@@ -78,7 +79,9 @@ export function DealTimelineScreen({ id }: { id: string }): ReactElement {
         <div data-testid="deal-summary" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           <Fact label={tr('Status')}>{phaseLabel(d.phase)}</Fact>
           <Fact label={tr('Amount')}>{decimalMoney(d.amount, d.currency)}</Fact>
-          <Fact label={tr('Rate')}>{d.rate}</Fact>
+          <Fact label={tr('Rate')}>
+            {tr('{{quote}} {{rate}} per {{base}}', { ...quoteOf(d.currency, d.counter_currency), rate: d.rate })}
+          </Fact>
           <Fact label={tr('Exchanged for')}>{d.counter_currency}</Fact>
           <Fact label={tr('Taken (Lagos)')}>{when(d.taken_at)}</Fact>
           <Fact label={tr('Offer owner')}>

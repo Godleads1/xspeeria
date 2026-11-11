@@ -89,7 +89,7 @@ export function CurrenciesScreen(): ReactElement {
       header: tr('LAST CHANGE'),
       render: (r) =>
         r.locked === 'naira' ? (
-          <span style={{ color: color.text.secondary }}>{tr('Always on: every deal has a naira side.')}</span>
+          <span style={{ color: color.text.secondary }}>{tr('Always on: naira can’t be switched off.')}</span>
         ) : r.changed_at ? (
           <>
             {when(r.changed_at)} · {r.reason}

@@ -1094,7 +1094,6 @@
  "China": "Chine",
  "New identity check on a different ID": "Nouvelle vérification avec une autre pièce d’identité",
  "A currency that is off leaves the market: its offers are hidden and can’t be taken, and no new offers or payout accounts can be made in it. Deals already matched finish as normal.": "Une devise désactivée quitte le marché : ses offres sont masquées et ne peuvent pas être prises, et aucune nouvelle offre ni aucun compte de versement ne peut être créé dans cette devise. Les transactions déjà conclues se terminent normalement.",
- "Always on: every deal has a naira side.": "Toujours active : chaque transaction a un côté en naira.",
  "British pound": "Livre sterling",
  "CURRENCY": "DEVISE",
  "Canadian dollar": "Dollar canadien",
@@ -1118,5 +1117,7 @@
  "{{c}} is off.": "{{c}} est désactivée.",
  "{{c}} is on.": "{{c}} est activée.",
  "The daily check found a deal whose money in and out don’t match": "Le contrôle quotidien a trouvé une transaction dont l’argent entré et sorti ne correspond pas",
- "A closed request is deleted after 12 hours, with its messages and contact details.": "Une demande clôturée est supprimée au bout de 12 heures, avec ses messages et ses coordonnées."
+ "A closed request is deleted after 12 hours, with its messages and contact details.": "Une demande clôturée est supprimée au bout de 12 heures, avec ses messages et ses coordonnées.",
+ "Always on: naira can’t be switched off.": "Toujours active : le naira ne peut pas être désactivé.",
+ "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} par {{base}}"
 }

@@ -1,6 +1,6 @@
 /** Customer activity log and deal timelines (ADR-073): Super Admin only, read-only, no secrets. */
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NAV_ITEMS } from '../fixtures';
@@ -139,6 +139,14 @@ describe('Transactions', () => {
     expect(steps[2]).toHaveTextContent('Paid into escrow (pretend bank)');
     expect(steps[3]).toHaveTextContent('Grace Ops'); // staff are named
     expect(steps[4]).toHaveTextContent('Xspeeria');
+  });
+
+  it('reads the rate as the pair does: NGN per USD, or GHS per USD (ADR-111)', async () => {
+    mount(<DealTimelineScreen id={MID} />);
+    expect(await screen.findByTestId('deal-summary')).toHaveTextContent('NGN 1320.500000 per USD');
+    cleanup();
+    mount(<DealTimelineScreen id={MID} />, { deal: vi.fn(async () => ({ ...DEAL, counter_currency: 'GHS', rate: '11.500000' })) });
+    expect(await screen.findByTestId('deal-summary')).toHaveTextContent('GHS 11.500000 per USD');
   });
 
   it('keeps money exact and labels unknown steps in words', () => {
