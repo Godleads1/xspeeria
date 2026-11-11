@@ -115,6 +115,9 @@ describe('Market for someone verified in the US', () => {
     await flush();
     expect(screen.getByTestId('market-pay')).toHaveTextContent('You pay in USD', { exact: false });
     expect(screen.queryByTestId('market-pay-change')).toBeNull(); // only one
+    // Before a currency is chosen the amount never names the one you pay with.
+    expect(screen.queryByText('Amount in “USD” *')).toBeNull();
+    expect(screen.getByText('Amount *')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('market-currency'));
     expect(screen.queryByTestId('currency-USD')).toBeNull();
     expect(screen.getByTestId('currency-NGN')).toBeTruthy();

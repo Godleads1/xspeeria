@@ -354,13 +354,18 @@ export function MarketScreen({
     <OutlinedField
       label={
         side === "buy"
-          ? tr("Amount in “{{value}}” *", { value: foreign?.code ?? "USD" })
+          ? foreign || !detectedPay
+            ? tr("Amount in “{{value}}” *", { value: foreign?.code ?? "USD" })
+            : // ADR-111: nothing chosen yet, and never the currency you pay with.
+              `${tr("Amount")} *`
           : tr("Amount in “{{code}}” to sell *", { code: pay })
       }
     >
       <FieldInput
         testID="market-amount"
-        accessibilityLabel={tr("Amount in {{value}}", { value: foreign?.code ?? "USD" })}
+        accessibilityLabel={
+          foreign || !detectedPay ? tr("Amount in {{value}}", { value: foreign?.code ?? "USD" }) : tr("Amount")
+        }
         value={amount}
         onChangeText={editAmount}
       />
