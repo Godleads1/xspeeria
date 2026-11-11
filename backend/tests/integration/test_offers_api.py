@@ -174,7 +174,7 @@ async def test_amount_is_stored_as_exact_minor_units(db_settings: Settings, davi
         ({"desired_rate": "1333.27"}, "VAL_422_RATE_ABOVE_CEILING"),
         ({"desired_rate": "1.1234567"}, "VALIDATION_ERROR"),
         ({"desired_rate": "NaN"}, "VALIDATION_ERROR"),
-        ({"source_currency": "USD", "target_currency": "GBP"}, "VALIDATION_ERROR"),
+        ({"source_currency": "USD", "target_currency": "USD"}, "VALIDATION_ERROR"),
         ({"source_currency": "NGN", "target_currency": "NGN"}, "VALIDATION_ERROR"),
         ({"source_currency": "JPY", "target_currency": "NGN"}, "VALIDATION_ERROR"),
     ],
@@ -347,7 +347,9 @@ async def test_listing_pages_and_filters_pair(david: User) -> None:
     assert first["next_offset"] == 2
     assert (await david.listings(limit=51)).status_code == 422
     assert (await david.listings("USDNGN")).status_code == 422
-    assert (await david.listings("USD/GBP")).status_code == 422
+    assert (await david.listings("USD/USD")).status_code == 422
+    assert (await david.listings("USD/JPY")).status_code == 422
+    assert (await david.listings("USD/GBP")).status_code == 200  # any pair (ADR-111)
     assert (await david.listings(**{"filter[type]": "request"})).status_code == 422
 
 

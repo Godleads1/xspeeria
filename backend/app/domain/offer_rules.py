@@ -1,6 +1,12 @@
 """Offer rules as pure functions (ADR-020, ADR-029). No I/O, no clock.
 
-Rates are always **NGN per 1 unit of the foreign currency**, whichever side the offer sells.
+A rate is the price of 1 unit of the pair's **base** currency in its **quote** currency,
+whichever side the offer sells (ADR-111):
+
+* a pair with naira: the quote is always NGN, so the rate is naira per 1 unit of the other
+  currency, as before (₦1,333.26 per USD);
+* a pair without naira (owner 2026-11-11, "any currency for any other"): the quote is the
+  weaker currency in ``STRENGTH`` order, so the rate is e.g. GHS per 1 USD (11.488).
 """
 
 from __future__ import annotations
@@ -10,6 +16,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
+from typing import Protocol
 
 __all__ = [
     "CURRENCY_DEF_VERSION",
@@ -34,6 +41,11 @@ __all__ = [
     "SCALE",
     "OfferInputError",
     "Pair",
+    "STRENGTH",
+    "ceiling_key",
+    "offer_pair",
+    "cross_ceilings",
+    "naira_values",
     "below_minimum",
     "parse_amount_minor",
     "parse_pair",
@@ -80,6 +92,8 @@ OFFICIAL_RATE: dict[str, Decimal] = {
     "EUR": Decimal("1491.20"),
 }
 OFFICIAL_RATE_AS_OF = "2026-10-17"
+#: The fed currencies of the snapshot, before anything is derived (for cross limits).
+FED_SNAPSHOT: dict[str, Decimal] = dict(OFFICIAL_RATE)
 
 #: ADR-101 (owner, 2026-11-09): the CBN publishes no CAD figure we can rely on, so the CAD
 #: ceiling = the USD ceiling ÷ Bank of Canada's daily USD/CAD rate (CAD per 1 USD), rounded
@@ -181,25 +195,98 @@ class OfferInputError(ValueError):
         self.message = message
 
 
+#: ADR-111: which way round a pair without naira is quoted — the earlier currency is the base,
+#: the later one the quote, so most rates are 1 or more (11.488 GHS per USD, 1.118 USD per
+#: EUR). Fixed, not from today's rates, so a pair is always quoted the same way. Roughly by
+#: naira value on 2026-11-10.
+STRENGTH: tuple[str, ...] = (
+    "GBP", "EUR", "USD", "CAD", "CNY", "MAD", "GHS", "ZAR", "ZMW",
+    "EGP", "KES", "ETB", "XOF", "TZS", "UGX",
+)  # fmt: skip
+CURRENCIES = FOREIGN | {"NGN"}
+
+
 @dataclass(frozen=True)
 class Pair:
     source: str
     target: str
 
     @property
+    def base(self) -> str:
+        """The currency the rate is "per 1 unit" of."""
+        if "NGN" in (self.source, self.target):
+            return self.target if self.source == "NGN" else self.source
+        return min(self.source, self.target, key=STRENGTH.index)
+
+    @property
+    def quote(self) -> str:
+        """The currency the rate is counted in: NGN when present, else the weaker one."""
+        return self.target if self.base == self.source else self.source
+
+    @property
     def foreign(self) -> str:
-        return self.target if self.source == "NGN" else self.source
+        """The base currency (the name from when every pair had naira)."""
+        return self.base
+
+    @property
+    def sells_quote(self) -> bool:
+        """The offer sells the quote currency (a naira request: sells NGN for USD)."""
+        return self.source == self.quote
 
 
 def parse_pair(source: str, target: str) -> Pair:
-    """NGN with one of the foreign currencies, in either direction."""
+    """Any two different supported currencies, in either direction (ADR-111)."""
     s, t = source.upper(), target.upper()
-    if s == t or "NGN" not in (s, t) or (s if t == "NGN" else t) not in FOREIGN:
+    if s == t or s not in CURRENCIES or t not in CURRENCIES:
         raise OfferInputError(
-            FORMAT_ERROR,
-            "Offers exchange naira with US dollars, pounds, euros, Canadian dollars or yuan.",
+            FORMAT_ERROR, "Choose two different currencies that Xspeeria exchanges."
         )
     return Pair(s, t)
+
+
+class _HasPair(Protocol):
+    source_currency: str
+    target_currency: str
+
+
+def offer_pair(offer: _HasPair) -> Pair:
+    """The pair of a stored offer (anything with ``source_currency`` and ``target_currency``)."""
+    return Pair(offer.source_currency, offer.target_currency)
+
+
+def ceiling_key(pair: Pair) -> str:
+    """The key of a pair's limit in a ceilings map: "USD" (naira per USD) or "USD/GHS"."""
+    return pair.base if pair.quote == "NGN" else f"{pair.base}/{pair.quote}"
+
+
+def naira_values(fed: Mapping[str, Decimal]) -> dict[str, Decimal]:
+    """Naira per 1 unit of each currency, **unrounded**, from the fed USD/GBP/EUR rates and
+    the same reference rates ``with_derived`` uses. Only for working out cross limits."""
+    out = {c: v for c, v in fed.items() if c in ("USD", "GBP", "EUR")}
+    usd, eur = out.get("USD"), out.get("EUR")
+    if usd is not None:
+        out["CAD"] = usd / CAD_PER_USD
+        out["CNY"] = usd / CNY_PER_USD
+        for currency, per_usd in AFRICA_PER_USD.items():
+            out[currency] = usd / per_usd
+    if eur is not None:
+        out["XOF"] = eur / XOF_PER_EUR
+    return out
+
+
+def cross_ceilings(fed: Mapping[str, Decimal]) -> dict[str, Decimal]:
+    """ADR-111 (owner: "Work out via official rates"): the limit for each pair without naira
+    = naira value of the base ÷ naira value of the quote, from unrounded values, cut down to
+    3 decimals, so it never exceeds the official cross rate. Keyed "BASE/QUOTE"."""
+    values = naira_values(fed)
+    out: dict[str, Decimal] = {}
+    for i, base in enumerate(STRENGTH):
+        for quote in STRENGTH[i + 1 :]:
+            if base in values and quote in values:
+                limit = (values[base] / values[quote]).quantize(_THREE, rounding=ROUND_DOWN)
+                if limit > 0:
+                    out[f"{base}/{quote}"] = limit
+    return out
 
 
 def parse_amount_minor(text: str, currency: str, *, minimum: bool = True) -> int:
@@ -255,19 +342,23 @@ def _shown(v: Decimal) -> str:
 
 
 def rate_problem(
-    rate: Decimal, foreign: str, ceilings: Mapping[str, Decimal] | None = None
+    rate: Decimal, key: str, ceilings: Mapping[str, Decimal] | None = None
 ) -> OfferInputError | None:
     """Positivity first, then the official-rate ceiling (contract §3.3, ADR-020, ADR-102).
 
-    ``ceilings`` comes from ``services.official_rates.current_ceilings``; None = the snapshot.
+    ``key`` is :func:`ceiling_key` ("USD" or "USD/GHS"). ``ceilings`` comes from
+    ``services.official_rates.current_ceilings``; None = the snapshot.
     """
     if rate <= 0:
         return OfferInputError("VAL_422_RATE_NOT_POSITIVE", "The rate must be more than zero.")
-    ceiling = (OFFICIAL_RATE if ceilings is None else ceilings).get(foreign)
+    if ceilings is None:
+        ceilings = {**OFFICIAL_RATE, **cross_ceilings(FED_SNAPSHOT)}
+    ceiling = ceilings.get(key)
     if ceiling is None or rate > ceiling or rate > _RATE_MAX:
         limit = _shown(ceiling) if ceiling is not None else "not set"
+        base, _, quote = key.partition("/")
         return OfferInputError(
             "VAL_422_RATE_ABOVE_CEILING",
-            f"The rate can’t be above the official rate (NGN {limit} per {foreign}).",
+            f"The rate can’t be above the official rate ({quote or 'NGN'} {limit} per {base}).",
         )
     return None

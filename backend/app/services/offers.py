@@ -33,6 +33,8 @@ from app.domain.offer_rules import (
     IDEMPOTENCY_TTL,
     SCALE,
     OfferInputError,
+    ceiling_key,
+    offer_pair,
     parse_amount_minor,
     parse_pair,
     parse_rate,
@@ -180,7 +182,8 @@ class OfferService:
             rate = parse_rate(desired_rate)
         except OfferInputError as e:
             raise _input_error(e) from None
-        problem = rate_problem(rate, pair.foreign, await current_ceilings(self._db, self._clock()))
+        ceilings = await current_ceilings(self._db, self._clock())
+        problem = rate_problem(rate, ceiling_key(pair), ceilings)
         if problem is not None:
             raise _input_error(problem)
 
@@ -414,7 +417,7 @@ class OfferService:
         except OfferInputError as e:
             raise _input_error(e) from None
         search = search or Search()
-        ceiling = (await current_ceilings(self._db, self._clock())).get(pair.foreign)
+        ceiling = (await current_ceilings(self._db, self._clock())).get(ceiling_key(pair))
         if ceiling is None:  # no current official rate (ADR-102): nothing can be listed
             return []
         remaining = Offer.source_amount_minor - Offer.matched_amount_minor
@@ -425,8 +428,10 @@ class OfferService:
         # The amount filter and sort are in the FOREIGN currency. A buy request (paying naira)
         # holds naira, so its foreign size is naira / rate; bounds are multiplied, not divided,
         # so the comparison stays exact (NUMERIC, never float).
-        selling_naira = pair.source == "NGN"
-        unit = Decimal(10) ** (SCALE["NGN"] - SCALE[pair.foreign])
+        # ADR-111: an offer selling the quote currency (a naira request, or e.g. cedis for
+        # dollars) holds the quote; its base-currency size is quote / rate.
+        selling_naira = pair.sells_quote
+        unit = Decimal(10) ** (SCALE[pair.quote] - SCALE[pair.base])
         conditions = [
             Offer.source_currency == pair.source,
             Offer.target_currency == pair.target,
@@ -522,8 +527,10 @@ class OfferService:
             pair = parse_pair(source, target)
         except OfferInputError as e:
             raise _input_error(e) from None
-        selling_naira = pair.source == "NGN"
-        unit = Decimal(10) ** (SCALE["NGN"] - SCALE[pair.foreign])
+        # ADR-111: an offer selling the quote currency (a naira request, or e.g. cedis for
+        # dollars) holds the quote; its base-currency size is quote / rate.
+        selling_naira = pair.sells_quote
+        unit = Decimal(10) ** (SCALE[pair.quote] - SCALE[pair.base])
         allocated = Match.allocated_amount_minor
         conditions = [
             Offer.source_currency == pair.source,
@@ -603,8 +610,7 @@ class OfferService:
         mine = offer.user_id == principal.user_id
         ceilings = await current_ceilings(self._db, self._clock())
         listed = offer.status in ACTIVE_STATUSES and offer.desired_rate <= ceilings.get(
-            offer.target_currency if offer.source_currency == "NGN" else offer.source_currency,
-            Decimal(0),
+            ceiling_key(offer_pair(offer)), Decimal(0)
         )
         if not mine and not listed:
             raise _not_found()  # someone else's closed offer: as if it did not exist
@@ -678,8 +684,8 @@ class OfferService:
                     "Change the rate, or withdraw it and post a new one.",
                 )
             )
-        foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
-        problem = rate_problem(rate, foreign, await current_ceilings(self._db, self._clock()))
+        key = ceiling_key(offer_pair(offer))
+        problem = rate_problem(rate, key, await current_ceilings(self._db, self._clock()))
         if problem is not None:
             await self._db.rollback()
             raise _input_error(problem)

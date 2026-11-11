@@ -22,8 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.db.row_scope import acting_for_service
-from app.domain.offer_rules import SCALE
-from app.domain.tier_rules import LIMITS, day_start, month_start, naira_minor_of
+from app.domain.tier_rules import LIMITS, day_start, deal_kobo, month_start
 from app.models.identity import User
 from app.models.kyc import KycCase
 from app.models.marketplace import Match, Offer
@@ -91,8 +90,7 @@ async def usage(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> tuple[in
     ).all()
     day = month = 0
     for source, target, allocated, rate, accepted_at in rows:
-        foreign = target if source == "NGN" else source
-        kobo = naira_minor_of(source, int(allocated), rate, SCALE.get(foreign, 2))
+        kobo = deal_kobo(source, target, int(allocated), rate)
         month += kobo
         if accepted_at >= today:
             day += kobo
@@ -108,10 +106,7 @@ async def check_new_deal(
     settings: Settings,
 ) -> None:
     """Refuse a deal that would take the taker or the offer's owner over a limit."""
-    foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
-    deal = naira_minor_of(
-        offer.source_currency, amount_minor, offer.desired_rate, SCALE.get(foreign, 2)
-    )
+    deal = deal_kobo(offer.source_currency, offer.target_currency, amount_minor, offer.desired_rate)
     people = sorted({taker_id, offer.user_id})
     await db.execute(select(User.id).where(User.id.in_(people)).order_by(User.id).with_for_update())
     # The taker first: when both would go over, tell the taker about their own limit.

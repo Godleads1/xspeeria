@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.db.session import build_engine
-from app.domain.offer_rules import AFRICAN, OFFICIAL_RATE
+from app.domain.offer_rules import AFRICAN, FED_SNAPSHOT, OFFICIAL_RATE, cross_ceilings
 from app.providers.frankfurter import RateFeedError, RateQuote
 from app.services.official_rates import OfficialRateService, current_ceilings
 from tests.integration.test_auth_api import Env, _code, _sql, clean, migrated  # noqa: F401
@@ -67,7 +67,9 @@ async def _rates(env: Env, user: User | None) -> Response:
 
 async def test_snapshot_until_the_feed_has_stored_a_rate(env: Env, db: AsyncSession) -> None:
     # The yuan is switched off by default (ADR-105, ADR-106), so it has no rate limit in force.
-    expected = {c: v for c, v in OFFICIAL_RATE.items() if c != "CNY"}
+    # Pairs without naira (ADR-111) are worked out from the same rates; none with the yuan.
+    both = {**OFFICIAL_RATE, **cross_ceilings(FED_SNAPSHOT)}
+    expected = {k: v for k, v in both.items() if "CNY" not in k.split("/")}
     assert await current_ceilings(db, env.clock()) == expected
     assert OFFICIAL_RATE["CAD"] == Decimal("944.70")
 

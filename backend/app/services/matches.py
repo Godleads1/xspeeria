@@ -50,6 +50,8 @@ from app.domain.offer_rules import (
     STORED_RATE_PLACES,
     OfferInputError,
     below_minimum,
+    ceiling_key,
+    offer_pair,
     parse_amount_minor,
     parse_rate,
 )
@@ -91,8 +93,9 @@ def _err(code: str, message: str, http: int) -> AppError:
     return AppError(code, message, status_code=http)
 
 
-def _foreign(offer: Offer) -> str:
-    return offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
+def _ceiling_key(offer: Offer) -> str:
+    """The offer's limit in ``current_ceilings`` (ADR-111: "USD" or "USD/GHS")."""
+    return ceiling_key(offer_pair(offer))
 
 
 def receive_side(match: Match, offer: Offer, viewer: uuid.UUID) -> tuple[str, int]:
@@ -285,7 +288,7 @@ class MatchService:
         handed_on = await pass_overdue_turns(self._db, offer, now)
 
         # 4. Still listed? Lifecycle status and today's official-rate ceiling (contract §3.5).
-        ceiling = (await current_ceilings(self._db, now)).get(_foreign(offer))
+        ceiling = (await current_ceilings(self._db, now)).get(_ceiling_key(offer))
         if offer.status not in ACTIVE_STATUSES or ceiling is None or offer.desired_rate > ceiling:
             await self._db.rollback()
             raise _err(
