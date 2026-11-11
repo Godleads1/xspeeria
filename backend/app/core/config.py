@@ -176,6 +176,9 @@ class Settings(BaseSettings):
     #: ADR-035: how often the server looks for deals whose 30 minutes ran out (0 = never;
     #: expiry then happens only when the offer or deal is next touched).
     preparation_sweep_seconds: int = 30
+    #: ADR-110 (owner 2026-11-10): how often finished deals' money in and out is checked
+    #: (seconds; 0 = off). Daily; the first run is a few minutes after start-up.
+    reconciliation_seconds: int = 86_400
     #: KYC-1 (ADR-039): Didit identity checks. All three secrets/ids are needed, or identity
     #: checks are switched off (503) and only the local KYC_DEV_BYPASS can approve anyone.
     #: Never logged or returned.

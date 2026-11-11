@@ -1117,5 +1117,6 @@
  "Yes, Switch On": "Oui, activer",
  "{{c}} is off.": "{{c}} est désactivée.",
  "{{c}} is on.": "{{c}} est activée.",
+ "The daily check found a deal whose money in and out don’t match": "Le contrôle quotidien a trouvé une transaction dont l’argent entré et sorti ne correspond pas",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "Une demande clôturée est supprimée au bout de 12 heures, avec ses messages et ses coordonnées."
 }

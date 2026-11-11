@@ -414,6 +414,23 @@ async def _activity_retention_loop(settings: Settings) -> None:
             log.exception("activity_retention_failed")
 
 
+async def _reconciliation_loop(settings: Settings) -> None:
+    """ADR-110: every day, each finished deal's money in must match its money out."""
+    from app.db.session import get_sessionmaker
+    from app.services.reconciliation import ReconciliationService
+
+    log = get_logger(__name__)
+    await asyncio.sleep(min(300, settings.reconciliation_seconds))  # soon after start-up
+    while True:
+        try:
+            async with get_sessionmaker(settings)() as db:
+                with track_job("Deal reconciliation", settings.reconciliation_seconds):
+                    await ReconciliationService(db, lambda: datetime.now(UTC)).daily()
+        except Exception:  # noqa: BLE001 - try again at the next run
+            log.exception("reconciliation_failed")
+        await asyncio.sleep(settings.reconciliation_seconds)
+
+
 async def _metrics_loop(settings: Settings) -> None:
     """ADR-072: add this server's API and job figures to the database once a minute."""
     from app.db.session import get_sessionmaker
@@ -517,6 +534,8 @@ def planned_tasks(
         if s.preparation_sweep_seconds > 0:
             out["deal expiry, queues, fraud scan"] = lambda: _sweep_preparations(s, rt)
             out["retention and clean-up"] = lambda: _activity_retention_loop(s)
+        if s.reconciliation_seconds > 0:
+            out["deal reconciliation"] = lambda: _reconciliation_loop(s)
         if rt.push_sender is not None and s.push_tick_seconds > 0:
             out["phone push"] = lambda: _push_loop(s, rt)
         if rt.email is not None and s.security_notice_seconds > 0:

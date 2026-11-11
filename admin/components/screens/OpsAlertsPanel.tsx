@@ -39,6 +39,7 @@ export const ALERT_TITLE: Record<OpsAlertRule, string> = {
   outside_failing: '{{subject}} is failing',
   job_failing: 'The job "{{subject}}" is failing',
   escrow_stalled: 'Escrow processing has stopped or messages to the bank failed',
+  books_mismatch: 'The daily check found a deal whose money in and out don’t match',
 };
 export const ALERT_SEVERITY: Record<OpsAlertSeverity, string> = {
   P1: 'P1 · Critical',

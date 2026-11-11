@@ -1117,5 +1117,6 @@
  "Yes, Switch On": "نعم، فعّل",
  "{{c}} is off.": "{{c}} معطّلة.",
  "{{c}} is on.": "{{c}} مفعّلة.",
+ "The daily check found a deal whose money in and out don’t match": "وجد الفحص اليومي صفقة لا تتطابق أموالها الواردة والصادرة",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "يُحذف الطلب المغلق بعد 12 ساعة، مع رسائله وبيانات الاتصال."
 }

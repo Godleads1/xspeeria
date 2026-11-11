@@ -1117,5 +1117,6 @@
  "Yes, Switch On": "是的，开启",
  "{{c}} is off.": "{{c}} 已关闭。",
  "{{c}} is on.": "{{c}} 已开启。",
+ "The daily check found a deal whose money in and out don’t match": "每日检查发现一笔交易的资金流入与流出不一致",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "已关闭的请求将在 12 小时后连同其消息和联系方式一起删除。"
 }

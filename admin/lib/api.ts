@@ -596,7 +596,8 @@ export type OpsAlertRule =
   | 'api_failing'
   | 'outside_failing'
   | 'job_failing'
-  | 'escrow_stalled';
+  | 'escrow_stalled'
+  | 'books_mismatch';
 export type OpsAlertSeverity = 'P1' | 'P2' | 'P3' | 'P4';
 export type OpsAlertStatus = 'open' | 'acknowledged' | 'resolved';
 export interface OpsAlert {
