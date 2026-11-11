@@ -26,7 +26,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
-from app.domain.offer_rules import OFFICIAL_RATE, with_derived
+from app.domain.offer_rules import FED_SNAPSHOT, OFFICIAL_RATE, cross_ceilings, with_derived
 from app.models.official_rates import OfficialRate
 from app.providers.frankfurter import RateFeedError, RateQuote
 from app.services.currency_switch import switched_off
@@ -48,19 +48,20 @@ class RateFeed(Protocol):
 
 
 async def current_ceilings(db: AsyncSession, now: datetime) -> dict[str, Decimal]:
-    """Naira per 1 unit, per foreign currency, that no rate may exceed right now.
+    """The rate no offer may exceed right now, keyed by ``offer_rules.ceiling_key``: "USD"
+    (naira per USD) and, for pairs without naira (ADR-111), "USD/GHS" (cedis per USD).
 
-    A currency switched off (ADR-106) has none: its offers leave the market and can't be
-    taken, queued for or re-priced; deals already matched don't use this and finish.
+    A currency switched off (ADR-106) has none, nor does any pair with it: its offers leave
+    the market and can't be taken, queued for or re-priced; deals already matched finish.
     """
     off = await switched_off(db)
-    return {c: v for c, v in (await _ceilings(db, now)).items() if c not in off}
+    return {k: v for k, v in (await _ceilings(db, now)).items() if not set(k.split("/")) & off}
 
 
 async def _ceilings(db: AsyncSession, now: datetime) -> dict[str, Decimal]:
     fed_ever = await db.scalar(select(OfficialRate.id).limit(1))
     if not fed_ever:
-        return dict(OFFICIAL_RATE)
+        return {**OFFICIAL_RATE, **cross_ceilings(FED_SNAPSHOT)}
     latest = (
         select(
             OfficialRate.currency,
@@ -73,7 +74,8 @@ async def _ceilings(db: AsyncSession, now: datetime) -> dict[str, Decimal]:
         .subquery()
     )
     rows = (await db.execute(select(latest.c.currency, latest.c.rate).where(latest.c.n == 1))).all()
-    return with_derived({str(c): Decimal(r) for c, r in rows if c in FED_CURRENCIES})
+    fed = {str(c): Decimal(r) for c, r in rows if c in FED_CURRENCIES}
+    return {**with_derived(fed), **cross_ceilings(fed)}
 
 
 class OfficialRateService:

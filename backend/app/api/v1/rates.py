@@ -4,6 +4,9 @@
 an offer may have right now, so the app can show it and check a rate before sending. The
 server checks every rate again when an offer is made or taken; this answer is for display.
 Signed-in customers only; nothing about any account is read.
+
+ADR-111: ``pairs`` lists the limits of pairs without naira (e.g. cedis per US dollar),
+worked out from the official naira rates.
 """
 
 from __future__ import annotations
@@ -37,8 +40,17 @@ class Ceiling(BaseModel):
     derived: bool
 
 
+class PairCeiling(BaseModel):
+    #: The rate is ``quote`` per 1 ``base`` (ADR-111), e.g. GHS per 1 USD.
+    base: str
+    quote: str
+    max_rate: str
+
+
 class Ceilings(BaseModel):
     items: list[Ceiling]
+    #: ADR-111: pairs without naira, worked out from the naira rates (cut down to 3 decimals).
+    pairs: list[PairCeiling] = []
     #: CAD per 1 USD used for the derived CAD ceiling (Bank of Canada, ADR-101).
     cad_per_usd: str
     #: CNY per 1 USD for the derived CNY ceiling (PBOC central parity, ADR-105); None while
@@ -65,7 +77,12 @@ async def official(
             Ceiling(currency=c, max_rate=_exact(v), derived=c in DERIVED)
             for c, v in sorted(ceilings.items())
             # ADR-105: the app shows China only when the server offers the yuan.
-            if china or c != "CNY"
+            if "/" not in c and (china or c != "CNY")
+        ],
+        pairs=[
+            PairCeiling(base=k.split("/")[0], quote=k.split("/")[1], max_rate=_exact(v))
+            for k, v in sorted(ceilings.items())
+            if "/" in k and (china or "CNY" not in k.split("/"))
         ],
         cad_per_usd=str(CAD_PER_USD),
         cny_per_usd=str(CNY_PER_USD) if china else None,

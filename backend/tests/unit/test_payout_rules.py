@@ -29,7 +29,7 @@ class TestCounterAmount:
 
     def test_naira_to_foreign_half_even(self) -> None:
         assert counter_amount_minor(26_410_000, "NGN", Decimal("1320.50"), "USD") == 20_000
-        assert counter_amount_minor(1_000_000, "NGN", Decimal("1333.26"), "USD") == 750  # 7.5005… → 750
+        assert counter_amount_minor(1_000_000, "NGN", Decimal("1333.26"), "USD") == 750  # 7.5005…
 
     def test_currencies_without_cents_use_whole_units(self) -> None:
         # 1,000 UGX at ₦0.306 = ₦306.00 (30,600 kobo), never ₦3.06.

@@ -35,7 +35,7 @@ class TestPair:
         assert parse_pair(s, t).foreign == foreign
 
     @pytest.mark.parametrize(
-        ("s", "t"), [("USD", "GBP"), ("NGN", "NGN"), ("JPY", "NGN"), ("NGN", "XXX")]
+        ("s", "t"), [("USD", "USD"), ("NGN", "NGN"), ("JPY", "NGN"), ("NGN", "XXX"), ("GBP", "JPY")]
     )
     def test_other_pairs_refused(self, s: str, t: str) -> None:
         assert _code(parse_pair, s, t) == "VALIDATION_ERROR"

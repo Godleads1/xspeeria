@@ -234,12 +234,13 @@ def counter_amount_minor(
 ) -> int:
     """The other side of a deal in the counter currency's minor units, half to even (ADR-019 §2).
 
-    The rate is NGN per 1 unit of the foreign currency. A foreign amount gives NGN = amount ×
-    rate; an NGN amount gives foreign = amount ÷ rate. Each side uses its own currency's
-    minor units (``offer_rules.SCALE``): the CFA franc and the Ugandan shilling have none, so
-    1,000 UGX at ₦0.306 is ₦306.00 (30,600 kobo), not ₦3.06.
+    The rate is the pair's quote currency per 1 unit of its base (ADR-111): naira per 1 USD,
+    or cedis per 1 USD for a pair without naira. A base amount gives quote = amount × rate; a
+    quote amount gives base = amount ÷ rate. Each side uses its own currency's minor units
+    (``offer_rules.SCALE``): the CFA franc and the Ugandan shilling have none, so 1,000 UGX at
+    ₦0.306 is ₦306.00 (30,600 kobo), not ₦3.06.
     """
-    from app.domain.offer_rules import SCALE  # local: offer_rules imports nothing from here
+    from app.domain.offer_rules import SCALE, Pair  # local: offer_rules imports nothing here
 
     micro = int((rate * 1_000_000).to_integral_exact())  # NUMERIC(12,6): exact
     if micro <= 0:
@@ -247,6 +248,6 @@ def counter_amount_minor(
     # 10^(scale of what we get − scale of what we have): units are matched exactly.
     shift = SCALE[counter_currency] - SCALE[currency]
     up, down = (10**shift, 1) if shift >= 0 else (1, 10**-shift)
-    if currency == "NGN":
+    if currency == Pair(currency, counter_currency).quote:
         return _half_even_div(amount_minor * 1_000_000 * up, micro * down)
     return _half_even_div(amount_minor * micro * up, 1_000_000 * down)

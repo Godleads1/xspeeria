@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
+from app.domain.offer_rules import ceiling_key, offer_pair
 from app.models.marketplace import QUEUE_ACTIVE, Match, Offer, OfferQueueEntry
 from app.models.settlement import Settlement, Transaction
 from app.services.auth import Principal
@@ -270,8 +271,8 @@ class QueueService:
                 "You can’t wait for your own offer.",
                 status.HTTP_403_FORBIDDEN,
             )
-        foreign = offer.target_currency if offer.source_currency == "NGN" else offer.source_currency
-        ceiling = (await current_ceilings(self._db, self._clock())).get(foreign)
+        key = ceiling_key(offer_pair(offer))  # ADR-111: "USD" or "USD/GHS"
+        ceiling = (await current_ceilings(self._db, self._clock())).get(key)
         if (
             offer.status not in QUEUE_OFFER_STATUSES
             or ceiling is None
