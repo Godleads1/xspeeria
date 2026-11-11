@@ -72,6 +72,15 @@
 - **Translations:** the currency names and the new sentence are in all seven translated languages. They are drafts, like the rest (M-6).
 - **Evidence:** `mobile/__tests__/africa-market.test.tsx`, plus the African cases in `market-search.test.tsx`.
 
+## Fix (2026-11-11): the other side of a whole-unit deal
+
+- **The bug:** the server worked out a deal's other side as if both currencies had cents. With UGX or XOF (no cents) that was **100 times wrong**. 1,000 UGX at ₦0.306 gave ₦3.06 instead of ₦306.00, and a naira request paid out 100 times too many shillings. It also showed and recorded the counter amount, "you receive" and payout choices in the wrong unit.
+- **Impact:** found before anything was hosted. No real money moved.
+- **The fix:** `counter_amount_minor` now uses each currency's own minor units. The amounts shown, the payout choices and the escrow legs use the receiving currency's scale.
+- **Evidence:**
+  - `test_payout_rules.py::test_currencies_without_cents_use_whole_units`;
+  - `test_africa_corridors.py`: a full shilling deal through the pretend bank, with legs `NGN 30600+306 @2` and `UGX 1000+10 @0` and payouts matching, plus a naira request for CFA francs.
+
 ## Not verified / owner actions
 
 - **Legality and partner banks:** UNKNOWN — NOT VERIFIED for every one of the eleven. Egypt, Ethiopia, Morocco and Zimbabwe tightly control foreign exchange.
