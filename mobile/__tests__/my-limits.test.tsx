@@ -64,3 +64,11 @@ it('writes the limit refusal with the amount left, in the user’s language', ()
   const junk = new ApiError('TRADE_403_DAILY_LIMIT', 403, 'Fallback text', null, { left: '<b>' });
   expect(messageFor(junk)).toBe('Fallback text');
 });
+
+it('says “offer” when posting one is over the limit (owner 2026-11-11: “Stop it”)', () => {
+  const { messageFor } = jest.requireActual('../src/api/client');
+  const daily = new ApiError('TRADE_403_DAILY_LIMIT', 403, 'English text', null, { left: '500000.00', for: 'offer' });
+  expect(messageFor(daily)).toBe('This offer is over your daily limit. You can trade up to NGN 500,000.00 more today.');
+  const monthly = new ApiError('TRADE_403_MONTHLY_LIMIT', 403, 'English text', null, { left: '1.00', for: 'offer' });
+  expect(messageFor(monthly)).toBe('This offer is over your monthly limit. You can trade up to NGN 1.00 more this month.');
+});

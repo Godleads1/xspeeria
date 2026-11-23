@@ -30,7 +30,7 @@ from app.models.settlement import Settlement, Transaction
 from app.models.tiers import TierCheck
 from app.services.offers import money_text
 
-__all__ = ["check_new_deal", "limits_view", "tier_of", "usage"]
+__all__ = ["check_new_deal", "check_new_offer", "limits_view", "tier_of", "usage"]
 
 #: A deal in one of these ended unpaid (or was paid back): its amount no longer counts.
 _GIVEN_BACK_PHASES = ("CANCELLED", "UNWINDING", "CLOSED_UNWOUND")
@@ -155,6 +155,44 @@ async def check_new_deal(
             status_code=status.HTTP_403_FORBIDDEN,
             details={"left": money_text(left, 2)},
         )
+
+
+async def check_new_offer(
+    db: AsyncSession, user_id: uuid.UUID, value_kobo: int, now: datetime, settings: Settings
+) -> None:
+    """Owner 2026-11-11 ("Stop it"): an offer or request bigger than its owner can still trade
+    today or this month is refused, so nobody sees one that can't be filled.
+
+    ``value_kobo`` is the whole offer at its naira value (``deal_kobo``). Deals already made
+    count, as for ``check_new_deal``; other open offers don't (only one deal is ever counted
+    once). Tier 0 can't post at all, which the identity check before this already says.
+    """
+    tier = await tier_of(db, user_id, settings)
+    limits = LIMITS[tier]
+    if limits is None:
+        raise AppError(
+            "AUTH_403_KYC_REQUIRED",
+            "Verify your identity to trade.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    day, month = await usage(db, user_id, now)
+    over_day = day + value_kobo > limits.daily_minor
+    over_month = month + value_kobo > limits.monthly_minor
+    if not (over_day or over_month):
+        return
+    left = max(0, min(limits.daily_minor - day, limits.monthly_minor - month))
+    raise AppError(
+        "TRADE_403_DAILY_LIMIT" if over_day else "TRADE_403_MONTHLY_LIMIT",
+        (
+            f"This offer is over your daily limit. You can trade up to NGN "
+            f"{money_text(left, 2)} more today."
+            if over_day
+            else f"This offer is over your monthly limit. You can trade up to NGN "
+            f"{money_text(left, 2)} more this month."
+        ),
+        status_code=status.HTTP_403_FORBIDDEN,
+        details={"left": money_text(left, 2), "for": "offer"},
+    )
 
 
 async def limits_view(

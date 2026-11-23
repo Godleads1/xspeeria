@@ -102,6 +102,12 @@ export function messageFor(error: unknown): string {
   if (left !== null && (error.code === 'TRADE_403_DAILY_LIMIT' || error.code === 'TRADE_403_MONTHLY_LIMIT')) {
     const [whole, frac = '00'] = left.split('.');
     const amount = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${frac}`;
+    // Owner 2026-11-11: posting an offer or request is held to the same limit ("Stop it").
+    if (error.details?.for === 'offer') {
+      return error.code === 'TRADE_403_DAILY_LIMIT'
+        ? tr('This offer is over your daily limit. You can trade up to NGN {{amount}} more today.', { amount })
+        : tr('This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.', { amount });
+    }
     return error.code === 'TRADE_403_DAILY_LIMIT'
       ? tr('This deal is over your daily limit. You can trade up to NGN {{amount}} more today.', { amount })
       : tr('This deal is over your monthly limit. You can trade up to NGN {{amount}} more this month.', { amount });

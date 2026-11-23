@@ -1550,5 +1550,7 @@
  "You pay {{pay}} and get {{currency}}.": "Vous payez en {{pay}} et recevez des {{currency}}.",
  "RATE RANGE ({{quote}} PER {{base}})": "FOURCHETTE DE TAUX ({{quote}} PAR {{base}})",
  "From {{quote}} {{low}}": "À partir de {{low}} {{quote}}",
- "Up to {{quote}} {{high}}": "Jusqu’à {{high}} {{quote}}"
+ "Up to {{quote}} {{high}}": "Jusqu’à {{high}} {{quote}}",
+ "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "Cette offre dépasse votre plafond journalier. Vous pouvez encore échanger jusqu’à NGN {{amount}} aujourd’hui.",
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Cette offre dépasse votre plafond mensuel. Vous pouvez encore échanger jusqu’à NGN {{amount}} ce mois-ci."
 }
