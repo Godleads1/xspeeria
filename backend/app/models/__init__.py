@@ -71,6 +71,7 @@ from app.models.settlement import (
     Transaction,
     WebhookReceipt,
 )
+from app.models.signup_pauses import SignupPause
 from app.models.staff import (
     StaffAccount,
     StaffAuditEntry,
@@ -85,6 +86,7 @@ from app.models.tiers import TierCheck
 __all__ = [
     "Advert",
     "DealPause",
+    "SignupPause",
     "OfficialRate",
     "FraudAlert",
     "HelpMessage",

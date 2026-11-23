@@ -28,6 +28,7 @@ def test_every_account_table_is_listed() -> None:
         "api_metrics",
         "job_status",
         "deal_pauses",  # ADR-075: emergency-control history, like outage notices
+        "signup_pauses",  # emergency switch for sign-ups (security check 2026-11-23)
         "official_rates",  # ADR-102: reference data (CBN rates), append-only
         "currency_switches",  # ADR-106: Super Admin settings, like the pause history
     } | {t for t in Base.metadata.tables if t.startswith("staff_")}

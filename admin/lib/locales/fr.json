@@ -1119,5 +1119,17 @@
  "The daily check found a deal whose money in and out don’t match": "Le contrôle quotidien a trouvé une transaction dont l’argent entré et sorti ne correspond pas",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "Une demande clôturée est supprimée au bout de 12 heures, avec ses messages et ses coordonnées.",
  "Always on: naira can’t be switched off.": "Toujours active : le naira ne peut pas être désactivé.",
- "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} par {{base}}"
+ "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} par {{base}}",
+ "New sign-ups and text messages are paused": "Les nouvelles inscriptions et les SMS sont suspendus",
+ "Sign-ups and text messages are running normally": "Les inscriptions et les SMS fonctionnent normalement",
+ "Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.": "À utiliser si quelqu’un crée de faux comptes ou fait grimper la facture des SMS. Aucun nouveau compte et aucun code par SMS ; les utilisateurs peuvent toujours se connecter avec leur code PIN.",
+ "Resume sign-ups": "Reprendre les inscriptions",
+ "Pause sign-ups and text messages": "Suspendre les inscriptions et les SMS",
+ "Pause sign-ups and text messages?": "Suspendre les inscriptions et les SMS ?",
+ "No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.": "Personne ne peut créer de compte ni recevoir de code par SMS jusqu’à la reprise. Les autres Super Admins sont alertés.",
+ "Sign-ups and text messages are paused.": "Les inscriptions et les SMS sont suspendus.",
+ "Resume sign-ups?": "Reprendre les inscriptions ?",
+ "New accounts and text-message codes start again. Say why it is safe now.": "Les nouveaux comptes et les codes par SMS reprennent. Expliquez pourquoi c’est sûr maintenant.",
+ "Sign-ups and text messages have resumed.": "Les inscriptions et les SMS ont repris.",
+ "This password is in lists of leaked passwords. Choose a different one.": "Ce mot de passe figure dans des listes de mots de passe divulgués. Choisissez-en un autre."
 }

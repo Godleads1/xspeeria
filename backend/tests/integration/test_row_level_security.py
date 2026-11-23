@@ -31,6 +31,9 @@ from tests.integration.test_kyc_api import K, _user, k  # noqa: F401
 from tests.integration.test_matches_api import TAKER
 from tests.integration.test_notifications_api import _inbox, _seed
 
+# The offer test needs the currency rows; another file may have cleared them first.
+from tests.integration.test_offers_api import currencies  # noqa: F401
+
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 _VERSIONS = Path(__file__).resolve().parents[3] / "migrations" / "versions"

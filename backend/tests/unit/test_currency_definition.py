@@ -377,6 +377,7 @@ class TestPackageRegistration:
             "currency_switches",
             "ops_alerts",
             "deal_pauses",
+            "signup_pauses",
             "rate_limit_hits",
             "staff_security_keys",
             "security_notices",
@@ -444,7 +445,7 @@ class TestPackageRegistration:
             "'reconciliation_exceptions', 'recovery_codes', 'reversals', 'security_notices', "
             "'service_outages', "
             "'settlement_events', "
-            "'settlement_holds', 'settlement_legs', 'settlements', "
+            "'settlement_holds', 'settlement_legs', 'settlements', 'signup_pauses', "
             "'staff_accounts', 'staff_audit_log', 'staff_codes', 'staff_key_challenges', "
             "'staff_roles', 'staff_security_keys', 'staff_sessions', "
             "'step_up_grants', "
@@ -539,4 +540,5 @@ class TestPackageRegistration:
             "0050_currency_switches.py",  # Currency on/off switches (ADR-106)
             "0051_africa.py",  # Eleven African countries (ADR-107)
             "0052_help_retention.py",  # Need-help deleted 12 h after closing (ADR-103)
+            "0053_security_checklist.py",  # fixes from the 40-point security check
         ]

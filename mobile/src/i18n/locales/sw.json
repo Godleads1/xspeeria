@@ -1552,5 +1552,7 @@
  "From {{quote}} {{low}}": "Kuanzia {{quote}} {{low}}",
  "Up to {{quote}} {{high}}": "Hadi {{quote}} {{high}}",
  "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "Ofa hii inazidi kikomo chako cha siku. Unaweza kufanya biashara hadi NGN {{amount}} zaidi leo.",
- "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Ofa hii inazidi kikomo chako cha mwezi. Unaweza kufanya biashara hadi NGN {{amount}} zaidi mwezi huu."
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Ofa hii inazidi kikomo chako cha mwezi. Unaweza kufanya biashara hadi NGN {{amount}} zaidi mwezi huu.",
+ "Phone numbers from this country can't be used on Xspeeria yet.": "Nambari za simu kutoka nchi hii haziwezi kutumika kwenye Xspeeria bado.",
+ "New sign-ups and text-message codes are paused for a short while for safety. Please try again later.": "Usajili mpya na misimbo ya SMS imesitishwa kwa muda mfupi kwa usalama. Tafadhali jaribu tena baadaye."
 }

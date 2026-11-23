@@ -6,6 +6,9 @@
  *
  * - **Pause all deals** ("freeze the clocks"): no new offers, takes or payout choices; bank
  *   commands are held; open windows get the paused time back on resume.
+ * - **Pause sign-ups and text messages** (security check, 2026-11-23): no new accounts and no
+ *   text-message codes, for an attack on sign-up or a text-message bill running up. Signing in
+ *   with the PIN, the face check and email codes keep working.
  * - **Sign everyone out**: customers, staff (except you), or both.
  *
  * Each needs a reason, is in the audit log and raises a P1 alert for the other Super Admins.
@@ -15,7 +18,7 @@
 
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 
-import { messageFor, type DealPauseStatus, type SessionsWho } from '../../lib/api';
+import { messageFor, type DealPauseStatus, type SessionsWho, type SignupPauseStatus } from '../../lib/api';
 import { count } from '../../lib/figures';
 import { tr } from '../../lib/i18n';
 import { useSession } from '../../lib/session';
@@ -31,11 +34,18 @@ export const WHO_LABEL: Record<SessionsWho, string> = {
   everyone: 'Everyone except me',
 };
 
-type Dialog = { kind: 'pause' } | { kind: 'resume' } | { kind: 'sessions'; who: SessionsWho } | null;
+type Dialog =
+  | { kind: 'pause' }
+  | { kind: 'resume' }
+  | { kind: 'pause-signups' }
+  | { kind: 'resume-signups' }
+  | { kind: 'sessions'; who: SessionsWho }
+  | null;
 
 export function EmergencyPanel(): ReactElement | null {
   const { api, me } = useSession();
   const [status, setStatus] = useState<DealPauseStatus | null>(null);
+  const [signups, setSignups] = useState<SignupPauseStatus | null>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [who, setWho] = useState<SessionsWho>('customers');
   const [busy, setBusy] = useState(false);
@@ -46,7 +56,9 @@ export function EmergencyPanel(): ReactElement | null {
   const load = useCallback(async () => {
     if (!allowed) return;
     try {
-      setStatus(await api.dealPauseStatus());
+      const [deals, signupState] = await Promise.all([api.dealPauseStatus(), api.signupPauseStatus()]);
+      setStatus(deals);
+      setSignups(signupState);
     } catch (e) {
       setError(messageFor(e));
     }
@@ -74,6 +86,8 @@ export function EmergencyPanel(): ReactElement | null {
 
   const paused = status?.paused === true;
   const pause = status?.pause ?? null;
+  const signupsPaused = signups?.paused === true;
+  const signupPause = signups?.pause ?? null;
 
   return (
     <Panel>
@@ -118,7 +132,40 @@ export function EmergencyPanel(): ReactElement | null {
             {tr('Pause all deals')}
           </Button>
         )}
-        <span style={{ flex: 1 }} />
+      </div>
+      <section
+        data-testid="signups-state"
+        role="status"
+        style={{
+          padding: '12px 14px',
+          borderRadius: 10,
+          backgroundColor: signupsPaused ? color.error.surface : color.success.surface,
+          color: signupsPaused ? color.error.text : color.success.text,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+        }}
+      >
+        <strong>{signupsPaused ? tr('New sign-ups and text messages are paused') : tr('Sign-ups and text messages are running normally')}</strong>
+        {signupsPaused && signupPause ? (
+          <span style={{ fontSize: 13 }}>{tr('Since {{time}}. Reason: {{reason}}', { time: when(signupPause.started_at), reason: signupPause.reason })}</span>
+        ) : null}
+      </section>
+      <p style={{ margin: 0, fontSize: 13, color: color.text.secondary }}>
+        {tr('Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.')}
+      </p>
+      <div style={{ display: 'flex', gap: space.sm, flexWrap: 'wrap', alignItems: 'center' }}>
+        {signupsPaused ? (
+          <Button variant="primary" testId="resume-signups" onClick={() => setDialog({ kind: 'resume-signups' })}>
+            {tr('Resume sign-ups')}
+          </Button>
+        ) : (
+          <Button variant="danger" testId="pause-signups" onClick={() => setDialog({ kind: 'pause-signups' })}>
+            {tr('Pause sign-ups and text messages')}
+          </Button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: space.sm, flexWrap: 'wrap', alignItems: 'center' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
           {tr('Sign out')}
           <select data-testid="sessions-who" value={who} onChange={(e) => setWho(e.target.value as SessionsWho)}>
@@ -166,6 +213,35 @@ export function EmergencyPanel(): ReactElement | null {
           onConfirm={(reason) => void run(async () => {
             await api.resumeDeals(reason);
             return tr('Deals have resumed.');
+          })}
+        />
+      ) : null}
+      {dialog?.kind === 'pause-signups' ? (
+        <ReasonDialog
+          title={tr('Pause sign-ups and text messages?')}
+          description={tr('No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.')}
+          confirm={tr('Pause sign-ups and text messages')}
+          danger
+          busy={busy}
+          error={error}
+          onCancel={() => setDialog(null)}
+          onConfirm={(reason) => void run(async () => {
+            await api.pauseSignups(reason);
+            return tr('Sign-ups and text messages are paused.');
+          })}
+        />
+      ) : null}
+      {dialog?.kind === 'resume-signups' ? (
+        <ReasonDialog
+          title={tr('Resume sign-ups?')}
+          description={tr('New accounts and text-message codes start again. Say why it is safe now.')}
+          confirm={tr('Resume sign-ups')}
+          busy={busy}
+          error={error}
+          onCancel={() => setDialog(null)}
+          onConfirm={(reason) => void run(async () => {
+            await api.resumeSignups(reason);
+            return tr('Sign-ups and text messages have resumed.');
           })}
         />
       ) : null}

@@ -1119,5 +1119,17 @@
  "The daily check found a deal whose money in and out don’t match": "وجد الفحص اليومي صفقة لا تتطابق أموالها الواردة والصادرة",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "يُحذف الطلب المغلق بعد 12 ساعة، مع رسائله وبيانات الاتصال.",
  "Always on: naira can’t be switched off.": "مفعّلة دائمًا: لا يمكن إيقاف النيرة.",
- "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} لكل {{base}}"
+ "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} لكل {{base}}",
+ "New sign-ups and text messages are paused": "التسجيلات الجديدة والرسائل النصية متوقفة مؤقتًا",
+ "Sign-ups and text messages are running normally": "التسجيلات والرسائل النصية تعمل بشكل طبيعي",
+ "Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.": "استخدم هذا إذا كان شخص ما ينشئ حسابات وهمية أو يرفع فاتورة الرسائل النصية. لا حسابات جديدة ولا رموز عبر الرسائل النصية؛ ويظل بإمكان المستخدمين تسجيل الدخول برمز PIN.",
+ "Resume sign-ups": "استئناف التسجيلات",
+ "Pause sign-ups and text messages": "إيقاف التسجيلات والرسائل النصية مؤقتًا",
+ "Pause sign-ups and text messages?": "إيقاف التسجيلات والرسائل النصية مؤقتًا؟",
+ "No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.": "لا يمكن لأحد إنشاء حساب أو الحصول على رمز عبر رسالة نصية حتى يستأنف أحدهم ذلك. يتم تنبيه المشرفين الأعلى الآخرين.",
+ "Sign-ups and text messages are paused.": "التسجيلات والرسائل النصية متوقفة مؤقتًا.",
+ "Resume sign-ups?": "استئناف التسجيلات؟",
+ "New accounts and text-message codes start again. Say why it is safe now.": "تبدأ الحسابات الجديدة ورموز الرسائل النصية من جديد. اذكر سبب كون الأمر آمنًا الآن.",
+ "Sign-ups and text messages have resumed.": "تم استئناف التسجيلات والرسائل النصية.",
+ "This password is in lists of leaked passwords. Choose a different one.": "كلمة المرور هذه موجودة في قوائم كلمات المرور المسرّبة. اختر كلمة مرور مختلفة."
 }

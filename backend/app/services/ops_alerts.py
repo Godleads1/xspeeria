@@ -12,7 +12,7 @@ Rule                       Sev.  Raised when
 ``staff_access_changed``    P2   a staff account is created, or its role or status changes,
                                 or a security key is added or removed (ADR-081);
                                  a role is created, changed or deleted (one per audit entry)
-``emergency_control_used``  P1   deals were paused or resumed, or sessions were ended
+``emergency_control_used``  P1   deals or sign-ups were paused or resumed, or sessions ended
                                  (ADR-075; one per audit entry)
 ``unusual_deal_volume``     P2   20 or more deals in the last hour and 3 times the hourly
                                  average of the 7 days before
@@ -108,7 +108,7 @@ TITLES: dict[str, str] = {
     "customer_sign_in_attack": "Many failed customer sign-ins",
     "staff_sign_in_attack": "Many failed staff sign-ins",
     "staff_access_changed": "A staff account or role was changed",
-    "emergency_control_used": "Deals were paused or resumed, or sessions were ended",
+    "emergency_control_used": "Deals or sign-ups were paused or resumed, or sessions were ended",
     "unusual_deal_volume": "Unusually many deals",
     "money_at_risk": "A deal needs money recovered",
     "high_fraud_alert": "A high-severity fraud alert opened",
@@ -139,7 +139,13 @@ _STAFF_ACCESS_ACTIONS = (
     "security_key_removed",
 )
 #: ADR-075: the emergency controls; each use tells the other Super Admins.
-_EMERGENCY_ACTIONS = ("deals_paused", "deals_resumed", "sessions_ended")
+_EMERGENCY_ACTIONS = (
+    "deals_paused",
+    "deals_resumed",
+    "sessions_ended",
+    "signups_paused",
+    "signups_resumed",
+)
 _MONEY_AT_RISK = ("RECOVERY_REQUIRED", "CLOSED_WITH_LOSS")
 _SEVERITY_ORDER = {"P1": 0, "P2": 1, "P3": 2, "P4": 3}
 

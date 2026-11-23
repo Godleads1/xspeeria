@@ -59,6 +59,7 @@ from app.domain.auth_rules import (
     LOGIN_REQUESTS_PER_MINUTE,
     MAX_PIN_TRIES,
     PIN_LOCK,
+    SMS_ALL_NUMBERS_PER_MINUTE,
 )
 from app.domain.offer_rules import MARKET_REQUESTS_PER_MINUTE
 from app.providers.bank_check import DevNameCheck
@@ -148,6 +149,11 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
     if settings.is_production and not settings.public_api_url.startswith("https://"):
         # ADR-084: the "this wasn't me" link in every security email points here.
         raise ValueError("PUBLIC_API_URL must be the API's https address in production (ADR-084)")
+    if settings.is_production and any(
+        o == "*" or not o.startswith("https://") for o in settings.cors_origins
+    ):
+        # Security check 19: only exact https origins in production, never a wildcard.
+        raise ValueError("CORS_ALLOWED_ORIGINS must list exact https:// origins in production")
     if settings.is_production and settings.official_rate_feed == "off":
         # ADR-102 (owner 2026-11-09: "turn it now"): live rate ceilings, never the old snapshot.
         raise ValueError("OFFICIAL_RATE_FEED must be frankfurter in production (ADR-102)")
@@ -180,6 +186,7 @@ def build_auth_runtime(settings: Settings) -> AuthRuntime:
         face=_face_check(settings),
         checks_per_hour=CHECKS_PER_HOUR * (20 if relaxed else 1),
         checks_per_day=CHECKS_PER_DAY * (20 if relaxed else 1),
+        sms_all_numbers_per_minute=SMS_ALL_NUMBERS_PER_MINUTE * (20 if relaxed else 1),
         tier_checks=_tier_checks(settings),
         object_store=_object_store(settings),
         staff_key_rp_id=settings.staff_key_rp_id,

@@ -135,3 +135,16 @@ Each finding was first checked against the code (F-006 to F-015 at `d2e5a65`, th
 | F-016 app restart skips the idle lock | IMPLEMENTED | The app keeps the last touch time and the idle-lock flag (`session.ts`); at start `serverAuth.restore` resumes only if touched under 5 minutes ago and not locked; otherwise Face ID or the PIN is needed and the refresh token is not spent. `server-auth.test.tsx` (six new cases). | Residual: someone with the unlocked phone could change its clock. Background polling still keeps the server session alive; making polls not count as activity on the server is a possible follow-up. |
 | F-017 CI guard output can be forged with control characters | IMPLEMENTED | `inert()` in `check_sensitive_files.py`, `check_gitleaks_config.py`, `check_npm_audit.py` escapes control characters and line separators in every repository-derived field before printing. Tests in `test_sensitive_files.py`, `test_gitleaks_config.py`, `test_npm_audit_gate.py`. | None. |
 
+## Security check of 2026-11-23 (40-point checklist, ADR-112)
+
+The owner's 40-point checklist, run against the code at `5170f4c`. The six code gaps it found were fixed in ADR-112, each with a test that runs against PostgreSQL. States are IMPLEMENTED: nothing here has been checked by an outside tester, and CI does not run.
+
+| Gap | State | Evidence | Gap / next action |
+|---|---|---|---|
+| SMS pumping: codes to any country, no overall cap | IMPLEMENTED | `auth_rules.SUPPORTED_CALLING_CODES`, `SMS_ALL_NUMBERS_PER_MINUTE` (60); `test_security_checklist.py::test_numbers_from_other_countries_get_no_code`, `::test_an_overall_cap_stops_sms_pumping` | Check the cap against the SMS provider's limits: `UNKNOWN — NOT VERIFIED`. |
+| A phone-number change left other sessions signed in | IMPLEMENTED | `phone_change_confirm` ends other sessions (`phone_change`, migration 0053); `::test_a_new_phone_number_signs_out_other_phones` | None. |
+| No switch to stop sign-ups during an attack | IMPLEMENTED (extends SEC-039) | `signup_pause.py`, `/admin/emergency/signups*`, Emergency controls panel; `::test_a_super_admin_can_pause_sign_ups_and_text_messages`, `::test_only_a_super_admin_can_pause_sign_ups`, `admin/__tests__/emergency.test.tsx` | None. |
+| Staff passwords not checked against leaked lists | IMPLEMENTED | `leaked_passwords.py` (30,447 entries of 12+ characters, SecLists, MIT); `::test_leaked_staff_passwords_are_refused` | Refresh the list now and then. |
+| `*` accepted in `CORS_ALLOWED_ORIGINS` in production | IMPLEMENTED (extends SEC-013) | `build_auth_runtime` refuses `*` and non-https origins in production; `::test_production_refuses_a_wildcard_cors_origin` | None. |
+| Accepted partner events not unique in the database | IMPLEMENTED (backs up FX-02's locked re-check) | `uq_webhook_receipts_accepted_event` (migration 0053); `::test_one_partner_event_is_accepted_once_at_most` | None. |
+| A test failed only when run with other files | IMPLEMENTED | `test_row_level_security.py` loads the currency rows (`currencies` fixture) | None. |

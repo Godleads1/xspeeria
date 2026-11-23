@@ -127,7 +127,7 @@ async def admin(db_settings: Settings) -> AsyncIterator[Admin]:
         await c.aclose()
     await _sql(
         db_settings,
-        "TRUNCATE rate_limit_hits, deal_pauses, ops_alerts, api_metrics, job_status, customer_activity, security_notices, kyc_reviews, fraud_alerts, adverts, service_outages, reversals, dispute_messages, disputes, help_messages, help_requests, staff_audit_log, staff_sessions, staff_codes, staff_key_challenges, staff_security_keys, staff_accounts",
+        "TRUNCATE rate_limit_hits, deal_pauses, signup_pauses, ops_alerts, api_metrics, job_status, customer_activity, security_notices, kyc_reviews, fraud_alerts, adverts, service_outages, reversals, dispute_messages, disputes, help_messages, help_requests, staff_audit_log, staff_sessions, staff_codes, staff_key_challenges, staff_security_keys, staff_accounts",
     )
     await _sql(db_settings, "DELETE FROM staff_roles WHERE NOT builtin")
 
@@ -188,7 +188,7 @@ async def test_the_cookie_is_secure_outside_a_developer_computer(db_settings: Se
     finally:
         await _sql(
             db_settings,
-            "TRUNCATE rate_limit_hits, deal_pauses, ops_alerts, api_metrics, job_status, customer_activity, security_notices, kyc_reviews, fraud_alerts, adverts, service_outages, reversals, dispute_messages, disputes, help_messages, help_requests, staff_audit_log, staff_sessions, staff_codes, staff_key_challenges, staff_security_keys, staff_accounts",
+            "TRUNCATE rate_limit_hits, deal_pauses, signup_pauses, ops_alerts, api_metrics, job_status, customer_activity, security_notices, kyc_reviews, fraud_alerts, adverts, service_outages, reversals, dispute_messages, disputes, help_messages, help_requests, staff_audit_log, staff_sessions, staff_codes, staff_key_challenges, staff_security_keys, staff_accounts",
         )
 
 

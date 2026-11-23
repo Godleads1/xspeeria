@@ -47,6 +47,7 @@ function mount(over: Partial<AdminApi> = {}): AdminApi {
     systemHealth: vi.fn(async () => HEALTH),
     opsAlerts: vi.fn(async () => ({ items: [], live: { P1: 0, P2: 0, P3: 0, P4: 0 } })),
     dealPauseStatus: vi.fn(async () => ({ paused: false, pause: null })),
+    signupPauseStatus: vi.fn(async () => ({ paused: false, pause: null })),
     ...over,
   };
   render(<SessionProvider api={a} onSignedOut={() => undefined}><SystemHealthScreen /></SessionProvider>);

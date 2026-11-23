@@ -1119,5 +1119,17 @@
  "The daily check found a deal whose money in and out don’t match": "A verificação diária encontrou um negócio cujo dinheiro de entrada e saída não corresponde",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "Um pedido encerrado é eliminado após 12 horas, com as suas mensagens e dados de contacto.",
  "Always on: naira can’t be switched off.": "Sempre ativa: o naira não pode ser desativado.",
- "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} por {{base}}"
+ "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} por {{base}}",
+ "New sign-ups and text messages are paused": "Novos cadastros e SMS estão pausados",
+ "Sign-ups and text messages are running normally": "Cadastros e SMS estão funcionando normalmente",
+ "Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.": "Use isto se alguém estiver criando contas falsas ou aumentando a conta de SMS. Nenhuma conta nova e nenhum código por SMS; as pessoas ainda podem entrar com o PIN.",
+ "Resume sign-ups": "Retomar cadastros",
+ "Pause sign-ups and text messages": "Pausar cadastros e SMS",
+ "Pause sign-ups and text messages?": "Pausar cadastros e SMS?",
+ "No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.": "Ninguém pode criar uma conta nem receber um código por SMS até que alguém retome. Os outros Super Admins são alertados.",
+ "Sign-ups and text messages are paused.": "Cadastros e SMS estão pausados.",
+ "Resume sign-ups?": "Retomar cadastros?",
+ "New accounts and text-message codes start again. Say why it is safe now.": "Novas contas e códigos por SMS voltam a funcionar. Diga por que agora é seguro.",
+ "Sign-ups and text messages have resumed.": "Cadastros e SMS foram retomados.",
+ "This password is in lists of leaked passwords. Choose a different one.": "Esta senha está em listas de senhas vazadas. Escolha outra."
 }
