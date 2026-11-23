@@ -122,6 +122,10 @@ Full review with the release classification: `docs/13-governance/PRODUCTION_READ
 - [ ] **Backups with a recorded restore** — *Build*, after hosting. (SEC-030) The "pause all deals" switch and "sign everyone out" are built (ADR-075, PR #94).
 - [ ] **Deployment basics:** separate environments, deploy pipeline and a disaster-recovery runbook. (SEC-033 to SEC-039) Done already: SBOM in CI (ADR-077), operations alerts and the incident plan (ADR-074).
 - [ ] **Independent penetration test** before launch. (SEC-040)
+- [ ] **Text-message cap of 60 a minute (ADR-112)** — *You + Build*: once an SMS provider is chosen, check `SMS_ALL_NUMBERS_PER_MINUTE` (60 codes a minute to all numbers together) against the provider's own limits and fraud controls; raise it if real sign-ups need more. `UNKNOWN — NOT VERIFIED`.
+- [ ] **New corridor country = new calling code (ADR-112)** — *Build*: a country added to the phone picker must also be added to `auth_rules.SUPPORTED_CALLING_CODES`, or its numbers get no codes.
+- [ ] **Refresh the leaked-password list now and then (ADR-112)** — *Build*: rebuild `app/data/leaked_passwords_12plus.txt.gz` from SecLists.
+- [x] **"Pause sign-ups and text messages"** — built (ADR-112, PR #166, 23 Nov 2026): Super Admin only, reason required, audited, P1 alert. Add it to the incident plan's first steps for an attack on sign-up.
 - [ ] **Rule to keep:** screenshots of the development build show demo balances — never use them in marketing, investor, partner or regulator material. (ADR-023 §3)
 
 ## 4b. Buildable now, no outside party needed (added 2 Nov 2026)
