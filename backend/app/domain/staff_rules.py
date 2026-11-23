@@ -125,6 +125,10 @@ def password_problem(password: str, *, email: str | None = None) -> str | None:
         return "Use a less repetitive password."
     if email and email.split("@")[0] and email.split("@")[0].lower() in password.lower():
         return "Don't use your email in your password."
+    from app.domain.leaked_passwords import is_leaked_password
+
+    if is_leaked_password(password):
+        return "This password is in lists of leaked passwords. Choose a different one."
     return None
 
 

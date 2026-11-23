@@ -1552,5 +1552,7 @@
  "From {{quote}} {{low}}": "从 {{low}} {{quote}} 起",
  "Up to {{quote}} {{high}}": "最高 {{high}} {{quote}}",
  "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "此报价超出您的每日限额。今天您最多还能交易 NGN {{amount}}。",
- "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "此报价超出您的每月限额。本月您最多还能交易 NGN {{amount}}。"
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "此报价超出您的每月限额。本月您最多还能交易 NGN {{amount}}。",
+ "Phone numbers from this country can't be used on Xspeeria yet.": "该国家/地区的电话号码暂时无法在 Xspeeria 上使用。",
+ "New sign-ups and text-message codes are paused for a short while for safety. Please try again later.": "为了安全，新注册和短信验证码已暂停片刻。请稍后再试。"
 }

@@ -1119,5 +1119,17 @@
  "The daily check found a deal whose money in and out don’t match": "La comprobación diaria encontró un acuerdo cuyo dinero de entrada y salida no coincide",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "Una solicitud cerrada se elimina a las 12 horas, con sus mensajes y datos de contacto.",
  "Always on: naira can’t be switched off.": "Siempre activa: el naira no se puede desactivar.",
- "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} por {{base}}"
+ "{{quote}} {{rate}} per {{base}}": "{{rate}} {{quote}} por {{base}}",
+ "New sign-ups and text messages are paused": "Los nuevos registros y los SMS están en pausa",
+ "Sign-ups and text messages are running normally": "Los registros y los SMS funcionan con normalidad",
+ "Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.": "Úsalo si alguien está creando cuentas falsas o disparando la factura de SMS. No se crean cuentas nuevas ni se envían códigos por SMS; las personas aún pueden iniciar sesión con su PIN.",
+ "Resume sign-ups": "Reanudar registros",
+ "Pause sign-ups and text messages": "Pausar registros y SMS",
+ "Pause sign-ups and text messages?": "¿Pausar registros y SMS?",
+ "No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.": "Nadie puede crear una cuenta ni recibir un código por SMS hasta que alguien lo reanude. Se avisa a los demás Super Admins.",
+ "Sign-ups and text messages are paused.": "Los registros y los SMS están en pausa.",
+ "Resume sign-ups?": "¿Reanudar registros?",
+ "New accounts and text-message codes start again. Say why it is safe now.": "Las cuentas nuevas y los códigos por SMS vuelven a funcionar. Explica por qué ya es seguro.",
+ "Sign-ups and text messages have resumed.": "Los registros y los SMS se han reanudado.",
+ "This password is in lists of leaked passwords. Choose a different one.": "Esta contraseña aparece en listas de contraseñas filtradas. Elige otra."
 }

@@ -10,6 +10,8 @@ import re
 from datetime import timedelta
 
 __all__ = [
+    "SUPPORTED_CALLING_CODES",
+    "phone_country_supported",
     "ACCESS_TOKEN_TTL",
     "ENROL_CHALLENGE_TTL",
     "KYC_REDO_CHECK_TTL",
@@ -34,6 +36,7 @@ __all__ = [
     "PIN_LENGTH",
     "PIN_LOCK",
     "SESSION_MAX",
+    "SMS_ALL_NUMBERS_PER_MINUTE",
     "SMS_PER_DAY",
     "SMS_PER_HOUR",
     "mask_phone",
@@ -56,6 +59,9 @@ ACCESS_TOKEN_TTL = timedelta(minutes=15)
 #: ADR-024 — SMS codes per phone number.
 SMS_PER_HOUR = 5
 SMS_PER_DAY = 10
+#: Security check 15: text-message codes to all numbers together, per minute (SMS pumping).
+#: Far above a real launch's sign-ups; raised only by local TEST_LIMITS_DEV.
+SMS_ALL_NUMBERS_PER_MINUTE = 60
 CODE_RESEND_WAIT = timedelta(seconds=60)
 CODE_TTL = timedelta(minutes=10)
 MAX_CODE_TRIES = 5
@@ -135,6 +141,22 @@ def normalise_phone(value: str) -> str | None:
         return None
     compact = re.sub(r"[\s\-.()]", "", value)
     return compact if _E164_RE.fullmatch(compact) else None
+
+
+#: Security check 15 / B&A 14: text messages go only to the countries Xspeeria serves (the
+#: identity-check countries, ADR-042/100/105/107), so codes can't be pumped to premium-rate
+#: numbers elsewhere. +1 covers the US and Canada (and the rest of the North American plan).
+SUPPORTED_CALLING_CODES: frozenset[str] = frozenset({
+    "1", "20", "27", "33", "44", "49", "86", "212", "221", "233", "234", "251", "254", "255",
+    "256", "260", "263",
+})  # fmt: skip
+
+
+def phone_country_supported(phone: str) -> bool:
+    """For an E.164 number from ``normalise_phone``: is its country code one we serve?"""
+    digits = phone.lstrip("+")
+    # Country codes never start one another (E.164 is prefix-free), so a prefix test is exact.
+    return any(digits.startswith(code) for code in SUPPORTED_CALLING_CODES)
 
 
 def normalise_email(value: str) -> str | None:

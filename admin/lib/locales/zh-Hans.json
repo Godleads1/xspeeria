@@ -1119,5 +1119,17 @@
  "The daily check found a deal whose money in and out don’t match": "每日检查发现一笔交易的资金流入与流出不一致",
  "A closed request is deleted after 12 hours, with its messages and contact details.": "已关闭的请求将在 12 小时后连同其消息和联系方式一起删除。",
  "Always on: naira can’t be switched off.": "始终开启：奈拉不能关闭。",
- "{{quote}} {{rate}} per {{base}}": "每 {{base}} {{rate}} {{quote}}"
+ "{{quote}} {{rate}} per {{base}}": "每 {{base}} {{rate}} {{quote}}",
+ "New sign-ups and text messages are paused": "新注册和短信已暂停",
+ "Sign-ups and text messages are running normally": "注册和短信运行正常",
+ "Use this if someone is creating fake accounts or running up the text-message bill. No new accounts and no text-message codes; people can still sign in with their PIN.": "如果有人在创建虚假账户或推高短信费用，请使用此功能。将不会创建新账户，也不会发送短信验证码；用户仍可使用 PIN 登录。",
+ "Resume sign-ups": "恢复注册",
+ "Pause sign-ups and text messages": "暂停注册和短信",
+ "Pause sign-ups and text messages?": "暂停注册和短信？",
+ "No one can create an account or get a text-message code until someone resumes. Other Super Admins are alerted.": "在有人恢复之前，任何人都无法创建账户或获取短信验证码。其他超级管理员会收到提醒。",
+ "Sign-ups and text messages are paused.": "注册和短信已暂停。",
+ "Resume sign-ups?": "恢复注册？",
+ "New accounts and text-message codes start again. Say why it is safe now.": "新账户和短信验证码将重新开始。请说明为什么现在是安全的。",
+ "Sign-ups and text messages have resumed.": "注册和短信已恢复。",
+ "This password is in lists of leaked passwords. Choose a different one.": "此密码出现在已泄露密码列表中。请选择其他密码。"
 }

@@ -41,6 +41,7 @@ from app.services.kyc_review import KycReviewService
 from app.services.ops_alerts import OpsAlertService
 from app.services.outages import OutageService
 from app.services.reversals import ReversalService
+from app.services.signup_pause import SignupPauseService
 from app.services.staff import RequestInfo, StaffPrincipal, StaffService, unauthorized
 from app.services.staff_work import StaffWorkService
 from app.services.system_health import SystemHealthService
@@ -1622,6 +1623,35 @@ async def pause_deals(
 @router.post("/emergency/deals/resume", summary="Resume deals; open windows get the time back")
 async def resume_deals(
     body: EmergencyReasonBody, staff: Staff, service: DealPauses, info: Info
+) -> Any:
+    return await service.resume(staff, info, body.reason)
+
+
+async def get_signup_pause(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
+) -> SignupPauseService:
+    return SignupPauseService(db, runtime.clock)
+
+
+SignupPauses = Annotated[SignupPauseService, Depends(get_signup_pause)]
+
+
+@router.get("/emergency/signups", summary="Are sign-ups and text messages paused? (Super Admin)")
+async def signup_pause_status(staff: Staff, service: SignupPauses) -> Any:
+    return await service.status(staff)
+
+
+@router.post("/emergency/signups/pause", summary="Pause sign-ups and text messages (reason)")
+async def pause_signups(
+    body: EmergencyReasonBody, staff: Staff, service: SignupPauses, info: Info
+) -> Any:
+    return await service.pause(staff, info, body.reason)
+
+
+@router.post("/emergency/signups/resume", summary="Resume sign-ups and text messages (reason)")
+async def resume_signups(
+    body: EmergencyReasonBody, staff: Staff, service: SignupPauses, info: Info
 ) -> Any:
     return await service.resume(staff, info, body.reason)
 

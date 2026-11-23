@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 
 import { EmergencyPanel } from '../components/screens/EmergencyPanel';
-import { makeAdminApi, type AdminApi, type DealPauseStatus, type Me } from '../lib/api';
+import { makeAdminApi, type AdminApi, type DealPauseStatus, type Me, type SignupPauseStatus } from '../lib/api';
 import { SessionProvider } from '../lib/session';
 
 const BOSS: Me = {
@@ -17,6 +17,12 @@ const PAUSED: DealPauseStatus = {
   pause: { id: 'p-1', started_at: '2026-11-02T10:00:00Z', started_by: 's-1', reason: 'Bank reported a problem', ended_at: null, ended_by: null, end_reason: null, details: {} },
 };
 
+const SIGNUPS_OPEN: SignupPauseStatus = { paused: false, pause: null };
+const SIGNUPS_PAUSED: SignupPauseStatus = {
+  paused: true,
+  pause: { id: 'sp-1', started_at: '2026-11-23T10:00:00Z', started_by: 's-1', reason: 'Text-message bill climbing', ended_at: null, ended_by: null, end_reason: null },
+};
+
 function mount(me: Me = BOSS, over: Partial<AdminApi> = {}): AdminApi {
   const a: AdminApi = {
     ...makeAdminApi(vi.fn()),
@@ -25,6 +31,9 @@ function mount(me: Me = BOSS, over: Partial<AdminApi> = {}): AdminApi {
     pauseDeals: vi.fn(async () => PAUSED),
     resumeDeals: vi.fn(async () => RUNNING),
     endSessions: vi.fn(async () => ({ customer_sessions: 12, staff_sessions: 3 })),
+    signupPauseStatus: vi.fn(async () => SIGNUPS_OPEN),
+    pauseSignups: vi.fn(async () => SIGNUPS_PAUSED),
+    resumeSignups: vi.fn(async () => SIGNUPS_OPEN),
     ...over,
   };
   render(<SessionProvider api={a} onSignedOut={() => undefined}><EmergencyPanel /></SessionProvider>);
@@ -67,10 +76,30 @@ describe('emergency controls', () => {
     expect(await screen.findByTestId('emergency-done')).toHaveTextContent('Signed out 12 customer sessions and 3 staff sessions.');
   });
 
+  it('pauses sign-ups and text messages with a reason', async () => {
+    const a = mount();
+    expect(await screen.findByText('Sign-ups and text messages are running normally')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('pause-signups'));
+    await confirm('Text-message bill climbing');
+    await waitFor(() => expect(a.pauseSignups).toHaveBeenCalledWith('Text-message bill climbing'));
+    expect(await screen.findByTestId('emergency-done')).toHaveTextContent('Sign-ups and text messages are paused.');
+    expect(a.pauseDeals).not.toHaveBeenCalled();
+  });
+
+  it('shows why sign-ups are paused, and resumes them', async () => {
+    const a = mount(BOSS, { signupPauseStatus: vi.fn(async () => SIGNUPS_PAUSED) });
+    expect(await screen.findByText('New sign-ups and text messages are paused')).toBeInTheDocument();
+    expect(screen.getByTestId('signups-state')).toHaveTextContent('Reason: Text-message bill climbing');
+    fireEvent.click(screen.getByTestId('resume-signups'));
+    await confirm('Provider blocked the numbers');
+    await waitFor(() => expect(a.resumeSignups).toHaveBeenCalledWith('Provider blocked the numbers'));
+  });
+
   it('is not shown to anyone but a Super Admin', async () => {
     const a = mount({ ...BOSS, role: 'operations_admin' });
     await waitFor(() => expect(a.me).toHaveBeenCalled());
     expect(screen.queryByTestId('pause-deals')).toBeNull();
     expect(a.dealPauseStatus).not.toHaveBeenCalled();
+    expect(a.signupPauseStatus).not.toHaveBeenCalled();
   });
 });

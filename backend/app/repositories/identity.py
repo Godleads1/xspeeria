@@ -78,6 +78,12 @@ class IdentityRepository:
         )
         return int((await self._db.execute(stmt)).scalar_one())
 
+    async def codes_sent_to_anyone_since(self, since: datetime) -> int:
+        """Security check 15: text-message codes sent to any number (sign-up, PIN reset,
+        phone change) since ``since`` -- the overall cap against SMS pumping."""
+        stmt = select(func.count()).where(PhoneVerification.created_at > since)
+        return int((await self._db.execute(stmt)).scalar_one())
+
     async def last_code_sent_at(self, phone: str) -> datetime | None:
         stmt = select(func.max(PhoneVerification.created_at)).where(
             PhoneVerification.phone == phone

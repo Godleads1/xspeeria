@@ -55,6 +55,7 @@ from app.domain.auth_rules import (
     MFA_LOCK,
     PIN_LOCK,
     SESSION_MAX,
+    SMS_ALL_NUMBERS_PER_MINUTE,
     SMS_PER_DAY,
     SMS_PER_HOUR,
     STEP_UP_ACTIONS,
@@ -63,6 +64,7 @@ from app.domain.auth_rules import (
     mask_phone,
     normalise_email,
     normalise_phone,
+    phone_country_supported,
     pin_problem,
 )
 from app.domain.disposable_email import is_disposable_email
@@ -91,6 +93,7 @@ from app.providers.tier_checks import TierCheckProvider
 from app.repositories.identity import IdentityRepository
 from app.services.account_deletion import restore_until
 from app.services.identity_redo import latest_redo, start_redo
+from app.services.signup_pause import refuse_if_signups_paused
 
 __all__ = [
     "AuthRuntime",
@@ -191,6 +194,14 @@ PIN_RESET_PURPOSE = frozenset({"pin_reset"})
 _REDO_PURPOSES = frozenset({"login", "pin_reset"})
 
 
+def _unsupported_country() -> AppError:
+    return _err(
+        "VAL_422_INVALID_PHONE",
+        "Phone numbers from this country can't be used on Xspeeria yet.",
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
+
 def sms_unavailable() -> AppError:
     return _err(
         "SYS_503_SERVICE_UNAVAILABLE",
@@ -281,6 +292,8 @@ class AuthRuntime:
     #: ADR-054 limits on second checks per account; raised only by local TEST_LIMITS_DEV.
     checks_per_hour: int = CHECKS_PER_HOUR
     checks_per_day: int = CHECKS_PER_DAY
+    #: Security check 15: text-message codes to all numbers together, per minute.
+    sms_all_numbers_per_minute: int = SMS_ALL_NUMBERS_PER_MINUTE
     #: ADR-058: BVN and proof-of-address checks for higher tiers. None: those checks are off.
     tier_checks: TierCheckProvider | None = None
     #: ADR-049/060: where photos are kept. None: photo uploads are off.
@@ -323,13 +336,7 @@ class AuthService:
 
     async def register(self, phone_raw: str, email: str, pin: str) -> None:
         """Create or replace an unverified account and send a code (ADR-025 §2)."""
-        phone = normalise_phone(phone_raw)
-        if phone is None:
-            raise _err(
-                "VAL_422_INVALID_PHONE",
-                "Enter the phone number with its country code, for example +2348012345678.",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-            )
+        phone = self._phone_or_422(phone_raw)
         problem = pin_problem(pin)
         if problem is not None:
             raise _err("VAL_422_WEAK_PASSWORD", problem, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -341,6 +348,7 @@ class AuthService:
             )
         if self._rt.sms is None or self._rt.email is None:
             raise sms_unavailable()
+        await refuse_if_signups_paused(self._db)  # B&A 39
 
         now = self._now()
         existing = await self._repo.user_by_phone(phone, lock=True)
@@ -414,6 +422,17 @@ class AuthService:
         )
 
     async def _enforce_sms_limits(self, phone: str, now: datetime) -> None:
+        # B&A 39: a Super Admin can pause sign-ups and text messages during an attack.
+        await refuse_if_signups_paused(self._db)
+        if not phone_country_supported(phone):  # an older number from before the check
+            await self._db.rollback()
+            raise _unsupported_country()
+        # Security check 15: all numbers together, against SMS pumping.
+        sent = await self._repo.codes_sent_to_anyone_since(now - timedelta(minutes=1))
+        if sent >= self._rt.sms_all_numbers_per_minute:
+            await self._db.rollback()
+            _logger.warning("sms_all_numbers_cap_reached", extra={"per_minute": sent})
+            raise _rate_limited(timedelta(minutes=1))
         last = await self._repo.last_code_sent_at(phone)
         if last is not None and now - last < CODE_RESEND_WAIT:
             await self._db.rollback()
@@ -893,6 +912,8 @@ class AuthService:
         if method == "sms_email" and self._rt.sms is None:
             await self._db.rollback()
             raise _check_unavailable()
+        if method == "sms_email":
+            await refuse_if_signups_paused(self._db)  # B&A 39: text messages paused
         if method == "face" and self._rt.face is None:
             await self._db.rollback()
             raise _face_unavailable()
@@ -1527,6 +1548,8 @@ class AuthService:
                 "Enter the phone number with its country code, for example +2348012345678.",
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
+        if not phone_country_supported(phone):
+            raise _unsupported_country()
         return phone
 
     async def phone_change_start(
@@ -1591,6 +1614,8 @@ class AuthService:
         old = user.phone
         user.phone = phone
         user.phone_verified_at = now
+        # Security check 13: a new phone number signs out every other session.
+        await self._end_sessions(user.id, now, "phone_change", keep=principal.session_id)
         try:
             await self._db.commit()
         except IntegrityError as exc:

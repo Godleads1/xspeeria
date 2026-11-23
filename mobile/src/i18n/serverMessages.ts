@@ -30,6 +30,8 @@ export const SERVER_MESSAGES: readonly string[] = [
   k("Enter your 11-digit BVN."),
   k("Enter a valid IBAN."),
   k("Please use a permanent email address. Temporary email services aren't accepted."),
+  k("Phone numbers from this country can't be used on Xspeeria yet."),
+  k("New sign-ups and text-message codes are paused for a short while for safety. Please try again later."),
   k("Fingerprint or Face ID could not confirm this. Please try the face check."),
   k("Fingerprint or Face ID is not turned on for this phone."),
   k("Fingerprint or Face ID needs a trusted phone. Log out and log in again on this phone to trust it."),

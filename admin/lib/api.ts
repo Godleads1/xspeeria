@@ -634,6 +634,21 @@ export interface DealPauseStatus {
   /** The latest pause (open or ended), or null if deals have never been paused. */
   pause: DealPauseRecord | null;
 }
+/** Security check (2026-11-23): pause new sign-ups and text-message codes (Super Admin only). */
+export interface SignupPauseRecord {
+  id: string;
+  started_at: string;
+  started_by: string;
+  reason: string;
+  ended_at: string | null;
+  ended_by: string | null;
+  end_reason: string | null;
+}
+export interface SignupPauseStatus {
+  paused: boolean;
+  /** The latest pause (open or ended), or null if sign-ups have never been paused. */
+  pause: SignupPauseRecord | null;
+}
 export type SessionsWho = 'customers' | 'staff' | 'everyone';
 
 export interface OpsAlertsPage {
@@ -869,6 +884,9 @@ export function makeAdminApi(doFetch: Fetch = (...a) => fetch(...a)) {
     dealPauseStatus: () => call<DealPauseStatus>('GET', '/emergency/deals'),
     pauseDeals: (reason: string) => call<DealPauseStatus>('POST', '/emergency/deals/pause', { reason }),
     resumeDeals: (reason: string) => call<DealPauseStatus>('POST', '/emergency/deals/resume', { reason }),
+    signupPauseStatus: () => call<SignupPauseStatus>('GET', '/emergency/signups'),
+    pauseSignups: (reason: string) => call<SignupPauseStatus>('POST', '/emergency/signups/pause', { reason }),
+    resumeSignups: (reason: string) => call<SignupPauseStatus>('POST', '/emergency/signups/resume', { reason }),
     endSessions: (who: SessionsWho, reason: string) =>
       call<{ customer_sessions: number; staff_sessions: number }>('POST', '/emergency/sessions/end', { who, reason }),
     acknowledgeAlert: (id: string) => call<OpsAlert>('POST', `/alerts/${encodeURIComponent(id)}/acknowledge`),

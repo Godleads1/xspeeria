@@ -1552,5 +1552,7 @@
  "From {{quote}} {{low}}": "À partir de {{low}} {{quote}}",
  "Up to {{quote}} {{high}}": "Jusqu’à {{high}} {{quote}}",
  "This offer is over your daily limit. You can trade up to NGN {{amount}} more today.": "Cette offre dépasse votre plafond journalier. Vous pouvez encore échanger jusqu’à NGN {{amount}} aujourd’hui.",
- "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Cette offre dépasse votre plafond mensuel. Vous pouvez encore échanger jusqu’à NGN {{amount}} ce mois-ci."
+ "This offer is over your monthly limit. You can trade up to NGN {{amount}} more this month.": "Cette offre dépasse votre plafond mensuel. Vous pouvez encore échanger jusqu’à NGN {{amount}} ce mois-ci.",
+ "Phone numbers from this country can't be used on Xspeeria yet.": "Les numéros de téléphone de ce pays ne peuvent pas encore être utilisés sur Xspeeria.",
+ "New sign-ups and text-message codes are paused for a short while for safety. Please try again later.": "Les nouvelles inscriptions et les codes par SMS sont suspendus quelques instants par sécurité. Veuillez réessayer plus tard."
 }
